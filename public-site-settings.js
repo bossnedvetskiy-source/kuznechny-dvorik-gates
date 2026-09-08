@@ -185,4 +185,14 @@
     }
     hours.textContent = site.businessHours;
   }
+
+  // Упрощаем управление каталогом: поиск по артикулу убран, сортировка только по цене.
+  const articleSearchLabel = document.querySelector('.search-label');
+  if (articleSearchLabel) articleSearchLabel.remove();
+  const sortSelect = document.getElementById('sortSelect');
+  if (sortSelect) {
+    sortSelect.querySelector('option[value="recommended"]')?.remove();
+    sortSelect.value = 'price-asc';
+    sortSelect.dispatchEvent(new Event('change'));
+  }
 })();
