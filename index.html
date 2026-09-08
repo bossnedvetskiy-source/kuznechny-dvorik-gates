@@ -715,7 +715,7 @@
           const result=(deliveryResult?.textContent||'').toLocaleLowerCase('ru-RU');
           const isMeleuz=normalized(city)==='мелеуз';
           const isOther=Boolean(city)&&!isMeleuz;
-          const chosen=Boolean(city)&&(result.includes('бесплат')||result.includes('учтена')||result.includes('подтвержд')||result.includes('населённый пункт выбран'));
+          const chosen=deliveryBlock.dataset.editing!=='1'&&Boolean(city)&&(result.includes('бесплат')||result.includes('учтена')||result.includes('подтвержд')||result.includes('населённый пункт выбран'));
           meleuzButton?.classList.toggle('is-active',isMeleuz);
           otherButton?.classList.toggle('is-active',isOther||deliveryBlock.dataset.mode==='other');
           meleuzButton?.setAttribute('aria-pressed',String(isMeleuz));
@@ -727,11 +727,15 @@
         };
         meleuzButton?.addEventListener('click',()=>{
           deliveryBlock.dataset.mode='meleuz';
+          deliveryBlock.dataset.editing='';
+          deliveryBlock.dataset.editOriginal='';
           if(cityInput){cityInput.value='Мелеуз';cityInput.dispatchEvent(new Event('input',{bubbles:true}));cityInput.blur();}
           syncDeliveryChoice();
         });
         otherButton?.addEventListener('click',()=>{
           deliveryBlock.dataset.mode='other';
+          deliveryBlock.dataset.editing='1';
+          deliveryBlock.dataset.editOriginal=(cityInput?.value||'').trim();
           if(cityInput&&normalized(cityInput.value)==='мелеуз'){cityInput.value='';cityInput.dispatchEvent(new Event('input',{bubbles:true}));}
           deliveryBlock.classList.remove('is-selected');
           selectedSummary.hidden=true;
@@ -741,11 +745,13 @@
         selectedSummary.querySelector('button')?.addEventListener('click',()=>{
           deliveryBlock.classList.remove('is-selected');
           selectedSummary.hidden=true;
+          deliveryBlock.dataset.editing='1';
+          deliveryBlock.dataset.editOriginal=(cityInput?.value||'').trim();
           deliveryBlock.dataset.mode=normalized(cityInput?.value)==='мелеуз'?'meleuz':'other';
           syncDeliveryChoice();
           if(deliveryBlock.dataset.mode==='other') setTimeout(()=>cityInput?.focus(),60);
         });
-        cityInput?.addEventListener('input',()=>{if(cityInput.value.trim()&&normalized(cityInput.value)!=='мелеуз')deliveryBlock.dataset.mode='other';syncDeliveryChoice();});
+        cityInput?.addEventListener('input',()=>{const current=cityInput.value.trim();if(deliveryBlock.dataset.editing==='1'&&current!==deliveryBlock.dataset.editOriginal)deliveryBlock.dataset.editing='';if(current&&normalized(current)!=='мелеуз')deliveryBlock.dataset.mode='other';syncDeliveryChoice();});
         cityInput?.addEventListener('change',syncDeliveryChoice);
         if(deliveryResult) new MutationObserver(syncDeliveryChoice).observe(deliveryResult,{childList:true,subtree:true,characterData:true});
         syncDeliveryChoice();
@@ -856,6 +862,22 @@
   .size-memory-note{margin:8px 0 0;padding:8px 10px;border-radius:9px;background:rgba(230,189,105,.10);color:var(--gold-light);font-size:12px;line-height:1.4;font-weight:700}
   .size-memory-note[hidden]{display:none!important}
 }
+</style>
+
+<style data-delivery-summary-global="2026-09-09">
+.delivery-selected-summary{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:10px;padding:12px 13px;border:1px solid rgba(255,255,255,.11);border-radius:12px;background:#0d0e10;color:#fff}
+.delivery-selected-summary[hidden]{display:none!important}
+.delivery-selected-summary div{display:grid;gap:3px;min-width:0}
+.delivery-selected-summary span{font-size:11px;color:rgba(255,255,255,.5)}
+.delivery-selected-summary strong{font-size:14px;color:#fff;white-space:normal}
+.delivery-selected-summary button{min-height:44px;border:1px solid rgba(230,189,105,.48);border-radius:9px;background:transparent;color:var(--gold-light);padding:0 12px;font-size:12px;font-weight:800;cursor:pointer}
+.delivery-choice-wrap.is-selected .delivery-choice-buttons,
+.delivery-choice-wrap.is-selected .city-label,
+.delivery-choice-wrap.is-selected .delivery-result,
+.delivery-choice-wrap.is-selected .route-button,
+.delivery-choice-wrap.is-selected .delivery-help{display:none!important}
+.size-memory-note{margin:8px 0 0;padding:8px 10px;border-radius:9px;background:rgba(230,189,105,.10);color:var(--gold-light);font-size:12px;line-height:1.4;font-weight:700}
+.size-memory-note[hidden]{display:none!important}
 </style>
 
 </body>
