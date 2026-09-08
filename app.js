@@ -251,6 +251,47 @@ if(mobileCatalogMedia.matches) estimateBreakdown.open=false;
 citySuggestions.innerHTML = destinations.map(destination=>`<option value="${escapeHTML(destination.name)}"></option>`).join('');
 
 let deliveryState = {kind:'fixed',name:'Мелеуз',resolvedName:'Мелеуз',price:0};
+const DELIVERY_MEMORY_KEY='kuzdvor:selected-delivery';
+
+function rememberDeliverySelection(){
+  if(!['fixed','calculated'].includes(deliveryState.kind))return;
+  const city=(deliveryState.resolvedName||deliveryState.shortName||cityInput.value||'').trim();
+  if(!city)return;
+  try{
+    sessionStorage.setItem(DELIVERY_MEMORY_KEY,JSON.stringify({
+      kind:deliveryState.kind,
+      city,
+      name:deliveryState.name||city,
+      resolvedName:deliveryState.resolvedName||city,
+      shortName:deliveryState.shortName||city,
+      price:Number(deliveryState.price)||0
+    }));
+  }catch{}
+}
+
+function restoreDeliverySelection(){
+  let saved=null;
+  try{saved=JSON.parse(sessionStorage.getItem(DELIVERY_MEMORY_KEY)||'null')}catch{}
+  if(!saved?.city)return false;
+  const known=destinationByKey.get(normalizePlace(saved.city));
+  if(known){
+    cityInput.value=known.name;
+    deliveryState={kind:'fixed',name:known.name,resolvedName:known.name,price:known.price};
+    routeButton.hidden=true;
+    setDeliveryResult(`${known.name} · населённый пункт выбран`,'success');
+    rememberDeliverySelection();
+    return true;
+  }
+  if(saved.kind==='calculated'&&Number.isFinite(Number(saved.price))){
+    const city=String(saved.shortName||saved.resolvedName||saved.city).trim();
+    cityInput.value=city;
+    deliveryState={kind:'calculated',name:saved.name||city,resolvedName:saved.resolvedName||city,shortName:city,price:Number(saved.price)||0};
+    routeButton.hidden=true;
+    setDeliveryResult(`${city} · населённый пункт подтверждён`,'success');
+    return true;
+  }
+  return false;
+}
 
 function selectedProduct(){return products.find(product=>product.id===productSelect.value)}
 
@@ -260,6 +301,7 @@ function chooseProduct(id){
   widthInput.value=product.standard[0];heightInput.value=product.standard[1];
   wicketWidthInput.value=product.wicketWidth??1;
   installCheck.checked=product.install>0;postsCheck.checked=false;
+  if(!cityInput.value.trim())restoreDeliverySelection();
   updateControls();calculate();
 }
 
@@ -388,6 +430,7 @@ function updateDeliveryFromCity(){
 
 cityInput.addEventListener('input',updateDeliveryFromCity);
 cityInput.addEventListener('change',updateDeliveryFromCity);
+if(restoreDeliverySelection())calculate();
 
 routeButton.addEventListener('click',async()=>{
   const place=cityInput.value.trim();
@@ -396,6 +439,7 @@ routeButton.addEventListener('click',async()=>{
     deliveryState={...deliveryState,kind:'calculated'};
     routeButton.hidden=true;
     setDeliveryResult(`${deliveryState.shortName} · населённый пункт подтверждён`,'success');
+    rememberDeliverySelection();
     calculate();
     return;
   }
