@@ -4,15 +4,17 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#0c0d0f">
-  <meta name="description" content="Каталог распашных и откатных ворот Кузнечного Дворика с предварительным расчётом стоимости.">
+  <meta name="description" content="Ворота с калиткой на заказ в Мелеузе: каталог моделей, предварительный расчёт монтажа, столбов и доставки.">
+  <meta name="robots" content="index,follow,max-image-preview:large">
   <meta property="og:type" content="website">
-  <meta property="og:title" content="Ворота с установкой в Мелеузе — Кузнечный ДворикЪ">
-  <meta property="og:description" content="38 моделей ворот с реальными ценами. Рассчитайте монтаж, столбы и доставку онлайн.">
-  <meta property="og:image" content="https://kuznechny-dvorik-gates.dragnaledon1284.chatgpt.site/hero-gates.jpg">
+  <meta property="og:title" content="Ворота с калиткой на заказ в Мелеузе — Кузнечный ДворикЪ">
+  <meta property="og:description" content="Каталог ворот с реальными ценами. Рассчитайте монтаж, столбы и доставку онлайн.">
+  <meta property="og:image" content="https://kuznechny-dvorik-gates.boss-nedvetskiy.workers.dev/hero-gates.jpg">
+  <meta property="og:url" content="https://kuznechny-dvorik-gates.boss-nedvetskiy.workers.dev/">
   <meta property="og:locale" content="ru_RU">
-  <link rel="canonical" href="https://kuznechny-dvorik-gates.dragnaledon1284.chatgpt.site/">
+  <link rel="canonical" href="https://kuznechny-dvorik-gates.boss-nedvetskiy.workers.dev/">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230c0d0f'/%3E%3Cpath d='M32 7 57 32 32 57 7 32Z' fill='none' stroke='%23e6bd69' stroke-width='3'/%3E%3Ctext x='32' y='41' text-anchor='middle' font-size='28' fill='%23e6bd69'%3EK%3C/text%3E%3C/svg%3E">
-  <title>Каталог ворот — Кузнечный ДворикЪ</title>
+  <title>Ворота с калиткой в Мелеузе — каталог и расчёт | Кузнечный ДворикЪ</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Prata&display=swap" rel="stylesheet">
@@ -180,9 +182,10 @@
             <label><span>Телефон <b class="required-mark">· обязательно</b></span><input id="phoneInput" type="tel" placeholder="+7 900 000-00-00" autocomplete="tel" inputmode="tel" maxlength="18" required aria-required="true"></label>
             <label class="lead-comment">Комментарий<textarea id="commentInput" placeholder="Например: нужен демонтаж старых ворот"></textarea></label>
           </div>
+          <label class="consent-row"><input id="consentInput" type="checkbox" required><span>Согласен на обработку данных для расчёта и связи по заявке. <a href="#privacyPolicy">Политика обработки данных</a></span></label>
           <button class="button button-primary wide" id="sendButton" type="button">Отправить заявку в WhatsApp</button>
           <button class="copy-button" id="copyButton" type="button">Скопировать смету</button>
-          <small class="privacy-copy">Нажимая кнопку, вы отправите готовую смету мастеру в WhatsApp. Сайт не сохраняет введённые данные.</small>
+          <small class="privacy-copy">После нажатия заявка сохраняется в защищённой админ-панели и открывается готовое сообщение в WhatsApp.</small>
         </aside>
       </div>
     </section>
@@ -220,6 +223,20 @@
       </div>
     </section>
 
+    <section class="privacy-section section-shell" id="privacyPolicy">
+      <details>
+        <summary>Политика обработки персональных данных</summary>
+        <div class="privacy-content">
+          <h2>Как используются данные заявки</h2>
+          <p>Оператор: ИП Недвецкий М. И., ИНН 026309248628, ОГРНИП 322028000029602. Для связи по заявке сайт может сохранять имя, номер телефона, населённый пункт, выбранный артикул, параметры расчёта и комментарий клиента.</p>
+          <p>Данные используются только для обработки обращения, предварительного расчёта, согласования замера, изготовления и связанных с заказом коммуникаций. Данные не предназначены для продажи третьим лицам.</p>
+          <p>На сайте используется Яндекс Метрика, включая Вебвизор, для анализа посещаемости и улучшения удобства сайта. При работе аналитики могут применяться технические идентификаторы и cookies сервиса Яндекса.</p>
+          <p>Данные заявки хранятся в базе сайта до достижения целей обработки или до получения требования о прекращении обработки, если иной срок не требуется законодательством. По вопросам обработки или удаления данных можно обратиться по телефону, указанному на сайте.</p>
+          <p>Отправляя заявку после установки отметки согласия, пользователь подтверждает согласие на обработку указанных им данных для перечисленных целей.</p>
+        </div>
+      </details>
+    </section>
+
     <section class="final-cta section-shell">
       <div>
         <span>Бесплатный замер · Мелеуз и районы</span>
@@ -233,7 +250,7 @@
     </section>
   </main>
 
-  <footer><span>© Кузнечный ДворикЪ</span><span>ИП Недвецкий М. И. · ИНН 026309248628 · ОГРНИП 322028000029602</span><a href="tel:+79373296750">8 937 329-67-50</a></footer>
+  <footer><span>© Кузнечный ДворикЪ</span><span>ИП Недвецкий М. И. · ИНН 026309248628 · ОГРНИП 322028000029602</span><a href="#privacyPolicy">Обработка данных</a><a href="tel:+79373296750">8 937 329-67-50</a></footer>
   <div class="mobile-cta"><a href="tel:+79373296750">Позвонить</a><a id="mobilePrimaryCta" href="#calculator">Рассчитать стоимость</a></div>
   <div class="lightbox" id="lightbox" hidden role="dialog" aria-modal="true" aria-label="Фотография ворот">
     <button class="lightbox-close" id="lightboxClose" type="button" aria-label="Закрыть">×</button>
@@ -250,116 +267,5 @@
   <script src="catalog-images.js"></script>
   <script src="prices.js"></script>
   <script src="app.js"></script>
-  <style id="catalog-final-polish">
-    .product-card{
-      border:1px solid rgba(17,18,20,.08)!important;
-      box-shadow:0 10px 28px rgba(17,18,20,.055)!important;
-    }
-    .product-card:hover{box-shadow:0 18px 42px rgba(17,18,20,.10)!important}
-    .product-art{
-      font-family:Prata,serif!important;
-      font-size:13px!important;
-      font-weight:400!important;
-      padding:8px 11px!important;
-    }
-    .card-thumbnails{padding:9px 11px 0!important;gap:7px!important}
-    .card-thumb{flex-basis:64px!important;width:64px!important;height:48px!important;border-radius:9px!important}
-    .product-info{padding:13px 17px 17px!important}
-    .product-info h3,.product-info>p{display:none!important}
-    .product-labels{margin:0 0 9px!important}
-    .product-labels span:first-child{
-      padding:6px 10px!important;
-      border-radius:999px!important;
-      background:#17191c!important;
-      color:#f1cf86!important;
-      font-size:9px!important;
-      font-weight:800!important;
-    }
-    .product-meta{display:flex!important;gap:6px!important;margin:0 0 13px!important;flex-wrap:wrap!important}
-    .product-meta span{
-      padding:5px 8px!important;
-      border:1px solid rgba(17,18,20,.07)!important;
-      background:#f5f2ec!important;
-      color:#6a645c!important;
-      font-size:9px!important;
-    }
-    .product-bottom{
-      display:grid!important;
-      grid-template-columns:1fr!important;
-      align-items:stretch!important;
-      gap:11px!important;
-    }
-    .price-stack{
-      width:100%!important;
-      display:grid!important;
-      grid-template-columns:repeat(2,minmax(0,1fr))!important;
-      gap:8px!important;
-    }
-    .price-row,.price-row.turnkey{
-      display:grid!important;
-      align-content:start!important;
-      gap:5px!important;
-      min-width:0!important;
-      padding:11px 12px!important;
-      border:1px solid rgba(17,18,20,.09)!important;
-      border-radius:12px!important;
-      background:#faf9f6!important;
-    }
-    .price-row.turnkey{
-      border-color:rgba(200,152,60,.28)!important;
-      background:#f8f2e7!important;
-    }
-    .price-row small{
-      min-height:27px!important;
-      color:#716b63!important;
-      font-size:9px!important;
-      line-height:1.35!important;
-    }
-    .price-row strong,.price-row.turnkey strong{
-      font-size:21px!important;
-      line-height:1.05!important;
-      letter-spacing:-.55px!important;
-    }
-    .price-row strong{color:#17191c!important}
-    .price-row.turnkey strong{color:#8a6326!important}
-    .select-product{
-      width:100%!important;
-      min-height:47px!important;
-      padding:12px 15px!important;
-      border-radius:12px!important;
-      font-size:13px!important;
-      font-weight:800!important;
-    }
-    @media(max-width:620px){
-      .card-thumbnails{padding:8px 9px 0!important;gap:6px!important}
-      .card-thumb{flex-basis:58px!important;width:58px!important;height:44px!important}
-      .product-info{padding:12px 14px 15px!important}
-      .product-labels{margin-bottom:8px!important}
-      .product-meta{margin-bottom:11px!important;flex-wrap:nowrap!important;overflow:hidden!important}
-      .product-meta span{font-size:9px!important;white-space:nowrap!important}
-      .price-stack{gap:7px!important}
-      .price-row,.price-row.turnkey{padding:10px!important;border-radius:11px!important}
-      .price-row small{min-height:31px!important;font-size:9px!important}
-      .price-row strong,.price-row.turnkey strong{font-size:19px!important}
-      .select-product{min-height:50px!important;font-size:14px!important}
-    }
-  </style>
-  <script>
-    (() => {
-      const polishCards = () => {
-        document.querySelectorAll('#catalogGrid .product-card').forEach(card => {
-          const desktop = card.querySelector('.button-label-desktop');
-          const mobile = card.querySelector('.button-label-mobile');
-          if (desktop) desktop.textContent = 'Рассчитать стоимость';
-          if (mobile) mobile.textContent = 'Рассчитать стоимость';
-        });
-      };
-      const grid = document.getElementById('catalogGrid');
-      if (grid) {
-        polishCards();
-        new MutationObserver(() => queueMicrotask(polishCards)).observe(grid, {childList:true});
-      }
-    })();
-  </script>
 </body>
 </html>
