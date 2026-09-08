@@ -36,3 +36,5 @@ jobs:
           git add .github/site-audit-fix.py index.html storefront.css public-site-settings.js app.js worker/leads-d1.js admin-leads.js
           git commit -m "Improve conversion flow after full site audit"
           git push origin main
+
+# Re-run after lead schema migration was applied directly.
