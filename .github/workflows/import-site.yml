@@ -4,7 +4,9 @@ on:
   push:
     paths:
       - 'kuznechny-dvorik-gallery-fixed.zip'
+      - 'kuznechny-dvorik-full-site.zip'
       - 'site-source.zip'
+      - '.github/workflows/import-site.yml'
   workflow_dispatch:
 
 permissions:
@@ -24,6 +26,8 @@ jobs:
           ZIP=''
           if [ -f 'kuznechny-dvorik-gallery-fixed.zip' ]; then
             ZIP='kuznechny-dvorik-gallery-fixed.zip'
+          elif [ -f 'kuznechny-dvorik-full-site.zip' ]; then
+            ZIP='kuznechny-dvorik-full-site.zip'
           elif [ -f 'site-source.zip' ]; then
             ZIP='site-source.zip'
           else
@@ -34,9 +38,16 @@ jobs:
           rm -rf /tmp/site-import
           mkdir -p /tmp/site-import
           unzip -q "$ZIP" -d /tmp/site-import
-          SOURCE='/tmp/site-import/site-export/source'
-          if [ ! -d "$SOURCE" ]; then
-            echo 'Expected site-export/source folder was not found.'
+
+          if [ -d '/tmp/site-import/site-export/source' ]; then
+            SOURCE='/tmp/site-import/site-export/source'
+          else
+            SOURCE=$(find /tmp/site-import -maxdepth 4 -type d -name source | head -n 1 || true)
+          fi
+
+          if [ -z "${SOURCE:-}" ] || [ ! -d "$SOURCE" ]; then
+            echo 'Site source folder was not found in ZIP.'
+            find /tmp/site-import -maxdepth 3 -type d -print
             exit 1
           fi
 
@@ -46,7 +57,7 @@ jobs:
             --exclude 'README.md' \
             "$SOURCE/" ./
 
-          rm -f "$ZIP"
+          rm -f 'kuznechny-dvorik-gallery-fixed.zip' 'kuznechny-dvorik-full-site.zip' 'site-source.zip'
 
       - name: Commit imported project
         shell: bash
