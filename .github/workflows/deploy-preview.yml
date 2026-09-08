@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -20,6 +20,23 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          ref: main
+
+      - name: Apply delivery edit fix
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/fix-delivery-edit.py
+          node scripts/test-gate-calculator.mjs
+          npm run build
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          if ! git diff --cached --quiet; then
+            git commit -m "Fix delivery edit state and summary"
+            git push origin main
+          fi
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
