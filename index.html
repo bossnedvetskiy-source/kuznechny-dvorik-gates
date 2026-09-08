@@ -295,5 +295,191 @@
       observer.observe(more);
     })();
   </script>
+  <script>
+    (() => {
+      const mq = window.matchMedia('(max-width: 620px)');
+      if (!mq.matches) return;
+
+      const calculator = document.getElementById('calculator');
+      const calcForm = document.getElementById('calcForm');
+      const leadRequest = document.getElementById('leadRequest');
+      const oldCta = document.getElementById('mobilePrimaryCta');
+      const mobileEstimateTotal = document.getElementById('mobileEstimateTotal');
+      const estimateLines = document.getElementById('estimateLines');
+      const estimateNote = document.getElementById('estimateNote');
+      const sendButton = document.getElementById('sendButton');
+      const phoneInput = document.getElementById('phoneInput');
+      const consentInput = document.getElementById('consentInput');
+      if (!calculator || !calcForm || !leadRequest || !oldCta || !mobileEstimateTotal) return;
+
+      const style = document.createElement('style');
+      style.textContent = `
+        @media(max-width:620px){
+          body.calculator-open{padding-bottom:64px!important}
+          body.mobile-lead-open{overflow:hidden!important}
+          .calculator-layout{display:block!important}
+          .calc-form{margin:0!important;padding-bottom:12px!important}
+          .calculator-open .mobile-cta{grid-template-columns:1fr!important;height:60px!important;padding:7px 9px!important;z-index:320!important}
+          .calculator-open .mobile-cta>a:first-child{display:none!important}
+          .calculator-open .mobile-cta>a:last-child{display:flex!important;width:100%!important;min-height:46px!important;border-radius:12px!important;font-size:13px!important;font-weight:800!important}
+
+          .mobile-price-breakdown{display:block!important;margin:12px 0 0!important;border:1px solid rgba(230,189,105,.28)!important;border-radius:13px!important;background:#101113!important;overflow:hidden!important;color:#fff!important}
+          .mobile-price-breakdown>summary{display:grid!important;grid-template-columns:1fr auto!important;align-items:center!important;gap:4px 12px!important;padding:12px 13px!important;list-style:none!important;cursor:pointer!important}
+          .mobile-price-breakdown>summary::-webkit-details-marker{display:none!important}
+          .mobile-price-breakdown>summary span{font-size:11px!important;color:rgba(255,255,255,.64)!important}
+          .mobile-price-breakdown>summary strong{grid-column:2;grid-row:1/3;font:19px/1 Prata,serif!important;color:var(--gold-light)!important;white-space:nowrap!important}
+          .mobile-price-breakdown>summary small{font-size:9px!important;color:rgba(255,255,255,.42)!important}
+          .mobile-price-breakdown-body{padding:0 13px 12px!important;border-top:1px solid rgba(255,255,255,.08)!important}
+          .mobile-price-lines{display:grid!important;gap:6px!important;padding-top:10px!important}
+          .mobile-price-lines .estimate-line{display:flex!important;justify-content:space-between!important;gap:12px!important;font-size:10px!important;color:rgba(255,255,255,.62)!important}
+          .mobile-price-lines .estimate-line strong{color:#fff!important;font-size:10px!important}
+          .mobile-price-note{margin:8px 0 0!important;color:rgba(255,255,255,.42)!important;font-size:9px!important;line-height:1.45!important}
+
+          .lead-sheet-backdrop{position:fixed!important;inset:0!important;background:rgba(0,0,0,.58)!important;backdrop-filter:blur(2px)!important;z-index:280!important;opacity:0!important;pointer-events:none!important;transition:opacity .2s ease!important}
+          body.mobile-lead-open .lead-sheet-backdrop{opacity:1!important;pointer-events:auto!important}
+          #leadRequest{position:fixed!important;left:10px!important;right:10px!important;bottom:66px!important;top:auto!important;width:auto!important;max-width:none!important;max-height:calc(100dvh - 92px)!important;overflow:auto!important;margin:0!important;padding:18px 15px 16px!important;border:1px solid rgba(230,189,105,.24)!important;border-radius:22px 22px 14px 14px!important;background:#141517!important;color:#fff!important;box-shadow:0 -18px 60px rgba(0,0,0,.48)!important;z-index:300!important;transform:translateY(calc(100% + 90px))!important;opacity:0!important;pointer-events:none!important;transition:transform .24s ease,opacity .2s ease!important}
+          body.mobile-lead-open #leadRequest{transform:translateY(0)!important;opacity:1!important;pointer-events:auto!important}
+          #leadRequest .estimate-top,#leadRequest>#estimateProduct,#leadRequest .estimate-breakdown,#leadRequest .privacy-copy,#leadRequest .copy-button,#leadRequest #sendButton{display:none!important}
+          #leadRequest .mobile-lead-heading{display:block!important;margin:8px 0 14px!important}
+          #leadRequest .mobile-lead-heading>span{display:none!important}
+          #leadRequest .mobile-lead-heading h3{margin:0 0 5px!important;color:#fff!important;font:25px/1.16 Prata,serif!important}
+          #leadRequest .mobile-lead-heading p{margin:0!important;color:rgba(255,255,255,.6)!important;font-size:11px!important;line-height:1.45!important}
+          .lead-sheet-handle{display:block!important;width:42px!important;height:4px!important;margin:0 auto 12px!important;border-radius:99px!important;background:rgba(255,255,255,.22)!important}
+          .lead-sheet-close{position:absolute!important;right:12px!important;top:10px!important;width:34px!important;height:34px!important;border:0!important;border-radius:50%!important;background:rgba(255,255,255,.07)!important;color:#fff!important;font-size:22px!important;line-height:1!important}
+          #leadRequest .lead-fields{display:grid!important;gap:10px!important;margin:0 0 10px!important}
+          #leadRequest .lead-fields label{display:grid!important;gap:6px!important;color:rgba(255,255,255,.62)!important;font-size:10px!important}
+          #leadRequest .lead-fields input,#leadRequest .lead-fields textarea{width:100%!important;min-height:50px!important;border:1px solid rgba(255,255,255,.14)!important;border-radius:12px!important;background:#0d0e10!important;color:#fff!important;font-size:16px!important;padding:12px 13px!important;box-shadow:none!important}
+          #leadRequest .lead-fields input::placeholder,#leadRequest .lead-fields textarea::placeholder{color:rgba(255,255,255,.38)!important}
+          #leadRequest .required-mark{color:var(--gold-light)!important}
+          #leadRequest .mobile-comment-toggle{background:#0d0e10!important;border-color:rgba(255,255,255,.14)!important;color:#fff!important;padding:11px 13px!important}
+          #leadRequest .lead-comment{display:none!important}
+          #leadRequest .lead-comment.is-open{display:grid!important}
+          #leadRequest .consent-row{display:grid!important;grid-template-columns:auto 1fr!important;gap:8px!important;margin:10px 0 0!important;color:rgba(255,255,255,.6)!important;font-size:9px!important;line-height:1.4!important}
+          #leadRequest .consent-row a{color:var(--gold-light)!important}
+          #leadRequest .consent-row input{width:19px!important;height:19px!important;margin-top:0!important}
+        }
+      `;
+      document.head.append(style);
+
+      const backdrop = document.createElement('div');
+      backdrop.className = 'lead-sheet-backdrop';
+      document.body.append(backdrop);
+
+      const handle = document.createElement('span');
+      handle.className = 'lead-sheet-handle';
+      leadRequest.prepend(handle);
+      const closeButton = document.createElement('button');
+      closeButton.type = 'button';
+      closeButton.className = 'lead-sheet-close';
+      closeButton.setAttribute('aria-label','Закрыть форму заявки');
+      closeButton.textContent = '×';
+      leadRequest.append(closeButton);
+
+      const leadHeading = leadRequest.querySelector('.mobile-lead-heading p');
+      if (leadHeading) leadHeading.textContent = 'Оставьте телефон — согласуем бесплатный замер.';
+
+      const leadFields = leadRequest.querySelector('.lead-fields');
+      if (leadFields) {
+        const labels = [...leadFields.children];
+        const phoneLabel = labels.find(label => label.querySelector('#phoneInput'));
+        const nameLabel = labels.find(label => label.querySelector('#nameInput'));
+        if (phoneLabel) leadFields.prepend(phoneLabel);
+        if (nameLabel) {
+          const nameInput = nameLabel.querySelector('#nameInput');
+          nameLabel.replaceChildren(document.createTextNode('Имя · необязательно'), nameInput);
+          if (phoneLabel) phoneLabel.after(nameLabel);
+        }
+      }
+
+      const estimateDetails = document.createElement('details');
+      estimateDetails.className = 'mobile-price-breakdown';
+      const estimateSummary = document.createElement('summary');
+      const estimateTitle = document.createElement('span');
+      estimateTitle.textContent = 'Итого';
+      const estimatePrice = document.createElement('strong');
+      const estimateHint = document.createElement('small');
+      estimateHint.textContent = 'Что входит в цену';
+      estimateSummary.append(estimateTitle, estimatePrice, estimateHint);
+      const estimateBody = document.createElement('div');
+      estimateBody.className = 'mobile-price-breakdown-body';
+      const estimateLinesCopy = document.createElement('div');
+      estimateLinesCopy.className = 'mobile-price-lines';
+      const estimateNoteCopy = document.createElement('p');
+      estimateNoteCopy.className = 'mobile-price-note';
+      estimateBody.append(estimateLinesCopy, estimateNoteCopy);
+      estimateDetails.append(estimateSummary, estimateBody);
+      calcForm.append(estimateDetails);
+
+      const syncBreakdown = () => {
+        estimatePrice.textContent = mobileEstimateTotal.textContent.trim();
+        if (estimateLines) estimateLinesCopy.innerHTML = estimateLines.innerHTML;
+        if (estimateNote) estimateNoteCopy.textContent = estimateNote.textContent;
+      };
+      syncBreakdown();
+      if (estimateLines) new MutationObserver(syncBreakdown).observe(estimateLines,{childList:true,subtree:true,characterData:true});
+      new MutationObserver(syncBreakdown).observe(mobileEstimateTotal,{childList:true,subtree:true,characterData:true});
+      if (estimateNote) new MutationObserver(syncBreakdown).observe(estimateNote,{childList:true,subtree:true,characterData:true});
+
+      const cta = oldCta.cloneNode(true);
+      oldCta.replaceWith(cta);
+      let sheetOpen = false;
+
+      const syncCta = () => {
+        const price = mobileEstimateTotal.textContent.trim();
+        if (calculator.hidden) cta.textContent = 'Рассчитать стоимость';
+        else if (sheetOpen) cta.textContent = `Отправить заявку · ${price}`;
+        else cta.textContent = `Получить точную цену · ${price}`;
+      };
+
+      const openSheet = () => {
+        if (sheetOpen) return;
+        sheetOpen = true;
+        document.body.classList.add('mobile-lead-open');
+        syncCta();
+        window.setTimeout(()=>phoneInput?.focus({preventScroll:true}),180);
+      };
+      const closeSheet = () => {
+        if (!sheetOpen) return;
+        sheetOpen = false;
+        document.body.classList.remove('mobile-lead-open');
+        syncCta();
+      };
+
+      backdrop.addEventListener('click',closeSheet);
+      closeButton.addEventListener('click',closeSheet);
+      document.addEventListener('keydown',event=>{if(event.key==='Escape')closeSheet()});
+      leadRequest.querySelector('a[href="#privacyPolicy"]')?.addEventListener('click',closeSheet);
+
+      cta.addEventListener('click',event=>{
+        event.preventDefault();
+        if (calculator.hidden) {
+          const selected = document.querySelector(`[data-card-product="${CSS.escape(document.getElementById('productSelect')?.value || '')}"] .select-product`) || document.querySelector('#catalogGrid .select-product');
+          selected?.click();
+          return;
+        }
+        if (!sheetOpen) {
+          openSheet();
+          return;
+        }
+        sendButton?.click();
+      });
+
+      const calculatorObserver = new MutationObserver(()=>{
+        if (calculator.hidden) closeSheet();
+        syncCta();
+      });
+      calculatorObserver.observe(calculator,{attributes:true,attributeFilter:['hidden']});
+      new MutationObserver(syncCta).observe(mobileEstimateTotal,{childList:true,subtree:true,characterData:true});
+      syncCta();
+
+      // Не прокручиваем к отдельной белой карточке — калькулятор остаётся единым экраном.
+      const mobileLeadButton = document.getElementById('mobileLeadButton');
+      mobileLeadButton?.addEventListener('click',event=>{
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        openSheet();
+      },true);
+    })();
+  </script>
 </body>
 </html>
