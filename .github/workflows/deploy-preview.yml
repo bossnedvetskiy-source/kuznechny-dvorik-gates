@@ -1,0 +1,84 @@
+name: Deploy test site to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Prepare static test build
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf _site
+          mkdir -p _site/catalog
+          cp index.html styles.css app.js prices.js catalog-images.js _site/
+          cp admin.html admin.css admin.js _site/
+          cp assets/hero-gates.jpg _site/hero-gates.jpg
+          cp -R assets/catalog/. _site/catalog/
+          cp delivery-prices.json _site/delivery-prices.json
+          touch _site/.nojekyll
+
+          node <<'NODE'
+          const fs = require('fs');
+          const delivery = fs.readFileSync('delivery-prices.json', 'utf8').trim();
+
+          let html = fs.readFileSync('_site/index.html', 'utf8');
+          html = html.replace('<script id="deliveryData" type="application/json">{}</script>', `<script id="deliveryData" type="application/json">${delivery.replace(/</g,'\\u003c')}</script>`);
+          html = html.replaceAll('/hero-gates.jpg', 'hero-gates.jpg');
+          html = html.replaceAll('/catalog/', 'catalog/');
+          fs.writeFileSync('_site/index.html', html);
+
+          let galleries = fs.readFileSync('_site/catalog-images.js', 'utf8');
+          galleries = galleries.replaceAll('/catalog/', 'catalog/');
+          fs.writeFileSync('_site/catalog-images.js', galleries);
+
+          let app = fs.readFileSync('_site/app.js', 'utf8');
+          app = app.replaceAll('/hero-gates.jpg', 'hero-gates.jpg');
+          app = app.replaceAll("fetch('/api/", "fetch('api/");
+          app = app.replaceAll('fetch(`/api/', 'fetch(`api/');
+          fs.writeFileSync('_site/app.js', app);
+
+          let admin = fs.readFileSync('_site/admin.html', 'utf8');
+          admin = admin.replaceAll('href="/"', 'href="./"');
+          fs.writeFileSync('_site/admin.html', admin);
+
+          let adminJs = fs.readFileSync('_site/admin.js', 'utf8');
+          adminJs = adminJs.replaceAll("'/api/", "'api/");
+          adminJs = adminJs.replaceAll('"/api/', '"api/');
+          fs.writeFileSync('_site/admin.js', adminJs);
+          NODE
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
