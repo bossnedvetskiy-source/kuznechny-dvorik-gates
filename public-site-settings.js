@@ -157,6 +157,7 @@
   setText('.hero h1 span', site.heroTitleMain);
   setText('.hero h1 em', site.heroTitleAccent);
   setText('.hero > p', site.heroText);
+  setText('.hero-prices > div:nth-child(2) small', 'Под ключ');
 
   const heroPoints = document.querySelectorAll('.hero-points > span');
   if (heroPoints[0] && site.warrantyYears) setBoldLine(heroPoints[0], `${site.warrantyYears} ${yearWord(site.warrantyYears)}`, 'гарантии на конструкцию');
