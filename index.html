@@ -95,7 +95,7 @@
     <section class="package section-shell" id="package">
       <div class="section-head">
         <div><span class="section-number">02</span><h2>Что входит в цену, если столбы уже есть</h2></div>
-        <p>В базовую цену входит изготовление ворот с калиткой и их установка на ваши готовые столбы.</p>
+        <p>В базовую цену входит изготовление ворот с калиткой и их установка на ваши существующие столбы.</p>
       </div>
       <div class="package-grid">
         <article><span>01</span><b>Прочный каркас</b><p>Профильная труба 40×25×2 мм.</p></article>
@@ -146,7 +146,7 @@
           <div class="form-block">
             <span class="step-label">02 · Комплектация</span>
             <div class="option-list">
-              <label class="choice"><input type="checkbox" id="installCheck" checked><span><b>Монтаж</b><small id="installHint">На готовые столбы</small></span><strong id="installPrice">+8 000 ₽</strong></label>
+              <label class="choice"><input type="checkbox" id="installCheck" checked><span><b>Монтаж</b><small id="installHint">Если столбы уже есть</small></span><strong id="installPrice">+8 000 ₽</strong></label>
               <label class="choice"><input type="checkbox" id="postsCheck"><span><b id="postsTitle">Новые усиленные столбы</b><small id="postsHint">Со связкой, установкой и бетонированием</small></span><strong id="postsPrice">+25 000 ₽</strong></label>
             </div>
             <label class="color-label" id="colorLabel">Цвет профнастила
@@ -162,7 +162,7 @@
               <input id="cityInput" list="citySuggestions" type="text" value="" placeholder="Введите ваш населённый пункт" autocomplete="address-level2" required>
               <datalist id="citySuggestions"></datalist>
             </label>
-            <div class="delivery-result" id="deliveryResult">Мелеуз · населённый пункт выбран</div>
+            <div class="delivery-result" id="deliveryResult">Выберите, где устанавливаем ворота.</div>
             <button class="route-button" id="routeButton" type="button" hidden>Рассчитать доставку</button>
             <details class="delivery-help">
               <summary>Как рассчитывается доставка?</summary>
@@ -657,7 +657,7 @@
       }
 
       const packageNote=document.querySelector('.package-note');
-      if(packageNote) packageNote.textContent='В базовую цену входит установка ворот с калиткой на готовые столбы. Новые усиленные столбы и доставка рассчитываются отдельно.';
+      if(packageNote) packageNote.textContent='В базовую цену входит установка ворот с калиткой, если подходящие столбы уже есть. Новые усиленные столбы и доставка рассчитываются отдельно.';
 
       const sortSelect=document.getElementById('sortSelect');
       sortSelect?.querySelector('option[value="recommended"]')?.remove();
@@ -801,7 +801,7 @@
   const catalog=document.getElementById('catalog');
   const filterbar=catalog?.querySelector('.filterbar');
   if(filterbar&&!catalog.querySelector('.catalog-price-context')){
-    const note=document.createElement('p');note.className='catalog-price-context';note.textContent='Цены в фильтре — с установкой на готовые столбы';filterbar.before(note);
+    const note=document.createElement('p');note.className='catalog-price-context';note.textContent='Цены в фильтре — если столбы уже есть';filterbar.before(note);
   }
   const cta=document.getElementById('mobilePrimaryCta'),calculator=document.getElementById('calculator'),total=document.getElementById('mobileEstimateTotal');
   if(!cta||!calculator)return;
