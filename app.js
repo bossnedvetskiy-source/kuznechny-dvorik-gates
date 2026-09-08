@@ -45,13 +45,7 @@ const photoZoom = (product,url) => {
   return Number.isFinite(zoom)?Math.max(.4,Math.min(4,zoom)):1;
 };
 const photoDisplayZoom = zoom => zoom>=1?zoom+.08:zoom;
-const photoStyle = (product,url) => {
-  const position=photoPosition(product,url);
-  const zoom=photoZoom(product,url);
-  const objectFit=product.fitMode==='cover'&&zoom>=1?'cover':'contain';
-  const transform=product.fitMode==='cover'?`scale(${photoDisplayZoom(zoom)})`:'none';
-  return `object-fit:${objectFit};object-position:${position};transform-origin:${position};transform:${transform}`;
-};
+const photoStyle = () => 'object-fit:contain;object-position:center;transform-origin:center;transform:none';
 
 const startingProduct = catalogProducts.reduce((best,product)=>product.price<best.price?product:best,catalogProducts[0]);
 document.getElementById('heroInstalledPrice').textContent = `от ${money(startingProduct.price + startingProduct.install)}`;
@@ -169,12 +163,10 @@ function shiftCardImage(card,direction){
   image.src=product.gallery[next];
   const backdrop=card.querySelector('.product-image-backdrop');
   if(backdrop)backdrop.src=product.gallery[next];
-  const position=photoPosition(product,product.gallery[next]);
-  const zoom=photoZoom(product,product.gallery[next]);
-  image.style.objectFit=product.fitMode==='cover'&&zoom>=1?'cover':'contain';
-  image.style.objectPosition=position;
-  image.style.transformOrigin=position;
-  image.style.transform=product.fitMode==='cover'?`scale(${photoDisplayZoom(zoom)})`:'none';
+  image.style.objectFit='contain';
+  image.style.objectPosition='center';
+  image.style.transformOrigin='center';
+  image.style.transform='none';
   image.alt=`Фотография ворот с калиткой ${product.art}, ${next+1} из ${product.gallery.length}`;
   card.querySelector('[data-photo-count]').textContent=`${next+1} из ${product.gallery.length}`;
 }
@@ -200,7 +192,8 @@ async function loadPublishedGalleries(){
       product.image=product.gallery[0];
       product.positions=published.positions&&typeof published.positions==='object'?published.positions:Object.fromEntries(product.gallery.map(url=>[url,{x:50,y:50}]));
       product.zooms=published.zooms&&typeof published.zooms==='object'?published.zooms:Object.fromEntries(product.gallery.map(url=>[url,1]));
-      product.fitMode=published.fitMode==='cover'?'cover':'contain';
+      // На витрине любое фото всегда показываем целиком, без обрезки.
+            product.fitMode='contain';
       product.media=published.mediaType==='sketch'?'sketch':'photo';
     }
     renderProducts();

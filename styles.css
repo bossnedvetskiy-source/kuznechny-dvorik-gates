@@ -119,3 +119,11 @@
 
   .mobile-cta{grid-template-columns:.58fr 1.42fr}.mobile-cta a{font-size:11px;line-height:1.15;text-align:center;padding:0 6px}.calculator-open .mobile-cta a:last-child{font-size:10px}
 }
+
+
+/* Автоматическая галерея: любое изображение показывается целиком, без обрезки и растягивания. */
+.product-card.photo .product-visual img,.product-card.photo.fit-cover .product-visual img{object-fit:contain!important;object-position:center!important;transform:none!important}
+.product-card.photo.fit-cover .product-visual{padding:10px!important;background:#131518!important}
+.product-card.photo.fit-cover .product-image-open{inset:10px!important;width:calc(100% - 20px)!important;height:calc(100% - 20px)!important}
+.product-image-backdrop{display:none!important}
+.hero-photo img,.work-gallery img,.selected-product-preview img,.lightbox-stage img{object-fit:contain!important;object-position:center!important;transform:none!important}

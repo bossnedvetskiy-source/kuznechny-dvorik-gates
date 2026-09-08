@@ -15,3 +15,8 @@
 @media(max-width:850px){.preview-panel{display:block}.preview-panel>.panel-heading{margin-bottom:18px}.fit-options{margin-top:13px}}
 .crop-actions{display:flex;align-items:center;justify-content:flex-end;gap:7px;flex-wrap:wrap}.zoom-control{display:grid;grid-template-columns:auto 34px minmax(90px,140px) 42px 34px;align-items:center;gap:7px;color:#72501e;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.4px}.crop-actions input{width:100%;accent-color:#a87525}.crop-actions output{font-size:10px;text-align:right}.crop-help .zoom-step{width:34px;min-height:34px;padding:0;font-size:18px;line-height:1}.card-preview.fit-cover img,.photo-thumb.fit-cover img{will-change:transform}
 @media(max-width:620px){.crop-help{align-items:stretch;flex-direction:column}.crop-actions{justify-content:flex-start}.zoom-control{flex:1 0 100%;grid-template-columns:auto 34px minmax(80px,1fr) 40px 34px}}
+
+
+/* Фото больше не нужно кадрировать вручную: редактор всегда показывает исходник целиком. */
+.crop-help,.fit-options{display:none!important}
+.card-preview img,.photo-thumb img{object-fit:contain!important;object-position:center!important;transform:none!important}

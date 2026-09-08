@@ -182,7 +182,7 @@ function parseStoredGallery(row) {
       photos,
       positions,
       zooms,
-      fitMode: row.fit_mode === 'cover' ? 'cover' : 'contain',
+      fitMode: 'contain',
       mediaType: row.media_type === 'sketch' ? 'sketch' : 'photo',
       customized: true
     };
@@ -246,7 +246,7 @@ async function saveGallery(request, env, article) {
   if (!photos.length) return json({error: 'В карточке должна остаться хотя бы одна фотография'}, 400);
   if (photos.length > 12) return json({error: 'Для одной модели можно добавить не больше 12 фотографий'}, 400);
   if (!photos.every(value => validPhotoUrl(article, value))) return json({error: 'В списке есть недопустимая фотография'}, 400);
-  const fitMode = body.fitMode === 'cover' ? 'cover' : 'contain';
+  const fitMode = 'contain';
   const mediaType = body.mediaType === 'sketch' ? 'sketch' : 'photo';
   const requestedPositions = body.positions && typeof body.positions === 'object' ? body.positions : {};
   const requestedZooms = body.zooms && typeof body.zooms === 'object' ? body.zooms : {};

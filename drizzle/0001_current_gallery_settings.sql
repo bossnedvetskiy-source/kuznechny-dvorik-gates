@@ -3,8 +3,8 @@ INSERT INTO `catalog_galleries`
 VALUES
   (
     'Арт.6',
-    '[{"url":"/catalog/art-6-1.webp","x":50,"y":50,"zoom":0.99},{"url":"/catalog/art-6-2.webp","x":50,"y":50,"zoom":1},{"url":"/catalog/art-6-3.webp","x":50,"y":50,"zoom":0.99}]',
-    'cover',
+    '[{"url":"/catalog/art-6-1.webp","x":50,"y":50,"zoom":1},{"url":"/catalog/art-6-2.webp","x":50,"y":50,"zoom":1},{"url":"/catalog/art-6-3.webp","x":50,"y":50,"zoom":1}]',
+    'contain',
     'photo',
     CURRENT_TIMESTAMP,
     'archive-export'

@@ -91,7 +91,7 @@ function cloneGallery(gallery) {
     positions,
     zooms,
     defaultPhotos: [...gallery.defaultPhotos],
-    fitMode: gallery.fitMode || 'contain',
+    fitMode: 'contain',
     mediaType: gallery.mediaType || 'photo',
     customized: Boolean(gallery.customized)
   };
@@ -147,10 +147,10 @@ function renderPhotos() {
     image.src = url;
     const position = draft.positions[url] || {x: 50, y: 50};
     const zoom = draft.zooms[url] || 1;
-    image.style.objectPosition = `${position.x}% ${position.y}%`;
-    image.style.objectFit = draft.fitMode === 'cover' && zoom >= 1 ? 'cover' : 'contain';
-    image.style.transformOrigin = `${position.x}% ${position.y}%`;
-    image.style.transform = draft.fitMode === 'cover' ? `scale(${displayZoom(zoom)})` : 'none';
+    image.style.objectPosition = 'center';
+    image.style.objectFit = 'contain';
+    image.style.transformOrigin = 'center';
+    image.style.transform = 'none';
     image.alt = `Фотография ${index + 1} для ${activeArticle}`;
     image.loading = 'lazy';
     const number = document.createElement('span');
@@ -182,13 +182,13 @@ function render() {
   previewPhotoBadge.textContent = selectedPhotoIndex === 0 ? 'Обложка' : `Фото ${selectedPhotoIndex + 1}`;
   coverPreview.src = selectedUrl;
   coverPreview.alt = `Фотография ${selectedPhotoIndex + 1} ворот ${activeArticle}`;
-  coverPreview.style.objectPosition = `${selectedPosition.x}% ${selectedPosition.y}%`;
-  coverPreview.style.objectFit = draft.fitMode === 'cover' && selectedZoom >= 1 ? 'cover' : 'contain';
-  coverPreview.style.transformOrigin = `${selectedPosition.x}% ${selectedPosition.y}%`;
-  coverPreview.style.transform = draft.fitMode === 'cover' ? `scale(${displayZoom(selectedZoom)})` : 'none';
-  cardPreview.className = `card-preview fit-${draft.fitMode}`;
-  cardPreview.classList.toggle('can-drag', draft.fitMode === 'cover' && selectedZoom >= 1);
-  cropHelp.hidden = draft.fitMode !== 'cover';
+  coverPreview.style.objectPosition = 'center';
+  coverPreview.style.objectFit = 'contain';
+  coverPreview.style.transformOrigin = 'center';
+  coverPreview.style.transform = 'none';
+  cardPreview.className = 'card-preview fit-contain';
+  cardPreview.classList.remove('can-drag');
+  cropHelp.hidden = true;
   cropZoom.value = String(Math.round(selectedZoom * 100));
   cropZoomValue.value = `${Math.round(selectedZoom * 100)}%`;
   cropZoomValue.textContent = cropZoomValue.value;
@@ -458,7 +458,7 @@ articleSelect.addEventListener('change', () => {
 });
 
 document.querySelectorAll('input[name="fitMode"]').forEach(input => input.addEventListener('change', () => {
-  draft.fitMode = input.value;
+  draft.fitMode = 'contain';
   setDirty();
   render();
 }));
@@ -473,7 +473,7 @@ saveButton.addEventListener('click', async () => {
     const data = await api(`/api/admin/catalog/${encodeURIComponent(activeArticle)}`, {
       method: 'POST',
       headers: {'content-type': 'application/json'},
-      body: JSON.stringify({photos: draft.photos, positions: draft.positions, zooms: draft.zooms, fitMode: draft.fitMode, mediaType: draft.mediaType, removedUrls})
+      body: JSON.stringify({photos: draft.photos, positions: draft.positions, zooms: draft.zooms, fitMode: 'contain', mediaType: draft.mediaType, removedUrls})
     });
     galleries[activeArticle] = {...cloneGallery(draft), ...data.gallery, defaultPhotos: [...draft.defaultPhotos]};
     draft.customized = true;
