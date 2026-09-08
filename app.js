@@ -252,6 +252,7 @@ citySuggestions.innerHTML = destinations.map(destination=>`<option value="${esca
 
 let deliveryState = {kind:'fixed',name:'Мелеуз',resolvedName:'Мелеуз',price:0};
 const DELIVERY_MEMORY_KEY='kuzdvor:selected-delivery';
+const POSTS_MEMORY_KEY='kuzdvor:strengthened-posts';
 
 function rememberDeliverySelection(){
   if(!['fixed','calculated'].includes(deliveryState.kind))return;
@@ -300,7 +301,12 @@ function chooseProduct(id){
   const product=selectedProduct();
   widthInput.value=product.standard[0];heightInput.value=product.standard[1];
   wicketWidthInput.value=product.wicketWidth??1;
-  installCheck.checked=product.install>0;postsCheck.checked=false;
+  installCheck.checked=product.install>0;
+  if(product.type==='catalog'&&product.posts){
+    try{postsCheck.checked=sessionStorage.getItem(POSTS_MEMORY_KEY)==='1'}catch{postsCheck.checked=false}
+  }else{
+    postsCheck.checked=false;
+  }
   if(!cityInput.value.trim())restoreDeliverySelection();
   updateControls();calculate();
 }
@@ -431,6 +437,11 @@ function updateDeliveryFromCity(){
 
 cityInput.addEventListener('input',updateDeliveryFromCity);
 cityInput.addEventListener('change',updateDeliveryFromCity);
+postsCheck.addEventListener('change',()=>{
+  const product=selectedProduct();
+  if(product?.type!=='catalog')return;
+  try{sessionStorage.setItem(POSTS_MEMORY_KEY,postsCheck.checked?'1':'0')}catch{}
+});
 if(restoreDeliverySelection())calculate();
 
 routeButton.addEventListener('click',async()=>{
