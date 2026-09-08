@@ -1,0 +1,54 @@
+name: One-off privacy modal fix
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/privacy-modal-fix.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Replace privacy jump with modal
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('index.html')
+          text = path.read_text(encoding='utf-8')
+
+          css_old = '''          #leadRequest .consent-row input{width:19px!important;height:19px!important;margin-top:0!important}\n        }'''
+          css_new = '''          #leadRequest .consent-row input{width:19px!important;height:19px!important;margin-top:0!important}\n\n          body.mobile-policy-open{overflow:hidden!important}\n          body.mobile-policy-open .mobile-cta{display:none!important}\n          .policy-modal-backdrop{position:fixed!important;inset:0!important;background:rgba(0,0,0,.72)!important;backdrop-filter:blur(3px)!important;z-index:350!important}\n          .policy-modal{position:fixed!important;left:12px!important;right:12px!important;top:calc(env(safe-area-inset-top,0px) + 14px)!important;bottom:calc(env(safe-area-inset-bottom,0px) + 14px)!important;display:grid!important;grid-template-rows:auto minmax(0,1fr) auto!important;background:#f4f1e9!important;color:#181818!important;border-radius:20px!important;overflow:hidden!important;z-index:360!important;box-shadow:0 24px 80px rgba(0,0,0,.52)!important}\n          .policy-modal[hidden],.policy-modal-backdrop[hidden]{display:none!important}\n          .policy-modal-head{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:12px!important;padding:15px 15px 12px!important;border-bottom:1px solid rgba(17,18,20,.1)!important}\n          .policy-modal-head strong{font:18px/1.25 Prata,serif!important}\n          .policy-modal-close{flex:0 0 36px!important;width:36px!important;height:36px!important;border:0!important;border-radius:50%!important;background:#1a1b1d!important;color:#fff!important;font-size:23px!important;line-height:1!important}\n          .policy-modal-body{overflow:auto!important;-webkit-overflow-scrolling:touch!important;padding:14px 15px 18px!important}\n          .policy-modal-body h2{font:20px/1.25 Prata,serif!important;margin:0 0 12px!important}\n          .policy-modal-body p{margin:0 0 11px!important;color:#625d55!important;font-size:11px!important;line-height:1.58!important}\n          .policy-modal-actions{padding:10px 12px 12px!important;border-top:1px solid rgba(17,18,20,.1)!important;background:#f4f1e9!important}\n          .policy-modal-continue{width:100%!important;min-height:50px!important;border:0!important;border-radius:13px!important;background:var(--gold)!important;color:#17130b!important;font-size:13px!important;font-weight:800!important}\n        }'''
+          if css_old not in text:
+              raise SystemExit('CSS anchor not found')
+          text = text.replace(css_old, css_new, 1)
+
+          dom_old = '''      leadRequest.append(closeButton);\n\n      const leadHeading = leadRequest.querySelector('.mobile-lead-heading p');'''
+          dom_new = '''      leadRequest.append(closeButton);\n\n      const policyBackdrop = document.createElement('div');\n      policyBackdrop.className = 'policy-modal-backdrop';\n      policyBackdrop.hidden = true;\n      const policyModal = document.createElement('section');\n      policyModal.className = 'policy-modal';\n      policyModal.hidden = true;\n      policyModal.setAttribute('role','dialog');\n      policyModal.setAttribute('aria-modal','true');\n      policyModal.setAttribute('aria-label','Политика обработки персональных данных');\n      policyModal.innerHTML = `\n        <div class="policy-modal-head"><strong>Политика обработки данных</strong><button class="policy-modal-close" type="button" aria-label="Закрыть">×</button></div>\n        <div class="policy-modal-body"></div>\n        <div class="policy-modal-actions"><button class="policy-modal-continue" type="button">Продолжить оформление заказа</button></div>\n      `;\n      const policySource = document.querySelector('#privacyPolicy .privacy-content');\n      if (policySource) policyModal.querySelector('.policy-modal-body').innerHTML = policySource.innerHTML;\n      document.body.append(policyBackdrop, policyModal);\n\n      const leadHeading = leadRequest.querySelector('.mobile-lead-heading p');'''
+          if dom_old not in text:
+              raise SystemExit('DOM anchor not found')
+          text = text.replace(dom_old, dom_new, 1)
+
+          handler_old = '''      backdrop.addEventListener('click',closeSheet);\n      closeButton.addEventListener('click',closeSheet);\n      document.addEventListener('keydown',event=>{if(event.key==='Escape')closeSheet()});\n      const privacyLink = leadRequest.querySelector('a[href="#privacyPolicy"]');\n      privacyLink?.addEventListener('click', event => {\n        event.preventDefault();\n        phoneInput?.blur();\n        closeSheet();\n        const privacySection = document.getElementById('privacyPolicy');\n        const privacyDetails = privacySection?.querySelector('details');\n        if (privacyDetails) privacyDetails.open = true;\n        window.setTimeout(() => {\n          privacySection?.scrollIntoView({behavior:'smooth', block:'start'});\n          try { history.replaceState(null, '', '#privacyPolicy'); } catch {}\n        }, 120);\n      });'''
+          handler_new = '''      let policyOpen = false;\n      const openPolicy = () => {\n        phoneInput?.blur();\n        policyOpen = true;\n        document.body.classList.remove('lead-keyboard-open');\n        document.body.classList.add('mobile-policy-open');\n        policyBackdrop.hidden = false;\n        policyModal.hidden = false;\n        const body = policyModal.querySelector('.policy-modal-body');\n        if (body) body.scrollTop = 0;\n      };\n      const closePolicy = () => {\n        if (!policyOpen) return;\n        policyOpen = false;\n        document.body.classList.remove('mobile-policy-open');\n        policyBackdrop.hidden = true;\n        policyModal.hidden = true;\n        syncViewport();\n      };\n\n      backdrop.addEventListener('click',closeSheet);\n      closeButton.addEventListener('click',closeSheet);\n      policyBackdrop.addEventListener('click',closePolicy);\n      policyModal.querySelector('.policy-modal-close')?.addEventListener('click',closePolicy);\n      policyModal.querySelector('.policy-modal-continue')?.addEventListener('click',closePolicy);\n      document.addEventListener('keydown',event=>{\n        if(event.key!=='Escape') return;\n        if(policyOpen) closePolicy();\n        else closeSheet();\n      });\n      const privacyLink = leadRequest.querySelector('a[href="#privacyPolicy"]');\n      privacyLink?.addEventListener('click', event => {\n        event.preventDefault();\n        openPolicy();\n      });'''
+          if handler_old not in text:
+              raise SystemExit('Privacy handler anchor not found')
+          text = text.replace(handler_old, handler_new, 1)
+
+          path.write_text(text, encoding='utf-8')
+          PY
+      - name: Commit fix
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git commit -m "Show privacy policy in closable order modal"
+          git push origin main
