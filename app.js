@@ -613,7 +613,8 @@ document.getElementById('copyButton').addEventListener('click',async()=>{
 });
 phoneInput.addEventListener('input',()=>phoneInput.removeAttribute('aria-invalid'));
 consentInput?.addEventListener('change',()=>consentInput.removeAttribute('aria-invalid'));
-document.getElementById('sendButton').addEventListener('click',()=>{
+document.getElementById('sendButton').addEventListener('click',async()=>{
+  const button=document.getElementById('sendButton');
   const phoneDigits=phoneInput.value.replace(/\D/g,'');
   if(phoneDigits.length<10||phoneDigits.length>11){
     phoneInput.setAttribute('aria-invalid','true');phoneInput.focus();showToast('Укажите номер телефона');return;
@@ -625,18 +626,15 @@ document.getElementById('sendButton').addEventListener('click',()=>{
     consentInput.setAttribute('aria-invalid','true');consentInput.focus();showToast('Подтвердите согласие на обработку данных');return;
   }
   const payload=leadPayload();
-  fetch('/api/leads',{
-    method:'POST',
-    headers:{'content-type':'application/json'},
-    body:JSON.stringify(payload),
-    keepalive:true
-  }).then(async response=>{
-    if(!response.ok){const data=await response.json().catch(()=>({}));throw new Error(data.error||'Не удалось сохранить заявку')}
+  button.disabled=true;
+  try{
+    const response=await fetch('/api/leads',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload),keepalive:true});
+    if(!response.ok){const data=await response.json().catch(()=>({}));throw new Error(data.error||'Не удалось отправить заявку')}
     if(window.ym)ym(107269914,'reachGoal','lead_saved',{article:selectedProduct().art,city:selectedCityName()});
-  }).catch(()=>{});
-  if(window.ym)ym(107269914,'reachGoal','whatsapp_request',{article:selectedProduct().art,city:selectedCityName()});
-  const whatsappDigits=String((window.SITE_SETTINGS||{}).whatsappDigits||'79373296750');
-  window.open(`https://wa.me/${whatsappDigits}?text=${encodeURIComponent(payload.message)}`,'_blank','noopener');
+    document.dispatchEvent(new CustomEvent('lead-sent',{detail:{payload}}));
+    showToast('Заявка отправлена');
+  }catch(error){showToast(error?.message||'Не удалось отправить заявку')}
+  finally{button.disabled=false;}
 });
 
 document.querySelectorAll('a[href^="tel:"]').forEach(link=>link.addEventListener('click',()=>{
