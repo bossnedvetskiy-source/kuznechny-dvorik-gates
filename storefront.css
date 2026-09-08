@@ -153,3 +153,46 @@
   .hero-points>span>b{grid-column:2;grid-row:1;margin:0!important;font-size:16px!important;white-space:nowrap}
   .hero-points>span::after{grid-column:1/-1;font-size:10px!important}
 }
+
+/* Цены первого экрана: одинаковая вертикальная структура без ломаных переносов. */
+.hero-prices>div{
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:flex-start!important;
+  justify-content:center!important;
+  gap:5px!important;
+  min-height:108px!important;
+  padding:14px 16px!important;
+}
+.hero-prices small{
+  display:block!important;
+  margin:0!important;
+  color:rgba(255,255,255,.62)!important;
+  font-size:11px!important;
+  line-height:1.25!important;
+  white-space:nowrap!important;
+}
+.hero-prices strong{
+  display:block!important;
+  margin:0!important;
+  color:var(--gold-light)!important;
+  font:24px/1.08 Prata,serif!important;
+  letter-spacing:-.35px!important;
+  white-space:nowrap!important;
+}
+.hero-prices span{
+  display:block!important;
+  margin:0!important;
+  color:rgba(255,255,255,.68)!important;
+  font-size:10px!important;
+  line-height:1.35!important;
+}
+@media(max-width:620px){
+  .hero-prices>div{min-height:100px!important;padding:12px!important;gap:4px!important}
+  .hero-prices small{font-size:10px!important}
+  .hero-prices strong{font-size:20px!important}
+  .hero-prices span{font-size:9px!important}
+}
+@media(max-width:390px){
+  .hero-prices>div{display:flex!important;grid-template-columns:none!important;align-items:flex-start!important}
+}
