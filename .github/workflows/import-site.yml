@@ -3,7 +3,8 @@ name: Import full site source
 on:
   push:
     paths:
-      - 'site-source.part-*'
+      - 'kuznechny-dvorik-gallery-fixed.zip'
+      - 'site-source.zip'
   workflow_dispatch:
 
 permissions:
@@ -16,31 +17,36 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Reassemble and extract site
+      - name: Extract site archive
         shell: bash
         run: |
           set -euo pipefail
-          shopt -s nullglob
-          parts=(site-source.part-*)
-          if [ ${#parts[@]} -eq 0 ]; then
-            echo 'No archive parts found.'
+          ZIP=''
+          if [ -f 'kuznechny-dvorik-gallery-fixed.zip' ]; then
+            ZIP='kuznechny-dvorik-gallery-fixed.zip'
+          elif [ -f 'site-source.zip' ]; then
+            ZIP='site-source.zip'
+          else
+            echo 'No supported site ZIP found.'
             exit 1
           fi
-          cat "${parts[@]}" > /tmp/site-source.zip
+
           rm -rf /tmp/site-import
           mkdir -p /tmp/site-import
-          unzip -q /tmp/site-source.zip -d /tmp/site-import
+          unzip -q "$ZIP" -d /tmp/site-import
           SOURCE='/tmp/site-import/site-export/source'
           if [ ! -d "$SOURCE" ]; then
             echo 'Expected site-export/source folder was not found.'
             exit 1
           fi
+
           rsync -a --delete \
             --exclude '.git/' \
             --exclude '.github/' \
             --exclude 'README.md' \
             "$SOURCE/" ./
-          rm -f site-source.part-*
+
+          rm -f "$ZIP"
 
       - name: Commit imported project
         shell: bash
