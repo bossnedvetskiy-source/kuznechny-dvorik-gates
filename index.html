@@ -267,5 +267,33 @@
   <script src="catalog-images.js"></script>
   <script src="prices.js"></script>
   <script src="app.js"></script>
+  <script>
+    (() => {
+      const more = document.getElementById('catalogMore');
+      const button = document.getElementById('showMoreButton');
+      if (!more || !button) return;
+
+      // Кнопка остаётся как технический fallback для существующей логики каталога,
+      // но клиент её не видит: следующая порция карточек подгружается при прокрутке.
+      button.style.display = 'none';
+
+      if (!('IntersectionObserver' in window)) {
+        // Для очень старых браузеров сразу показываем весь каталог.
+        let guard = 0;
+        while (!button.hidden && guard < 20) {
+          button.click();
+          guard += 1;
+        }
+        return;
+      }
+
+      const observer = new IntersectionObserver(entries => {
+        if (!entries.some(entry => entry.isIntersecting) || button.hidden) return;
+        button.click();
+      }, {rootMargin: '0px 0px 450px 0px', threshold: 0});
+
+      observer.observe(more);
+    })();
+  </script>
 </body>
 </html>
