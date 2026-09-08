@@ -253,3 +253,18 @@
   .calculator-open .mobile-cta a:last-child::after{content:none!important;display:none!important}
   .calculator-open .toast{bottom:74px!important}
 }
+
+
+/* Desktop UX sync 2026-09 */
+@media(min-width:621px){
+  .hero-size-note{margin:10px 0 0!important;color:rgba(255,255,255,.48)!important;font-size:11px!important;line-height:1.45!important;max-width:560px!important}
+  .product-meta span{font-size:10px!important}
+  .price-row small{font-size:11px!important;min-height:30px!important}
+  .estimate-line{font-size:13px!important}
+  .estimate-note{font-size:11px!important}
+  .consent-row{font-size:11px!important}
+  .product-picker-label{display:none!important}
+  .desktop-change-model{margin-top:7px;border:0;background:transparent;color:#d9af5e;font-size:12px;font-weight:800;padding:0;cursor:pointer;text-align:left}
+  .desktop-change-model:hover{text-decoration:underline}
+}
+@media(max-width:620px){.hero-size-note{display:none!important}}
