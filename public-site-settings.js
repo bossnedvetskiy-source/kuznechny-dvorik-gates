@@ -147,7 +147,7 @@
       .simplified-posts-block .choice strong{font-size:12px!important}
       .simplified-posts-block .color-label{margin-top:10px!important}
       #calcForm .mobile-price-breakdown>summary small{font-size:0!important}
-      #calcForm .mobile-price-breakdown>summary small::after{content:"С установкой на готовые столбы";font-size:9px!important;color:rgba(255,255,255,.42)!important}
+      #calcForm .mobile-price-breakdown>summary small::after{content:"Если столбы уже есть";font-size:9px!important;color:rgba(255,255,255,.42)!important}
       #calcForm:has(#postsCheck:checked) .mobile-price-breakdown>summary small::after{content:"Под ключ с новыми усиленными столбами"}
     }
   `;
@@ -309,7 +309,7 @@
   setText('.hero h1 span', site.heroTitleMain);
   setText('.hero h1 em', site.heroTitleAccent);
   setText('.hero > p', site.heroText);
-  setText('.hero-prices > div:nth-child(2) small', 'Под ключ');
+  setText('.hero-prices > div:nth-child(2) small', 'Под ключ с новыми столбами');
 
   const heroPoints = document.querySelectorAll('.hero-points > span');
   if (heroPoints[0] && site.warrantyYears) setBoldLine(heroPoints[0], `${site.warrantyYears} ${yearWord(site.warrantyYears)}`, 'гарантии на конструкцию');
@@ -470,7 +470,7 @@
     const syncInstallNote = () => {
       note.textContent = postsCheck.checked
         ? 'Расчёт под ключ с новыми усиленными столбами'
-        : 'В цену уже входит установка на готовые столбы';
+        : 'Если столбы уже есть — установка ворот и калитки уже входит в цену';
     };
     postsCheck.addEventListener('change', syncInstallNote);
     syncInstallNote();

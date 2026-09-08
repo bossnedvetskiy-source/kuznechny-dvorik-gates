@@ -278,3 +278,28 @@
   .catalog-trust-strip{grid-template-columns:1fr 1fr;gap:6px;margin:12px 0 10px}
   .catalog-trust-strip span{min-height:38px;padding:7px 8px;font-size:10px}
 }
+
+
+/* Final usability polish 2026-09-09 */
+.dimension-help{display:block;margin:8px 0 0;color:rgba(255,255,255,.58);font-size:12px;line-height:1.4}
+.delivery-choice-buttons{display:grid;grid-template-columns:1fr 1.35fr;gap:8px;margin:8px 0 10px}
+.delivery-choice-buttons button{min-height:46px;border:1px solid rgba(255,255,255,.16);border-radius:11px;background:#101113;color:#fff;padding:9px 12px;font-size:13px;font-weight:800;cursor:pointer}
+.delivery-choice-buttons button.is-active{border-color:rgba(230,189,105,.72);background:rgba(230,189,105,.12);color:var(--gold-light)}
+.delivery-choice-wrap .city-label{display:none}
+.delivery-choice-wrap .city-label.is-visible{display:grid}
+
+@media(max-width:620px){
+  .hero>.hero-photo{display:none!important}
+  .hero>.hero-size-note{order:5!important;margin:9px 0 0!important}
+  .hero>.hero-actions{order:6!important}
+  .hero>.hero-points{order:7!important}
+  .price-row small{font-size:11px!important;line-height:1.35!important}
+  .filter-tabs .filter,.mobile-delivery-summary button{min-height:44px!important}
+  .delivery-choice-buttons{grid-template-columns:1fr 1.35fr;gap:7px;margin:8px 0 9px}
+  .delivery-choice-buttons button{min-height:46px;font-size:12px;padding:8px 9px}
+  .dimension-help{font-size:12px!important;color:rgba(255,255,255,.66)!important}
+}
+@media(max-width:390px){
+  .price-stack{grid-template-columns:1fr!important}
+  .price-row small{min-height:0!important}
+}

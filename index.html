@@ -42,8 +42,8 @@
       <h1><span>Ворота с калиткой</span><em>по вашим размерам</em></h1>
       <p>Выберите дизайн и сразу узнайте предварительную стоимость с монтажом, столбами и доставкой.</p>
       <div class="hero-prices" aria-label="Минимальная стоимость стандартного комплекта">
-        <div><small>На готовые столбы</small><strong id="heroInstalledPrice">от 64 600 ₽</strong><span>ворота, калитка и монтаж</span></div>
-        <div><small>Полностью под ключ</small><strong id="heroTurnkeyPrice">от 89 600 ₽</strong><span>с новыми усиленными столбами</span></div>
+        <div><small>Если столбы уже есть</small><strong id="heroInstalledPrice">от 64 600 ₽</strong><span>ворота, калитка и монтаж</span></div>
+        <div><small>Под ключ с новыми столбами</small><strong id="heroTurnkeyPrice">от 89 600 ₽</strong><span>с новыми усиленными столбами</span></div>
       </div>
       <div class="hero-size-note">Цены указаны для стандартного размера: ворота 3,4×1,8 м и калитка 1×1,8 м. Другие размеры можно рассчитать на сайте.</div>
       <div class="hero-actions">
@@ -94,8 +94,8 @@
 
     <section class="package section-shell" id="package">
       <div class="section-head">
-        <div><span class="section-number">02</span><h2>Что входит в комплект</h2></div>
-        <p>Стоимость модели уже включает изготовление готовых ворот и калитки стандартного размера.</p>
+        <div><span class="section-number">02</span><h2>Что входит в цену, если столбы уже есть</h2></div>
+        <p>В базовую цену входит изготовление ворот с калиткой и их установка на ваши готовые столбы.</p>
       </div>
       <div class="package-grid">
         <article><span>01</span><b>Прочный каркас</b><p>Профильная труба 40×25×2 мм.</p></article>
@@ -105,7 +105,7 @@
         <article><span>05</span><b>Порошковая окраска</b><p>Подготовка металла, окраска и защитный лак.</p></article>
         <article><span>06</span><b>Изготовление</b><p>По размерам вашего проёма, до 30 рабочих дней.</p></article>
       </div>
-      <p class="package-note">Стандарт: ворота 3,4×1,8 м и калитка 1×1,8 м. В базовую цену входит установка на готовые столбы. Новые усиленные столбы и доставка рассчитываются отдельно.</p>
+      <p class="package-note">Стандарт: ворота 3,4×1,8 м и калитка 1×1,8 м. В цену входят изготовление и установка ворот с калиткой, если подходящие столбы уже есть. Новые усиленные столбы и доставка рассчитываются отдельно.</p>
     </section>
 
     <section class="calculator inline-calculator" id="calculator" hidden>
@@ -134,11 +134,12 @@
               <select id="productSelect" name="product"></select>
             </label>
             <div class="dimensions">
-              <label><span id="widthLabelText">Ширина ворот, м</span><input id="widthInput" type="number" min="0.8" max="8" step="0.1" value="3.4" inputmode="decimal"></label>
+              <label><span id="widthLabelText">Ширина ворот без калитки, м</span><input id="widthInput" type="number" min="0.8" max="8" step="0.1" value="3.4" inputmode="decimal"></label>
               <label id="wicketWidthWrap">Ширина калитки, м<input id="wicketWidthInput" type="number" min="0.7" max="2.5" step="0.05" value="1" inputmode="decimal"></label>
               <label>Высота ворот, м<input id="heightInput" type="number" min="1" max="3" step="0.1" value="1.8" inputmode="decimal"></label>
               <label id="wicketHeightWrap">Высота калитки, м<input id="wicketHeightInput" type="number" min="1" max="3" step="0.1" value="1.8" inputmode="decimal"></label>
             </div>
+            <small class="dimension-help" id="dimensionHelp">Ворота и калитка указываются отдельно.</small>
             <div class="size-notice" id="sizeNotice" hidden>Цена пересчитана по выбранным размерам</div>
           </div>
 
@@ -158,7 +159,7 @@
           <div class="form-block">
             <span class="step-label">03 · Доставка</span>
             <label class="city-label">Населённый пункт
-              <input id="cityInput" list="citySuggestions" type="text" value="Мелеуз" placeholder="Выберите или введите название" autocomplete="address-level2" required>
+              <input id="cityInput" list="citySuggestions" type="text" value="" placeholder="Введите ваш населённый пункт" autocomplete="address-level2" required>
               <datalist id="citySuggestions"></datalist>
             </label>
             <div class="delivery-result" id="deliveryResult">Мелеуз · населённый пункт выбран</div>
@@ -276,31 +277,6 @@
   <script src="gate-calc-models.js"></script>
   <script src="gate-calc-engine.js"></script>
   <script src="app.js"></script>
-  <script>
-    (() => {
-      const more = document.getElementById('catalogMore');
-      const button = document.getElementById('showMoreButton');
-      if (!more || !button) return;
-      button.style.display = '';
-      return;
-
-      if (!('IntersectionObserver' in window)) {
-        let guard = 0;
-        while (!button.hidden && guard < 20) {
-          button.click();
-          guard += 1;
-        }
-        return;
-      }
-
-      const observer = new IntersectionObserver(entries => {
-        if (!entries.some(entry => entry.isIntersecting) || button.hidden) return;
-        button.click();
-      }, {rootMargin: '0px 0px 450px 0px', threshold: 0});
-
-      observer.observe(more);
-    })();
-  </script>
   <script>
     (() => {
       const mq = window.matchMedia('(max-width: 620px)');
@@ -699,7 +675,9 @@
         back.addEventListener('click',()=>{
           try{ if(typeof closeInlineCalculator==='function') closeInlineCalculator(); else calculator.hidden=true; }catch{ calculator.hidden=true; }
           document.body.classList.remove('calculator-open','mobile-lead-open','lead-keyboard-open');
-          catalog?.scrollIntoView({behavior:'smooth',block:'start'});
+          const activeId=productSelect?.value||'';
+          const activeCard=activeId?catalog?.querySelector(`[data-card-product="${CSS.escape(activeId)}"]`):null;
+          (activeCard||catalog)?.scrollIntoView({behavior:'smooth',block:'center'});
         });
         preview.append(back);
       }
@@ -715,38 +693,40 @@
       syncPosts();
 
       const deliveryBlock=cityInput?.closest('.form-block');
-      if(deliveryBlock&&!deliveryBlock.classList.contains('mobile-delivery-wrap')){
-        deliveryBlock.classList.add('mobile-delivery-wrap');
-        const summary=document.createElement('div');
-        summary.className='mobile-delivery-summary';
-        summary.innerHTML='<span>Доставка</span><strong></strong><button type="button">Изменить</button>';
-        deliveryBlock.querySelector('.step-label')?.after(summary);
-        const summaryValue=summary.querySelector('strong');
-        const syncDeliverySummary=()=>{
+      if(deliveryBlock&&!deliveryBlock.classList.contains('delivery-choice-wrap')){
+        deliveryBlock.classList.add('delivery-choice-wrap');
+        const cityLabel=deliveryBlock.querySelector('.city-label');
+        const chooser=document.createElement('div');
+        chooser.className='delivery-choice-buttons';
+        chooser.innerHTML='<button type="button" data-delivery-choice="meleuz">Мелеуз</button><button type="button" data-delivery-choice="other">Другой населённый пункт</button>';
+        cityLabel?.before(chooser);
+        const meleuzButton=chooser.querySelector('[data-delivery-choice="meleuz"]');
+        const otherButton=chooser.querySelector('[data-delivery-choice="other"]');
+        const normalized=value=>String(value||'').trim().toLocaleLowerCase('ru-RU').replace(/ё/g,'е');
+        const syncDeliveryChoice=()=>{
           const city=(cityInput?.value||'').trim();
-          const result=(deliveryResult?.textContent||'').toLowerCase();
-          if(!city) summaryValue.textContent='Укажите населённый пункт';
-          else if(city.toLowerCase().replace('ё','е')==='мелеуз') summaryValue.textContent='Мелеуз — бесплатно';
-          else if(result.includes('бесплат')) summaryValue.textContent=`${city} — бесплатно`;
-          else if(result.includes('выбран')||result.includes('подтвержд')) summaryValue.textContent=`${city} — доставка учтена в итоге`;
-          else summaryValue.textContent=city;
-          const chosen=Boolean(city)&&(result.includes('бесплат')||result.includes('выбран')||result.includes('подтвержд'));
-          if(chosen) deliveryBlock.classList.remove('is-editing');
+          const isMeleuz=normalized(city)==='мелеуз';
+          const isOther=Boolean(city)&&!isMeleuz;
+          meleuzButton?.classList.toggle('is-active',isMeleuz);
+          otherButton?.classList.toggle('is-active',isOther||deliveryBlock.dataset.mode==='other');
+          meleuzButton?.setAttribute('aria-pressed',String(isMeleuz));
+          otherButton?.setAttribute('aria-pressed',String(isOther||deliveryBlock.dataset.mode==='other'));
+          cityLabel?.classList.toggle('is-visible',isOther||deliveryBlock.dataset.mode==='other');
         };
-        if(cityInput) cityInput.placeholder='Введите ваш населённый пункт';
-        summary.querySelector('button').addEventListener('click',()=>{
-          deliveryBlock.classList.add('is-editing');
-          if(cityInput){
-            cityInput.value='';
-            cityInput.placeholder='Введите ваш населённый пункт';
-            cityInput.dispatchEvent(new Event('input',{bubbles:true}));
-          }
-          setTimeout(()=>cityInput?.focus(),80);
+        meleuzButton?.addEventListener('click',()=>{
+          deliveryBlock.dataset.mode='meleuz';
+          if(cityInput){cityInput.value='Мелеуз';cityInput.dispatchEvent(new Event('input',{bubbles:true}));cityInput.blur();}
+          syncDeliveryChoice();
         });
-        cityInput?.addEventListener('input',syncDeliverySummary);
-        cityInput?.addEventListener('change',syncDeliverySummary);
-        if(deliveryResult) new MutationObserver(syncDeliverySummary).observe(deliveryResult,{childList:true,subtree:true,characterData:true});
-        syncDeliverySummary();
+        otherButton?.addEventListener('click',()=>{
+          deliveryBlock.dataset.mode='other';
+          if(cityInput&&normalized(cityInput.value)==='мелеуз'){cityInput.value='';cityInput.dispatchEvent(new Event('input',{bubbles:true}));}
+          syncDeliveryChoice();
+          setTimeout(()=>cityInput?.focus(),60);
+        });
+        cityInput?.addEventListener('input',()=>{if(cityInput.value.trim()&&normalized(cityInput.value)!=='мелеуз')deliveryBlock.dataset.mode='other';syncDeliveryChoice();});
+        cityInput?.addEventListener('change',syncDeliveryChoice);
+        syncDeliveryChoice();
       }
 
       const consentRow=document.querySelector('#leadRequest .consent-row span');
@@ -756,13 +736,7 @@
         privacyLink.textContent='Политика';
       }
 
-      const syncFriendlyCta=()=>{
-        if(!mobileCta)return;
-        const price=(mobileTotal?.textContent||'').trim();
-        if(calculator?.hidden) mobileCta.textContent='Выбрать ворота';
-        else if(document.body.classList.contains('mobile-lead-open')) mobileCta.textContent=`Отправить заявку · ${price}`;
-        else mobileCta.textContent=`Заказать бесплатный замер · ${price}`;
-      };
+      const syncFriendlyCta=()=>{};
       mobileCta?.addEventListener('click',event=>{
         if(!calculator?.hidden)return;
         event.preventDefault();
@@ -787,45 +761,18 @@
       const doneButton=successModal.querySelector('.success-order-done');
       const closeSuccess=()=>{successBackdrop.hidden=true;successModal.hidden=true;};
       successBackdrop.addEventListener('click',closeSuccess);
-      doneButton.addEventListener('click',()=>{closeSuccess();catalog?.scrollIntoView({behavior:'smooth',block:'start'});});
+      doneButton.addEventListener('click',closeSuccess);
 
-      sendButton?.addEventListener('click',async event=>{
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        const phoneDigits=(phoneInput?.value||'').replace(/\D/g,'');
-        if(phoneDigits.length<10||phoneDigits.length>11){
-          phoneInput?.setAttribute('aria-invalid','true');phoneInput?.focus();
-          if(typeof showToast==='function') showToast('Укажите номер телефона');
-          return;
-        }
-        if(!cityInput?.value.trim()){
-          cityInput?.focus();
-          if(typeof showToast==='function') showToast('Укажите населённый пункт');
-          return;
-        }
-        if(consentInput&&!consentInput.checked){
-          consentInput.setAttribute('aria-invalid','true');consentInput.focus();
-          if(typeof showToast==='function') showToast('Подтвердите согласие на обработку данных');
-          return;
-        }
-        let payload;
-        try{payload=typeof leadPayload==='function'?leadPayload():null}catch{}
-        if(!payload){if(typeof showToast==='function') showToast('Не удалось подготовить заявку');return;}
-        sendButton.disabled=true;
-        try{
-          const response=await fetch('/api/leads',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload),keepalive:true});
-          if(!response.ok){const data=await response.json().catch(()=>({}));throw new Error(data.error||'Не удалось отправить заявку')}
-          if(window.ym) ym(107269914,'reachGoal','lead_saved',{article:payload.article,city:payload.city});
+      document.addEventListener('lead-sent',event=>{
+        const payload=event.detail?.payload||null;
+        if(payload){
           const whatsappDigits=String((window.SITE_SETTINGS||{}).whatsappDigits||'79373296750');
           waButton.href=`https://wa.me/${whatsappDigits}?text=${encodeURIComponent(payload.message||'Здравствуйте! Хочу уточнить заказ.')}`;
-          document.dispatchEvent(new CustomEvent('lead-sent'));
-          successBackdrop.hidden=false;
-          successModal.hidden=false;
-          syncFriendlyCta();
-        }catch(error){
-          if(typeof showToast==='function') showToast(error?.message||'Не удалось отправить заявку');
-        }finally{sendButton.disabled=false;}
-      },true);
+        }
+        successBackdrop.hidden=false;
+        successModal.hidden=false;
+        syncFriendlyCta();
+      });
     })();
   </script>
 
@@ -858,7 +805,7 @@
   }
   const cta=document.getElementById('mobilePrimaryCta'),calculator=document.getElementById('calculator'),total=document.getElementById('mobileEstimateTotal');
   if(!cta||!calculator)return;
-  const sync=()=>{const price=(total?.textContent||'').trim();let text='Выбрать модель';if(!calculator.hidden)text=document.body.classList.contains('mobile-lead-open')?`Отправить заявку · ${price}`:`Заказать замер · ${price}`;if(cta.textContent!==text)cta.replaceChildren(document.createTextNode(text));cta.setAttribute('aria-label',text)};
+  const sync=()=>{const price=(total?.textContent||'').trim();let text='Выбрать ворота';if(!calculator.hidden)text=document.body.classList.contains('mobile-lead-open')?`Отправить заявку · ${price}`:`Заказать замер · ${price}`;if(cta.textContent!==text)cta.replaceChildren(document.createTextNode(text));cta.setAttribute('aria-label',text)};
   const schedule=()=>requestAnimationFrame(sync);
   new MutationObserver(schedule).observe(calculator,{attributes:true,attributeFilter:['hidden']});new MutationObserver(schedule).observe(document.body,{attributes:true,attributeFilter:['class']});if(total)new MutationObserver(schedule).observe(total,{childList:true,subtree:true,characterData:true});new MutationObserver(schedule).observe(cta,{childList:true,subtree:true,characterData:true});sync();
 })();

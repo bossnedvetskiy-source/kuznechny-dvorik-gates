@@ -76,7 +76,6 @@ function closeInlineCalculator(){
   if (calculatorPanel.parentElement === grid) calculatorPanel.remove();
   calculatorPanel.hidden = true;
   document.body.classList.remove('calculator-open');
-  mobilePrimaryCta.textContent = 'Рассчитать стоимость';
   grid.querySelectorAll('.select-product').forEach(button=>button.setAttribute('aria-expanded','false'));
 }
 
@@ -102,8 +101,8 @@ function renderProducts(){
     <div class="product-info">${product.badge?`<div class="product-labels"><span>${product.badge}</span></div>`:''}<h3>Ворота с калиткой</h3><p>${product.description}</p>
       <div class="product-meta">${product.meta.map(item=>`<span>${item}</span>`).join('')}</div>
       <div class="product-bottom"><div class="price-stack">
-        <div class="price-row"><small>На готовые столбы</small><strong>${money(product.price+product.install)}</strong></div>
-        <div class="price-row turnkey"><small>Под ключ со столбами</small><strong>${money(product.price+product.install+product.posts)}</strong></div>
+        <div class="price-row"><small>Если столбы уже есть</small><strong>${money(product.price+product.install)}</strong></div>
+        <div class="price-row turnkey"><small>Под ключ с новыми столбами</small><strong>${money(product.price+product.install+product.posts)}</strong></div>
       </div><button class="select-product" data-product="${product.id}" type="button" aria-expanded="false"><span class="button-label-desktop">Рассчитать стоимость</span><span class="button-label-mobile">Рассчитать стоимость</span></button></div>
     </div>
   </article>`).join('');
@@ -238,6 +237,7 @@ const postsHint=document.getElementById('postsHint');
 const widthLabelText=document.getElementById('widthLabelText');
 const colorLabel=document.getElementById('colorLabel');
 const sizeNotice=document.getElementById('sizeNotice');
+const dimensionHelp=document.getElementById('dimensionHelp');
 const cityInput=document.getElementById('cityInput');
 const citySuggestions=document.getElementById('citySuggestions');
 const deliveryResult=document.getElementById('deliveryResult');
@@ -259,7 +259,7 @@ window.GATE_CALC?.ready?.then(()=>{ if(!calculatorPanel.hidden) calculate(); ren
 
 citySuggestions.innerHTML = destinations.map(destination=>`<option value="${escapeHTML(destination.name)}"></option>`).join('');
 
-let deliveryState = {kind:'fixed',name:'Мелеуз',resolvedName:'Мелеуз',price:0};
+let deliveryState = {kind:'empty',name:'',resolvedName:'',price:null};
 const DELIVERY_MEMORY_KEY='kuzdvor:selected-delivery';
 const POSTS_MEMORY_KEY='kuzdvor:strengthened-posts';
 const DIMENSIONS_MEMORY_KEY='kuzdvor:gate-dimensions';
@@ -385,7 +385,7 @@ function updateControls(){
   const product=selectedProduct();
   installPrice.textContent=product.install?`+${money(product.install)}`:'По замеру';
   postsPrice.textContent=product.posts?`+${money(product.posts)}`:'По замеру';
-  installHint.textContent=product.type==='frame'?'Самостоятельная сборка':product.type==='sliding'?'Рассчитывается после замера':'На готовые столбы';
+  installHint.textContent=product.type==='frame'?'Самостоятельная сборка':product.type==='sliding'?'Рассчитывается после замера':'Если столбы уже есть';
   if(product.type==='frame'){
     postsTitle.textContent='Добавить комплект столбов';
     postsHint.textContent='Без установки и бетонирования';
@@ -396,7 +396,8 @@ function updateControls(){
   const hasSeparateWicket=Number.isFinite(product.wicketWidth);
   wicketWidthWrap.hidden=!hasSeparateWicket;
   if(wicketHeightWrap) wicketHeightWrap.hidden=!hasSeparateWicket;
-  widthLabelText.textContent=product.type==='wicket'?'Ширина калитки, м':product.type==='sliding'?'Ширина проёма, м':'Ширина ворот, м';
+  widthLabelText.textContent=product.type==='wicket'?'Ширина калитки, м':product.type==='sliding'?'Ширина проёма, м':'Ширина ворот без калитки, м';
+  if(dimensionHelp) dimensionHelp.hidden=product.type!=='catalog';
   colorLabel.hidden=product.type==='frame';
   installCheck.disabled=!product.install;postsCheck.disabled=!product.posts;
   installCheck.closest('.choice').classList.toggle('disabled',!product.install);
@@ -471,7 +472,6 @@ function calculate(){
   mobileEstimateProduct.textContent=`${p.art} · текущая цена`;
   mobileEstimateTotal.textContent=(approximate?'от ':'')+money(total);
   mobileEstimateLabel.textContent=deliveryPending?'Без доставки — уточним населённый пункт':'Предварительно с доставкой';
-  if(!calculatorPanel.hidden) mobilePrimaryCta.textContent=`К заявке · ${approximate?'от ':''}${money(total)}`;
   let note='Доставка учтена в общей сумме. Окончательная стоимость фиксируется в договоре после бесплатного замера.';
   if(nonStandard&&dimensionsCalculated) note='Стоимость изделия пересчитана по указанным размерам и формуле выбранной модели. Доставка учтена в общей сумме. Итоговую стоимость зафиксируем после замера.';
   else if(nonStandard) note='Размер отличается от стандартного. Точную стоимость подтвердим после замера. Доставка учтена в общей сумме.';
