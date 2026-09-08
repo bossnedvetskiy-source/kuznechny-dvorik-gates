@@ -20,7 +20,8 @@ jobs:
         with:
           node-version: 22
       - name: Repair patch script
-        run: sed -i "s/pattern.subn(replacement, app, count=1)/pattern.subn(lambda m: replacement, app, count=1)/" .github/site-audit-fix.py
+        run: |
+          sed -i "s/pattern.subn(replacement, app, count=1)/pattern.subn(lambda m: replacement, app, count=1)/" .github/site-audit-fix.py
       - name: Apply audit fixes
         run: python3 .github/site-audit-fix.py
       - name: Run gate calculator tests
