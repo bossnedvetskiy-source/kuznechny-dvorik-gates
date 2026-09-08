@@ -1,0 +1,45 @@
+name: Fix usability copy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/fix-usability-copy.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Apply copy cleanup
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          s=s.replace('В базовую цену входит изготовление ворот с калиткой и их установка на ваши готовые столбы.','В базовую цену входит изготовление ворот с калиткой и их установка на ваши существующие столбы.',1)
+          s=s.replace('<small id="installHint">На готовые столбы</small>','<small id="installHint">Если столбы уже есть</small>',1)
+          s=s.replace('<div class="delivery-result" id="deliveryResult">Мелеуз · населённый пункт выбран</div>','<div class="delivery-result" id="deliveryResult">Выберите, где устанавливаем ворота.</div>',1)
+          s=s.replace("if(packageNote) packageNote.textContent='В базовую цену входит установка ворот с калиткой на готовые столбы. Новые усиленные столбы и доставка рассчитываются отдельно.';","if(packageNote) packageNote.textContent='В базовую цену входит установка ворот с калиткой, если подходящие столбы уже есть. Новые усиленные столбы и доставка рассчитываются отдельно.';",1)
+          s=s.replace("note.textContent='Цены в фильтре — с установкой на готовые столбы'","note.textContent='Цены в фильтре — если столбы уже есть'",1)
+          p.write_text(s,encoding='utf-8')
+          PY
+      - name: Run calculator tests
+        run: node scripts/test-gate-calculator.mjs
+      - name: Build production worker
+        run: npm run build
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git commit -m "Clarify installation and delivery wording"
+          git push origin main
