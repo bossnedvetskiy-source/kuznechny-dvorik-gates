@@ -416,6 +416,7 @@ function updateDeliveryFromCity(){
     deliveryState={kind:'fixed',name:known.name,resolvedName:known.name,price:known.price};
     routeButton.hidden=true;
     setDeliveryResult(`${known.name} · населённый пункт выбран`,'success');
+    rememberDeliverySelection();
   }else if(entered.length>=2){
     deliveryState={kind:'pending',name:entered,resolvedName:'',price:null};
     routeButton.hidden=false;routeButton.disabled=false;routeButton.textContent='Рассчитать доставку';
