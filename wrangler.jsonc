@@ -10,7 +10,9 @@
   },
   "d1_databases": [
     {
-      "binding": "DB"
+      "binding": "DB",
+      "database_name": "kuznechny-dvorik-gates-db",
+      "database_id": "c791154a-a6d7-4532-80f5-00643a03e479"
     }
   ],
   "r2_buckets": [
