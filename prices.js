@@ -14,9 +14,7 @@ window.PRICE_DATA = {
   catalog: [
     { art: 'Арт.6', price: 56600 },
     { art: 'Арт.18', price: 59800 },
-    { art: 'Арт.39', price: 64100 },
     { art: 'Арт.31', price: 65200 },
-    { art: 'Арт.40', price: 67700 },
     { art: 'Арт.28', price: 74400 },
     { art: 'Арт.15', price: 75400 },
     { art: 'Арт.30', price: 76300 },
