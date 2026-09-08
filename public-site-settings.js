@@ -98,6 +98,24 @@
       padding:0!important;
     }
 
+    /* Десктоп: фото и цены занимают свои колонки и больше не накладываются. */
+    @media(min-width:901px){
+      .hero>.hero-prices{
+        width:590px!important;
+        max-width:590px!important;
+        margin-left:calc((100vw - min(1280px,100vw))/2)!important;
+        margin-right:auto!important;
+        grid-template-columns:repeat(2,minmax(0,1fr))!important;
+      }
+      .hero-photo{
+        top:188px!important;
+        right:max(24px,calc((100vw - 1280px)/2 + 44px))!important;
+        width:min(38vw,480px)!important;
+        height:auto!important;
+        aspect-ratio:16/10!important;
+      }
+    }
+
     .lightbox{
       background:rgba(239,235,226,.985)!important;
     }
