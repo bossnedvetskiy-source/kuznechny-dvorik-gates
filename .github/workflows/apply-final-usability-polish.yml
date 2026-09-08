@@ -1,0 +1,39 @@
+name: Apply final usability polish
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/apply-final-usability-polish.yml'
+      - '.github/ux-final-polish.py'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Apply usability polish
+        run: python3 .github/ux-final-polish.py
+      - name: Run calculator tests
+        run: node scripts/test-gate-calculator.mjs
+      - name: Build production worker
+        run: npm run build
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html storefront.css public-site-settings.js app.js
+          if git diff --cached --quiet; then
+            echo "No changes"
+            exit 0
+          fi
+          git commit -m "Polish mobile usability and delivery choice"
+          git push origin main
