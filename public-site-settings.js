@@ -61,8 +61,8 @@
     .product-art,.product-photo-count{z-index:5!important}
     .card-gallery-arrow{z-index:6!important}
 
+    /* Не меняем position у контейнера: hero-photo на десктопе должен оставаться absolute. */
     .soft-photo-frame{
-      position:relative!important;
       isolation:isolate;
       overflow:hidden!important;
       background:#ece8df!important;
