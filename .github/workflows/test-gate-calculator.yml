@@ -4,6 +4,15 @@ on:
   push:
     paths:
       - '.github/workflows/test-gate-calculator.yml'
+      - 'gate-calc-engine.js'
+      - 'gate-calc-prices.js'
+      - 'gate-calc-models.js'
+      - 'gate-calc-models-chunk*.js'
+      - 'scripts/test-gate-calculator.mjs'
+      - 'app.js'
+      - 'prices.js'
+      - 'index.html'
+      - 'scripts/build.mjs'
   workflow_dispatch:
 
 jobs:
