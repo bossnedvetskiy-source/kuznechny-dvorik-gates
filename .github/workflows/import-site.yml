@@ -1,0 +1,57 @@
+name: Import full site source
+
+on:
+  push:
+    paths:
+      - 'site-source.part-*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  import-site:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Reassemble and extract site
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          parts=(site-source.part-*)
+          if [ ${#parts[@]} -eq 0 ]; then
+            echo 'No archive parts found.'
+            exit 1
+          fi
+          cat "${parts[@]}" > /tmp/site-source.zip
+          rm -rf /tmp/site-import
+          mkdir -p /tmp/site-import
+          unzip -q /tmp/site-source.zip -d /tmp/site-import
+          SOURCE='/tmp/site-import/site-export/source'
+          if [ ! -d "$SOURCE" ]; then
+            echo 'Expected site-export/source folder was not found.'
+            exit 1
+          fi
+          rsync -a --delete \
+            --exclude '.git/' \
+            --exclude '.github/' \
+            --exclude 'README.md' \
+            "$SOURCE/" ./
+          rm -f site-source.part-*
+
+      - name: Commit imported project
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          if git diff --cached --quiet; then
+            echo 'No changes to commit.'
+            exit 0
+          fi
+          git commit -m 'Import full Kuznechny Dvorik site source [skip ci]'
+          git push
