@@ -66,12 +66,14 @@
   calculatorUxStyle.textContent = `
     .mobile-size-summary,.mobile-comment-toggle{display:none}
     @media(max-width:620px){
-      .calculator.inline-calculator{padding-bottom:20px!important}
+      .calculator.inline-calculator{padding-bottom:20px!important;scroll-margin-top:6px!important}
       .calculator-open .mobile-calc-summary{display:none!important}
       .calc-form{padding:14px!important;border-radius:17px!important}
-      .selected-product-preview{margin:0 0 16px!important;padding:10px!important;grid-template-columns:92px 1fr!important;gap:12px!important}
-      .selected-product-preview img{width:92px!important;height:68px!important}
-      .selected-product-preview figcaption strong{font-size:15px!important}
+      .selected-product-preview{margin:0 0 13px!important;padding:8px!important;grid-template-columns:76px 1fr!important;gap:10px!important;border-radius:13px!important;scroll-margin-top:6px!important}
+      .selected-product-preview img{width:76px!important;height:56px!important;border-radius:10px!important}
+      .selected-product-preview figcaption{gap:2px!important}
+      .selected-product-preview figcaption span{display:none!important}
+      .selected-product-preview figcaption strong{font-size:16px!important;line-height:1.2!important}
       .product-picker-label{display:none!important}
       .form-block{padding:0 0 18px!important;margin:0 0 18px!important}
       .form-block:last-child{padding-bottom:0!important;margin-bottom:0!important}
@@ -102,11 +104,13 @@
       .delivery-result{margin-top:9px!important;padding:10px 11px!important;font-size:11px!important;border-radius:11px!important}
       .delivery-help{margin-top:9px!important}.delivery-help summary{font-size:11px!important}
 
-      .estimate-card{padding:15px!important;border-radius:16px!important}
-      .estimate-breakdown{margin-bottom:14px!important}
-      .mobile-lead-heading{margin-bottom:13px!important}
-      .mobile-lead-heading h3{font-size:22px!important;margin:5px 0!important}
-      .mobile-lead-heading p{font-size:12px!important}
+      .estimate-card{padding:13px!important;border-radius:16px!important}
+      .estimate-breakdown{margin-bottom:12px!important}
+      .estimate-breakdown>summary{min-height:0!important;padding:11px 13px!important;border-radius:11px!important;font-size:12px!important;line-height:1.25!important}
+      .mobile-lead-heading{margin-bottom:11px!important}
+      .mobile-lead-heading>span{font-size:9px!important}
+      .mobile-lead-heading h3{font-size:21px!important;margin:4px 0!important;line-height:1.18!important}
+      .mobile-lead-heading p{font-size:11px!important;line-height:1.45!important}
       .lead-fields{gap:10px!important;margin-bottom:10px!important}
       .lead-fields label{font-size:11px!important}.lead-fields input{min-height:50px!important;font-size:16px!important}
       .mobile-comment-toggle{display:flex;width:100%;align-items:center;justify-content:space-between;border:1px solid var(--line);background:#fff;color:#5f5a53;border-radius:12px;padding:12px 13px;margin:0;font-size:12px;font-weight:800;text-align:left}
@@ -117,7 +121,7 @@
       .lead-comment textarea{min-height:76px!important;font-size:15px!important}
       .consent-row{font-size:10px!important;margin:10px 0 4px!important;gap:8px!important}
       #sendButton,.copy-button{display:none!important}
-      .privacy-copy{margin-top:10px!important;font-size:9px!important;padding:0 4px!important}
+      .privacy-copy{display:none!important}
 
       .mobile-cta{height:56px!important;padding:6px 8px!important;grid-template-columns:.58fr 1.42fr!important}
       .mobile-cta a{font-size:11px!important}
@@ -416,14 +420,43 @@
     simplifyDelivery();
   }
 
+  // Мобильная карточка выбранной модели — компактно показываем только артикул.
+  const selectedProductCaption = document.getElementById('selectedProductCaption');
+  let captionSyncBusy = false;
+  const simplifySelectedCaption = () => {
+    if (!selectedProductCaption || window.innerWidth > 620 || captionSyncBusy) return;
+    const current = selectedProductCaption.textContent.trim();
+    const match = current.match(/Арт\.\s*[0-9А-Яа-яA-Za-z-]+/u);
+    if (match && current !== match[0]) {
+      captionSyncBusy = true;
+      selectedProductCaption.textContent = match[0];
+      queueMicrotask(() => { captionSyncBusy = false; });
+    }
+  };
+  if (selectedProductCaption) {
+    new MutationObserver(simplifySelectedCaption).observe(selectedProductCaption, {childList:true, subtree:true, characterData:true});
+    simplifySelectedCaption();
+  }
+
+  // Последний шаг формулируем короче и понятнее.
+  const leadHeadingText = document.querySelector('.mobile-lead-heading p');
+  if (leadHeadingText) leadHeadingText.textContent = 'Телефон нужен для согласования бесплатного замера.';
+
   // Нижняя панель становится главным действием: сначала «Продолжить», затем «Отправить».
   const calculator = document.getElementById('calculator');
   const leadRequest = document.getElementById('leadRequest');
   const mobilePrimaryCta = document.getElementById('mobilePrimaryCta');
   const mobileEstimateTotal = document.getElementById('mobileEstimateTotal');
   const sendButton = document.getElementById('sendButton');
+  const estimateSummary = document.querySelector('#estimateBreakdown > summary');
   let leadStageActive = false;
   let ctaSyncBusy = false;
+
+  const syncEstimateSummary = () => {
+    if (!estimateSummary || window.innerWidth > 620) return;
+    const price = mobileEstimateTotal?.textContent?.trim() || '';
+    estimateSummary.textContent = price ? `Что входит в ${price}` : 'Что входит в стоимость';
+  };
 
   const syncMobileCta = () => {
     if (!mobilePrimaryCta || ctaSyncBusy) return;
@@ -437,6 +470,7 @@
       mobilePrimaryCta.textContent = next;
       queueMicrotask(() => { ctaSyncBusy = false; });
     }
+    syncEstimateSummary();
   };
 
   const updateLeadStage = () => {
@@ -463,10 +497,23 @@
     }, true);
     new MutationObserver(syncMobileCta).observe(mobilePrimaryCta, {childList:true, subtree:true, characterData:true});
   }
-  if (mobileEstimateTotal) new MutationObserver(syncMobileCta).observe(mobileEstimateTotal, {childList:true, subtree:true, characterData:true});
+  if (mobileEstimateTotal) new MutationObserver(() => { syncMobileCta(); syncEstimateSummary(); }).observe(mobileEstimateTotal, {childList:true, subtree:true, characterData:true});
   if (calculator) new MutationObserver(() => { updateLeadStage(); syncMobileCta(); }).observe(calculator, {attributes:true, attributeFilter:['hidden']});
+
+  // После выбора модели доводим прокрутку ровно до начала калькулятора, без хвоста предыдущей карточки.
+  if (catalogGrid) {
+    catalogGrid.addEventListener('click', event => {
+      if (!event.target.closest('.select-product') || window.innerWidth > 620) return;
+      window.setTimeout(() => {
+        const preview = document.querySelector('.selected-product-preview');
+        if (preview && calculator && !calculator.hidden) preview.scrollIntoView({behavior:'smooth', block:'start'});
+      }, 460);
+    }, true);
+  }
+
   window.addEventListener('scroll', updateLeadStage, {passive:true});
-  window.addEventListener('resize', updateLeadStage, {passive:true});
+  window.addEventListener('resize', () => { updateLeadStage(); simplifySelectedCaption(); syncEstimateSummary(); }, {passive:true});
   updateLeadStage();
+  syncEstimateSummary();
   syncMobileCta();
 })();
