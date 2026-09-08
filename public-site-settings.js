@@ -130,6 +130,29 @@
   `;
   document.head.append(calculatorUxStyle);
 
+  const simplifiedInstallStyle = document.createElement('style');
+  simplifiedInstallStyle.textContent = `
+    .simplified-posts-block .base-install-choice{display:none!important}
+    .base-install-note{margin:-2px 0 10px;color:rgba(255,255,255,.58);font-size:11px;line-height:1.45}
+    @media(max-width:620px){
+      .simplified-posts-block{padding-bottom:15px!important;margin-bottom:15px!important}
+      .simplified-posts-block .step-label{margin-bottom:7px!important}
+      .base-install-note{margin:0 0 8px!important;font-size:9px!important;line-height:1.4!important;color:rgba(255,255,255,.5)!important}
+      .simplified-posts-block .option-list{gap:0!important}
+      .simplified-posts-block .choice{min-height:64px!important;padding:9px 11px!important;gap:9px!important;border-radius:12px!important;grid-template-columns:22px minmax(0,1fr) auto!important}
+      .simplified-posts-block .choice input{width:22px!important;height:22px!important;border-radius:6px!important}
+      .simplified-posts-block .choice input:checked::after{left:5px!important;top:0!important;font-size:13px!important}
+      .simplified-posts-block .choice b{font-size:13px!important;line-height:1.25!important}
+      .simplified-posts-block .choice small{font-size:9px!important;line-height:1.32!important}
+      .simplified-posts-block .choice strong{font-size:12px!important}
+      .simplified-posts-block .color-label{margin-top:10px!important}
+      #calcForm .mobile-price-breakdown>summary small{font-size:0!important}
+      #calcForm .mobile-price-breakdown>summary small::after{content:"С установкой на готовые столбы";font-size:9px!important;color:rgba(255,255,255,.42)!important}
+      #calcForm:has(#postsCheck:checked) .mobile-price-breakdown>summary small::after{content:"Под ключ с новыми усиленными столбами"}
+    }
+  `;
+  document.head.append(simplifiedInstallStyle);
+
   const findCatalogProduct = card => {
     const id = card?.dataset.cardProduct;
     if (!id || typeof catalogProducts === 'undefined') return null;
@@ -419,6 +442,46 @@
     cityInput.addEventListener('change', () => setTimeout(simplifyDelivery, 0));
     simplifyDelivery();
   }
+
+  // Монтаж входит в базовую цену: скрываем его как отдельную опцию и оставляем только компактный выбор новых столбов.
+  const installCheck = document.getElementById('installCheck');
+  const postsCheck = document.getElementById('postsCheck');
+  const postsTitle = document.getElementById('postsTitle');
+  const installationBlock = installCheck?.closest('.form-block');
+  if (installCheck && postsCheck && installationBlock) {
+    installationBlock.classList.add('simplified-posts-block');
+    installCheck.closest('.choice')?.classList.add('base-install-choice');
+    if (!installCheck.checked) {
+      installCheck.checked = true;
+      installCheck.dispatchEvent(new Event('change', {bubbles:true}));
+    }
+    const stepLabel = installationBlock.querySelector('.step-label');
+    if (stepLabel) stepLabel.textContent = '02 · Столбы';
+    if (postsTitle) postsTitle.textContent = 'Добавить новые усиленные столбы';
+    let note = installationBlock.querySelector('.base-install-note');
+    if (!note) {
+      note = document.createElement('div');
+      note.className = 'base-install-note';
+      const optionList = installationBlock.querySelector('.option-list');
+      if (optionList) optionList.before(note);
+    }
+    const syncInstallNote = () => {
+      note.textContent = postsCheck.checked
+        ? 'Расчёт под ключ с новыми усиленными столбами'
+        : 'В цену уже входит установка на готовые столбы';
+    };
+    postsCheck.addEventListener('change', syncInstallNote);
+    syncInstallNote();
+  }
+
+  // В раскрываемом составе мобильной цены не дублируем монтаж отдельной строкой.
+  const simplifyMobilePriceLines = () => {
+    document.querySelectorAll('.mobile-price-lines .estimate-line').forEach(line => {
+      if (/монтаж/i.test(line.textContent || '')) line.style.display = 'none';
+    });
+  };
+  new MutationObserver(simplifyMobilePriceLines).observe(document.body, {childList:true, subtree:true});
+  simplifyMobilePriceLines();
 
   // Мобильная карточка выбранной модели — компактно показываем только артикул.
   const selectedProductCaption = document.getElementById('selectedProductCaption');
