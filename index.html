@@ -62,7 +62,7 @@
     <section class="catalog section-shell" id="catalog">
       <div class="section-head">
         <div><span class="section-number">01</span><h2>Каталог и цены</h2></div>
-        <p>Выберите дизайн. Стандарт: ворота 3,4×1,8 м и калитка 1×1,8 м. Точная смета откроется под выбранной моделью.</p>
+        <p>Выберите дизайн. Стандарт: ворота 3,4×1,8 м и калитка 1×1,8 м. Предварительный расчёт откроется под выбранной моделью.</p>
       </div>
       <div class="filterbar" role="group" aria-label="Фильтры каталога">
         <div class="filter-tabs" id="priceFilters">
@@ -82,7 +82,7 @@
           </label>
         </div>
       </div>
-      <div class="catalog-summary"><span id="catalogCount">38 моделей</span><span>В карточках — цена с монтажом и под ключ</span></div>
+      <div class="catalog-summary"><span id="catalogCount">38 моделей</span></div>
       <div class="catalog-grid" id="catalogGrid"></div>
       <div class="catalog-trust-strip" aria-label="Почему нам доверяют"><span>Собственное производство</span><span>Бесплатный замер</span><span>Договор</span><span>Гарантия 3 года</span></div>
       <div class="empty-state" id="emptyState" hidden>По выбранным параметрам вариантов нет.</div>
@@ -139,8 +139,9 @@
               <label>Высота ворот, м<input id="heightInput" type="number" min="1" max="3" step="0.1" value="1.8" inputmode="decimal"></label>
               <label id="wicketHeightWrap">Высота калитки, м<input id="wicketHeightInput" type="number" min="1" max="3" step="0.1" value="1.8" inputmode="decimal"></label>
             </div>
-            <small class="dimension-help" id="dimensionHelp">Ворота и калитка указываются отдельно.</small>
+            <small class="dimension-help" id="dimensionHelp">Ворота и калитка указываются отдельно. Не знаете точные размеры? Оставьте стандартные — замерщик измерит проём бесплатно.</small>
             <div class="size-notice" id="sizeNotice" hidden>Цена пересчитана по выбранным размерам</div>
+            <div class="size-memory-note" id="sizeMemoryNote" hidden>✓ Размер сохранён — можно сравнивать другие дизайны</div>
           </div>
 
           <div class="form-block">
@@ -319,7 +320,7 @@
           .simplified-posts-block .compact-post-switch{display:grid!important;grid-template-columns:minmax(0,1fr) auto 38px!important;align-items:center!important;gap:7px!important;min-height:48px!important;padding:8px 9px!important;border-radius:10px!important}
           .simplified-posts-block .compact-post-switch>span{grid-column:1!important;grid-row:1!important;min-width:0!important}
           .simplified-posts-block .compact-post-switch b{font-size:12px!important;line-height:1.2!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
-          .simplified-posts-block .compact-post-switch small{display:none!important}
+          .simplified-posts-block .compact-post-switch small{display:block!important;margin-top:3px!important;font-size:11px!important;line-height:1.35!important;color:rgba(255,255,255,.56)!important}
           .simplified-posts-block .compact-post-switch>strong{grid-column:2!important;grid-row:1!important;font-size:11px!important;white-space:nowrap!important}
           .simplified-posts-block .compact-post-switch>input{grid-column:3!important;grid-row:1!important;appearance:none!important;-webkit-appearance:none!important;position:relative!important;width:36px!important;height:20px!important;min-width:36px!important;min-height:20px!important;margin:0!important;border:1px solid rgba(255,255,255,.24)!important;border-radius:999px!important;background:#24262a!important;box-shadow:none!important}
           .simplified-posts-block .compact-post-switch>input::after{content:""!important;position:absolute!important;left:2px!important;top:2px!important;width:14px!important;height:14px!important;border-radius:50%!important;background:#8c8f94!important;transform:none!important;transition:left .18s ease,background .18s ease!important}
@@ -700,18 +701,29 @@
         chooser.className='delivery-choice-buttons';
         chooser.innerHTML='<button type="button" data-delivery-choice="meleuz">Мелеуз</button><button type="button" data-delivery-choice="other">Другой населённый пункт</button>';
         cityLabel?.before(chooser);
+        const selectedSummary=document.createElement('div');
+        selectedSummary.className='delivery-selected-summary';
+        selectedSummary.hidden=true;
+        selectedSummary.innerHTML='<div><span>Доставка</span><strong></strong></div><button type="button">Изменить</button>';
+        chooser.after(selectedSummary);
+        const selectedValue=selectedSummary.querySelector('strong');
         const meleuzButton=chooser.querySelector('[data-delivery-choice="meleuz"]');
         const otherButton=chooser.querySelector('[data-delivery-choice="other"]');
         const normalized=value=>String(value||'').trim().toLocaleLowerCase('ru-RU').replace(/ё/g,'е');
         const syncDeliveryChoice=()=>{
           const city=(cityInput?.value||'').trim();
+          const result=(deliveryResult?.textContent||'').toLocaleLowerCase('ru-RU');
           const isMeleuz=normalized(city)==='мелеуз';
           const isOther=Boolean(city)&&!isMeleuz;
+          const chosen=Boolean(city)&&(result.includes('бесплат')||result.includes('учтена')||result.includes('подтвержд')||result.includes('населённый пункт выбран'));
           meleuzButton?.classList.toggle('is-active',isMeleuz);
           otherButton?.classList.toggle('is-active',isOther||deliveryBlock.dataset.mode==='other');
           meleuzButton?.setAttribute('aria-pressed',String(isMeleuz));
           otherButton?.setAttribute('aria-pressed',String(isOther||deliveryBlock.dataset.mode==='other'));
-          cityLabel?.classList.toggle('is-visible',isOther||deliveryBlock.dataset.mode==='other');
+          cityLabel?.classList.toggle('is-visible',!chosen&&(isOther||deliveryBlock.dataset.mode==='other'));
+          deliveryBlock.classList.toggle('is-selected',chosen);
+          selectedSummary.hidden=!chosen;
+          if(chosen&&selectedValue) selectedValue.textContent=isMeleuz?'Мелеуз — бесплатно':`${city} — доставка учтена в цене`;
         };
         meleuzButton?.addEventListener('click',()=>{
           deliveryBlock.dataset.mode='meleuz';
@@ -721,13 +733,29 @@
         otherButton?.addEventListener('click',()=>{
           deliveryBlock.dataset.mode='other';
           if(cityInput&&normalized(cityInput.value)==='мелеуз'){cityInput.value='';cityInput.dispatchEvent(new Event('input',{bubbles:true}));}
+          deliveryBlock.classList.remove('is-selected');
+          selectedSummary.hidden=true;
           syncDeliveryChoice();
           setTimeout(()=>cityInput?.focus(),60);
         });
+        selectedSummary.querySelector('button')?.addEventListener('click',()=>{
+          deliveryBlock.classList.remove('is-selected');
+          selectedSummary.hidden=true;
+          deliveryBlock.dataset.mode=normalized(cityInput?.value)==='мелеуз'?'meleuz':'other';
+          syncDeliveryChoice();
+          if(deliveryBlock.dataset.mode==='other') setTimeout(()=>cityInput?.focus(),60);
+        });
         cityInput?.addEventListener('input',()=>{if(cityInput.value.trim()&&normalized(cityInput.value)!=='мелеуз')deliveryBlock.dataset.mode='other';syncDeliveryChoice();});
         cityInput?.addEventListener('change',syncDeliveryChoice);
+        if(deliveryResult) new MutationObserver(syncDeliveryChoice).observe(deliveryResult,{childList:true,subtree:true,characterData:true});
         syncDeliveryChoice();
       }
+
+      const sizeMemoryNote=document.getElementById('sizeMemoryNote');
+      const sizeNotice=document.getElementById('sizeNotice');
+      const syncSizeMemoryNote=()=>{if(sizeMemoryNote)sizeMemoryNote.hidden=!sizeNotice||sizeNotice.hidden;};
+      if(sizeNotice)new MutationObserver(syncSizeMemoryNote).observe(sizeNotice,{attributes:true,attributeFilter:['hidden']});
+      syncSizeMemoryNote();
 
       const consentRow=document.querySelector('#leadRequest .consent-row span');
       const privacyLink=consentRow?.querySelector('a[href="#privacyPolicy"]');
@@ -810,6 +838,25 @@
   new MutationObserver(schedule).observe(calculator,{attributes:true,attributeFilter:['hidden']});new MutationObserver(schedule).observe(document.body,{attributes:true,attributeFilter:['class']});if(total)new MutationObserver(schedule).observe(total,{childList:true,subtree:true,characterData:true});new MutationObserver(schedule).observe(cta,{childList:true,subtree:true,characterData:true});sync();
 })();
 </script>
+
+<style data-final-clarity-polish="2026-09-09">
+@media(max-width:620px){
+  .simplified-posts-block .compact-post-switch{min-height:58px!important}
+  .delivery-selected-summary{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:10px;padding:12px 13px;border:1px solid rgba(255,255,255,.11);border-radius:12px;background:#0d0e10}
+  .delivery-selected-summary[hidden]{display:none!important}
+  .delivery-selected-summary div{display:grid;gap:3px;min-width:0}
+  .delivery-selected-summary span{font-size:11px;color:rgba(255,255,255,.5)}
+  .delivery-selected-summary strong{font-size:14px;color:#fff;white-space:normal}
+  .delivery-selected-summary button{min-height:44px;border:1px solid rgba(230,189,105,.48);border-radius:9px;background:transparent;color:var(--gold-light);padding:0 12px;font-size:12px;font-weight:800}
+  .delivery-choice-wrap.is-selected .delivery-choice-buttons,
+  .delivery-choice-wrap.is-selected .city-label,
+  .delivery-choice-wrap.is-selected .delivery-result,
+  .delivery-choice-wrap.is-selected .route-button,
+  .delivery-choice-wrap.is-selected .delivery-help{display:none!important}
+  .size-memory-note{margin:8px 0 0;padding:8px 10px;border-radius:9px;background:rgba(230,189,105,.10);color:var(--gold-light);font-size:12px;line-height:1.4;font-weight:700}
+  .size-memory-note[hidden]{display:none!important}
+}
+</style>
 
 </body>
 </html>

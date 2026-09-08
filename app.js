@@ -21,7 +21,7 @@ const catalogProducts = priceData.catalog.map(({art,price},index)=>{
     id:`catalog-${article}`,type:'catalog',style:tier,art,title:'Ворота с калиткой',
     description:'Стандарт: ворота 3,4×1,8 м и калитка 1×1,8 м.',
     price,install:priceData.catalogInstallation,posts:priceData.catalogPosts,standard:[3.4,1.8],wicketWidth:1,wicketHeight:1.8,
-    meta:['Любой цвет профнастила','Порошковая окраска'],
+    meta:['Любой цвет профнастила'],
     badge:art==='Арт.6'?'Хит продаж':'',rank:index+1,image,gallery,positions,zooms,tier,media,fitMode:'contain'
   };
 });
