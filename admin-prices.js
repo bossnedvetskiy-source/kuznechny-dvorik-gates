@@ -1,6 +1,7 @@
 const adminTabs = [...document.querySelectorAll('[data-admin-tab]')];
 const photosTab = document.getElementById('photosTab');
 const pricesTab = document.getElementById('pricesTab');
+const catalogTab = document.getElementById('catalogTab');
 const priceForm = document.getElementById('priceForm');
 const catalogInstallationInput = document.getElementById('catalogInstallationInput');
 const catalogPostsInput = document.getElementById('catalogPostsInput');
@@ -8,11 +9,16 @@ const catalogPriceList = document.getElementById('catalogPriceList');
 const extraPriceList = document.getElementById('extraPriceList');
 const priceSaveState = document.getElementById('priceSaveState');
 const savePricesButton = document.getElementById('savePricesButton');
+const catalogManageList = document.getElementById('catalogManageList');
+const catalogSaveState = document.getElementById('catalogSaveState');
+const saveCatalogButton = document.getElementById('saveCatalogButton');
 
 let priceSettings = null;
 let priceDirty = false;
+let catalogDirty = false;
 let pricesLoaded = false;
 let pricesLoading = false;
+let catalogDraft = [];
 
 function moneyInputValue(value) {
   const number = Math.round(Number(value));
@@ -24,6 +30,13 @@ function setPriceDirty(value = true) {
   savePricesButton.disabled = !value;
   priceSaveState.textContent = value ? 'Есть несохранённые изменения' : 'Все цены сохранены';
   priceSaveState.classList.toggle('dirty', value);
+}
+
+function setCatalogDirty(value = true) {
+  catalogDirty = value;
+  saveCatalogButton.disabled = !value;
+  catalogSaveState.textContent = value ? 'Есть несохранённые изменения' : 'Каталог сохранён';
+  catalogSaveState.classList.toggle('dirty', value);
 }
 
 function createMoneyInput(value, dataset = {}) {
@@ -86,19 +99,94 @@ function renderExtraPrices() {
   }
 }
 
+function normalizeCatalogDraft() {
+  catalogDraft = (priceSettings?.catalog || [])
+    .map((item, index) => ({...item, visible: item.visible !== false, order: Number(item.order) || index + 1}))
+    .sort((a, b) => a.order - b.order);
+  catalogDraft.forEach((item, index) => { item.order = index + 1; });
+}
+
+function renderCatalogManagement() {
+  catalogManageList.replaceChildren();
+  catalogDraft.forEach((item, index) => {
+    const row = document.createElement('article');
+    row.className = `catalog-manage-row${item.visible ? '' : ' is-hidden'}`;
+
+    const position = document.createElement('span');
+    position.className = 'catalog-position';
+    position.textContent = String(index + 1);
+
+    const name = document.createElement('div');
+    name.className = 'catalog-manage-name';
+    name.innerHTML = `<b>${item.art}</b><small>${moneyInputValue(item.price)} ₽</small>`;
+
+    const visibility = document.createElement('label');
+    visibility.className = 'catalog-visibility';
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.checked = item.visible;
+    const visibilityText = document.createElement('span');
+    visibilityText.textContent = item.visible ? 'На сайте' : 'Скрыто';
+    checkbox.addEventListener('change', () => {
+      if (!checkbox.checked && catalogDraft.filter(entry => entry.visible).length <= 1) {
+        checkbox.checked = true;
+        showToast('В каталоге должна остаться хотя бы одна модель', true);
+        return;
+      }
+      item.visible = checkbox.checked;
+      visibilityText.textContent = item.visible ? 'На сайте' : 'Скрыто';
+      setCatalogDirty();
+      renderCatalogManagement();
+    });
+    visibility.append(checkbox, visibilityText);
+
+    const actions = document.createElement('div');
+    actions.className = 'catalog-order-actions';
+    const up = document.createElement('button');
+    up.type = 'button';
+    up.textContent = '↑';
+    up.title = 'Поднять выше';
+    up.disabled = index === 0;
+    up.addEventListener('click', () => moveCatalogItem(index, -1));
+    const down = document.createElement('button');
+    down.type = 'button';
+    down.textContent = '↓';
+    down.title = 'Опустить ниже';
+    down.disabled = index === catalogDraft.length - 1;
+    down.addEventListener('click', () => moveCatalogItem(index, 1));
+    actions.append(up, down);
+
+    row.append(position, name, visibility, actions);
+    catalogManageList.append(row);
+  });
+}
+
+function moveCatalogItem(index, direction) {
+  const next = index + direction;
+  if (next < 0 || next >= catalogDraft.length) return;
+  [catalogDraft[index], catalogDraft[next]] = [catalogDraft[next], catalogDraft[index]];
+  catalogDraft.forEach((item, itemIndex) => { item.order = itemIndex + 1; });
+  setCatalogDirty();
+  renderCatalogManagement();
+}
+
 function renderPrices() {
   if (!priceSettings) return;
   catalogInstallationInput.value = moneyInputValue(priceSettings.catalogInstallation);
   catalogPostsInput.value = moneyInputValue(priceSettings.catalogPosts);
   renderCatalogPrices();
   renderExtraPrices();
+  normalizeCatalogDraft();
+  renderCatalogManagement();
   setPriceDirty(false);
+  setCatalogDirty(false);
 }
 
 async function loadPriceSettings(force = false) {
   if (pricesLoading || (pricesLoaded && !force)) return;
   pricesLoading = true;
   priceSaveState.textContent = 'Загружаем цены…';
+  catalogSaveState.textContent = 'Загружаем каталог…';
   try {
     const data = await api('/api/admin/prices');
     priceSettings = data.prices;
@@ -106,6 +194,7 @@ async function loadPriceSettings(force = false) {
     renderPrices();
   } catch (error) {
     priceSaveState.textContent = 'Не удалось загрузить цены';
+    catalogSaveState.textContent = 'Не удалось загрузить каталог';
     showToast(error.message, true);
   } finally {
     pricesLoading = false;
@@ -134,24 +223,46 @@ function collectPrices() {
   };
 }
 
+function collectCatalogSettings() {
+  const byArt = new Map((priceSettings.catalog || []).map(item => [item.art, {...item}]));
+  catalogDraft.forEach((draftItem, index) => {
+    const item = byArt.get(draftItem.art);
+    if (!item) return;
+    item.visible = draftItem.visible !== false;
+    item.order = index + 1;
+  });
+  return {...priceSettings, catalog: [...byArt.values()]};
+}
+
+function currentAdminTab() {
+  return adminTabs.find(button => button.classList.contains('active'))?.dataset.adminTab || 'photos';
+}
+
 function switchAdminTab(name) {
-  const nextIsPrices = name === 'prices';
-  photosTab.hidden = nextIsPrices;
-  pricesTab.hidden = !nextIsPrices;
+  photosTab.hidden = name !== 'photos';
+  pricesTab.hidden = name !== 'prices';
+  catalogTab.hidden = name !== 'catalog';
   adminTabs.forEach(button => button.classList.toggle('active', button.dataset.adminTab === name));
-  if (nextIsPrices) loadPriceSettings();
+  if (name === 'prices' || name === 'catalog') loadPriceSettings();
 }
 
 adminTabs.forEach(button => button.addEventListener('click', () => {
-  if (button.dataset.adminTab === 'prices' && dirty) {
+  const target = button.dataset.adminTab;
+  const current = currentAdminTab();
+  if (current === target) return;
+  if (dirty) {
     showToast('Сначала сохраните изменения фотографий', true);
     return;
   }
-  if (button.dataset.adminTab === 'photos' && priceDirty) {
+  if (priceDirty) {
     showToast('Сначала сохраните изменения цен', true);
     return;
   }
-  switchAdminTab(button.dataset.adminTab);
+  if (catalogDirty) {
+    showToast('Сначала сохраните изменения каталога', true);
+    return;
+  }
+  switchAdminTab(target);
 }));
 
 catalogInstallationInput?.addEventListener('input', () => setPriceDirty());
@@ -180,12 +291,34 @@ priceForm?.addEventListener('submit', async event => {
   }
 });
 
+saveCatalogButton?.addEventListener('click', async () => {
+  if (!priceSettings || !catalogDirty) return;
+  saveCatalogButton.disabled = true;
+  saveCatalogButton.textContent = 'Сохраняем…';
+  try {
+    const data = await api('/api/admin/prices', {
+      method: 'POST',
+      headers: {'content-type': 'application/json'},
+      body: JSON.stringify({prices: collectCatalogSettings()})
+    });
+    priceSettings = data.prices;
+    renderPrices();
+    showToast('Каталог опубликован на сайте');
+  } catch (error) {
+    setCatalogDirty(true);
+    showToast(error.message, true);
+  } finally {
+    saveCatalogButton.textContent = 'Сохранить каталог';
+    saveCatalogButton.disabled = !catalogDirty;
+  }
+});
+
 window.addEventListener('admin:ready', () => {
   switchAdminTab('photos');
 });
 
 window.addEventListener('beforeunload', event => {
-  if (!priceDirty) return;
+  if (!priceDirty && !catalogDirty) return;
   event.preventDefault();
   event.returnValue = '';
 });
