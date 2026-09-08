@@ -1,6 +1,54 @@
 (() => {
   const site = window.SITE_SETTINGS || {};
 
+  const heroPriceStyle = document.createElement('style');
+  heroPriceStyle.textContent = `
+    .hero-prices>div{
+      display:grid!important;
+      grid-template-columns:1fr!important;
+      align-content:start!important;
+      justify-items:start!important;
+      gap:5px!important;
+      text-align:left!important;
+    }
+    .hero-prices small{
+      display:block!important;
+      margin:0!important;
+      min-width:0!important;
+      color:rgba(255,255,255,.64)!important;
+      font-size:11px!important;
+      line-height:1.25!important;
+      font-weight:600!important;
+    }
+    .hero-prices strong{
+      display:block!important;
+      margin:0!important;
+      color:var(--gold-light)!important;
+      font:22px/1.08 Prata,serif!important;
+      letter-spacing:-.35px!important;
+      white-space:nowrap!important;
+    }
+    .hero-prices span{
+      display:block!important;
+      margin:1px 0 0!important;
+      color:rgba(255,255,255,.66)!important;
+      font-size:10px!important;
+      line-height:1.35!important;
+    }
+    @media(max-width:620px){
+      .hero-prices>div{padding:12px!important;gap:4px!important}
+      .hero-prices small{font-size:10px!important}
+      .hero-prices strong{font-size:20px!important}
+      .hero-prices span{font-size:9px!important}
+    }
+    @media(max-width:430px){
+      .hero-prices{grid-template-columns:1fr!important}
+      .hero-prices strong{font-size:22px!important}
+      .hero-prices span{font-size:10px!important}
+    }
+  `;
+  document.head.append(heroPriceStyle);
+
   const findCatalogProduct = card => {
     const id = card?.dataset.cardProduct;
     if (!id || typeof catalogProducts === 'undefined') return null;
