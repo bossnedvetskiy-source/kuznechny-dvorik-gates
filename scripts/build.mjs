@@ -33,12 +33,18 @@ const pricesMatch = pricesSource.match(/window\.PRICE_DATA\s*=\s*({[\s\S]*?});\s
 if (!pricesMatch) throw new Error('Некорректный файл prices.js');
 const defaultPrices = JSON.parse(pricesMatch[1]);
 
+const publicJs = js.replace(
+  "const catalogProducts = priceData.catalog.map(({art,price},index)=>{",
+  "const orderedCatalogPrices = [...priceData.catalog].filter(item=>item.visible!==false).sort((a,b)=>(Number(a.order)||9999)-(Number(b.order)||9999));\nconst catalogProducts = orderedCatalogPrices.map(({art,price},index)=>{"
+);
+if (publicJs === js) throw new Error('Не найден блок каталога в app.js');
+
 const html = htmlSource
   .replace('<link rel="stylesheet" href="styles.css">', `<style>${css}</style>`)
   .replace('<script id="deliveryData" type="application/json">{}</script>', `<script id="deliveryData" type="application/json">${embeddedDeliveryPrices}</script>`)
   .replace('<script src="catalog-images.js"></script>', `<script>${catalogImages}</script>`)
   .replace('<script src="prices.js"></script>', '<script>window.PRICE_DATA=__RUNTIME_PRICE_DATA__;</script>')
-  .replace('<script src="app.js"></script>', `<script>${js}</script>`);
+  .replace('<script src="app.js"></script>', `<script>${publicJs}</script>`);
 
 // A 401 from the login endpoint means invalid credentials, not an expired session.
 // Keep the server's real error message visible instead of clearing the password field.
@@ -88,13 +94,13 @@ patchedWorkerSource = patchedWorkerSource
     "if (env.BUCKET) await Promise.allSettled(keys.map(key => env.BUCKET.delete(key)));"
   );
 
-// Add price management to the authenticated admin API.
+// Add price and catalog settings management to the authenticated admin API.
 patchedWorkerSource = patchedWorkerSource.replace(
   "if (url.pathname === '/api/admin/catalog' && request.method === 'GET') {\n    try {\n      return json({galleries: await allGalleries(env, true)});",
   "if (url.pathname === '/api/admin/prices') {\n    try {\n      if (request.method === 'GET') return json({prices: await loadPrices(env)});\n      if (request.method === 'POST') return await savePrices(request, env);\n      return json({error: 'Метод не поддерживается'}, 405);\n    } catch (error) {\n      return json({error: 'Не удалось сохранить цены: ' + errorMessage(error)}, 500);\n    }\n  }\n  if (url.pathname === '/api/admin/catalog' && request.method === 'GET') {\n    try {\n      return json({galleries: await allGalleries(env, true), photoUploadEnabled: Boolean(env.BUCKET)});"
 );
 
-// Render the public page with prices from D1, falling back to prices.js defaults.
+// Render the public page with settings from D1, falling back to repository defaults.
 patchedWorkerSource = patchedWorkerSource.replace('return html(PAGE);\n  }\n};', 'return html(await renderPublicPage(env));\n  }\n};');
 
 const worker = patchedWorkerSource
