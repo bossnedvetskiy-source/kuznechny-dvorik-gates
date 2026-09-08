@@ -31,7 +31,7 @@ if (!galleryMatch) throw new Error('Некорректный файл catalog-im
 const defaultGalleries = JSON.parse(galleryMatch[1]);
 const pricesMatch = pricesSource.match(/window\.PRICE_DATA\s*=\s*({[\s\S]*?});\s*$/);
 if (!pricesMatch) throw new Error('Некорректный файл prices.js');
-const defaultPrices = JSON.parse(pricesMatch[1]);
+const defaultPrices = Function(`"use strict"; return (${pricesMatch[1]});`)();
 
 const publicJs = js.replace(
   "const catalogProducts = priceData.catalog.map(({art,price},index)=>{",
