@@ -14,6 +14,7 @@ async function ensureLeadSchema(env) {
     product_title TEXT NOT NULL DEFAULT '',
     width REAL,
     wicket_width REAL,
+    wicket_height REAL,
     height REAL,
     install INTEGER NOT NULL DEFAULT 0,
     posts INTEGER NOT NULL DEFAULT 0,
@@ -23,6 +24,11 @@ async function ensureLeadSchema(env) {
     comment TEXT NOT NULL DEFAULT '',
     message TEXT NOT NULL
   )`).run();
+  try {
+    await env.DB.prepare('ALTER TABLE site_leads ADD COLUMN wicket_height REAL').run();
+  } catch (error) {
+    if (!/duplicate column/i.test(String(error?.message || error))) throw error;
+  }
   await env.DB.prepare('CREATE INDEX IF NOT EXISTS site_leads_created_idx ON site_leads(created_at DESC)').run();
   await env.DB.prepare('CREATE INDEX IF NOT EXISTS site_leads_status_idx ON site_leads(status)').run();
 }
@@ -53,22 +59,23 @@ async function createLead(request, env, url) {
   const message = leadText(body.message, 8000);
   const width = leadNumber(body.width);
   const wicketWidth = leadNumber(body.wicketWidth);
+  const wicketHeight = leadNumber(body.wicketHeight);
   const height = leadNumber(body.height);
   const total = Math.round(Math.max(0, Math.min(10000000, Number(body.total) || 0)));
 
   if (phoneDigits.length < 10 || phoneDigits.length > 11) return json({error: 'Укажите корректный номер телефона'}, 400);
   if (!city || !article || !message) return json({error: 'В заявке не хватает обязательных данных'}, 400);
-  for (const value of [width, wicketWidth, height]) {
+  for (const value of [width, wicketWidth, wicketHeight, height]) {
     if (value !== null && (value <= 0 || value > 100)) return json({error: 'Некорректные размеры в заявке'}, 400);
   }
 
   await ensureLeadSchema(env);
   const result = await env.DB.prepare(`INSERT INTO site_leads (
-    status, name, phone, city, article, product_title, width, wicket_width, height,
+    status, name, phone, city, article, product_title, width, wicket_width, wicket_height, height,
     install, posts, color, total, delivery_pending, comment, message
-  ) VALUES ('new', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+  ) VALUES ('new', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
     .bind(
-      name, phone, city, article, productTitle, width, wicketWidth, height,
+      name, phone, city, article, productTitle, width, wicketWidth, wicketHeight, height,
       body.install ? 1 : 0, body.posts ? 1 : 0, color, total,
       body.deliveryPending ? 1 : 0, comment, message
     ).run();
@@ -79,7 +86,7 @@ async function createLead(request, env, url) {
 async function listLeads(env) {
   await ensureLeadSchema(env);
   const result = await env.DB.prepare(`SELECT id, created_at, updated_at, status, name, phone, city, article,
-    product_title, width, wicket_width, height, install, posts, color, total,
+    product_title, width, wicket_width, wicket_height, height, install, posts, color, total,
     delivery_pending, comment, message
     FROM site_leads ORDER BY id DESC LIMIT 200`).all();
   const leads = (result.results || []).map(row => ({
