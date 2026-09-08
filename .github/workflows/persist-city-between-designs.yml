@@ -1,0 +1,66 @@
+name: One-off city persistence between designs
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/persist-city-between-designs.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Remember selected city between design calculations
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('app.js')
+          s = p.read_text(encoding='utf-8')
+
+          anchor = "let deliveryState = {kind:'fixed',name:'Мелеуз',resolvedName:'Мелеуз',price:0};\n"
+          insert = """let deliveryState = {kind:'fixed',name:'Мелеуз',resolvedName:'Мелеуз',price:0};\nconst DELIVERY_MEMORY_KEY='kuzdvor:selected-delivery';\n\nfunction rememberDeliverySelection(){\n  if(!['fixed','calculated'].includes(deliveryState.kind))return;\n  const city=(deliveryState.resolvedName||deliveryState.shortName||cityInput.value||'').trim();\n  if(!city)return;\n  try{\n    sessionStorage.setItem(DELIVERY_MEMORY_KEY,JSON.stringify({\n      kind:deliveryState.kind,\n      city,\n      name:deliveryState.name||city,\n      resolvedName:deliveryState.resolvedName||city,\n      shortName:deliveryState.shortName||city,\n      price:Number(deliveryState.price)||0\n    }));\n  }catch{}\n}\n\nfunction restoreDeliverySelection(){\n  let saved=null;\n  try{saved=JSON.parse(sessionStorage.getItem(DELIVERY_MEMORY_KEY)||'null')}catch{}\n  if(!saved?.city)return false;\n  const known=destinationByKey.get(normalizePlace(saved.city));\n  if(known){\n    cityInput.value=known.name;\n    deliveryState={kind:'fixed',name:known.name,resolvedName:known.name,price:known.price};\n    routeButton.hidden=true;\n    setDeliveryResult(`${known.name} · населённый пункт выбран`,'success');\n    return true;\n  }\n  if(saved.kind==='calculated'&&Number.isFinite(Number(saved.price))){\n    const city=String(saved.shortName||saved.resolvedName||saved.city).trim();\n    cityInput.value=city;\n    deliveryState={kind:'calculated',name:saved.name||city,resolvedName:saved.resolvedName||city,shortName:city,price:Number(saved.price)||0};\n    routeButton.hidden=true;\n    setDeliveryResult(`${city} · населённый пункт подтверждён`,'success');\n    return true;\n  }\n  return false;\n}\n"""
+          if 'DELIVERY_MEMORY_KEY' not in s:
+            if anchor not in s: raise SystemExit('delivery state anchor not found')
+            s = s.replace(anchor, insert, 1)
+
+          old_choose = """function chooseProduct(id){\n  productSelect.value=id;\n  const product=selectedProduct();\n  widthInput.value=product.standard[0];heightInput.value=product.standard[1];\n  wicketWidthInput.value=product.wicketWidth??1;\n  installCheck.checked=product.install>0;postsCheck.checked=false;\n  updateControls();calculate();\n}"""
+          new_choose = """function chooseProduct(id){\n  productSelect.value=id;\n  const product=selectedProduct();\n  widthInput.value=product.standard[0];heightInput.value=product.standard[1];\n  wicketWidthInput.value=product.wicketWidth??1;\n  installCheck.checked=product.install>0;postsCheck.checked=false;\n  if(!cityInput.value.trim())restoreDeliverySelection();\n  updateControls();calculate();\n}"""
+          if old_choose in s:
+            s = s.replace(old_choose,new_choose,1)
+          elif new_choose not in s:
+            raise SystemExit('chooseProduct anchor not found')
+
+          old_known = """    deliveryState={kind:'fixed',name:known.name,resolvedName:known.name,price:known.price};\n    routeButton.hidden=true;\n    setDeliveryResult(`${known.name} · населённый пункт выбран`,'success');"""
+          new_known = """    deliveryState={kind:'fixed',name:known.name,resolvedName:known.name,price:known.price};\n    routeButton.hidden=true;\n    setDeliveryResult(`${known.name} · населённый пункт выбран`,'success');\n    rememberDeliverySelection();"""
+          if old_known in s:
+            s = s.replace(old_known,new_known,1)
+          elif new_known not in s:
+            raise SystemExit('known city anchor not found')
+
+          old_confirm = """    deliveryState={...deliveryState,kind:'calculated'};\n    routeButton.hidden=true;\n    setDeliveryResult(`${deliveryState.shortName} · населённый пункт подтверждён`,'success');\n    calculate();"""
+          new_confirm = """    deliveryState={...deliveryState,kind:'calculated'};\n    routeButton.hidden=true;\n    setDeliveryResult(`${deliveryState.shortName} · населённый пункт подтверждён`,'success');\n    rememberDeliverySelection();\n    calculate();"""
+          if old_confirm in s:
+            s = s.replace(old_confirm,new_confirm,1)
+          elif new_confirm not in s:
+            raise SystemExit('route confirm anchor not found')
+
+          listener_anchor = """cityInput.addEventListener('input',updateDeliveryFromCity);\ncityInput.addEventListener('change',updateDeliveryFromCity);\n"""
+          listener_new = """cityInput.addEventListener('input',updateDeliveryFromCity);\ncityInput.addEventListener('change',updateDeliveryFromCity);\nif(restoreDeliverySelection())calculate();\n"""
+          if listener_new not in s:
+            if listener_anchor not in s: raise SystemExit('city listeners anchor not found')
+            s = s.replace(listener_anchor,listener_new,1)
+
+          p.write_text(s,encoding='utf-8')
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app.js
+          git commit -m "Remember delivery city between design calculations"
+          git push origin main
