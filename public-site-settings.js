@@ -49,6 +49,17 @@
   `;
   document.head.append(heroPriceStyle);
 
+  const mobileHeroStyle = document.createElement('style');
+  mobileHeroStyle.textContent = `
+    @media(max-width:620px){
+      .hero>.hero-photo{display:none!important}
+      .hero{min-height:0!important;padding-bottom:18px!important}
+      .hero>.hero-points{margin-top:12px!important}
+      .catalog{padding-top:34px!important}
+    }
+  `;
+  document.head.append(mobileHeroStyle);
+
   const findCatalogProduct = card => {
     const id = card?.dataset.cardProduct;
     if (!id || typeof catalogProducts === 'undefined') return null;
