@@ -1,8 +1,7 @@
 /* Standalone gate calculator. Excel is not required at runtime. */
 (() => {
-  const pack = window.GATE_CALC_MODELS;
   const prices = window.GATE_CALC_PRICES;
-  if (!pack?.models || !prices) throw new Error('Не загружена модель расчёта ворот');
+  if (!prices) throw new Error('Не загружены общие цены расчёта ворот');
 
   const normalizeArticle = value => String(value ?? '')
     .replace(/^\s*арт\.?\s*/iu, '')
@@ -31,6 +30,7 @@
 
   const sum = value => Array.isArray(value) ? value.reduce((acc, item) => acc + Number(item || 0), 0) : Number(value || 0);
   const compiled = new WeakMap();
+  const pack = () => window.GATE_CALC_MODELS;
 
   const compileModel = model => {
     if (compiled.has(model)) return compiled.get(model);
@@ -44,7 +44,7 @@
 
   function calculateGate({ article, gateWidth, gateHeight, wicketWidth, wicketHeight }) {
     const key = normalizeArticle(article);
-    const model = pack.models[key];
+    const model = pack()?.models?.[key];
     if (!model) throw new Error(`Нет расчётной модели для артикула ${article}`);
 
     const ctx = {
@@ -77,6 +77,7 @@
     return { article: key, gatePrice, wicketPrice, totalRaw, total };
   }
 
-  function hasArticle(article) { return Boolean(pack.models[normalizeArticle(article)]); }
-  window.GATE_CALC = { calculateGate, hasArticle, normalizeArticle, roundExcel, roundUp };
+  function hasArticle(article) { return Boolean(pack()?.models?.[normalizeArticle(article)]); }
+  const ready = Promise.resolve(window.GATE_CALC_MODELS_READY).then(() => true);
+  window.GATE_CALC = { calculateGate, hasArticle, normalizeArticle, roundExcel, roundUp, ready };
 })();
