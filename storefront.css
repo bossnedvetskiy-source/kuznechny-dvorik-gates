@@ -237,3 +237,19 @@
   .mobile-cta a:last-child::after{content:"Рассчитать";font-size:12px;font-weight:800}
   .toast{bottom:68px!important}
 }
+
+/* В калькуляторе итоговая цена всегда видна в нижней панели. */
+@media(max-width:620px){
+  .calculator-open .mobile-calc-summary{display:none!important}
+  .calculator-open .mobile-cta{height:60px!important;grid-template-columns:.58fr 1.42fr!important}
+  .calculator-open .mobile-cta a:last-child{
+    font-size:13px!important;
+    line-height:1.15!important;
+    white-space:nowrap!important;
+    font-weight:800!important;
+    letter-spacing:-.15px!important;
+    padding:0 8px!important;
+  }
+  .calculator-open .mobile-cta a:last-child::after{content:none!important;display:none!important}
+  .calculator-open .toast{bottom:74px!important}
+}
