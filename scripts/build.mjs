@@ -5,7 +5,7 @@ await mkdir('dist/server', { recursive: true });
 await mkdir('dist/client', { recursive: true });
 await mkdir('dist/.openai', { recursive: true });
 
-const [htmlSource, css, catalogImages, pricesSource, deliveryPricesSource, js, publicSiteJsSource, adminHtmlSource, adminCss, adminJsSource, adminPricesJsSource, adminSiteJsSource, workerSource, adminAuthSource, siteSettingsSource, catalogMediaSource] = await Promise.all([
+const [htmlSource, css, catalogImages, pricesSource, deliveryPricesSource, js, publicSiteJsSource, adminHtmlSource, adminCss, adminJsSource, adminPricesJsSource, adminSiteJsSource, adminLeadsJsSource, workerSource, adminAuthSource, siteSettingsSource, catalogMediaSource, leadsSource] = await Promise.all([
   readFile('index.html', 'utf8'),
   readFile('styles.css', 'utf8'),
   readFile('catalog-images.js', 'utf8'),
@@ -18,10 +18,12 @@ const [htmlSource, css, catalogImages, pricesSource, deliveryPricesSource, js, p
   readFile('admin.js', 'utf8'),
   readFile('admin-prices.js', 'utf8'),
   readFile('admin-site.js', 'utf8'),
+  readFile('admin-leads.js', 'utf8'),
   readFile('worker/runtime.js', 'utf8'),
   readFile('worker/auth-d1.js', 'utf8'),
   readFile('worker/site-settings-d1.js', 'utf8'),
-  readFile('worker/catalog-media-d1.js', 'utf8')
+  readFile('worker/catalog-media-d1.js', 'utf8'),
+  readFile('worker/leads-d1.js', 'utf8')
 ]);
 
 const deliveryPrices = JSON.parse(deliveryPricesSource);
@@ -42,15 +44,10 @@ let publicJs = js.replace(
 );
 if (publicJs === js) throw new Error('Не найден блок каталога в app.js');
 
-publicJs = publicJs
-  .replace(
-    'const priceData = window.PRICE_DATA;',
-    'const siteSettings = window.SITE_SETTINGS || {};\nconst priceData = window.PRICE_DATA;'
-  )
-  .replace(
-    "window.open(`https://wa.me/79373296750?text=${encodeURIComponent(buildMessage())}`,'_blank','noopener');",
-    "window.open(`https://wa.me/${String(siteSettings.whatsappDigits||'79373296750')}?text=${encodeURIComponent(buildMessage())}`,'_blank','noopener');"
-  );
+publicJs = publicJs.replace(
+  'const priceData = window.PRICE_DATA;',
+  'const siteSettings = window.SITE_SETTINGS || {};\nconst priceData = window.PRICE_DATA;'
+);
 
 const html = htmlSource
   .replace('<link rel="stylesheet" href="styles.css">', `<style>${css}</style>`)
@@ -59,8 +56,6 @@ const html = htmlSource
   .replace('<script src="prices.js"></script>', '<script>window.PRICE_DATA=__RUNTIME_PRICE_DATA__;window.SITE_SETTINGS=__RUNTIME_SITE_DATA__;</script>')
   .replace('<script src="app.js"></script>', `<script>${publicJs}</script><script>${publicSiteJsSource}</script>`);
 
-// A 401 from the login endpoint means invalid credentials, not an expired session.
-// Keep the server's real error message visible instead of clearing the password field.
 let adminJs = adminJsSource
   .replace(
     "if (response.status === 401) {\n    showLogin();\n    throw new Error('Сеанс завершён. Войдите снова.');\n  }",
@@ -75,8 +70,6 @@ let adminJs = adminJsSource
     "showEditor();\n    selectArticle(articles[0]);\n    window.dispatchEvent(new CustomEvent('admin:ready'));"
   );
 
-// D1 has a 2 MB maximum row size. Prepare uploaded photos in the browser so the
-// stored WebP stays comfortably below that limit while preserving proportions.
 const optimizeStart = adminJs.indexOf('async function optimizeImage(file) {');
 const optimizeEnd = adminJs.indexOf('\nasync function uploadFiles(files) {', optimizeStart);
 if (optimizeStart < 0 || optimizeEnd < 0) throw new Error('Не найден блок подготовки фотографий');
@@ -115,17 +108,16 @@ adminJs = adminJs.slice(0, optimizeStart) + optimizedPhotoFunction + adminJs.sli
 const adminHtml = adminHtmlSource
   .replace('<link rel="stylesheet" href="admin.css">', `<style>${adminCss}</style>`)
   .replace('<script src="admin.js"></script>', `<script>${adminJs}</script>`)
-  .replace('<script src="admin-prices.js"></script>', `<script>${adminPricesJsSource}</script><script>${adminSiteJsSource}</script>`);
+  .replace('<script src="admin-prices.js"></script>', `<script>${adminPricesJsSource}</script><script>${adminSiteJsSource}</script><script>${adminLeadsJsSource}</script>`);
 
-// Replace old environment-variable auth with D1-backed authentication and add
-// D1-backed settings/media helpers.
 const authStart = workerSource.indexOf('async function createSessionCookie(env)');
 const authEnd = workerSource.indexOf('\nfunction defaultGallery(article)', authStart);
 if (authStart < 0 || authEnd < 0) throw new Error('Не найден блок авторизации Worker');
 let patchedWorkerSource = workerSource.slice(0, authStart)
   + adminAuthSource.trim() + '\n\n'
   + siteSettingsSource.trim() + '\n\n'
-  + catalogMediaSource.trim()
+  + catalogMediaSource.trim() + '\n\n'
+  + leadsSource.trim()
   + workerSource.slice(authEnd);
 
 patchedWorkerSource = patchedWorkerSource.replace(
@@ -133,8 +125,6 @@ patchedWorkerSource = patchedWorkerSource.replace(
   'const DEFAULT_GALLERIES = __DEFAULT_GALLERIES__;\nconst DEFAULT_PRICES = __DEFAULT_PRICES__;'
 );
 
-// Existing gallery metadata lives in D1. New image bytes use R2 when available,
-// otherwise the D1 media table is used as a no-billing fallback.
 patchedWorkerSource = patchedWorkerSource.replaceAll(
   "if (!env.DB || !env.BUCKET) return json({error: 'Хранилище фотографий временно недоступно'}, 503);",
   "if (!env.DB) return json({error: 'База данных временно недоступна'}, 503);"
@@ -166,15 +156,19 @@ patchedWorkerSource = patchedWorkerSource
   .replace(
     "  const result = {\n    requestedName: place,\n    resolvedName: selected.display_name,\n    shortName: [...new Set(shortNameParts)].join(', ') || selected.display_name,\n    price: distanceKm * FALLBACK_RATE,\n    distanceKm,\n    rate: FALLBACK_RATE,",
     "  const runtimeDeliveryRate = (await loadSiteProfile(env)).deliveryRate;\n  const result = {\n    requestedName: place,\n    resolvedName: selected.display_name,\n    shortName: [...new Set(shortNameParts)].join(', ') || selected.display_name,\n    price: distanceKm * runtimeDeliveryRate,\n    distanceKm,\n    rate: runtimeDeliveryRate,"
-  );
+  )
+  .replaceAll('https://kuznechny-dvorik-gates.dragnaledon1284.chatgpt.site', 'https://kuznechny-dvorik-gates.boss-nedvetskiy.workers.dev');
 
-// Add prices, catalog and general site settings to the authenticated admin API.
 patchedWorkerSource = patchedWorkerSource.replace(
   "if (url.pathname === '/api/admin/catalog' && request.method === 'GET') {\n    try {\n      return json({galleries: await allGalleries(env, true)});",
-  "if (url.pathname === '/api/admin/site-settings') {\n    try {\n      if (request.method === 'GET') return json({site: await loadSiteProfile(env)});\n      if (request.method === 'POST') return await saveSiteProfile(request, env);\n      return json({error: 'Метод не поддерживается'}, 405);\n    } catch (error) {\n      return json({error: 'Не удалось сохранить настройки сайта: ' + errorMessage(error)}, 500);\n    }\n  }\n  if (url.pathname === '/api/admin/prices') {\n    try {\n      if (request.method === 'GET') return json({prices: await loadPrices(env)});\n      if (request.method === 'POST') return await savePrices(request, env);\n      return json({error: 'Метод не поддерживается'}, 405);\n    } catch (error) {\n      return json({error: 'Не удалось сохранить цены: ' + errorMessage(error)}, 500);\n    }\n  }\n  if (url.pathname === '/api/admin/catalog' && request.method === 'GET') {\n    try {\n      return json({galleries: await allGalleries(env, true), photoUploadEnabled: Boolean(env.BUCKET || env.DB)});"
+  "if (url.pathname === '/api/admin/site-settings') {\n    try {\n      if (request.method === 'GET') return json({site: await loadSiteProfile(env)});\n      if (request.method === 'POST') return await saveSiteProfile(request, env);\n      return json({error: 'Метод не поддерживается'}, 405);\n    } catch (error) {\n      return json({error: 'Не удалось сохранить настройки сайта: ' + errorMessage(error)}, 500);\n    }\n  }\n  if (url.pathname === '/api/admin/prices') {\n    try {\n      if (request.method === 'GET') return json({prices: await loadPrices(env)});\n      if (request.method === 'POST') return await savePrices(request, env);\n      return json({error: 'Метод не поддерживается'}, 405);\n    } catch (error) {\n      return json({error: 'Не удалось сохранить цены: ' + errorMessage(error)}, 500);\n    }\n  }\n  if (url.pathname === '/api/admin/leads' && request.method === 'GET') {\n    try {\n      return json(await listLeads(env));\n    } catch (error) {\n      return json({error: 'Не удалось загрузить заявки: ' + errorMessage(error)}, 500);\n    }\n  }\n  if (url.pathname.startsWith('/api/admin/leads/') && request.method === 'POST') {\n    try {\n      return await updateLeadStatus(request, env, url.pathname.slice('/api/admin/leads/'.length));\n    } catch (error) {\n      return json({error: 'Не удалось обновить заявку: ' + errorMessage(error)}, 500);\n    }\n  }\n  if (url.pathname === '/api/admin/catalog' && request.method === 'GET') {\n    try {\n      return json({galleries: await allGalleries(env, true), photoUploadEnabled: Boolean(env.BUCKET || env.DB)});"
 );
 
-// Render the public page with settings from D1, falling back to repository defaults.
+patchedWorkerSource = patchedWorkerSource.replace(
+  "if (url.pathname.startsWith('/catalog-media/')) return serveCatalogMedia(env, url.pathname);\n    if (url.pathname === '/api/catalog-images' && request.method === 'GET') {",
+  "if (url.pathname.startsWith('/catalog-media/')) return serveCatalogMedia(env, url.pathname);\n    if (url.pathname === '/api/leads') {\n      if (request.method !== 'POST') return json({error: 'Метод не поддерживается'}, 405);\n      try {\n        return await createLead(request, env, url);\n      } catch (error) {\n        return json({error: 'Не удалось сохранить заявку: ' + errorMessage(error)}, 500);\n      }\n    }\n    if (url.pathname === '/api/catalog-images' && request.method === 'GET') {"
+);
+
 patchedWorkerSource = patchedWorkerSource.replace('return html(PAGE);\n  }\n};', 'return html(await renderPublicPage(env));\n  }\n};');
 
 const worker = patchedWorkerSource
@@ -188,6 +182,7 @@ const worker = patchedWorkerSource
 await writeFile('dist/server/index.js', worker, 'utf8');
 await writeFile('dist/client/.keep', '', 'utf8');
 await copyFile('assets/hero-gates.jpg', 'dist/client/hero-gates.jpg');
+await copyFile('storefront.css', 'dist/client/storefront.css');
 await cp('assets/catalog', 'dist/client/catalog', { recursive: true });
 await copyFile('.openai/hosting.json', 'dist/.openai/hosting.json');
 await cp('drizzle', 'dist/.openai/drizzle', { recursive: true });
