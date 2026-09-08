@@ -1,3 +1,34 @@
+function sameOrigin(request, url) {
+  return request.headers.get('origin') === url.origin;
+}
+
+function clientKey(request) {
+  return request.headers.get('cf-connecting-ip') || 'unknown';
+}
+
+function canAttemptLogin(request) {
+  const key = clientKey(request);
+  const now = Date.now();
+  const attempt = loginAttempts.get(key);
+  if (!attempt || attempt.resetAt <= now) {
+    loginAttempts.delete(key);
+    return true;
+  }
+  return attempt.count < 5;
+}
+
+function registerFailedLogin(request) {
+  const key = clientKey(request);
+  const now = Date.now();
+  const current = loginAttempts.get(key);
+  if (!current || current.resetAt <= now) {
+    loginAttempts.set(key, {count: 1, resetAt: now + 15 * 60 * 1000});
+  } else {
+    current.count += 1;
+  }
+  if (loginAttempts.size > 500) loginAttempts.clear();
+}
+
 async function loadAdminAuth(env) {
   if (!env.DB) return null;
   try {
