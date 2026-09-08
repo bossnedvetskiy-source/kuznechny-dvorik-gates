@@ -127,9 +127,7 @@
 
   function fill(settings) {
     siteSettings = settings;
-    for (const [key, input] of Object.entries(fields)) {
-      input.value = settings[key] ?? '';
-    }
+    for (const [key, input] of Object.entries(fields)) input.value = settings[key] ?? '';
     setDirty(false);
   }
 
@@ -192,8 +190,18 @@
       showToast('Сначала сохраните изменения настроек', true);
       return;
     }
+    if (panel.hidden) return;
+
+    event.preventDefault();
+    event.stopImmediatePropagation();
     panel.hidden = true;
     tab.classList.remove('active');
+    const target = button.dataset.adminTab;
+    document.getElementById('photosTab').hidden = target !== 'photos';
+    document.getElementById('pricesTab').hidden = target !== 'prices';
+    document.getElementById('catalogTab').hidden = target !== 'catalog';
+    oldTabs.forEach(item => item.classList.toggle('active', item === button));
+    if (target === 'prices' || target === 'catalog') loadPriceSettings();
   }, true));
 
   form.addEventListener('submit', async event => {
