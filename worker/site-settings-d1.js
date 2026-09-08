@@ -19,6 +19,11 @@ function positiveMoney(value, fallback) {
   return Number.isFinite(number) && number >= 0 && number <= 10000000 ? number : fallback;
 }
 
+function positiveOrder(value, fallback) {
+  const number = Math.round(Number(value));
+  return Number.isFinite(number) && number >= 1 && number <= 10000 ? number : fallback;
+}
+
 function normalizePrices(input) {
   const source = input && typeof input === 'object' ? input : {};
   const defaultCatalog = Array.isArray(DEFAULT_PRICES.catalog) ? DEFAULT_PRICES.catalog : [];
@@ -26,14 +31,24 @@ function normalizePrices(input) {
   const defaultExtras = Array.isArray(DEFAULT_PRICES.extraProducts) ? DEFAULT_PRICES.extraProducts : [];
   const inputExtras = new Map((Array.isArray(source.extraProducts) ? source.extraProducts : []).map(item => [String(item?.id || ''), item]));
 
+  const catalog = defaultCatalog.map((defaultItem, index) => {
+    const item = inputCatalog.get(defaultItem.art) || {};
+    return {
+      art: defaultItem.art,
+      price: positiveMoney(item.price, defaultItem.price),
+      visible: item.visible !== false,
+      order: positiveOrder(item.order, index + 1)
+    };
+  }).sort((left, right) => left.order - right.order || left.art.localeCompare(right.art, 'ru'));
+
+  catalog.forEach((item, index) => { item.order = index + 1; });
+  if (catalog.length && !catalog.some(item => item.visible)) catalog[0].visible = true;
+
   return {
     updatedAt: new Date().toISOString().slice(0, 10),
     catalogInstallation: positiveMoney(source.catalogInstallation, DEFAULT_PRICES.catalogInstallation),
     catalogPosts: positiveMoney(source.catalogPosts, DEFAULT_PRICES.catalogPosts),
-    catalog: defaultCatalog.map(defaultItem => {
-      const item = inputCatalog.get(defaultItem.art) || {};
-      return {art: defaultItem.art, price: positiveMoney(item.price, defaultItem.price)};
-    }),
+    catalog,
     extraProducts: defaultExtras.map(defaultItem => {
       const item = inputExtras.get(defaultItem.id) || {};
       return {
