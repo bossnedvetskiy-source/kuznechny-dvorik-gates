@@ -27,6 +27,17 @@ const [htmlSource, css, storefrontCss, catalogImages, pricesSource, deliveryPric
   readFile('worker/leads-d1.js', 'utf8')
 ]);
 
+const gateCalcSources = await Promise.all([
+  readFile('gate-calc-prices.js', 'utf8'),
+  readFile('gate-calc-models-chunk1.js', 'utf8'),
+  readFile('gate-calc-models-chunk2.js', 'utf8'),
+  readFile('gate-calc-models-chunk3.js', 'utf8'),
+  readFile('gate-calc-models-chunk4.js', 'utf8'),
+  readFile('gate-calc-models.js', 'utf8'),
+  readFile('gate-calc-engine.js', 'utf8')
+]);
+const gateCalcBundle = gateCalcSources.join('\n');
+
 const deliveryPrices = JSON.parse(deliveryPricesSource);
 if (!Number.isFinite(deliveryPrices.fallbackRatePerKm) || !deliveryPrices.origin) {
   throw new Error('Некорректный файл delivery-prices.json');
@@ -55,6 +66,13 @@ const html = htmlSource
   .replace('<script id="deliveryData" type="application/json">{}</script>', `<script id="deliveryData" type="application/json">${embeddedDeliveryPrices}</script>`)
   .replace('<script src="catalog-images.js"></script>', `<script>${catalogImages}</script>`)
   .replace('<script src="prices.js"></script>', '<script>window.PRICE_DATA=__RUNTIME_PRICE_DATA__;window.SITE_SETTINGS=__RUNTIME_SITE_DATA__;</script>')
+  .replace('<script src="gate-calc-prices.js"></script>', `<script>${gateCalcBundle}</script>`)
+  .replace('<script src="gate-calc-models-chunk1.js"></script>', '')
+  .replace('<script src="gate-calc-models-chunk2.js"></script>', '')
+  .replace('<script src="gate-calc-models-chunk3.js"></script>', '')
+  .replace('<script src="gate-calc-models-chunk4.js"></script>', '')
+  .replace('<script src="gate-calc-models.js"></script>', '')
+  .replace('<script src="gate-calc-engine.js"></script>', '')
   .replace('<script src="app.js"></script>', `<script>${publicJs}</script><script>${publicSiteJsSource}</script>`);
 
 let adminJs = adminJsSource

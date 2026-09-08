@@ -81,11 +81,11 @@
           </label>
         </div>
       </div>
-      <div class="catalog-summary"><span id="catalogCount">38 моделей</span><span>В карточках — цена с монтажом и под ключ</span></div>
+      <div class="catalog-summary"><span id="catalogCount">40 моделей</span><span>В карточках — цена с монтажом и под ключ</span></div>
       <div class="catalog-grid" id="catalogGrid"></div>
       <div class="empty-state" id="emptyState" hidden>По выбранным параметрам вариантов нет.</div>
       <div class="catalog-more" id="catalogMore">
-        <span id="catalogProgress">Показано 6 из 38</span>
+        <span id="catalogProgress">Показано 6 из 40</span>
         <button class="show-more" id="showMoreButton" type="button">Показать ещё 6 моделей</button>
       </div>
     </section>
@@ -134,9 +134,10 @@
             <div class="dimensions">
               <label><span id="widthLabelText">Ширина ворот, м</span><input id="widthInput" type="number" min="0.8" max="8" step="0.1" value="3.4" inputmode="decimal"></label>
               <label id="wicketWidthWrap">Ширина калитки, м<input id="wicketWidthInput" type="number" min="0.7" max="2.5" step="0.05" value="1" inputmode="decimal"></label>
-              <label>Высота, м<input id="heightInput" type="number" min="1" max="3" step="0.1" value="1.8" inputmode="decimal"></label>
+              <label>Высота ворот, м<input id="heightInput" type="number" min="1" max="3" step="0.1" value="1.8" inputmode="decimal"></label>
+              <label id="wicketHeightWrap">Высота калитки, м<input id="wicketHeightInput" type="number" min="1" max="3" step="0.1" value="1.8" inputmode="decimal"></label>
             </div>
-            <div class="size-notice" id="sizeNotice" hidden>Нестандартный размер — расчёт ориентировочный</div>
+            <div class="size-notice" id="sizeNotice" hidden>Цена пересчитана по выбранным размерам</div>
           </div>
 
           <div class="form-block">
@@ -266,6 +267,13 @@
   <script id="deliveryData" type="application/json">{}</script>
   <script src="catalog-images.js"></script>
   <script src="prices.js"></script>
+  <script src="gate-calc-prices.js"></script>
+  <script src="gate-calc-models-chunk1.js"></script>
+  <script src="gate-calc-models-chunk2.js"></script>
+  <script src="gate-calc-models-chunk3.js"></script>
+  <script src="gate-calc-models-chunk4.js"></script>
+  <script src="gate-calc-models.js"></script>
+  <script src="gate-calc-engine.js"></script>
   <script src="app.js"></script>
   <script>
     (() => {

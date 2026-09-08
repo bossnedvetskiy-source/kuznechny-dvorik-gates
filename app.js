@@ -20,7 +20,7 @@ const catalogProducts = priceData.catalog.map(({art,price},index)=>{
   return {
     id:`catalog-${article}`,type:'catalog',style:tier,art,title:'Ворота с калиткой',
     description:'Стандарт: ворота 3,4×1,8 м и калитка 1×1,8 м.',
-    price,install:priceData.catalogInstallation,posts:priceData.catalogPosts,standard:[3.4,1.8],wicketWidth:1,
+    price,install:priceData.catalogInstallation,posts:priceData.catalogPosts,standard:[3.4,1.8],wicketWidth:1,wicketHeight:1.8,
     meta:['Любой цвет профнастила','Порошковая окраска'],
     badge:art==='Арт.6'?'Хит продаж':'',rank:index+1,image,gallery,positions,zooms,tier,media,fitMode:'contain'
   };
@@ -226,6 +226,8 @@ const widthInput=document.getElementById('widthInput');
 const wicketWidthInput=document.getElementById('wicketWidthInput');
 const wicketWidthWrap=document.getElementById('wicketWidthWrap');
 const heightInput=document.getElementById('heightInput');
+const wicketHeightInput=document.getElementById('wicketHeightInput');
+const wicketHeightWrap=document.getElementById('wicketHeightWrap');
 const installCheck=document.getElementById('installCheck');
 const postsCheck=document.getElementById('postsCheck');
 const installPrice=document.getElementById('installPrice');
@@ -247,6 +249,9 @@ const selectedProductCaption=document.getElementById('selectedProductCaption');
 const estimateBreakdown=document.getElementById('estimateBreakdown');
 
 if(mobileCatalogMedia.matches) estimateBreakdown.open=false;
+wicketHeightInput?.addEventListener('input',calculate);
+wicketHeightInput?.addEventListener('change',calculate);
+window.GATE_CALC?.ready?.then(()=>{ if(!calculatorPanel.hidden) calculate(); renderProducts(); }).catch(error=>console.error('Gate models load failed',error));
 
 citySuggestions.innerHTML = destinations.map(destination=>`<option value="${escapeHTML(destination.name)}"></option>`).join('');
 
@@ -301,6 +306,7 @@ function chooseProduct(id){
   const product=selectedProduct();
   widthInput.value=product.standard[0];heightInput.value=product.standard[1];
   wicketWidthInput.value=product.wicketWidth??1;
+  if(wicketHeightInput) wicketHeightInput.value=product.wicketHeight??product.standard[1];
   installCheck.checked=product.install>0;
   if(product.type==='catalog'&&product.posts){
     try{postsCheck.checked=sessionStorage.getItem(POSTS_MEMORY_KEY)==='1'}catch{postsCheck.checked=false}
@@ -345,6 +351,7 @@ function updateControls(){
   }
   const hasSeparateWicket=Number.isFinite(product.wicketWidth);
   wicketWidthWrap.hidden=!hasSeparateWicket;
+  if(wicketHeightWrap) wicketHeightWrap.hidden=!hasSeparateWicket;
   widthLabelText.textContent=product.type==='wicket'?'Ширина калитки, м':product.type==='sliding'?'Ширина проёма, м':'Ширина ворот, м';
   colorLabel.hidden=product.type==='frame';
   installCheck.disabled=!product.install;postsCheck.disabled=!product.posts;
@@ -370,19 +377,36 @@ function deliveryLine(){
 
 function isNonStandard(product){
   const gateWidthChanged=Math.abs((Number(widthInput.value)||0)-product.standard[0])>.01;
-  const heightChanged=Math.abs((Number(heightInput.value)||0)-product.standard[1])>.01;
+  const gateHeightChanged=Math.abs((Number(heightInput.value)||0)-product.standard[1])>.01;
   const wicketWidthChanged=Number.isFinite(product.wicketWidth)&&Math.abs((Number(wicketWidthInput.value)||0)-product.wicketWidth)>.01;
-  return gateWidthChanged||heightChanged||wicketWidthChanged;
+  const wicketHeightChanged=Number.isFinite(product.wicketWidth)&&Math.abs((Number(wicketHeightInput?.value)||0)-(product.wicketHeight??product.standard[1]))>.01;
+  return gateWidthChanged||gateHeightChanged||wicketWidthChanged||wicketHeightChanged;
 }
 
 function sizeMessageLines(product){
   if(product.type==='wicket') return [`Размер калитки: ${widthInput.value} × ${heightInput.value} м`];
-  if(Number.isFinite(product.wicketWidth)) return [`Размер ворот: ${widthInput.value} × ${heightInput.value} м`,`Размер калитки: ${wicketWidthInput.value} × ${heightInput.value} м`];
+  if(Number.isFinite(product.wicketWidth)) return [`Размер ворот: ${widthInput.value} × ${heightInput.value} м`,`Размер калитки: ${wicketWidthInput.value} × ${wicketHeightInput?.value||heightInput.value} м`];
   return [`Размер: ${widthInput.value} × ${heightInput.value} м`];
 }
 
+function catalogCalculatedPrice(product){
+  if(product.type!=='catalog'||!window.GATE_CALC?.hasArticle(product.art)) return product.price;
+  try{
+    return window.GATE_CALC.calculateGate({
+      article:product.art,
+      gateWidth:Number(widthInput.value),
+      gateHeight:Number(heightInput.value),
+      wicketWidth:Number(wicketWidthInput.value),
+      wicketHeight:Number(wicketHeightInput?.value||heightInput.value)
+    }).total;
+  }catch(error){
+    console.error('Gate calculation failed',product.art,error);
+    return product.price;
+  }
+}
+
 function calcData(){
-  const product=selectedProduct(),lines=[['Изделие',product.price]];
+  const product=selectedProduct(),lines=[['Изделие',catalogCalculatedPrice(product)]];
   if(installCheck.checked&&product.install)lines.push(['Монтаж',product.install]);
   if(postsCheck.checked&&product.posts)lines.push([product.type==='frame'?'Комплект столбов':'Столбы и установка',product.posts]);
   lines.push(deliveryLine());
@@ -393,8 +417,9 @@ function calcData(){
 function calculate(){
   const {p,lines,total,deliveryPending}=calcData();
   const nonStandard=isNonStandard(p);
-  const approximate=nonStandard||p.from||deliveryPending;
-  sizeNotice.hidden=!nonStandard;
+  const dimensionsCalculated=p.type==='catalog'&&Boolean(window.GATE_CALC?.hasArticle(p.art));
+  const approximate=(nonStandard&&!dimensionsCalculated)||p.from||deliveryPending;
+  sizeNotice.hidden=!nonStandard||!dimensionsCalculated;
   document.getElementById('estimateProduct').textContent=`${p.title} · ${p.art}`;
   document.getElementById('estimateLines').innerHTML=lines.map(([name,value,kind,displayValue])=>`<div class="estimate-line"><span>${escapeHTML(name)}</span><strong class="${value===null?'pending':''}">${kind==='delivery'?escapeHTML(displayValue):value===null?'Уточняется':money(value)}</strong></div>`).join('');
   document.getElementById('estimateTotalLabel').textContent=deliveryPending?'Ориентир без доставки':'Предварительно с доставкой';
@@ -404,7 +429,8 @@ function calculate(){
   mobileEstimateLabel.textContent=deliveryPending?'Без доставки — уточним населённый пункт':'Предварительно с доставкой';
   if(!calculatorPanel.hidden) mobilePrimaryCta.textContent=`К заявке · ${approximate?'от ':''}${money(total)}`;
   let note='Доставка учтена в общей сумме. Окончательная стоимость фиксируется в договоре после бесплатного замера.';
-  if(nonStandard) note='Размер отличается от стандартного. Показана цена стандартной модели — точную стоимость подтвердим после замера. Доставка учтена в общей сумме.';
+  if(nonStandard&&dimensionsCalculated) note='Стоимость изделия пересчитана по указанным размерам и формуле выбранной модели. Доставка учтена в общей сумме. Итоговую стоимость зафиксируем после замера.';
+  else if(nonStandard) note='Размер отличается от стандартного. Точную стоимость подтвердим после замера. Доставка учтена в общей сумме.';
   if(deliveryPending) note+=' Рассчитайте доставку или отправьте заявку — стоимость уточним вручную.';
   document.getElementById('estimateNote').textContent=note;
 }
@@ -501,6 +527,7 @@ function leadPayload(){
     productTitle:p.title,
     width:Number(widthInput.value)||null,
     wicketWidth:Number.isFinite(p.wicketWidth)?(Number(wicketWidthInput.value)||null):null,
+    wicketHeight:Number.isFinite(p.wicketWidth)?(Number(wicketHeightInput?.value)||null):null,
     height:Number(heightInput.value)||null,
     install:Boolean(installCheck.checked&&p.install),
     posts:Boolean(postsCheck.checked&&p.posts),
