@@ -5,17 +5,19 @@ await mkdir('dist/server', { recursive: true });
 await mkdir('dist/client', { recursive: true });
 await mkdir('dist/.openai', { recursive: true });
 
-const [htmlSource, css, catalogImages, pricesSource, deliveryPricesSource, js, adminHtmlSource, adminCss, adminJsSource, adminPricesJsSource, workerSource, adminAuthSource, siteSettingsSource, catalogMediaSource] = await Promise.all([
+const [htmlSource, css, catalogImages, pricesSource, deliveryPricesSource, js, publicSiteJsSource, adminHtmlSource, adminCss, adminJsSource, adminPricesJsSource, adminSiteJsSource, workerSource, adminAuthSource, siteSettingsSource, catalogMediaSource] = await Promise.all([
   readFile('index.html', 'utf8'),
   readFile('styles.css', 'utf8'),
   readFile('catalog-images.js', 'utf8'),
   readFile('prices.js', 'utf8'),
   readFile('delivery-prices.json', 'utf8'),
   readFile('app.js', 'utf8'),
+  readFile('public-site-settings.js', 'utf8'),
   readFile('admin.html', 'utf8'),
   readFile('admin.css', 'utf8'),
   readFile('admin.js', 'utf8'),
   readFile('admin-prices.js', 'utf8'),
+  readFile('admin-site.js', 'utf8'),
   readFile('worker/runtime.js', 'utf8'),
   readFile('worker/auth-d1.js', 'utf8'),
   readFile('worker/site-settings-d1.js', 'utf8'),
@@ -34,18 +36,28 @@ const pricesMatch = pricesSource.match(/window\.PRICE_DATA\s*=\s*({[\s\S]*?});\s
 if (!pricesMatch) throw new Error('Некорректный файл prices.js');
 const defaultPrices = Function(`"use strict"; return (${pricesMatch[1]});`)();
 
-const publicJs = js.replace(
+let publicJs = js.replace(
   "const catalogProducts = priceData.catalog.map(({art,price},index)=>{",
   "const orderedCatalogPrices = [...priceData.catalog].filter(item=>item.visible!==false).sort((a,b)=>(Number(a.order)||9999)-(Number(b.order)||9999));\nconst catalogProducts = orderedCatalogPrices.map(({art,price},index)=>{"
 );
 if (publicJs === js) throw new Error('Не найден блок каталога в app.js');
 
+publicJs = publicJs
+  .replace(
+    'const priceData = window.PRICE_DATA;',
+    'const siteSettings = window.SITE_SETTINGS || {};\nconst priceData = window.PRICE_DATA;'
+  )
+  .replace(
+    "window.open(`https://wa.me/79373296750?text=${encodeURIComponent(buildMessage())}`,'_blank','noopener');",
+    "window.open(`https://wa.me/${String(siteSettings.whatsappDigits||'79373296750')}?text=${encodeURIComponent(buildMessage())}`,'_blank','noopener');"
+  );
+
 const html = htmlSource
   .replace('<link rel="stylesheet" href="styles.css">', `<style>${css}</style>`)
   .replace('<script id="deliveryData" type="application/json">{}</script>', `<script id="deliveryData" type="application/json">${embeddedDeliveryPrices}</script>`)
   .replace('<script src="catalog-images.js"></script>', `<script>${catalogImages}</script>`)
-  .replace('<script src="prices.js"></script>', '<script>window.PRICE_DATA=__RUNTIME_PRICE_DATA__;</script>')
-  .replace('<script src="app.js"></script>', `<script>${publicJs}</script>`);
+  .replace('<script src="prices.js"></script>', '<script>window.PRICE_DATA=__RUNTIME_PRICE_DATA__;window.SITE_SETTINGS=__RUNTIME_SITE_DATA__;</script>')
+  .replace('<script src="app.js"></script>', `<script>${publicJs}</script><script>${publicSiteJsSource}</script>`);
 
 // A 401 from the login endpoint means invalid credentials, not an expired session.
 // Keep the server's real error message visible instead of clearing the password field.
@@ -103,7 +115,7 @@ adminJs = adminJs.slice(0, optimizeStart) + optimizedPhotoFunction + adminJs.sli
 const adminHtml = adminHtmlSource
   .replace('<link rel="stylesheet" href="admin.css">', `<style>${adminCss}</style>`)
   .replace('<script src="admin.js"></script>', `<script>${adminJs}</script>`)
-  .replace('<script src="admin-prices.js"></script>', `<script>${adminPricesJsSource}</script>`);
+  .replace('<script src="admin-prices.js"></script>', `<script>${adminPricesJsSource}</script><script>${adminSiteJsSource}</script>`);
 
 // Replace old environment-variable auth with D1-backed authentication and add
 // D1-backed settings/media helpers.
@@ -150,12 +162,16 @@ patchedWorkerSource = patchedWorkerSource
   .replace(
     "await Promise.allSettled(keys.map(key => env.BUCKET.delete(key)));",
     "await Promise.allSettled(keys.map(key => deleteCatalogMediaObject(env, key)));"
+  )
+  .replace(
+    "  const result = {\n    requestedName: place,\n    resolvedName: selected.display_name,\n    shortName: [...new Set(shortNameParts)].join(', ') || selected.display_name,\n    price: distanceKm * FALLBACK_RATE,\n    distanceKm,\n    rate: FALLBACK_RATE,",
+    "  const runtimeDeliveryRate = (await loadSiteProfile(env)).deliveryRate;\n  const result = {\n    requestedName: place,\n    resolvedName: selected.display_name,\n    shortName: [...new Set(shortNameParts)].join(', ') || selected.display_name,\n    price: distanceKm * runtimeDeliveryRate,\n    distanceKm,\n    rate: runtimeDeliveryRate,"
   );
 
-// Add price and catalog settings management to the authenticated admin API.
+// Add prices, catalog and general site settings to the authenticated admin API.
 patchedWorkerSource = patchedWorkerSource.replace(
   "if (url.pathname === '/api/admin/catalog' && request.method === 'GET') {\n    try {\n      return json({galleries: await allGalleries(env, true)});",
-  "if (url.pathname === '/api/admin/prices') {\n    try {\n      if (request.method === 'GET') return json({prices: await loadPrices(env)});\n      if (request.method === 'POST') return await savePrices(request, env);\n      return json({error: 'Метод не поддерживается'}, 405);\n    } catch (error) {\n      return json({error: 'Не удалось сохранить цены: ' + errorMessage(error)}, 500);\n    }\n  }\n  if (url.pathname === '/api/admin/catalog' && request.method === 'GET') {\n    try {\n      return json({galleries: await allGalleries(env, true), photoUploadEnabled: Boolean(env.BUCKET || env.DB)});"
+  "if (url.pathname === '/api/admin/site-settings') {\n    try {\n      if (request.method === 'GET') return json({site: await loadSiteProfile(env)});\n      if (request.method === 'POST') return await saveSiteProfile(request, env);\n      return json({error: 'Метод не поддерживается'}, 405);\n    } catch (error) {\n      return json({error: 'Не удалось сохранить настройки сайта: ' + errorMessage(error)}, 500);\n    }\n  }\n  if (url.pathname === '/api/admin/prices') {\n    try {\n      if (request.method === 'GET') return json({prices: await loadPrices(env)});\n      if (request.method === 'POST') return await savePrices(request, env);\n      return json({error: 'Метод не поддерживается'}, 405);\n    } catch (error) {\n      return json({error: 'Не удалось сохранить цены: ' + errorMessage(error)}, 500);\n    }\n  }\n  if (url.pathname === '/api/admin/catalog' && request.method === 'GET') {\n    try {\n      return json({galleries: await allGalleries(env, true), photoUploadEnabled: Boolean(env.BUCKET || env.DB)});"
 );
 
 // Render the public page with settings from D1, falling back to repository defaults.
