@@ -61,16 +61,17 @@ for (const [article, scenario, gateWidth, gateHeight, wicketWidth, wicketHeight,
 for (const [article, model] of Object.entries(context.GATE_CALC_MODELS.models)) {
   if (!model.standard) continue;
   const s = model.standard;
+  const expected = Number(s.total_round100);
   const actual = context.GATE_CALC.calculateGate({
     article,
-    gateWidth: s.gateWidth,
-    gateHeight: s.gateHeight,
-    wicketWidth: s.wicketWidth,
-    wicketHeight: s.wicketHeight,
+    gateWidth: Number(s.gate_width_m),
+    gateHeight: Number(s.gate_height_m),
+    wicketWidth: Number(s.wicket_width_m),
+    wicketHeight: Number(s.wicket_height_m),
   });
-  if (actual.total !== s.total) {
+  if (!Number.isFinite(expected) || actual.total !== expected) {
     failures += 1;
-    console.error(`STANDARD FAIL ${article}: expected ${s.total}, got ${actual.total}`);
+    console.error(`STANDARD FAIL ${article}: expected ${expected}, got ${actual.total}`);
   }
 }
 
