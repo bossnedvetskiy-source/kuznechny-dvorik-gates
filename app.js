@@ -251,6 +251,10 @@ const estimateBreakdown=document.getElementById('estimateBreakdown');
 if(mobileCatalogMedia.matches) estimateBreakdown.open=false;
 wicketHeightInput?.addEventListener('input',calculate);
 wicketHeightInput?.addEventListener('change',calculate);
+[widthInput,wicketWidthInput,heightInput,wicketHeightInput].filter(Boolean).forEach(element=>{
+  element.addEventListener('input',rememberDimensionsSelection);
+  element.addEventListener('change',rememberDimensionsSelection);
+});
 window.GATE_CALC?.ready?.then(()=>{ if(!calculatorPanel.hidden) calculate(); renderProducts(); }).catch(error=>console.error('Gate models load failed',error));
 
 citySuggestions.innerHTML = destinations.map(destination=>`<option value="${escapeHTML(destination.name)}"></option>`).join('');
@@ -258,6 +262,7 @@ citySuggestions.innerHTML = destinations.map(destination=>`<option value="${esca
 let deliveryState = {kind:'fixed',name:'Мелеуз',resolvedName:'Мелеуз',price:0};
 const DELIVERY_MEMORY_KEY='kuzdvor:selected-delivery';
 const POSTS_MEMORY_KEY='kuzdvor:strengthened-posts';
+const DIMENSIONS_MEMORY_KEY='kuzdvor:gate-dimensions';
 
 function rememberDeliverySelection(){
   if(!['fixed','calculated'].includes(deliveryState.kind))return;
@@ -301,12 +306,51 @@ function restoreDeliverySelection(){
 
 function selectedProduct(){return products.find(product=>product.id===productSelect.value)}
 
+function rememberedDimensions(){
+  try{
+    const saved=JSON.parse(sessionStorage.getItem(DIMENSIONS_MEMORY_KEY)||'null');
+    if(!saved)return null;
+    const values={
+      gateWidth:Number(saved.gateWidth),gateHeight:Number(saved.gateHeight),
+      wicketWidth:Number(saved.wicketWidth),wicketHeight:Number(saved.wicketHeight)
+    };
+    if(values.gateWidth<.8||values.gateWidth>8||values.gateHeight<1||values.gateHeight>3||values.wicketWidth<.7||values.wicketWidth>2.5||values.wicketHeight<1||values.wicketHeight>3)return null;
+    if(!Object.values(values).every(Number.isFinite))return null;
+    return values;
+  }catch{return null}
+}
+
+function rememberDimensionsSelection(){
+  const product=selectedProduct();
+  if(product?.type!=='catalog')return;
+  const values={
+    gateWidth:Number(widthInput.value),gateHeight:Number(heightInput.value),
+    wicketWidth:Number(wicketWidthInput.value),wicketHeight:Number(wicketHeightInput?.value)
+  };
+  if(values.gateWidth<.8||values.gateWidth>8||values.gateHeight<1||values.gateHeight>3||values.wicketWidth<.7||values.wicketWidth>2.5||values.wicketHeight<1||values.wicketHeight>3)return;
+  if(!Object.values(values).every(Number.isFinite))return;
+  try{sessionStorage.setItem(DIMENSIONS_MEMORY_KEY,JSON.stringify(values))}catch{}
+}
+
+function restoreDimensionsSelection(product){
+  if(product?.type!=='catalog')return false;
+  const saved=rememberedDimensions();
+  if(!saved)return false;
+  widthInput.value=saved.gateWidth;
+  heightInput.value=saved.gateHeight;
+  wicketWidthInput.value=saved.wicketWidth;
+  if(wicketHeightInput)wicketHeightInput.value=saved.wicketHeight;
+  return true;
+}
+
 function chooseProduct(id){
   productSelect.value=id;
   const product=selectedProduct();
-  widthInput.value=product.standard[0];heightInput.value=product.standard[1];
-  wicketWidthInput.value=product.wicketWidth??1;
-  if(wicketHeightInput) wicketHeightInput.value=product.wicketHeight??product.standard[1];
+  if(!restoreDimensionsSelection(product)){
+    widthInput.value=product.standard[0];heightInput.value=product.standard[1];
+    wicketWidthInput.value=product.wicketWidth??1;
+    if(wicketHeightInput) wicketHeightInput.value=product.wicketHeight??product.standard[1];
+  }
   installCheck.checked=product.install>0;
   if(product.type==='catalog'&&product.posts){
     try{postsCheck.checked=sessionStorage.getItem(POSTS_MEMORY_KEY)==='1'}catch{postsCheck.checked=false}

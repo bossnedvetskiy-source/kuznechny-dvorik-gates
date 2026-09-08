@@ -268,3 +268,13 @@
   .desktop-change-model:hover{text-decoration:underline}
 }
 @media(max-width:620px){.hero-size-note{display:none!important}}
+
+
+/* Conversion audit fixes 2026-09 */
+.catalog-trust-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:14px 0 12px}
+.catalog-trust-strip span{display:flex;align-items:center;justify-content:center;min-height:42px;padding:8px 10px;border:1px solid rgba(17,18,20,.08);border-radius:11px;background:#f7f4ee;color:#5f594f;font-size:11px;font-weight:800;text-align:center}
+@media(max-width:620px){
+  .hero-size-note{display:block!important;margin:9px 0 0!important;color:rgba(255,255,255,.66)!important;font-size:12px!important;line-height:1.45!important}
+  .catalog-trust-strip{grid-template-columns:1fr 1fr;gap:6px;margin:12px 0 10px}
+  .catalog-trust-strip span{min-height:38px;padding:7px 8px;font-size:10px}
+}

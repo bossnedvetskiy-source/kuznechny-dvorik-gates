@@ -17,7 +17,7 @@
   panel.innerHTML = `
     <div class="page-title">
       <div><p class="eyebrow">Заявки с сайта</p><h1>Клиенты и расчёты</h1></div>
-      <p>Заявка сохраняется перед открытием WhatsApp, поэтому контакт останется в админ-панели.</p>
+      <p>Заявки с сайта сохраняются здесь сразу после отправки клиентом.</p>
     </div>
     <div class="lead-toolbar">
       <div class="lead-stats" id="leadStats"></div>
@@ -79,7 +79,7 @@
     empty.hidden = shown.length > 0;
     list.innerHTML = shown.map(lead => {
       const dimensions = [lead.width ? `${lead.width} м` : '', lead.height ? `× ${lead.height} м` : ''].filter(Boolean).join(' ');
-      const wicket = lead.wicket_width ? `${lead.wicket_width} м` : '—';
+      const wicket = [lead.wicket_width ? `${lead.wicket_width} м` : '', lead.wicket_height ? `× ${lead.wicket_height} м` : ''].filter(Boolean).join(' ') || '—';
       const options = [lead.install ? 'монтаж' : '', lead.posts ? 'новые столбы' : '', lead.color || ''].filter(Boolean).join(' · ') || 'без дополнительных опций';
       const digits = phoneDigits(lead.phone);
       return `<article class="lead-card ${lead.status==='new'?'is-new':''}" data-lead-id="${lead.id}">

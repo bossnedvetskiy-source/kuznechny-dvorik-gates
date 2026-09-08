@@ -354,6 +354,7 @@
   const widthInput = document.getElementById('widthInput');
   const wicketWidthInput = document.getElementById('wicketWidthInput');
   const heightInput = document.getElementById('heightInput');
+  const wicketHeightInput = document.getElementById('wicketHeightInput');
   const sizeNotice = document.getElementById('sizeNotice');
   const productSelect = document.getElementById('productSelect');
   if (dimensions && !document.querySelector('.mobile-size-summary')) {
@@ -377,8 +378,9 @@
       const width = String(widthInput?.value || '').replace('.', ',');
       const height = String(heightInput?.value || '').replace('.', ',');
       const wicket = String(wicketWidthInput?.value || '').replace('.', ',');
+      const wicketHeight = String(wicketHeightInput?.value || heightInput?.value || '').replace('.', ',');
       kicker.textContent = sizeNotice?.hidden === false ? 'Ваш размер' : 'Стандартный размер';
-      value.textContent = wicket ? `Ворота ${width} × ${height} м · калитка ${wicket} м` : `${width} × ${height} м`;
+      value.textContent = wicket ? `Ворота ${width} × ${height} м · калитка ${wicket} × ${wicketHeight} м` : `${width} × ${height} м`;
     };
     toggle.addEventListener('click', () => {
       const open = dimensions.classList.toggle('is-open');
@@ -386,7 +388,7 @@
       toggle.setAttribute('aria-expanded', String(open));
       if (open) widthInput?.focus({preventScroll:true});
     });
-    [widthInput, wicketWidthInput, heightInput, productSelect].filter(Boolean).forEach(element => element.addEventListener('input', () => setTimeout(updateSizeSummary, 0)));
+    [widthInput, wicketWidthInput, heightInput, wicketHeightInput, productSelect].filter(Boolean).forEach(element => element.addEventListener('input', () => setTimeout(updateSizeSummary, 0)));
     productSelect?.addEventListener('change', () => setTimeout(updateSizeSummary, 0));
     updateSizeSummary();
   }

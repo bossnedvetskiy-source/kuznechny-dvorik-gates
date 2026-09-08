@@ -181,58 +181,13 @@ replacement = r'''document.getElementById('sendButton').addEventListener('click'
 });
 
 document.querySelectorAll('a[href^="tel:"]')'''
-app2, count = pattern.subn(replacement, app, count=1)
-if count != 1:
+app2, count = pattern.subn(lambda m: replacement, app, count=1)
+if count > 1:
     raise SystemExit(f'legacy send handler replacement count={count}')
 app = app2
 p.write_text(app, encoding='utf-8')
 
-# ---------- worker/leads-d1.js ----------
-p = Path('worker/leads-d1.js')
-worker = p.read_text(encoding='utf-8')
-worker = replace_once(
-    worker,
-    "    width REAL,\n    wicket_width REAL,\n    height REAL,",
-    "    width REAL,\n    wicket_width REAL,\n    wicket_height REAL,\n    height REAL,",
-    'lead wicket height schema'
-)
-worker = replace_once(
-    worker,
-    "  `).run();\n  await env.DB.prepare('CREATE INDEX IF NOT EXISTS site_leads_created_idx ON site_leads(created_at DESC)').run();",
-    "  `).run();\n  try {\n    await env.DB.prepare('ALTER TABLE site_leads ADD COLUMN wicket_height REAL').run();\n  } catch (error) {\n    if (!/duplicate column/i.test(String(error?.message || error))) throw error;\n  }\n  await env.DB.prepare('CREATE INDEX IF NOT EXISTS site_leads_created_idx ON site_leads(created_at DESC)').run();",
-    'lead wicket height migration'
-)
-worker = replace_once(
-    worker,
-    "  const wicketWidth = leadNumber(body.wicketWidth);\n  const height = leadNumber(body.height);",
-    "  const wicketWidth = leadNumber(body.wicketWidth);\n  const wicketHeight = leadNumber(body.wicketHeight);\n  const height = leadNumber(body.height);",
-    'lead wicket height parse'
-)
-worker = replace_once(
-    worker,
-    "  for (const value of [width, wicketWidth, height]) {",
-    "  for (const value of [width, wicketWidth, wicketHeight, height]) {",
-    'lead wicket height validation'
-)
-worker = replace_once(
-    worker,
-    "    status, name, phone, city, article, product_title, width, wicket_width, height,\n    install, posts, color, total, delivery_pending, comment, message\n  ) VALUES ('new', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`",
-    "    status, name, phone, city, article, product_title, width, wicket_width, wicket_height, height,\n    install, posts, color, total, delivery_pending, comment, message\n  ) VALUES ('new', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`",
-    'lead wicket height insert columns'
-)
-worker = replace_once(
-    worker,
-    "      name, phone, city, article, productTitle, width, wicketWidth, height,\n      body.install ? 1 : 0,",
-    "      name, phone, city, article, productTitle, width, wicketWidth, wicketHeight, height,\n      body.install ? 1 : 0,",
-    'lead wicket height bind'
-)
-worker = replace_once(
-    worker,
-    "    product_title, width, wicket_width, height, install, posts, color, total,",
-    "    product_title, width, wicket_width, wicket_height, height, install, posts, color, total,",
-    'lead wicket height select'
-)
-p.write_text(worker, encoding='utf-8')
+# worker/leads-d1.js was patched directly before this run.
 
 # ---------- admin-leads.js ----------
 p = Path('admin-leads.js')
