@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/final-clarity-polish.yml'
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -23,9 +24,7 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          import re
 
-          # index.html
           p=Path('index.html')
           s=p.read_text(encoding='utf-8')
 
@@ -34,7 +33,6 @@ jobs:
           s=s.replace('<small class="dimension-help" id="dimensionHelp">Ворота и калитка указываются отдельно.</small>','<small class="dimension-help" id="dimensionHelp">Ворота и калитка указываются отдельно. Не знаете точные размеры? Оставьте стандартные — замерщик измерит проём бесплатно.</small>',1)
           s=s.replace('<div class="size-notice" id="sizeNotice" hidden>Цена пересчитана по выбранным размерам</div>','<div class="size-notice" id="sizeNotice" hidden>Цена пересчитана по выбранным размерам</div>\n            <div class="size-memory-note" id="sizeMemoryNote" hidden>✓ Размер сохранён — можно сравнивать другие дизайны</div>',1)
 
-          # Replace current delivery chooser block with chooser + compact selected state.
           old = r'''      const deliveryBlock=cityInput?.closest('.form-block');
       if(deliveryBlock&&!deliveryBlock.classList.contains('delivery-choice-wrap')){
         deliveryBlock.classList.add('delivery-choice-wrap');
@@ -134,7 +132,6 @@ jobs:
               raise SystemExit('delivery chooser anchor not found')
           s=s.replace(old,new,1)
 
-          # Size-memory message follows the actual non-standard calculation state.
           anchor="      const consentRow=document.querySelector('#leadRequest .consent-row span');"
           addition=r'''      const sizeMemoryNote=document.getElementById('sizeMemoryNote');
       const sizeNotice=document.getElementById('sizeNotice');
@@ -146,10 +143,8 @@ jobs:
           if addition not in s:
               s=s.replace(anchor,addition+anchor,1)
 
-          # Mobile: show the posts explanation instead of hiding it.
           s=s.replace('.simplified-posts-block .compact-post-switch small{display:none!important}', '.simplified-posts-block .compact-post-switch small{display:block!important;margin-top:3px!important;font-size:11px!important;line-height:1.35!important;color:rgba(255,255,255,.56)!important}', 1)
 
-          # Add latest UI overrides near end of document.
           marker='data-final-clarity-polish="2026-09-09"'
           if marker not in s:
               extra=r'''
@@ -176,7 +171,6 @@ jobs:
 
           p.write_text(s,encoding='utf-8')
 
-          # app.js: keep only the useful product chip.
           p=Path('app.js')
           app=p.read_text(encoding='utf-8')
           app=app.replace("meta:['Любой цвет профнастила','Порошковая окраска']", "meta:['Любой цвет профнастила']", 1)
