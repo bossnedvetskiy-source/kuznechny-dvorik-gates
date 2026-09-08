@@ -132,3 +132,24 @@
   .product-meta span:nth-child(n+2){display:none!important}
   .hero-points{grid-template-columns:1fr 1fr!important}.hero-points span:last-child{grid-column:1/-1!important}
 }
+
+/* Условия первого экрана: сначала смысл, затем значение — читается за один взгляд. */
+.hero-points{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:10px!important}
+.hero-points>span{display:block!important;min-width:0;padding:11px 12px 10px!important;border-left:2px solid rgba(230,189,105,.78)!important;border-radius:0 10px 10px 0;background:rgba(255,255,255,.035)!important;color:transparent!important;font-size:0!important;line-height:1.35!important}
+.hero-points>span::before{display:block;margin-bottom:5px;color:var(--gold-light);font-size:9px;line-height:1.2;font-weight:800;letter-spacing:.9px;text-transform:uppercase}
+.hero-points>span:nth-child(1)::before{content:"Гарантия"}
+.hero-points>span:nth-child(2)::before{content:"Срок изготовления"}
+.hero-points>span:nth-child(3)::before{content:"Замер и смета"}
+.hero-points>span>b{display:block!important;margin:0 0 3px!important;color:#fff!important;font:18px/1.15 Prata,serif!important;letter-spacing:-.25px!important}
+.hero-points>span::after{display:block;color:rgba(255,255,255,.58);font-size:10px;line-height:1.35}
+.hero-points>span:nth-child(1)::after{content:"на конструкцию"}
+.hero-points>span:nth-child(2)::after{content:"по договору"}
+.hero-points>span:nth-child(3)::after{content:"перед оформлением заказа"}
+
+@media(max-width:620px){
+  .hero-points{grid-template-columns:1fr!important;gap:7px!important}
+  .hero-points>span{display:grid!important;grid-template-columns:1fr auto!important;align-items:center!important;gap:2px 10px!important;padding:10px 12px!important}
+  .hero-points>span::before{grid-column:1;margin:0!important;font-size:9px!important}
+  .hero-points>span>b{grid-column:2;grid-row:1;margin:0!important;font-size:16px!important;white-space:nowrap}
+  .hero-points>span::after{grid-column:1/-1;font-size:10px!important}
+}
