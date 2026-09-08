@@ -1,0 +1,54 @@
+name: One-off delivery edit UX fix
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/delivery-edit-ux-fix.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Improve mobile delivery edit flow
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+
+          old_css = ".mobile-delivery-wrap:not(.is-editing) .city-label,.mobile-delivery-wrap:not(.is-editing) .delivery-result,.mobile-delivery-wrap:not(.is-editing) .route-button,.mobile-delivery-wrap:not(.is-editing) .delivery-help{display:none!important}\n      .mobile-delivery-wrap.is-editing .mobile-delivery-summary{margin-bottom:10px!important}"
+          new_css = ".mobile-delivery-wrap .city-label{display:none!important}\n      .mobile-delivery-wrap:not(.is-editing) #cityInput,.mobile-delivery-wrap:not(.is-editing) .delivery-result,.mobile-delivery-wrap:not(.is-editing) .route-button,.mobile-delivery-wrap:not(.is-editing) .delivery-help{display:none!important}\n      .mobile-delivery-wrap.is-editing .mobile-delivery-summary{display:none!important}\n      .mobile-delivery-wrap.is-editing #cityInput{display:block!important}\n      .mobile-delivery-wrap.is-editing .delivery-result{margin-top:8px!important}"
+          if old_css in s:
+              s = s.replace(old_css, new_css, 1)
+          elif new_css not in s:
+              raise SystemExit('delivery css anchor not found')
+
+          old_click = """        summary.querySelector('button').addEventListener('click',()=>{\n          deliveryBlock.classList.add('is-editing');\n          setTimeout(()=>cityInput?.focus(),80);\n        });"""
+          new_click = """        if(cityInput) cityInput.placeholder='Введите ваш населённый пункт';\n        summary.querySelector('button').addEventListener('click',()=>{\n          deliveryBlock.classList.add('is-editing');\n          if(cityInput){\n            cityInput.value='';\n            cityInput.placeholder='Введите ваш населённый пункт';\n            cityInput.dispatchEvent(new Event('input',{bubbles:true}));\n          }\n          setTimeout(()=>cityInput?.focus(),80);\n        });"""
+          if old_click in s:
+              s = s.replace(old_click, new_click, 1)
+          elif new_click not in s:
+              raise SystemExit('delivery click anchor not found')
+
+          old_sync = """          else if(result.includes('выбран')||result.includes('подтвержд')) summaryValue.textContent=`${city} — доставка учтена в итоге`;\n          else summaryValue.textContent=city;\n        };"""
+          new_sync = """          else if(result.includes('выбран')||result.includes('подтвержд')) summaryValue.textContent=`${city} — доставка учтена в итоге`;\n          else summaryValue.textContent=city;\n          const chosen=Boolean(city)&&(result.includes('бесплат')||result.includes('выбран')||result.includes('подтвержд'));\n          if(chosen) deliveryBlock.classList.remove('is-editing');\n        };"""
+          if old_sync in s:
+              s = s.replace(old_sync, new_sync, 1)
+          elif new_sync not in s:
+              raise SystemExit('delivery summary anchor not found')
+
+          p.write_text(s, encoding='utf-8')
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git commit -m "Make delivery city editing clear on mobile"
+          git push origin main
