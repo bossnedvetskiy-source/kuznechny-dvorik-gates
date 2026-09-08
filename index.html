@@ -59,7 +59,7 @@
     <section class="catalog section-shell" id="catalog">
       <div class="section-head">
         <div><span class="section-number">01</span><h2>Каталог и цены</h2></div>
-        <p>Фильтры показывают только подходящие варианты. Нажмите «Рассчитать», и смета откроется под выбранной моделью.</p>
+        <p>Выберите дизайн. Стандарт: ворота 3,4×1,8 м и калитка 1×1,8 м. Точная смета откроется под выбранной моделью.</p>
       </div>
       <div class="filterbar" role="group" aria-label="Фильтры каталога">
         <div class="filter-tabs" id="priceFilters">
@@ -250,5 +250,116 @@
   <script src="catalog-images.js"></script>
   <script src="prices.js"></script>
   <script src="app.js"></script>
+  <style id="catalog-final-polish">
+    .product-card{
+      border:1px solid rgba(17,18,20,.08)!important;
+      box-shadow:0 10px 28px rgba(17,18,20,.055)!important;
+    }
+    .product-card:hover{box-shadow:0 18px 42px rgba(17,18,20,.10)!important}
+    .product-art{
+      font-family:Prata,serif!important;
+      font-size:13px!important;
+      font-weight:400!important;
+      padding:8px 11px!important;
+    }
+    .card-thumbnails{padding:9px 11px 0!important;gap:7px!important}
+    .card-thumb{flex-basis:64px!important;width:64px!important;height:48px!important;border-radius:9px!important}
+    .product-info{padding:13px 17px 17px!important}
+    .product-info h3,.product-info>p{display:none!important}
+    .product-labels{margin:0 0 9px!important}
+    .product-labels span:first-child{
+      padding:6px 10px!important;
+      border-radius:999px!important;
+      background:#17191c!important;
+      color:#f1cf86!important;
+      font-size:9px!important;
+      font-weight:800!important;
+    }
+    .product-meta{display:flex!important;gap:6px!important;margin:0 0 13px!important;flex-wrap:wrap!important}
+    .product-meta span{
+      padding:5px 8px!important;
+      border:1px solid rgba(17,18,20,.07)!important;
+      background:#f5f2ec!important;
+      color:#6a645c!important;
+      font-size:9px!important;
+    }
+    .product-bottom{
+      display:grid!important;
+      grid-template-columns:1fr!important;
+      align-items:stretch!important;
+      gap:11px!important;
+    }
+    .price-stack{
+      width:100%!important;
+      display:grid!important;
+      grid-template-columns:repeat(2,minmax(0,1fr))!important;
+      gap:8px!important;
+    }
+    .price-row,.price-row.turnkey{
+      display:grid!important;
+      align-content:start!important;
+      gap:5px!important;
+      min-width:0!important;
+      padding:11px 12px!important;
+      border:1px solid rgba(17,18,20,.09)!important;
+      border-radius:12px!important;
+      background:#faf9f6!important;
+    }
+    .price-row.turnkey{
+      border-color:rgba(200,152,60,.28)!important;
+      background:#f8f2e7!important;
+    }
+    .price-row small{
+      min-height:27px!important;
+      color:#716b63!important;
+      font-size:9px!important;
+      line-height:1.35!important;
+    }
+    .price-row strong,.price-row.turnkey strong{
+      font-size:21px!important;
+      line-height:1.05!important;
+      letter-spacing:-.55px!important;
+    }
+    .price-row strong{color:#17191c!important}
+    .price-row.turnkey strong{color:#8a6326!important}
+    .select-product{
+      width:100%!important;
+      min-height:47px!important;
+      padding:12px 15px!important;
+      border-radius:12px!important;
+      font-size:13px!important;
+      font-weight:800!important;
+    }
+    @media(max-width:620px){
+      .card-thumbnails{padding:8px 9px 0!important;gap:6px!important}
+      .card-thumb{flex-basis:58px!important;width:58px!important;height:44px!important}
+      .product-info{padding:12px 14px 15px!important}
+      .product-labels{margin-bottom:8px!important}
+      .product-meta{margin-bottom:11px!important;flex-wrap:nowrap!important;overflow:hidden!important}
+      .product-meta span{font-size:9px!important;white-space:nowrap!important}
+      .price-stack{gap:7px!important}
+      .price-row,.price-row.turnkey{padding:10px!important;border-radius:11px!important}
+      .price-row small{min-height:31px!important;font-size:9px!important}
+      .price-row strong,.price-row.turnkey strong{font-size:19px!important}
+      .select-product{min-height:50px!important;font-size:14px!important}
+    }
+  </style>
+  <script>
+    (() => {
+      const polishCards = () => {
+        document.querySelectorAll('#catalogGrid .product-card').forEach(card => {
+          const desktop = card.querySelector('.button-label-desktop');
+          const mobile = card.querySelector('.button-label-mobile');
+          if (desktop) desktop.textContent = 'Рассчитать стоимость';
+          if (mobile) mobile.textContent = 'Рассчитать стоимость';
+        });
+      };
+      const grid = document.getElementById('catalogGrid');
+      if (grid) {
+        polishCards();
+        new MutationObserver(() => queueMicrotask(polishCards)).observe(grid, {childList:true});
+      }
+    })();
+  </script>
 </body>
 </html>
