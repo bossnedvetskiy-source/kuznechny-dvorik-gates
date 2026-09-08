@@ -5,7 +5,7 @@ await mkdir('dist/server', { recursive: true });
 await mkdir('dist/client', { recursive: true });
 await mkdir('dist/.openai', { recursive: true });
 
-const [htmlSource, css, catalogImages, prices, deliveryPricesSource, js, adminHtmlSource, adminCss, adminJsSource, workerSource] = await Promise.all([
+const [htmlSource, css, catalogImages, prices, deliveryPricesSource, js, adminHtmlSource, adminCss, adminJsSource, workerSource, adminAuthSource] = await Promise.all([
   readFile('index.html', 'utf8'),
   readFile('styles.css', 'utf8'),
   readFile('catalog-images.js', 'utf8'),
@@ -15,7 +15,8 @@ const [htmlSource, css, catalogImages, prices, deliveryPricesSource, js, adminHt
   readFile('admin.html', 'utf8'),
   readFile('admin.css', 'utf8'),
   readFile('admin.js', 'utf8'),
-  readFile('worker/runtime.js', 'utf8')
+  readFile('worker/runtime.js', 'utf8'),
+  readFile('worker/auth-d1.js', 'utf8')
 ]);
 
 const deliveryPrices = JSON.parse(deliveryPricesSource);
@@ -46,7 +47,29 @@ const adminHtml = adminHtmlSource
   .replace('<link rel="stylesheet" href="admin.css">', `<style>${adminCss}</style>`)
   .replace('<script src="admin.js"></script>', `<script>${adminJs}</script>`);
 
-const worker = workerSource
+// Replace the old environment-variable auth block with D1-backed authentication.
+const authStart = workerSource.indexOf('async function createSessionCookie(env)');
+const authEnd = workerSource.indexOf('\nfunction defaultGallery(article)', authStart);
+if (authStart < 0 || authEnd < 0) throw new Error('Не найден блок авторизации Worker');
+let patchedWorkerSource = workerSource.slice(0, authStart) + adminAuthSource.trim() + workerSource.slice(authEnd);
+
+// R2 is not available on this account yet. Allow edits that only change existing
+// catalog image order/settings to be saved in D1; uploads still require R2.
+patchedWorkerSource = patchedWorkerSource
+  .replaceAll(
+    "if (!env.DB || !env.BUCKET) return json({error: 'Хранилище фотографий временно недоступно'}, 503);",
+    "if (!env.DB) return json({error: 'База данных временно недоступна'}, 503);"
+  )
+  .replace(
+    "await Promise.allSettled([...removed].filter(key => !retained.has(key)).map(key => env.BUCKET.delete(key)));",
+    "if (env.BUCKET) await Promise.allSettled([...removed].filter(key => !retained.has(key)).map(key => env.BUCKET.delete(key)));"
+  )
+  .replace(
+    "await Promise.allSettled(keys.map(key => env.BUCKET.delete(key)));",
+    "if (env.BUCKET) await Promise.allSettled(keys.map(key => env.BUCKET.delete(key)));"
+  );
+
+const worker = patchedWorkerSource
   .replace('__PUBLIC_PAGE__', JSON.stringify(html))
   .replace('__ADMIN_PAGE__', JSON.stringify(adminHtml))
   .replace('__DEFAULT_GALLERIES__', JSON.stringify(defaultGalleries))
