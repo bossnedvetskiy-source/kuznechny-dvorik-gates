@@ -8,7 +8,6 @@ const deliveryData = JSON.parse(deliveryDataElement?.textContent || '{}');
 if (!Array.isArray(deliveryData.destinations)) throw new Error('Не найден файл delivery-prices.json');
 
 const tierFor = price => price + priceData.catalogInstallation < 80000 ? 'value' : price + priceData.catalogInstallation < 100000 ? 'middle' : 'premium';
-const tierLabel = tier => ({value:'До 80 000 ₽',middle:'80–100 000 ₽',premium:'От 100 000 ₽'})[tier];
 const sketchArticles = new Set(['Арт.4','Арт.11','Арт.34','Арт.37']);
 const catalogProducts = priceData.catalog.map(({art,price},index)=>{
   const article = art.replace(/^Арт\.\s*/,'').toLowerCase().replace('с','s');
@@ -23,7 +22,7 @@ const catalogProducts = priceData.catalog.map(({art,price},index)=>{
     description:'Стандарт: ворота 3,4×1,8 м и калитка 1×1,8 м.',
     price,install:priceData.catalogInstallation,posts:priceData.catalogPosts,standard:[3.4,1.8],wicketWidth:1,
     meta:['Любой цвет профнастила','Порошковая окраска'],
-    badge:art==='Арт.6'?'Хит продаж':tierLabel(tier),rank:index+1,image,gallery,positions,zooms,tier,media,fitMode:'contain'
+    badge:art==='Арт.6'?'Хит продаж':'',rank:index+1,image,gallery,positions,zooms,tier,media,fitMode:'contain'
   };
 });
 
@@ -100,12 +99,12 @@ function renderProducts(){
       ${product.gallery.length>1?`<button class="card-gallery-arrow previous" data-gallery-shift="-1" type="button" aria-label="Предыдущая фотография ${product.art}">‹</button><button class="card-gallery-arrow next" data-gallery-shift="1" type="button" aria-label="Следующая фотография ${product.art}">›</button>`:''}
       <span class="product-photo-count" data-photo-count>${product.media==='sketch'?'Эскиз':product.gallery.length>1?`1 из ${product.gallery.length}`:'1 фото'}</span>
     </div>
-    <div class="product-info"><div class="product-labels"><span>${product.badge}</span></div><h3>Ворота с калиткой</h3><p>${product.description}</p>
+    <div class="product-info">${product.badge?`<div class="product-labels"><span>${product.badge}</span></div>`:''}<h3>Ворота с калиткой</h3><p>${product.description}</p>
       <div class="product-meta">${product.meta.map(item=>`<span>${item}</span>`).join('')}</div>
       <div class="product-bottom"><div class="price-stack">
-        <div class="price-row"><small>с установкой на готовые столбы</small><strong>${money(product.price+product.install)}</strong></div>
-        <div class="price-row turnkey"><small>под ключ со столбами</small><strong>${money(product.price+product.install+product.posts)}</strong></div>
-      </div><button class="select-product" data-product="${product.id}" type="button" aria-expanded="false"><span class="button-label-desktop">Рассчитать →</span><span class="button-label-mobile">Настроить и узнать итог</span></button></div>
+        <div class="price-row"><small>На готовые столбы</small><strong>${money(product.price+product.install)}</strong></div>
+        <div class="price-row turnkey"><small>Под ключ со столбами</small><strong>${money(product.price+product.install+product.posts)}</strong></div>
+      </div><button class="select-product" data-product="${product.id}" type="button" aria-expanded="false"><span class="button-label-desktop">Рассчитать стоимость</span><span class="button-label-mobile">Рассчитать стоимость</span></button></div>
     </div>
   </article>`).join('');
   document.getElementById('catalogCount').textContent = `${shown.length} ${pluralModels(shown.length)}`;
@@ -192,8 +191,7 @@ async function loadPublishedGalleries(){
       product.image=product.gallery[0];
       product.positions=published.positions&&typeof published.positions==='object'?published.positions:Object.fromEntries(product.gallery.map(url=>[url,{x:50,y:50}]));
       product.zooms=published.zooms&&typeof published.zooms==='object'?published.zooms:Object.fromEntries(product.gallery.map(url=>[url,1]));
-      // На витрине любое фото всегда показываем целиком, без обрезки.
-            product.fitMode='contain';
+      product.fitMode='contain';
       product.media=published.mediaType==='sketch'?'sketch':'photo';
     }
     renderProducts();
@@ -243,6 +241,7 @@ const citySuggestions=document.getElementById('citySuggestions');
 const deliveryResult=document.getElementById('deliveryResult');
 const routeButton=document.getElementById('routeButton');
 const phoneInput=document.getElementById('phoneInput');
+const consentInput=document.getElementById('consentInput');
 const selectedProductImage=document.getElementById('selectedProductImage');
 const selectedProductCaption=document.getElementById('selectedProductCaption');
 const estimateBreakdown=document.getElementById('estimateBreakdown');
@@ -436,6 +435,27 @@ function buildMessage(){
   return ['Здравствуйте! Хочу получить бесплатный замер.',name?`Имя: ${name}`:'',phone?`Телефон: ${phone}`:'',city?`Населённый пункт: ${city}`:'',`Изделие: ${p.title}, ${p.art}`,...sizeMessageLines(p),color,...lines.map(([lineName,value,kind])=>lineText(lineName,value,kind)),`${totalLabel}: ${nonStandard||p.from||deliveryPending?'от ':''}${money(total)}`,nonStandard?'Нужен перерасчёт нестандартного размера.':'',deliveryPending?'Доставка ещё не рассчитана — нужно уточнить.':'',comment?`Комментарий: ${comment}`:''].filter(Boolean).join('\n');
 }
 
+function leadPayload(){
+  const {p,total,deliveryPending}=calcData();
+  return {
+    name:document.getElementById('nameInput').value.trim(),
+    phone:phoneInput.value.trim(),
+    city:selectedCityName(),
+    article:p.art,
+    productTitle:p.title,
+    width:Number(widthInput.value)||null,
+    wicketWidth:Number.isFinite(p.wicketWidth)?(Number(wicketWidthInput.value)||null):null,
+    height:Number(heightInput.value)||null,
+    install:Boolean(installCheck.checked&&p.install),
+    posts:Boolean(postsCheck.checked&&p.posts),
+    color:p.type==='frame'?'':document.getElementById('colorSelect').value,
+    total:Math.round(total),
+    deliveryPending:Boolean(deliveryPending),
+    comment:document.getElementById('commentInput').value.trim(),
+    message:buildMessage()
+  };
+}
+
 function showToast(message){
   const toast=document.getElementById('toast');
   toast.textContent=message;toast.classList.add('show');
@@ -465,6 +485,7 @@ document.getElementById('copyButton').addEventListener('click',async()=>{
   try{await navigator.clipboard.writeText(buildMessage());if(window.ym)ym(107269914,'reachGoal','estimate_copy',{article:selectedProduct().art});showToast('Смета скопирована')}catch{showToast('Не удалось скопировать')}
 });
 phoneInput.addEventListener('input',()=>phoneInput.removeAttribute('aria-invalid'));
+consentInput?.addEventListener('change',()=>consentInput.removeAttribute('aria-invalid'));
 document.getElementById('sendButton').addEventListener('click',()=>{
   const phoneDigits=phoneInput.value.replace(/\D/g,'');
   if(phoneDigits.length<10||phoneDigits.length>11){
@@ -473,8 +494,22 @@ document.getElementById('sendButton').addEventListener('click',()=>{
   if(!cityInput.value.trim()){
     cityInput.focus();showToast('Укажите населённый пункт');return;
   }
+  if(consentInput&&!consentInput.checked){
+    consentInput.setAttribute('aria-invalid','true');consentInput.focus();showToast('Подтвердите согласие на обработку данных');return;
+  }
+  const payload=leadPayload();
+  fetch('/api/leads',{
+    method:'POST',
+    headers:{'content-type':'application/json'},
+    body:JSON.stringify(payload),
+    keepalive:true
+  }).then(async response=>{
+    if(!response.ok){const data=await response.json().catch(()=>({}));throw new Error(data.error||'Не удалось сохранить заявку')}
+    if(window.ym)ym(107269914,'reachGoal','lead_saved',{article:selectedProduct().art,city:selectedCityName()});
+  }).catch(()=>{});
   if(window.ym)ym(107269914,'reachGoal','whatsapp_request',{article:selectedProduct().art,city:selectedCityName()});
-  window.open(`https://wa.me/79373296750?text=${encodeURIComponent(buildMessage())}`,'_blank','noopener');
+  const whatsappDigits=String((window.SITE_SETTINGS||{}).whatsappDigits||'79373296750');
+  window.open(`https://wa.me/${whatsappDigits}?text=${encodeURIComponent(payload.message)}`,'_blank','noopener');
 });
 
 document.querySelectorAll('a[href^="tel:"]').forEach(link=>link.addEventListener('click',()=>{
