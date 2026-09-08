@@ -1,0 +1,51 @@
+name: One-off privacy policy link fix
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/policy-link-fix.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Fix privacy policy link behavior
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('index.html')
+          text = path.read_text(encoding='utf-8')
+          old = '''      leadRequest.querySelector('a[href="#privacyPolicy"]')?.addEventListener('click',closeSheet);'''
+          new = '''      const privacyLink = leadRequest.querySelector('a[href="#privacyPolicy"]');
+      privacyLink?.addEventListener('click', event => {
+        event.preventDefault();
+        phoneInput?.blur();
+        closeSheet();
+        const privacySection = document.getElementById('privacyPolicy');
+        const privacyDetails = privacySection?.querySelector('details');
+        if (privacyDetails) privacyDetails.open = true;
+        window.setTimeout(() => {
+          privacySection?.scrollIntoView({behavior:'smooth', block:'start'});
+          try { history.replaceState(null, '', '#privacyPolicy'); } catch {}
+        }, 120);
+      });'''
+          if old not in text:
+              raise SystemExit('Target privacy link handler not found')
+          path.write_text(text.replace(old, new, 1), encoding='utf-8')
+          PY
+      - name: Commit fix
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git commit -m "Fix privacy policy link in mobile lead form"
+          git push origin main
