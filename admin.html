@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#101214">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <title>Редактор карточек — Кузнечный ДворикЪ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Prata&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+  <main>
+    <section class="login-view" id="loginView" hidden>
+      <form class="login-card" id="loginForm">
+        <div class="brand-mark" aria-hidden="true">К</div>
+        <p class="eyebrow">Кузнечный ДворикЪ</p>
+        <h1>Вход в редактор</h1>
+        <p class="login-copy">Здесь можно менять фотографии в карточках каталога.</p>
+        <label>Логин<input id="loginInput" name="username" type="text" autocomplete="username" required></label>
+        <label>Пароль<input id="passwordInput" name="password" type="password" autocomplete="current-password" required></label>
+        <p class="form-error" id="loginError" role="alert" hidden></p>
+        <button class="primary-button" type="submit">Войти</button>
+        <a class="back-link" href="/">← Вернуться на сайт</a>
+      </form>
+    </section>
+
+    <section class="editor-view" id="editorView" hidden>
+      <header class="editor-header">
+        <a class="brand" href="/" target="_blank" rel="noopener">
+          <span class="brand-mark" aria-hidden="true">К</span>
+          <span><b>Редактор карточек</b><small>Кузнечный ДворикЪ</small></span>
+        </a>
+        <div class="header-actions">
+          <a href="/" target="_blank" rel="noopener">Открыть сайт ↗</a>
+          <button id="logoutButton" type="button">Выйти</button>
+        </div>
+      </header>
+
+      <div class="editor-shell">
+        <div class="page-title">
+          <div>
+            <p class="eyebrow">Управление каталогом</p>
+            <h1>Фотографии моделей</h1>
+          </div>
+          <p>Выберите модель, добавьте фотографии и поставьте лучшую первой — она станет обложкой карточки.</p>
+        </div>
+
+        <div class="model-picker">
+          <label>Модель ворот<select id="articleSelect" aria-label="Выберите модель ворот"></select></label>
+          <span class="save-state" id="saveState">Все изменения сохранены</span>
+        </div>
+
+        <div class="workspace">
+          <section class="preview-panel">
+            <div class="panel-heading">
+              <div><span>Как выглядит карточка</span><h2 id="previewArticle">Арт.6</h2></div>
+              <span class="photo-counter" id="photoCounter">1 фото</span>
+            </div>
+            <div class="card-preview" id="cardPreview" tabindex="0" aria-label="Предпросмотр области фотографии">
+              <img id="coverPreview" alt="Обложка выбранной модели">
+              <span class="article-badge" id="articleBadge">Арт.6</span>
+              <span class="cover-badge" id="previewPhotoBadge">Обложка</span>
+            </div>
+            <div class="crop-help" id="cropHelp" hidden>
+              <span><b>Выберите область показа</b>Рамка соответствует формату 1300×800. Перетаскивайте фотографию или нажмите «Показать низ».</span>
+              <div class="crop-actions">
+                <div class="zoom-control">
+                  <span>Масштаб</span>
+                  <button class="zoom-step" id="cropZoomMinus" type="button" aria-label="Уменьшить масштаб на 1 процент">−</button>
+                  <input id="cropZoom" type="range" min="40" max="400" step="1" value="100" aria-label="Масштаб фотографии">
+                  <output id="cropZoomValue" for="cropZoom">100%</output>
+                  <button class="zoom-step" id="cropZoomPlus" type="button" aria-label="Увеличить масштаб на 1 процент">+</button>
+                </div>
+                <button id="fitPhotoButton" type="button">Уместить</button>
+                <button id="fillPhotoButton" type="button">Заполнить кадр</button>
+                <button id="bottomPhotoButton" type="button">Показать низ</button>
+                <button id="centerPhotoButton" type="button">По центру</button>
+              </div>
+            </div>
+            <div class="fit-options" role="radiogroup" aria-label="Отображение фотографии">
+              <label class="fit-option">
+                <input type="radio" name="fitMode" value="contain" checked>
+                <span><b>Показать целиком</b><small>Без обрезки, с аккуратными полями</small></span>
+              </label>
+              <label class="fit-option">
+                <input type="radio" name="fitMode" value="cover">
+                <span><b>Настроить вручную</b><small>Масштаб и положение сохраняются отдельно для каждого фото</small></span>
+              </label>
+            </div>
+          </section>
+
+          <section class="photos-panel">
+            <div class="panel-heading">
+              <div><span>Фотографии модели</span><h2>Порядок показа</h2></div>
+              <label class="upload-button" for="photoInput">+ Добавить фото</label>
+              <input id="photoInput" type="file" accept="image/jpeg,image/png,image/webp,image/*" multiple hidden>
+            </div>
+            <div class="upload-note" id="uploadNote">Можно загрузить до 12 фотографий. Большие файлы автоматически уменьшаются без изменения пропорций.</div>
+            <div class="photo-grid" id="photoGrid"></div>
+            <p class="empty-photos" id="emptyPhotos" hidden>Сначала добавьте фотографию.</p>
+          </section>
+        </div>
+
+        <div class="action-bar">
+          <div>
+            <button class="reset-button" id="resetButton" type="button">Вернуть исходные фото</button>
+            <small>Удалить последнюю фотографию нельзя: сначала добавьте замену.</small>
+          </div>
+          <button class="primary-button save-button" id="saveButton" type="button" disabled>Сохранить изменения</button>
+        </div>
+      </div>
+    </section>
+  </main>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="admin.js"></script>
+</body>
+</html>

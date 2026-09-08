@@ -1,0 +1,8 @@
+# Эти значения задаются в панели хостинга. Не публикуйте файл с настоящим паролем.
+ADMIN_USERNAME=replace_with_new_login
+ADMIN_PASSWORD=replace_with_new_strong_password
+ADMIN_SESSION_SECRET=replace_with_long_random_secret
+
+# Серверные привязки
+DB=D1_or_compatible_database
+BUCKET=R2_or_compatible_object_storage
