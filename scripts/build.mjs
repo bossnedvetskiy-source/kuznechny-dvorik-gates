@@ -5,7 +5,7 @@ await mkdir('dist/server', { recursive: true });
 await mkdir('dist/client', { recursive: true });
 await mkdir('dist/.openai', { recursive: true });
 
-const [htmlSource, css, catalogImages, prices, deliveryPricesSource, js, adminHtmlSource, adminCss, adminJs, workerSource] = await Promise.all([
+const [htmlSource, css, catalogImages, prices, deliveryPricesSource, js, adminHtmlSource, adminCss, adminJsSource, workerSource] = await Promise.all([
   readFile('index.html', 'utf8'),
   readFile('styles.css', 'utf8'),
   readFile('catalog-images.js', 'utf8'),
@@ -33,6 +33,14 @@ const html = htmlSource
   .replace('<script src="catalog-images.js"></script>', `<script>${catalogImages}</script>`)
   .replace('<script src="prices.js"></script>', `<script>${prices}</script>`)
   .replace('<script src="app.js"></script>', `<script>${js}</script>`);
+
+// A 401 from the login endpoint means invalid credentials, not an expired session.
+// Keep the server's real error message visible instead of clearing the password field
+// and replacing it with "Сеанс завершён".
+const adminJs = adminJsSource.replace(
+  "if (response.status === 401) {\n    showLogin();\n    throw new Error('Сеанс завершён. Войдите снова.');\n  }",
+  "if (response.status === 401 && path !== '/api/admin/login') {\n    showLogin();\n    throw new Error('Сеанс завершён. Войдите снова.');\n  }"
+);
 
 const adminHtml = adminHtmlSource
   .replace('<link rel="stylesheet" href="admin.css">', `<style>${adminCss}</style>`)
