@@ -1,0 +1,121 @@
+name: Apply gallery contain fix
+
+on:
+  push:
+    paths:
+      - '.github/workflows/apply-gallery-fix.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix-gallery:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Make every gallery image display fully
+        shell: python
+        run: |
+          from pathlib import Path
+
+          def replace(path, old, new):
+              p = Path(path)
+              text = p.read_text(encoding='utf-8')
+              if old not in text:
+                  raise SystemExit(f'Expected block not found in {path}: {old[:80]!r}')
+              p.write_text(text.replace(old, new), encoding='utf-8')
+
+          # Store/display all gallery photos in contain mode only.
+          replace('app.js', """const photoStyle = (product,url) => {
+            const position=photoPosition(product,url);
+            const zoom=photoZoom(product,url);
+            const objectFit=product.fitMode==='cover'&&zoom>=1?'cover':'contain';
+            const transform=product.fitMode==='cover'?`scale(${photoDisplayZoom(zoom)})`:'none';
+            return `object-fit:${objectFit};object-position:${position};transform-origin:${position};transform:${transform}`;
+          };""", """const photoStyle = () => 'object-fit:contain;object-position:center;transform-origin:center;transform:none';""")
+          replace('app.js', """  const position=photoPosition(product,product.gallery[next]);
+            const zoom=photoZoom(product,product.gallery[next]);
+            image.style.objectFit=product.fitMode==='cover'&&zoom>=1?'cover':'contain';
+            image.style.objectPosition=position;
+            image.style.transformOrigin=position;
+            image.style.transform=product.fitMode==='cover'?`scale(${photoDisplayZoom(zoom)})`:'none';""", """  image.style.objectFit='contain';
+            image.style.objectPosition='center';
+            image.style.transformOrigin='center';
+            image.style.transform='none';""")
+          replace('app.js', "product.fitMode=published.fitMode==='cover'?'cover':'contain';", "// На витрине любое фото всегда показываем целиком, без обрезки.\n            product.fitMode='contain';")
+
+          replace('admin.js', "fitMode: gallery.fitMode || 'contain',", "fitMode: 'contain',")
+          replace('admin.js', """    image.style.objectPosition = `${position.x}% ${position.y}%`;
+              image.style.objectFit = draft.fitMode === 'cover' && zoom >= 1 ? 'cover' : 'contain';
+              image.style.transformOrigin = `${position.x}% ${position.y}%`;
+              image.style.transform = draft.fitMode === 'cover' ? `scale(${displayZoom(zoom)})` : 'none';""", """    image.style.objectPosition = 'center';
+              image.style.objectFit = 'contain';
+              image.style.transformOrigin = 'center';
+              image.style.transform = 'none';""")
+          replace('admin.js', """  coverPreview.style.objectPosition = `${selectedPosition.x}% ${selectedPosition.y}%`;
+            coverPreview.style.objectFit = draft.fitMode === 'cover' && selectedZoom >= 1 ? 'cover' : 'contain';
+            coverPreview.style.transformOrigin = `${selectedPosition.x}% ${selectedPosition.y}%`;
+            coverPreview.style.transform = draft.fitMode === 'cover' ? `scale(${displayZoom(selectedZoom)})` : 'none';
+            cardPreview.className = `card-preview fit-${draft.fitMode}`;
+            cardPreview.classList.toggle('can-drag', draft.fitMode === 'cover' && selectedZoom >= 1);
+            cropHelp.hidden = draft.fitMode !== 'cover';""", """  coverPreview.style.objectPosition = 'center';
+            coverPreview.style.objectFit = 'contain';
+            coverPreview.style.transformOrigin = 'center';
+            coverPreview.style.transform = 'none';
+            cardPreview.className = 'card-preview fit-contain';
+            cardPreview.classList.remove('can-drag');
+            cropHelp.hidden = true;""")
+          replace('admin.js', "draft.fitMode = input.value;", "draft.fitMode = 'contain';")
+          replace('admin.js', "body: JSON.stringify({photos: draft.photos, positions: draft.positions, zooms: draft.zooms, fitMode: draft.fitMode, mediaType: draft.mediaType, removedUrls})", "body: JSON.stringify({photos: draft.photos, positions: draft.positions, zooms: draft.zooms, fitMode: 'contain', mediaType: draft.mediaType, removedUrls})")
+
+          replace('worker/runtime.js', "fitMode: row.fit_mode === 'cover' ? 'cover' : 'contain',", "fitMode: 'contain',")
+          replace('worker/runtime.js', "const fitMode = body.fitMode === 'cover' ? 'cover' : 'contain';", "const fitMode = 'contain';")
+
+          sql = Path('drizzle/0001_current_gallery_settings.sql')
+          text = sql.read_text(encoding='utf-8')
+          text = text.replace('"zoom":0.99', '"zoom":1').replace("    'cover',", "    'contain',")
+          sql.write_text(text, encoding='utf-8')
+
+          admin_css = Path('admin.css')
+          text = admin_css.read_text(encoding='utf-8')
+          marker = 'Фото больше не нужно кадрировать вручную'
+          if marker not in text:
+              text += """
+
+          /* Фото больше не нужно кадрировать вручную: редактор всегда показывает исходник целиком. */
+          .crop-help,.fit-options{display:none!important}
+          .card-preview img,.photo-thumb img{object-fit:contain!important;object-position:center!important;transform:none!important}
+          """
+              admin_css.write_text(text, encoding='utf-8')
+
+          styles = Path('styles.css')
+          text = styles.read_text(encoding='utf-8')
+          marker = 'Автоматическая галерея: любое изображение показывается целиком'
+          if marker not in text:
+              text += """
+
+          /* Автоматическая галерея: любое изображение показывается целиком, без обрезки и растягивания. */
+          .product-card.photo .product-visual img,.product-card.photo.fit-cover .product-visual img{object-fit:contain!important;object-position:center!important;transform:none!important}
+          .product-card.photo.fit-cover .product-visual{padding:10px!important;background:#131518!important}
+          .product-card.photo.fit-cover .product-image-open{inset:10px!important;width:calc(100% - 20px)!important;height:calc(100% - 20px)!important}
+          .product-image-backdrop{display:none!important}
+          .hero-photo img,.work-gallery img,.selected-product-preview img,.lightbox-stage img{object-fit:contain!important;object-position:center!important;transform:none!important}
+          """
+              styles.write_text(text, encoding='utf-8')
+
+      - name: Commit gallery fix
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add admin.css admin.js app.js styles.css worker/runtime.js drizzle/0001_current_gallery_settings.sql
+          if git diff --cached --quiet; then
+            echo 'Gallery fix is already applied.'
+            exit 0
+          fi
+          git commit -m 'Show gallery images fully without cropping [skip ci]'
+          git push
