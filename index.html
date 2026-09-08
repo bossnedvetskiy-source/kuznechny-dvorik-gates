@@ -500,7 +500,19 @@
       backdrop.addEventListener('click',closeSheet);
       closeButton.addEventListener('click',closeSheet);
       document.addEventListener('keydown',event=>{if(event.key==='Escape')closeSheet()});
-      leadRequest.querySelector('a[href="#privacyPolicy"]')?.addEventListener('click',closeSheet);
+      const privacyLink = leadRequest.querySelector('a[href="#privacyPolicy"]');
+      privacyLink?.addEventListener('click', event => {
+        event.preventDefault();
+        phoneInput?.blur();
+        closeSheet();
+        const privacySection = document.getElementById('privacyPolicy');
+        const privacyDetails = privacySection?.querySelector('details');
+        if (privacyDetails) privacyDetails.open = true;
+        window.setTimeout(() => {
+          privacySection?.scrollIntoView({behavior:'smooth', block:'start'});
+          try { history.replaceState(null, '', '#privacyPolicy'); } catch {}
+        }, 120);
+      });
 
       cta.addEventListener('click',event=>{
         event.preventDefault();
