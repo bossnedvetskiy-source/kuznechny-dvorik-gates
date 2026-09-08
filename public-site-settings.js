@@ -52,10 +52,12 @@
   const mobileHeroStyle = document.createElement('style');
   mobileHeroStyle.textContent = `
     @media(max-width:620px){
+      .hero{display:flex!important;flex-direction:column!important;min-height:0!important;padding-bottom:18px!important}
       .hero>.hero-photo{display:none!important}
-      .hero{min-height:0!important;padding-bottom:18px!important}
-      .hero>.hero-points{margin-top:12px!important}
-      .catalog{padding-top:34px!important}
+      .hero>.hero-prices{order:4!important}
+      .hero>.hero-points{order:5!important;margin-top:12px!important}
+      .hero>.hero-actions{order:6!important;margin-top:14px!important;margin-bottom:0!important}
+      .catalog{padding-top:30px!important}
     }
   `;
   document.head.append(mobileHeroStyle);
