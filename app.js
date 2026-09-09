@@ -283,30 +283,42 @@ function isNonStandard(product) {
     Math.abs((Number(wicketHeightInput.value)||0)-product.wicketHeight)>.01;
 }
 
-function catalogCalculatedPrice(product) {
-  if(!window.GATE_CALC?.hasArticle(product.art))return product.price;
+function dimensionState() {
+  const specs=[
+    {input:widthInput,min:.8,max:8},
+    {input:heightInput,min:1,max:3},
+    {input:wicketWidthInput,min:.7,max:2.5},
+    {input:wicketHeightInput,min:1,max:3}
+  ];
+  const invalid=specs.find(({input,min,max})=>{
+    const raw=String(input?.value??'').trim();
+    const value=Number(raw);
+    return !raw||!Number.isFinite(value)||value<min||value>max;
+  });
+  return {valid:!invalid,invalidInput:invalid?.input||null,values:{gateWidth:Number(widthInput.value),gateHeight:Number(heightInput.value),wicketWidth:Number(wicketWidthInput.value),wicketHeight:Number(wicketHeightInput.value)}};
+}
+
+function calculatedProductPrice(product,dimensions) {
+  if(!dimensions.valid||!window.GATE_CALC?.hasArticle(product.art))return {price:product.price,calculated:false};
   try {
-    return window.GATE_CALC.calculateGate({
-      article:product.art,
-      gateWidth:Number(widthInput.value),
-      gateHeight:Number(heightInput.value),
-      wicketWidth:Number(wicketWidthInput.value),
-      wicketHeight:Number(wicketHeightInput.value)
-    }).total;
+    return {price:window.GATE_CALC.calculateGate({article:product.art,...dimensions.values}).total,calculated:true};
   } catch(error) {
     console.error('Gate calculation failed',product.art,error);
-    return product.price;
+    return {price:product.price,calculated:false};
   }
 }
 
 function calcData() {
   const product=selectedProduct();
-  const base=catalogCalculatedPrice(product)+product.install;
+  const dimensions=dimensionState();
+  const productPrice=calculatedProductPrice(product,dimensions);
+  const base=productPrice.price+product.install;
   const lines=[['Ворота с калиткой и установка',base]];
   if(postsCheck.checked)lines.push(['Новые усиленные столбы',product.posts]);
   const delivery=deliveryController?.line() || {name:'Населённый пункт',value:null,display:cityInput.value.trim()||'Не выбран',resolved:false};
+  const deliveryKind=deliveryController?.getState()?.kind||'empty';
   const total=lines.reduce((sum,[,value])=>sum+(Number(value)||0),0)+(delivery.resolved?(Number(delivery.value)||0):0);
-  return {product,lines,delivery,total,deliveryPending:!delivery.resolved};
+  return {product,lines,delivery,total,deliveryPending:!delivery.resolved,deliveryKind,dimensionsValid:dimensions.valid,dimensionsCalculated:productPrice.calculated,invalidDimensionInput:dimensions.invalidInput};
 }
 
 function renderEstimateLines(lines,delivery) {
@@ -317,12 +329,11 @@ function renderEstimateLines(lines,delivery) {
 }
 
 function calculate() {
-  const {product,lines,delivery,total,deliveryPending}=calcData();
-  const nonStandard=isNonStandard(product);
-  const dimensionsCalculated=Boolean(window.GATE_CALC?.hasArticle(product.art));
-  const approximate=(nonStandard&&!dimensionsCalculated)||deliveryPending;
-  sizeNotice.hidden=!nonStandard||!dimensionsCalculated;
-  sizeMemoryNote.hidden=!nonStandard;
+  const {product,lines,delivery,total,deliveryPending,deliveryKind,dimensionsValid,dimensionsCalculated}=calcData();
+  const nonStandard=dimensionsValid&&isNonStandard(product);
+  const approximate=!dimensionsValid||(nonStandard&&!dimensionsCalculated)||deliveryPending;
+  sizeNotice.hidden=!dimensionsValid||!nonStandard||!dimensionsCalculated;
+  sizeMemoryNote.hidden=!dimensionsValid||!nonStandard;
   updateSelectedPreview();
 
   document.getElementById('estimateProduct').textContent=`Ворота с калиткой · ${product.art}`;
@@ -335,16 +346,17 @@ function calculate() {
   if(mobilePriceLines)mobilePriceLines.innerHTML=linesHtml;
 
   let note='Доставка учтена в общей сумме. Окончательная стоимость фиксируется в договоре после бесплатного замера.';
-  if(nonStandard&&dimensionsCalculated)note='Стоимость пересчитана по вашим размерам и формуле выбранной модели. Итоговую цену зафиксируем после бесплатного замера.';
-  if(deliveryPending)note+=' Укажите населённый пункт, чтобы учесть доставку.';
+  if(!dimensionsValid)note='Проверьте размеры ворот и калитки — пока показываем ориентир по стандартному размеру.';
+  else if(nonStandard&&dimensionsCalculated)note='Стоимость пересчитана по вашим размерам и формуле выбранной модели. Итоговую цену зафиксируем после бесплатного замера.';
+  if(deliveryPending)note+=' Укажите и подтвердите населённый пункт, чтобы учесть доставку.';
   document.getElementById('estimateNote').textContent=note;
   if(mobilePriceNote)mobilePriceNote.textContent=note;
-  document.dispatchEvent(new CustomEvent('gate:calculated',{detail:{article:product.art,total,totalText,deliveryPending,nonStandard}}));
+  document.dispatchEvent(new CustomEvent('gate:calculated',{detail:{article:product.art,total,totalText,deliveryPending,deliveryKind,dimensionsValid,nonStandard}}));
 }
 
 [widthInput,wicketWidthInput,heightInput,wicketHeightInput].forEach(input=>{
-  input.addEventListener('input',()=>{rememberDimensions();calculate()});
-  input.addEventListener('change',()=>{rememberDimensions();calculate()});
+  input.addEventListener('input',()=>{input.removeAttribute('aria-invalid');rememberDimensions();calculate()});
+  input.addEventListener('change',()=>{input.removeAttribute('aria-invalid');rememberDimensions();calculate()});
 });
 postsCheck.addEventListener('change',()=>{
   try{sessionStorage.setItem(POSTS_MEMORY_KEY,postsCheck.checked?'1':'0')}catch{}
@@ -410,6 +422,13 @@ function showToast(message){
 phoneInput.addEventListener('input',()=>phoneInput.removeAttribute('aria-invalid'));
 consentInput.addEventListener('change',()=>consentInput.removeAttribute('aria-invalid'));
 sendButton.addEventListener('click',async()=>{
+  const dimensions=dimensionState();
+  if(!dimensions.valid){
+    dimensions.invalidInput?.setAttribute('aria-invalid','true');
+    dimensions.invalidInput?.focus();
+    showToast('Проверьте размеры ворот и калитки');
+    return;
+  }
   const validation=window.KUZDVOR_LEADS.validate({phone:phoneInput.value,city:selectedCityName(),consent:consentInput.checked});
   if(!validation.ok){
     if(validation.field==='phone'){phoneInput.setAttribute('aria-invalid','true');phoneInput.focus();}
@@ -471,7 +490,7 @@ document.addEventListener('keydown',event=>{
 });
 document.querySelectorAll('[data-proof-image]').forEach(button=>button.addEventListener('click',()=>openGallery([button.dataset.proofImage],'Выполненная работа','Мелеуз и ближайшие районы','Выполненная работа Кузнечного Дворика')));
 
-window.GATE_PAGE_API={selectedProduct,productById,closeCalculator,openCalculatorForProduct,showCardImage};
+window.GATE_PAGE_API={selectedProduct,productById,closeCalculator,openCalculatorForProduct,showCardImage,deliveryState:()=>deliveryController?.getState()||{kind:'empty'},dimensionState};
 renderProducts();
 loadPublishedGalleries();
 chooseProduct(selectedProductId);

@@ -9,6 +9,9 @@
   const sendButton = document.getElementById('sendButton');
   const mobilePriceTotal = document.getElementById('mobilePriceTotal');
   let leadOpen = false;
+  let deliveryCanProceed = false;
+  let deliveryKind = 'empty';
+  let dimensionsValid = true;
 
   const dimensions = document.getElementById('gateDimensions');
   const sizeToggle = document.getElementById('sizeToggle');
@@ -59,6 +62,8 @@
     const price = mobilePriceTotal?.textContent?.trim() || '';
     if (!calculator || calculator.hidden) cta.textContent = 'Выбрать ворота';
     else if (leadOpen) cta.textContent = `Отправить заявку${price ? ` · ${price}` : ''}`;
+    else if (!dimensionsValid) cta.textContent = `Проверьте размеры${price ? ` · ${price}` : ''}`;
+    else if (!deliveryCanProceed) cta.textContent = `Указать город${price ? ` · ${price}` : ''}`;
     else cta.textContent = `Заказать бесплатный замер${price ? ` · ${price}` : ''}`;
   }
 
@@ -87,6 +92,17 @@
     event.preventDefault();
     if (!calculator || calculator.hidden) {
       catalog?.scrollIntoView({behavior:'smooth', block:'start'});
+      return;
+    }
+    if (!dimensionsValid) {
+      dimensions?.classList.add('is-open');
+      if(sizeToggle){sizeToggle.textContent='Скрыть';sizeToggle.setAttribute('aria-expanded','true');}
+      dimensions?.closest('.form-block')?.scrollIntoView({behavior:'smooth',block:'start'});
+      setTimeout(()=>widthInput?.focus({preventScroll:true}),260);
+      return;
+    }
+    if (!deliveryCanProceed) {
+      document.getElementById('deliveryChooser')?.closest('.form-block')?.scrollIntoView({behavior:'smooth',block:'start'});
       return;
     }
     if (!leadOpen) openLead();
@@ -183,7 +199,13 @@
   const grid = document.getElementById('catalogGrid');
   if (grid) new MutationObserver(() => queueMicrotask(installDesktopThumbnails)).observe(grid,{childList:true});
   mobile.addEventListener('change', installDesktopThumbnails);
-  document.addEventListener('gate:calculated', () => { updateSizeSummary(); syncMobileCta(); });
+  document.addEventListener('gate:calculated', event => {
+    deliveryKind = event.detail?.deliveryKind || 'empty';
+    deliveryCanProceed = event.detail?.deliveryPending === false || deliveryKind === 'error';
+    dimensionsValid = event.detail?.dimensionsValid !== false;
+    updateSizeSummary();
+    syncMobileCta();
+  });
   if (calculator) new MutationObserver(() => { if (calculator.hidden) closeLead(); syncMobileCta(); }).observe(calculator,{attributes:true,attributeFilter:['hidden']});
 
   updateSizeSummary();

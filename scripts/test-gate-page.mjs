@@ -25,6 +25,9 @@ assert(app.includes("install:true"), 'Gate leads must record installation as inc
 assert(app.includes("Ворота с калиткой и установка"), 'Base gate estimate must combine product and installation');
 assert(app.includes('priceData.catalogInstallation'), 'Gate page must still use the configured installation price');
 assert(app.includes('priceData.catalogPosts'), 'Gate page must still use the configured posts price');
+assert(app.includes('dimensionState()'), 'Gate page must validate all four dimensions');
+assert(app.includes('deliveryKind'), 'Gate page must expose delivery state to mobile CTA');
+assert(ui.includes('deliveryCanProceed'), 'Mobile CTA must require delivery before opening the lead form');
 assert(!runtime.includes("document.createElement('style')"), 'Runtime settings must not inject CSS patches');
 assert(!ui.includes("fetch('/api/leads'"), 'UI controller must not duplicate lead submission');
 assert(delivery.includes('window.KUZDVOR_DELIVERY'), 'Shared delivery API missing');
