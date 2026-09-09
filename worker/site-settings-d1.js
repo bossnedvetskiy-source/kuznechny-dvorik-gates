@@ -12,10 +12,10 @@ const DEFAULT_SITE_PROFILE = Object.freeze({
   heroEyebrow: 'Собственное производство · Мелеуз',
   heroTitleMain: 'Ворота с калиткой',
   heroTitleAccent: 'по вашим размерам',
-  heroText: 'Выберите дизайн и сразу узнайте предварительную стоимость с монтажом, столбами и доставкой.',
+  heroText: 'Выберите дизайн и рассчитайте предварительную стоимость по своим размерам — с учётом установки, новых столбов при необходимости и доставки.',
   trustText: 'Собственное производство в Мелеузе. Бесплатно замерим проём, согласуем комплектацию и зафиксируем стоимость в договоре.',
   finalCtaTitle: 'Выберите модель и получите предварительную стоимость',
-  finalCtaText: 'Калькулятор учтёт комплектацию и доставку. Итоговую сумму зафиксируем в договоре после замера.'
+  finalCtaText: 'Калькулятор учтёт ваши размеры, новые усиленные столбы при необходимости и доставку. Итоговую сумму зафиксируем в договоре после бесплатного замера.'
 });
 
 async function ensureSiteSettings(env) {
@@ -58,7 +58,13 @@ function cleanDigits(value, fallback) {
 }
 
 function normalizeSiteProfile(input) {
-  const source = input && typeof input === 'object' ? input : {};
+  const source = input && typeof input === 'object' ? {...input} : {};
+  const legacyHeroTexts = new Set([
+    'Выберите дизайн и сразу узнайте предварительную стоимость с монтажом, столбами и доставкой.',
+    'Выберите дизайн и сразу узнайте предварительную стоимость с установкой, столбами и доставкой.'
+  ]);
+  if (legacyHeroTexts.has(String(source.heroText || '').trim())) source.heroText = DEFAULT_SITE_PROFILE.heroText;
+  if (String(source.finalCtaText || '').trim() === 'Калькулятор учтёт комплектацию и доставку. Итоговую сумму зафиксируем в договоре после замера.') source.finalCtaText = DEFAULT_SITE_PROFILE.finalCtaText;
   return {
     phoneDisplay: cleanText(source.phoneDisplay, DEFAULT_SITE_PROFILE.phoneDisplay, 40),
     phoneDigits: cleanDigits(source.phoneDigits, DEFAULT_SITE_PROFILE.phoneDigits),

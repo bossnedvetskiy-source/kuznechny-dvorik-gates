@@ -61,7 +61,7 @@
       const city = selectedCityName();
       if (chooser) chooser.hidden = resolved || editingOther;
       if (summary) summary.hidden = !resolved;
-      if (summaryValue && resolved) summaryValue.textContent = normalize(city) === normalize('Мелеуз') ? 'Мелеуз — бесплатно' : `${city} — доставка учтена в цене`;
+      if (summaryValue && resolved) summaryValue.textContent = normalize(city) === normalize('Мелеуз') ? 'Мелеуз — бесплатно' : `${city} — доставка учтена в итоговой сумме`;
       input?.closest('.city-label')?.classList.toggle('is-visible', editingOther && !resolved);
       if (result) result.hidden = resolved;
       if (routeButton) routeButton.hidden = resolved || state.kind === 'empty';
@@ -77,7 +77,7 @@
       if (input) input.value = city;
       state = {kind:'fixed', name:city, resolvedName:city, shortName:city, price:Number(known.price)||0};
       editingOther = false;
-      setResult(normalize(city) === normalize('Мелеуз') ? 'Доставка по Мелеузу — бесплатно' : `${city} · доставка учтена в итоговой цене`, 'success');
+      setResult(normalize(city) === normalize('Мелеуз') ? 'Доставка по Мелеузу — бесплатно' : `${city} · доставка учтена в итоговой сумме`, 'success');
       saveResolved(state);
       emit();
     };
@@ -96,7 +96,7 @@
           routeButton.disabled = false;
           routeButton.textContent = 'Рассчитать доставку';
         }
-        setResult('Пункта нет в прайсе — рассчитайте доставку по маршруту.', 'pending');
+        setResult('Для этого населённого пункта нет готовой стоимости доставки. Рассчитайте её по автомобильному маршруту.', 'pending');
       } else {
         state = {kind:'empty', name:entered, resolvedName:'', shortName:'', price:null};
         if (routeButton) routeButton.hidden = true;
@@ -116,7 +116,7 @@
       if (state.kind === 'confirm') {
         state = {...state, kind:'calculated'};
         editingOther = false;
-        setResult(`${state.shortName} · доставка учтена в итоговой цене`, 'success');
+        setResult(`${state.shortName} · доставка учтена в итоговой сумме`, 'success');
         saveResolved(state);
         emit();
         return;
@@ -157,7 +157,7 @@
       editingOther = false;
       state = {kind:'empty', name:'', resolvedName:'', shortName:'', price:null};
       if (input) input.value = '';
-      setResult('Выберите, где устанавливаем.', 'pending');
+      setResult('Выберите место установки.', 'pending');
       emit();
     };
 
@@ -192,7 +192,7 @@
     const line = () => {
       const city = selectedCityName();
       const resolved = ['fixed','calculated'].includes(state.kind);
-      return {name:'Населённый пункт', value:resolved ? Number(state.price)||0 : null, display:city || 'Не выбран', resolved};
+      return {name:'Место установки', value:resolved ? Number(state.price)||0 : null, display:city || 'Не выбрано', resolved};
     };
 
     restore();

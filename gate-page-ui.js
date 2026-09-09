@@ -78,7 +78,7 @@
     if (!calculator || calculator.hidden) cta.textContent = 'Выбрать ворота';
     else if (leadOpen) cta.textContent = `Отправить заявку${price ? ` · ${price}` : ''}`;
     else if (!dimensionsValid) cta.textContent = `Проверьте размеры${price ? ` · ${price}` : ''}`;
-    else if (!deliveryCanProceed) cta.textContent = `Указать город${price ? ` · ${price}` : ''}`;
+    else if (!deliveryCanProceed) cta.textContent = `Указать место установки${price ? ` · ${price}` : ''}`;
     else cta.textContent = `Заказать бесплатный замер${price ? ` · ${price}` : ''}`;
   }
 

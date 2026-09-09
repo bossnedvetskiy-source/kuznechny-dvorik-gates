@@ -24,7 +24,7 @@ for (const required of ['deliveryChooser','deliverySummary','postsCheck','mobile
 }
 
 assert(app.includes("install:true"), 'Gate leads must record installation as included');
-assert(app.includes("Ворота с калиткой и установка"), 'Base gate estimate must combine product and installation');
+assert(app.includes("Ворота с калиткой + установка"), 'Base gate estimate must combine product and installation');
 assert(app.includes('priceData.catalogInstallation'), 'Gate page must still use the configured installation price');
 assert(app.includes('priceData.catalogPosts'), 'Gate page must still use the configured posts price');
 assert(app.includes('dimensionState()'), 'Gate page must validate all four dimensions');
@@ -44,5 +44,14 @@ assert.equal((leadInsertSql.match(/\?/g)||[]).length, 21, 'Lead INSERT must have
 assert(workerLeads.includes('LEAD_NOTIFY_WEBHOOK_URL'), 'Optional lead notification webhook missing');
 assert(adminLeads.includes('Notification.requestPermission') && adminLeads.includes('30000'), 'Admin new-lead polling/notifications missing');
 assert(build.includes('gatePageCss') && build.includes('customerContextSource') && build.includes('gatePageUiSource'), 'Production build does not bundle the gate foundation');
+
+for (const ambiguous of ['Под ключ с новыми столбами','<b>Бесплатно</b> замер','Пункта нет в прайсе','Согласен на обработку данных.']) {
+  assert(!html.includes(ambiguous), `Ambiguous public copy returned: ${ambiguous}`);
+}
+assert(!app.includes('Под ключ с новыми столбами') && !app.includes('Расчёт под ключ'), 'Ambiguous turnkey wording returned to gate runtime');
+assert(!delivery.includes('Пункта нет в прайсе') && delivery.includes('нет готовой стоимости доставки'), 'Delivery copy must avoid internal price-list jargon');
+assert(html.includes('Если подходящие столбы уже есть') && html.includes('без доставки'), 'Initial prices must clearly state posts condition and delivery exclusion');
+assert(html.includes('Даю согласие на обработку персональных данных.'), 'Consent wording must explicitly mention personal data');
+assert(ui.includes('Указать место установки'), 'Mobile CTA must work for cities, villages and settlements');
 
 console.log('Gate page foundation checks: OK');

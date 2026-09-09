@@ -20,7 +20,7 @@ const catalogProducts = orderedCatalogPrices.map(({art,price}, index) => {
     type:'catalog',
     art,
     title:'Ворота с калиткой',
-    description:'Стандарт: ворота 3,4×1,8 м и калитка 1×1,8 м.',
+    description:'Стандарт: ворота 3,4×1,8 м и калитка 1×1,8 м. Доставка добавится в расчёте.',
     price:Number(price)||0,
     install:Number(priceData.catalogInstallation)||0,
     posts:Number(priceData.catalogPosts)||0,
@@ -107,8 +107,8 @@ function renderProducts() {
     <div class="product-info">${product.badge?`<div class="product-labels"><span>${product.badge}</span></div>`:''}<h3>Ворота с калиткой</h3><p>${product.description}</p>
       <div class="product-meta"><span>Любой цвет профнастила</span></div>
       <div class="product-bottom"><div class="price-stack">
-        <div class="price-row"><small>Если столбы уже есть</small><strong>${money(product.price+product.install)}</strong></div>
-        <div class="price-row turnkey"><small>Под ключ с новыми столбами</small><strong>${money(product.price+product.install+product.posts)}</strong></div>
+        <div class="price-row"><small>Если подходящие столбы уже есть</small><strong>${money(product.price+product.install)}</strong></div>
+        <div class="price-row turnkey"><small>С новыми усиленными столбами</small><strong>${money(product.price+product.install+product.posts)}</strong></div>
       </div><button class="select-product" data-product="${product.id}" type="button" aria-expanded="false">Рассчитать стоимость</button></div>
     </div>
   </article>`).join('');
@@ -235,9 +235,9 @@ function updateSelectedPreview() {
   selectedProductImage.alt=`Ворота с калиткой ${product.art}`;
   selectedProductCaption.textContent=product.art;
   postsPrice.textContent=`+${money(product.posts)}`;
-  postsHint.textContent='Связка, установка и бетонирование';
+  postsHint.textContent='Установка, бетонирование и усиленная связка столбов';
   postsTitle.textContent=postsCheck.checked?'✓ Новые усиленные столбы добавлены':'Добавить новые усиленные столбы';
-  baseInstallNote.textContent=postsCheck.checked?'Расчёт под ключ с новыми усиленными столбами':'Установка ворот и калитки на ваши подходящие столбы уже входит в цену';
+  baseInstallNote.textContent=postsCheck.checked?'Расчёт с новыми усиленными столбами':'Установка ворот и калитки на ваши подходящие столбы уже входит в цену';
 }
 
 function chooseProduct(id) {
@@ -314,7 +314,7 @@ function calcData() {
   const dimensions=dimensionState();
   const productPrice=calculatedProductPrice(product,dimensions);
   const base=productPrice.price+product.install;
-  const lines=[['Ворота с калиткой и установка',base]];
+  const lines=[['Ворота с калиткой + установка',base]];
   if(postsCheck.checked)lines.push(['Новые усиленные столбы',product.posts]);
   const delivery=deliveryController?.line() || {name:'Населённый пункт',value:null,display:cityInput.value.trim()||'Не выбран',resolved:false};
   const deliveryKind=deliveryController?.getState()?.kind||'empty';
@@ -349,7 +349,8 @@ function calculate() {
   let note='Доставка учтена в общей сумме. Окончательная стоимость фиксируется в договоре после бесплатного замера.';
   if(!dimensionsValid)note='Проверьте размеры ворот и калитки — пока показываем ориентир по стандартному размеру.';
   else if(nonStandard&&dimensionsCalculated)note='Стоимость пересчитана по вашим размерам и формуле выбранной модели. Итоговую цену зафиксируем после бесплатного замера.';
-  if(deliveryPending)note+=' Укажите и подтвердите населённый пункт, чтобы учесть доставку.';
+  if(deliveryKind==='error') note='Доставку автоматически рассчитать не удалось. Уточним её при подтверждении заявки.';
+  else if(deliveryPending)note+=' Укажите и подтвердите место установки, чтобы учесть доставку.';
   document.getElementById('estimateNote').textContent=note;
   if(mobilePriceNote)mobilePriceNote.textContent=note;
   document.dispatchEvent(new CustomEvent('gate:calculated',{detail:{article:product.art,total,totalText,deliveryPending,deliveryKind,dimensionsValid,nonStandard}}));
@@ -441,7 +442,7 @@ sendButton.addEventListener('click',async()=>{
   }
   const deliveryState=deliveryController?.getState?.()||{kind:'empty'};
   if(!['fixed','calculated','error'].includes(deliveryState.kind)){
-    const message=deliveryState.kind==='confirm'?'Подтвердите найденный населённый пункт':deliveryState.kind==='loading'?'Дождитесь расчёта доставки':'Сначала укажите населённый пункт и рассчитайте доставку';
+    const message=deliveryState.kind==='confirm'?'Подтвердите найденный населённый пункт':deliveryState.kind==='loading'?'Дождитесь расчёта доставки':'Сначала укажите место установки и рассчитайте доставку';
     reachGoal('lead_validation_error',{field:'delivery',kind:deliveryState.kind});
     document.getElementById('deliveryChooser')?.closest('.form-block')?.scrollIntoView({behavior:'smooth',block:'start'});
     if(['empty','pending'].includes(deliveryState.kind)) setTimeout(()=>cityInput.focus({preventScroll:true}),260);
@@ -496,7 +497,7 @@ function openGallery(gallery,title,caption,alt,initialIndex=0){
   document.getElementById('lightboxTitle').textContent=title;document.getElementById('lightboxPrice').textContent=caption;showLightboxImage();
   lightbox.hidden=false;document.body.style.overflow='hidden';
 }
-function openLightbox(id,initialIndex=0){const product=productById(id);if(product)openGallery(product.gallery,product.art,`с установкой · ${money(product.price+product.install)}`,`Ворота с калиткой ${product.art}`,initialIndex)}
+function openLightbox(id,initialIndex=0){const product=productById(id);if(product)openGallery(product.gallery,product.art,`с установкой, без доставки · ${money(product.price+product.install)}`,`Ворота с калиткой ${product.art}`,initialIndex)}
 function closeLightbox(){lightbox.hidden=true;document.body.style.overflow=''}
 document.getElementById('lightboxClose').addEventListener('click',closeLightbox);
 lightboxPrevious.addEventListener('click',()=>{lightboxIndex-=1;showLightboxImage()});
