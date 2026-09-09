@@ -21,6 +21,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Check JavaScript syntax
+        run: |
+          node --check app.js
+          node --check gate-page-ui.js
+          node --check shared/customer-context.js
+          node --check shared/delivery.js
+          node --check shared/leads.js
+          node --check public-site-settings.js
+          node --check admin.js
+          node --check admin-prices.js
+          node --check admin-site.js
+          node --check admin-leads.js
+          node --check worker/auth-d1.js
+          node --check worker/site-settings-d1.js
+          node --check worker/leads-d1.js
+
       - name: Verify gate page foundation
         run: node scripts/test-gate-page.mjs
 
