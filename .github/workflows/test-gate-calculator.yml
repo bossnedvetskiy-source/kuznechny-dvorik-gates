@@ -1,4 +1,4 @@
-name: Verify Excel gate calculator
+name: Verify gate page and calculator
 
 on:
   push:
@@ -9,7 +9,12 @@ on:
       - 'gate-calc-models.js'
       - 'gate-calc-models-chunk*.js'
       - 'scripts/test-gate-calculator.mjs'
+      - 'scripts/test-gate-page.mjs'
       - 'app.js'
+      - 'gate-page-ui.js'
+      - 'gate-page.css'
+      - 'public-site-settings.js'
+      - 'shared/**'
       - 'prices.js'
       - 'index.html'
       - 'scripts/build.mjs'
@@ -23,6 +28,16 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Check JavaScript syntax
+        run: |
+          node --check app.js
+          node --check gate-page-ui.js
+          node --check public-site-settings.js
+          node --check shared/customer-context.js
+          node --check shared/delivery.js
+          node --check shared/leads.js
+      - name: Verify simplified gate page foundation
+        run: node scripts/test-gate-page.mjs
       - name: Run calculator control tests
         run: node scripts/test-gate-calculator.mjs
       - name: Build production worker
