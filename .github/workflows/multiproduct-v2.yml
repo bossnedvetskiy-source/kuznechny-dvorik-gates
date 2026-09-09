@@ -17,8 +17,12 @@ jobs:
         with:
           ref: main
 
-      - name: Apply foundation refactor
+      - name: Apply product and admin refactor
+        continue-on-error: true
         run: python3 .github/multiproduct-v2.py
+
+      - name: Apply build and routing refactor
+        run: python3 .github/multiproduct-stage2.py
 
       - name: Verify gate calculator
         run: node scripts/test-gate-calculator.mjs
