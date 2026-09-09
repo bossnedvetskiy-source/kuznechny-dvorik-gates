@@ -1,0 +1,42 @@
+name: Final gate copy polish
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: main
+      - name: Apply copy polish
+        run: python3 .github/final-copy-polish.py
+      - name: Check JavaScript syntax
+        run: |
+          node --check app.js
+          node --check gate-page-ui.js
+          node --check shared/delivery.js
+          node --check worker/site-settings-d1.js
+      - name: Verify gate foundation
+        run: node scripts/test-gate-page.mjs
+      - name: Verify gate calculator
+        run: node scripts/test-gate-calculator.mjs
+      - name: Build production worker
+        run: npm run build
+      - name: Commit verified changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html app.js gate-page-ui.js shared/delivery.js worker/site-settings-d1.js scripts/test-gate-page.mjs
+          if git diff --cached --quiet; then
+            echo "No copy changes"
+            exit 0
+          fi
+          git commit -m "Polish gate copy and remove ambiguity"
+          git push
