@@ -1,0 +1,42 @@
+name: Final audit polish
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+      - name: Apply final audit polish
+        run: python3 .github/final-audit-polish.py
+      - name: Syntax checks
+        run: |
+          node --check app.js
+          node --check gate-page-ui.js
+          node --check shared/delivery.js
+          node --check worker/auth-d1.js
+          node --check worker/site-settings-d1.js
+      - name: Foundation tests
+        run: node scripts/test-gate-page.mjs
+      - name: Calculator tests
+        run: node scripts/test-gate-calculator.mjs
+      - name: Production build
+        run: npm run build
+      - name: Commit verified changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html app.js gate-page.css scripts/test-gate-page.mjs
+          if git diff --cached --quiet; then
+            echo "No final audit changes"
+            exit 0
+          fi
+          git commit -m "Finish gate copy and accessibility polish"
+          git push
