@@ -40,6 +40,47 @@ async function loadAdminAuth(env) {
   }
 }
 
+async function pbkdf2Hex(password, salt, iterations = 210000) {
+  const encoder = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw', encoder.encode(String(password || '')), 'PBKDF2', false, ['deriveBits']
+  );
+  const bits = await crypto.subtle.deriveBits({
+    name: 'PBKDF2',
+    hash: 'SHA-256',
+    salt: encoder.encode(String(salt || '')),
+    iterations
+  }, keyMaterial, 256);
+  return [...new Uint8Array(bits)].map(byte => byte.toString(16).padStart(2, '0')).join('');
+}
+
+function parsePbkdf2Hash(value) {
+  const match = /^pbkdf2-sha256\$(\d+)\$([0-9a-f]{64})$/i.exec(String(value || ''));
+  if (!match) return null;
+  const iterations = Number(match[1]);
+  if (!Number.isInteger(iterations) || iterations < 100000 || iterations > 1000000) return null;
+  return {iterations, hash: match[2].toLowerCase()};
+}
+
+async function verifyAdminPassword(password, auth) {
+  const stored = String(auth?.password_hash || '');
+  const modern = parsePbkdf2Hash(stored);
+  if (modern) {
+    const derived = await pbkdf2Hex(password, auth.password_salt, modern.iterations);
+    return {valid: constantTimeEqual(derived, modern.hash), needsUpgrade: false};
+  }
+  const legacy = await digestHex(`${auth.password_salt}:${String(password || '')}`);
+  return {valid: constantTimeEqual(legacy, stored), needsUpgrade: true};
+}
+
+async function upgradeAdminPasswordHash(env, password, auth) {
+  const iterations = 210000;
+  const derived = await pbkdf2Hex(password, auth.password_salt, iterations);
+  const encoded = `pbkdf2-sha256$${iterations}$${derived}`;
+  await env.DB.prepare('UPDATE admin_auth SET password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE id = 1')
+    .bind(encoded).run();
+}
+
 async function createSessionCookie(env, authOverride = null) {
   const auth = authOverride || await loadAdminAuth(env);
   if (!auth?.session_secret) throw new Error('Вход в редактор ещё не настроен');
@@ -73,13 +114,19 @@ async function handleLogin(request, env, url) {
     if (length > 4096) return json({error: 'Слишком большой запрос'}, 413);
     const body = await request.json();
     const username = String(body.username || '').trim();
-    const passwordHash = await digestHex(`${auth.password_salt}:${String(body.password || '')}`);
+    const password = String(body.password || '');
     const validUsername = constantTimeEqual(username, String(auth.username));
-    const validPassword = constantTimeEqual(passwordHash, String(auth.password_hash));
+    const passwordCheck = await verifyAdminPassword(password, auth);
 
-    if (!validUsername || !validPassword) {
+    if (!validUsername || !passwordCheck.valid) {
       registerFailedLogin(request);
       return json({error: 'Неверный логин или пароль'}, 401);
+    }
+
+    if (passwordCheck.needsUpgrade) {
+      try { await upgradeAdminPasswordHash(env, password, auth); } catch (error) {
+        console.warn('Admin password hash upgrade failed', String(error?.message || error));
+      }
     }
 
     loginAttempts.delete(clientKey(request));
