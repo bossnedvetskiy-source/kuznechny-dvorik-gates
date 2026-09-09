@@ -25,7 +25,7 @@
     <section class="hub-hero hub-shell">
       <div class="hub-eyebrow">Кузнечный ДворикЪ · Мелеуз</div>
       <h1>Изделия из металла для вашего участка</h1>
-      <p>Выберите нужное изделие. Для каждого направления будет свой понятный автоматический расчёт по размерам, комплектации и доставке.</p>
+      <p>Выберите нужное изделие. В каждом направлении будет свой отдельный расчёт, а населённый пункт и доставка — общими для всего сайта.</p>
       <div class="hub-trust" aria-label="Преимущества">
         <span>Собственное производство</span><span>Бесплатный замер</span><span>Договор</span><span id="hubWarranty">Гарантия 3 года</span>
       </div>
@@ -34,10 +34,10 @@
     <section class="hub-categories hub-shell">
       <div class="hub-section-head">
         <h2>Что хотите рассчитать?</h2>
-        <p>Ворота уже доступны с автоматическим калькулятором. Остальные направления подготовлены в общей структуре и будут подключаться по мере готовности расчётов.</p>
+        <p>Ворота с калиткой уже можно рассчитать онлайн. Для остальных изделий калькуляторы появятся после подготовки точных формул и цен.</p>
       </div>
       <div class="category-grid" id="categoryGrid"></div>
-      <div class="hub-note">Сейчас эта страница используется как безопасный предварительный раздел новой структуры. Основная рекламная страница ворот остаётся без лишних шагов.</div>
+      <div class="hub-note">Предварительный расчёт помогает сориентироваться по стоимости. Точные размеры и итоговую сумму подтвердим после бесплатного замера.</div>
     </section>
   </main>
 
@@ -57,12 +57,13 @@
       const phoneDigits=String(settings.phoneDigits||'79373296750').replace(/\D/g,'');
       const area=Number(settings.serviceAreaKm)||150;
       const warranty=Number(settings.warrantyYears)||3;
+      const yearWord=value=>{const n=Math.abs(Number(value))%100,n10=n%10;if(n>10&&n<20)return'лет';if(n10===1)return'год';if(n10>=2&&n10<=4)return'года';return'лет'};
       const phoneHref=`tel:+${phoneDigits}`;
       document.getElementById('hubPhone').textContent=phoneDisplay;
       document.getElementById('hubPhone').href=phoneHref;
       document.getElementById('hubCall').href=phoneHref;
       document.getElementById('hubArea').textContent=`Выезд до ${area} км`;
-      document.getElementById('hubWarranty').textContent=`Гарантия ${warranty} года`;
+      document.getElementById('hubWarranty').textContent=`Гарантия ${warranty} ${yearWord(warranty)}`;
       document.getElementById('hubHours').textContent=`${settings.businessHours||'Пн–Пт, 9:00–18:00'} · Мелеуз и до ${area} км`;
 
       const icons={
