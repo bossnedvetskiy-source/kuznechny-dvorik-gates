@@ -53,5 +53,8 @@ assert(!delivery.includes('Пункта нет в прайсе') && delivery.inc
 assert(html.includes('Если подходящие столбы уже есть') && html.includes('без доставки'), 'Initial prices must clearly state posts condition and delivery exclusion');
 assert(html.includes('Даю согласие на обработку персональных данных.'), 'Consent wording must explicitly mention personal data');
 assert(ui.includes('Указать место установки'), 'Mobile CTA must work for cities, villages and settlements');
+assert(html.includes('связка между столбами под землёй'), 'Posts wording must explain what the linkage means');
+assert(html.includes('свяжемся с вами в рабочее время'), 'Lead confirmation must set a realistic contact expectation');
+assert(html.includes('class="skip-link"'), 'Gate page must include a keyboard skip link');
 
 console.log('Gate page foundation checks: OK');

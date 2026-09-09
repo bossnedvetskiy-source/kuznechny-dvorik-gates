@@ -20,7 +20,7 @@ const catalogProducts = orderedCatalogPrices.map(({art,price}, index) => {
     type:'catalog',
     art,
     title:'Ворота с калиткой',
-    description:'Стандарт: ворота 3,4×1,8 м и калитка 1×1,8 м. Доставка добавится в расчёте.',
+    description:'Стандарт: ворота 3,4×1,8 м и калитка 1×1,8 м. Доставку рассчитаем после выбора места установки.',
     price:Number(price)||0,
     install:Number(priceData.catalogInstallation)||0,
     posts:Number(priceData.catalogPosts)||0,
@@ -235,7 +235,7 @@ function updateSelectedPreview() {
   selectedProductImage.alt=`Ворота с калиткой ${product.art}`;
   selectedProductCaption.textContent=product.art;
   postsPrice.textContent=`+${money(product.posts)}`;
-  postsHint.textContent='Установка, бетонирование и усиленная связка столбов';
+  postsHint.textContent='Установка, бетонирование и усиленная связка между столбами под землёй';
   postsTitle.textContent=postsCheck.checked?'✓ Новые усиленные столбы добавлены':'Добавить новые усиленные столбы';
   baseInstallNote.textContent=postsCheck.checked?'Расчёт с новыми усиленными столбами':'Установка ворот и калитки на ваши подходящие столбы уже входит в цену';
 }
