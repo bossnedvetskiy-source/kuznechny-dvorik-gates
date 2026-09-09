@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0d0f11">
+  <meta name="robots" content="noindex,follow">
+  <meta name="description" content="Кузнечный ДворикЪ — ворота, заборы и автомобильные навесы по вашим размерам в Мелеузе и ближайших районах.">
+  <title>Кузнечный ДворикЪ — изделия из металла для участка</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Prata&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="home.css">
+</head>
+<body>
+  <header class="hub-topbar hub-shell">
+    <a class="hub-brand" href="/napravleniya" aria-label="Кузнечный ДворикЪ">
+      <span class="hub-brand-mark" aria-hidden="true">К</span>
+      <span><b>Кузнечный ДворикЪ</b><small>собственное производство · Мелеуз</small></span>
+    </a>
+    <div class="hub-contact"><span id="hubArea">Выезд до 150 км</span><a id="hubPhone" href="tel:+79373296750">8 937 329-67-50</a></div>
+  </header>
+
+  <main>
+    <section class="hub-hero hub-shell">
+      <div class="hub-eyebrow">Кузнечный ДворикЪ · Мелеуз</div>
+      <h1>Изделия из металла для вашего участка</h1>
+      <p>Выберите нужное изделие. Для каждого направления будет свой понятный автоматический расчёт по размерам, комплектации и доставке.</p>
+      <div class="hub-trust" aria-label="Преимущества">
+        <span>Собственное производство</span><span>Бесплатный замер</span><span>Договор</span><span id="hubWarranty">Гарантия 3 года</span>
+      </div>
+    </section>
+
+    <section class="hub-categories hub-shell">
+      <div class="hub-section-head">
+        <h2>Что хотите рассчитать?</h2>
+        <p>Ворота уже доступны с автоматическим калькулятором. Остальные направления подготовлены в общей структуре и будут подключаться по мере готовности расчётов.</p>
+      </div>
+      <div class="category-grid" id="categoryGrid"></div>
+      <div class="hub-note">Сейчас эта страница используется как безопасный предварительный раздел новой структуры. Основная рекламная страница ворот остаётся без лишних шагов.</div>
+    </section>
+  </main>
+
+  <footer class="hub-footer">
+    <div class="hub-footer-inner hub-shell">
+      <div><b>Кузнечный ДворикЪ</b><p id="hubHours">Пн–Пт, 9:00–18:00 · Мелеуз и до 150 км</p></div>
+      <a id="hubCall" href="tel:+79373296750">Позвонить</a>
+    </div>
+  </footer>
+
+  <script>window.SITE_SETTINGS=__RUNTIME_SITE_DATA__;</script>
+  <script src="product-categories.js"></script>
+  <script>
+    (()=>{
+      const settings=window.SITE_SETTINGS||{};
+      const phoneDisplay=settings.phoneDisplay||'8 937 329-67-50';
+      const phoneDigits=String(settings.phoneDigits||'79373296750').replace(/\D/g,'');
+      const area=Number(settings.serviceAreaKm)||150;
+      const warranty=Number(settings.warrantyYears)||3;
+      const phoneHref=`tel:+${phoneDigits}`;
+      document.getElementById('hubPhone').textContent=phoneDisplay;
+      document.getElementById('hubPhone').href=phoneHref;
+      document.getElementById('hubCall').href=phoneHref;
+      document.getElementById('hubArea').textContent=`Выезд до ${area} км`;
+      document.getElementById('hubWarranty').textContent=`Гарантия ${warranty} года`;
+      document.getElementById('hubHours').textContent=`${settings.businessHours||'Пн–Пт, 9:00–18:00'} · Мелеуз и до ${area} км`;
+
+      const icons={
+        gates:'<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M6 38V12h36v26M9 38V16h13v22M26 38V16h13v22M22 16l-6 6 6 6M26 16l6 6-6 6M4 38h40"/></svg>',
+        canopy:'<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M5 21l19-10 19 10M8 22h32M10 22v17M38 22v17M16 39h16M14 31h20l-3-6H17z"/></svg>',
+        'forged-fence':'<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M5 39h38M8 39V14M16 39V10M24 39V14M32 39V10M40 39V14M5 20h38M5 31h38M13 14l3-5 3 5M29 14l3-5 3 5"/></svg>',
+        'profsheet-fence':'<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M6 39V11h36v28M10 35V15l4 4 4-4 4 4 4-4 4 4 4-4 4 4v16M4 39h40"/></svg>',
+        'picket-fence':'<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M6 39h36M8 39V15l4-5 4 5v24M20 39V15l4-5 4 5v24M32 39V15l4-5 4 5v24M5 25h38"/></svg>'
+      };
+      const grid=document.getElementById('categoryGrid');
+      const categories=Array.isArray(window.PRODUCT_CATEGORIES)?window.PRODUCT_CATEGORIES:[];
+      categories.forEach(category=>{
+        const active=category.status==='active';
+        const card=document.createElement(active?'a':'div');
+        card.className=`category-card ${active?'is-active':'is-planned'}`;
+        if(active)card.href=category.href;
+        else card.setAttribute('aria-disabled','true');
+        card.innerHTML=`<div class="category-icon">${icons[category.id]||''}</div><div class="category-copy"><small>${category.eyebrow||''}</small><h3>${category.title}</h3><p>${category.description}</p></div><div class="category-action"><span>${active?category.action:'Калькулятор готовится'}</span><span>${active?'→':''}</span></div>`;
+        grid.append(card);
+      });
+    })();
+  </script>
+</body>
+</html>
