@@ -5,8 +5,11 @@ await mkdir('dist/server', { recursive: true });
 await mkdir('dist/client', { recursive: true });
 await mkdir('dist/.openai', { recursive: true });
 
-const [htmlSource, css, storefrontCss, catalogImages, pricesSource, deliveryPricesSource, js, publicSiteJsSource, adminHtmlSource, adminCss, adminJsSource, adminPricesJsSource, adminSiteJsSource, adminLeadsJsSource, workerSource, adminAuthSource, siteSettingsSource, catalogMediaSource, leadsSource] = await Promise.all([
+const [htmlSource, homeHtmlSource, homeCss, productCategoriesSource, css, storefrontCss, catalogImages, pricesSource, deliveryPricesSource, js, publicSiteJsSource, adminHtmlSource, adminCss, adminJsSource, adminPricesJsSource, adminSiteJsSource, adminLeadsJsSource, workerSource, adminAuthSource, siteSettingsSource, catalogMediaSource, leadsSource] = await Promise.all([
   readFile('index.html', 'utf8'),
+  readFile('home.html', 'utf8'),
+  readFile('home.css', 'utf8'),
+  readFile('product-categories.js', 'utf8'),
   readFile('styles.css', 'utf8'),
   readFile('storefront.css', 'utf8'),
   readFile('catalog-images.js', 'utf8'),
@@ -60,6 +63,10 @@ publicJs = publicJs.replace(
   'const priceData = window.PRICE_DATA;',
   'const siteSettings = window.SITE_SETTINGS || {};\nconst priceData = window.PRICE_DATA;'
 );
+
+const homeHtml = homeHtmlSource
+  .replace('<link rel="stylesheet" href="home.css">', `<style>${homeCss}</style>`)
+  .replace('<script src="product-categories.js"></script>', `<script>${productCategoriesSource}</script>`);
 
 const html = htmlSource
   .replace('<link rel="stylesheet" href="styles.css">', `<style>${css}\n${storefrontCss}</style>`)
@@ -140,6 +147,11 @@ let patchedWorkerSource = workerSource.slice(0, authStart)
   + workerSource.slice(authEnd);
 
 patchedWorkerSource = patchedWorkerSource.replace(
+  'const PAGE = __PUBLIC_PAGE__;',
+  'const PAGE = __PUBLIC_PAGE__;\nconst HOME_PAGE = __HOME_PAGE__;'
+);
+
+patchedWorkerSource = patchedWorkerSource.replace(
   'const DEFAULT_GALLERIES = __DEFAULT_GALLERIES__;',
   'const DEFAULT_GALLERIES = __DEFAULT_GALLERIES__;\nconst DEFAULT_PRICES = __DEFAULT_PRICES__;'
 );
@@ -188,10 +200,15 @@ patchedWorkerSource = patchedWorkerSource.replace(
   "if (url.pathname.startsWith('/catalog-media/')) return serveCatalogMedia(env, url.pathname);\n    if (url.pathname === '/api/leads') {\n      if (request.method !== 'POST') return json({error: 'Метод не поддерживается'}, 405);\n      try {\n        return await createLead(request, env, url);\n      } catch (error) {\n        return json({error: 'Не удалось сохранить заявку: ' + errorMessage(error)}, 500);\n      }\n    }\n    if (url.pathname === '/api/catalog-images' && request.method === 'GET') {"
 );
 
+patchedWorkerSource = patchedWorkerSource.replace(
+  "    if (url.pathname !== '/' && url.pathname !== '/index.html')",
+  "    if (url.pathname === '/napravleniya' || url.pathname === '/napravleniya/') return html(await renderProductHub(env));\n    if (url.pathname !== '/' && url.pathname !== '/index.html' && url.pathname !== '/vorota' && url.pathname !== '/vorota/')"
+);
 patchedWorkerSource = patchedWorkerSource.replace('return html(PAGE);\n  }\n};', 'return html(await renderPublicPage(env));\n  }\n};');
 
 const worker = patchedWorkerSource
   .replace('__PUBLIC_PAGE__', JSON.stringify(html))
+  .replace('__HOME_PAGE__', JSON.stringify(homeHtml))
   .replace('__ADMIN_PAGE__', JSON.stringify(adminHtml))
   .replace('__DEFAULT_GALLERIES__', JSON.stringify(defaultGalleries))
   .replace('__DEFAULT_PRICES__', JSON.stringify(defaultPrices))

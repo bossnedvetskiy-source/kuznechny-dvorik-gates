@@ -14,6 +14,7 @@
     .admin-tabs{display:flex;gap:8px;margin:0 0 30px;padding:6px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.72);width:max-content;max-width:100%}
     .admin-tab{min-height:42px;padding:0 17px;border:0;border-radius:10px;background:transparent;color:var(--muted);font-size:12px;font-weight:800;white-space:nowrap}
     .admin-tab.active{background:var(--ink);color:#fff;box-shadow:0 6px 18px rgba(17,19,21,.13)}
+    .admin-tab[data-admin-tab="leads"]{order:1}.admin-tab[data-admin-tab="catalog"]{order:2}.admin-tab[data-admin-tab="prices"]{order:3}.admin-tab[data-admin-tab="photos"]{order:4}.admin-tab[data-admin-tab="settings"]{order:5}
     .settings-card{margin-bottom:18px;padding:22px;border:1px solid var(--line);border-radius:20px;background:#fff;box-shadow:0 15px 45px rgba(18,16,13,.055)}
     .price-general-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
     .price-general-grid label,.extra-price-fields label{display:grid;gap:7px;color:var(--muted);font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.55px}
@@ -47,7 +48,7 @@
         <div class="brand-mark" aria-hidden="true">К</div>
         <p class="eyebrow">Кузнечный ДворикЪ</p>
         <h1>Вход в админ-панель</h1>
-        <p class="login-copy">Здесь можно управлять каталогом, фотографиями и ценами сайта.</p>
+        <p class="login-copy">Здесь можно управлять заявками, изделиями, фотографиями, ценами и настройками сайта.</p>
         <label>Логин<input id="loginInput" name="username" type="text" autocomplete="username" required></label>
         <label>Пароль<input id="passwordInput" name="password" type="password" autocomplete="current-password" required></label>
         <p class="form-error" id="loginError" role="alert" hidden></p>
@@ -70,16 +71,16 @@
 
       <div class="editor-shell">
         <nav class="admin-tabs" aria-label="Разделы админ-панели">
-          <button class="admin-tab active" data-admin-tab="photos" type="button">📷 Фото</button>
-          <button class="admin-tab" data-admin-tab="prices" type="button">₽ Цены</button>
-          <button class="admin-tab" data-admin-tab="catalog" type="button">🗂 Каталог</button>
+          <button class="admin-tab" data-admin-tab="photos" type="button">🖼 Фото</button>
+          <button class="admin-tab" data-admin-tab="prices" type="button">🧮 Цены</button>
+          <button class="admin-tab" data-admin-tab="catalog" type="button">🛍 Изделия</button>
         </nav>
 
         <section class="admin-tab-panel" id="photosTab">
           <div class="page-title">
             <div>
               <p class="eyebrow">Управление каталогом</p>
-              <h1>Фотографии моделей</h1>
+              <h1>Фотографии · Ворота с калиткой</h1>
             </div>
             <p>Выберите модель, измените порядок фотографий и поставьте лучшую первой — она станет обложкой карточки.</p>
           </div>
@@ -153,7 +154,7 @@
           <div class="page-title">
             <div>
               <p class="eyebrow">Управление сайтом</p>
-              <h1>Цены</h1>
+              <h1>Цены · Ворота с калиткой</h1>
             </div>
             <p>Изменения публикуются на основном сайте сразу после сохранения. Пересборка сайта не нужна.</p>
           </div>
@@ -188,7 +189,7 @@
           <div class="page-title">
             <div>
               <p class="eyebrow">Управление каталогом</p>
-              <h1>Порядок моделей</h1>
+              <h1>Ворота с калиткой</h1>
             </div>
             <p>Можно временно скрывать модели с сайта и менять порядок, в котором карточки показываются клиенту.</p>
           </div>

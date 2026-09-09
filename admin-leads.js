@@ -8,7 +8,7 @@
   tab.type = 'button';
   tab.dataset.adminTab = 'leads';
   tab.textContent = '📥 Заявки';
-  nav.append(tab);
+  nav.prepend(tab);
 
   const panel = document.createElement('section');
   panel.className = 'admin-tab-panel';
@@ -64,6 +64,8 @@
     return Number.isNaN(date.getTime()) ? String(value || '') : date.toLocaleString('ru-RU', {dateStyle:'short', timeStyle:'short'});
   };
   const statusLabel = status => ({new:'Новая',contacted:'Связались',done:'Закрыта',archived:'Архив'})[status] || status;
+  const categoryLabel = category => ({gates:'Ворота с калиткой',canopy:'Автомобильный навес','forged-fence':'Кованый забор','profsheet-fence':'Забор из профнастила','picket-fence':'Евроштакетник'})[category] || 'Изделие';
+  const configLabel = key => ({width:'ширина',height:'высота',length:'длина',wicketWidth:'калитка',wicketHeight:'высота калитки',type:'тип',roof:'кровля',color:'цвет'})[key] || key;
   const phoneDigits = value => String(value || '').replace(/\D/g, '');
 
   function hasUnsavedChanges() {
@@ -78,16 +80,26 @@
     const shown = activeFilter === 'all' ? leads : leads.filter(lead => lead.status === activeFilter);
     empty.hidden = shown.length > 0;
     list.innerHTML = shown.map(lead => {
+      const category=lead.category||'gates';
+      const categoryName=categoryLabel(category);
       const dimensions = [lead.width ? `${lead.width} м` : '', lead.height ? `× ${lead.height} м` : ''].filter(Boolean).join(' ');
       const wicket = [lead.wicket_width ? `${lead.wicket_width} м` : '', lead.wicket_height ? `× ${lead.wicket_height} м` : ''].filter(Boolean).join(' ') || '—';
       const options = [lead.install ? 'монтаж' : '', lead.posts ? 'новые столбы' : '', lead.color || ''].filter(Boolean).join(' · ') || 'без дополнительных опций';
+      const config=lead.configuration&&typeof lead.configuration==='object'?lead.configuration:{};
+      const genericParams=Object.entries(config).filter(([key,value])=>value!==null&&value!==''&&value!==false&&!['article','install','posts'].includes(key)).slice(0,5).map(([key,value])=>`${configLabel(key)}: ${value}`).join(' · ') || '—';
       const digits = phoneDigits(lead.phone);
+      const productLine=[categoryName,lead.article].filter(Boolean).join(' · ');
+      const sourceLine=lead.source?` · ${lead.source}`:'';
+      const fieldTwoLabel=category==='gates'?'Ворота':'Параметры';
+      const fieldTwoValue=category==='gates'?(dimensions||'—'):genericParams;
+      const fieldThreeLabel=category==='gates'?'Калитка':'Изделие';
+      const fieldThreeValue=category==='gates'?wicket:(lead.product_title||categoryName);
       return `<article class="lead-card ${lead.status==='new'?'is-new':''}" data-lead-id="${lead.id}">
-        <div class="lead-card-head"><div class="lead-main"><b>#${lead.id} · ${escape(lead.article)} · ${escape(lead.name || 'Без имени')}</b><span>${escape(formatDate(lead.created_at))} · ${escape(lead.city)}</span></div><strong class="lead-total">${money(lead.total)}</strong></div>
+        <div class="lead-card-head"><div class="lead-main"><b>#${lead.id} · ${escape(productLine)} · ${escape(lead.name || 'Без имени')}</b><span>${escape(formatDate(lead.created_at))} · ${escape(lead.city)}${escape(sourceLine)}</span></div><strong class="lead-total">${money(lead.total)}</strong></div>
         <div class="lead-grid">
           <div class="lead-field"><span>Телефон</span><b>${escape(lead.phone)}</b></div>
-          <div class="lead-field"><span>Ворота</span><b>${escape(dimensions || '—')}</b></div>
-          <div class="lead-field"><span>Калитка</span><b>${escape(wicket)}</b></div>
+          <div class="lead-field"><span>${escape(fieldTwoLabel)}</span><b>${escape(fieldTwoValue)}</b></div>
+          <div class="lead-field"><span>${escape(fieldThreeLabel)}</span><b>${escape(fieldThreeValue)}</b></div>
           <div class="lead-field"><span>Комплектация</span><b>${escape(options)}</b></div>
         </div>
         ${lead.comment?`<p class="lead-note">${escape(lead.comment)}</p>`:''}
@@ -157,5 +169,11 @@
     if (!button || button === tab || panel.hidden) return;
     panel.hidden = true;
     tab.classList.remove('active');
+  });
+
+  window.addEventListener('admin:ready', () => {
+    document.querySelectorAll('.admin-tab-panel').forEach(item => { item.hidden = item !== panel; });
+    nav.querySelectorAll('.admin-tab').forEach(item => item.classList.toggle('active', item === tab));
+    load(true);
   });
 })();

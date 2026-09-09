@@ -171,3 +171,10 @@ async function renderPublicPage(env) {
     .replace('__RUNTIME_PRICE_DATA__', serializedPrices)
     .replace('__RUNTIME_SITE_DATA__', serializedSite);
 }
+
+
+async function renderProductHub(env) {
+  const site = await loadSiteProfile(env);
+  const serializedSite = JSON.stringify(site).replace(/</g, '\u003c');
+  return HOME_PAGE.replace('__RUNTIME_SITE_DATA__', serializedSite);
+}

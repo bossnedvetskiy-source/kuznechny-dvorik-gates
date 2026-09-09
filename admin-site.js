@@ -46,7 +46,7 @@
       </section>
 
       <section class="settings-card">
-        <div class="panel-heading"><div><span>Первый экран</span><h2>Главный оффер</h2></div></div>
+        <div class="panel-heading"><div><span>Страница ворот</span><h2>Главный оффер</h2></div></div>
         <div class="site-settings-grid one">
           <label>Строка над заголовком<input id="siteHeroEyebrow" type="text" maxlength="120" required></label>
           <div class="site-settings-grid two nested">

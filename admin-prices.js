@@ -313,10 +313,6 @@ saveCatalogButton?.addEventListener('click', async () => {
   }
 });
 
-window.addEventListener('admin:ready', () => {
-  switchAdminTab('photos');
-});
-
 window.addEventListener('beforeunload', event => {
   if (!priceDirty && !catalogDirty) return;
   event.preventDefault();

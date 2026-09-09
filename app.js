@@ -563,7 +563,11 @@ function buildMessage(){
 
 function leadPayload(){
   const {p,total,deliveryPending}=calcData();
+  const tracking=new URLSearchParams(window.location.search);
+  const source=[tracking.get('utm_source'),tracking.get('utm_campaign')].filter(Boolean).join(' / ');
   return {
+    category:'gates',
+    source,
     name:document.getElementById('nameInput').value.trim(),
     phone:phoneInput.value.trim(),
     city:selectedCityName(),
@@ -576,6 +580,16 @@ function leadPayload(){
     install:Boolean(installCheck.checked&&p.install),
     posts:Boolean(postsCheck.checked&&p.posts),
     color:p.type==='frame'?'':document.getElementById('colorSelect').value,
+    configuration:{
+      article:p.art,
+      width:Number(widthInput.value)||null,
+      height:Number(heightInput.value)||null,
+      wicketWidth:Number.isFinite(p.wicketWidth)?(Number(wicketWidthInput.value)||null):null,
+      wicketHeight:Number.isFinite(p.wicketWidth)?(Number(wicketHeightInput?.value)||null):null,
+      install:Boolean(installCheck.checked&&p.install),
+      posts:Boolean(postsCheck.checked&&p.posts),
+      color:p.type==='frame'?'':document.getElementById('colorSelect').value
+    },
     total:Math.round(total),
     deliveryPending:Boolean(deliveryPending),
     comment:document.getElementById('commentInput').value.trim(),
