@@ -1,5 +1,20 @@
 (() => {
   const mobile = window.matchMedia('(max-width: 620px)');
+  const desktopHero = window.matchMedia('(min-width: 621px)');
+  const heroImage = document.getElementById('heroDesktopImage');
+  const trackGoal = (name, params = {}) => { try { if (typeof window.ym === 'function') window.ym(107269914, 'reachGoal', name, params); } catch {} };
+  const syncHeroImage = () => {
+    if (!heroImage) return;
+    if (desktopHero.matches && !heroImage.hasAttribute('src')) {
+      heroImage.loading = 'eager';
+      heroImage.fetchPriority = 'high';
+      heroImage.src = heroImage.dataset.desktopSrc || '/hero-gates.jpg';
+    } else if (!desktopHero.matches && heroImage.hasAttribute('src')) {
+      heroImage.removeAttribute('src');
+    }
+  };
+  syncHeroImage();
+  desktopHero.addEventListener('change', syncHeroImage);
   const calculator = document.getElementById('calculator');
   const catalog = document.getElementById('catalog');
   const cta = document.getElementById('mobilePrimaryCta');
@@ -34,7 +49,7 @@
     const open = dimensions?.classList.toggle('is-open');
     sizeToggle.textContent = open ? 'Скрыть' : 'Изменить';
     sizeToggle.setAttribute('aria-expanded', String(Boolean(open)));
-    if (open) setTimeout(() => widthInput?.focus({preventScroll:true}), 40);
+    if (open) { trackGoal('gate_size_edit_open'); setTimeout(() => widthInput?.focus({preventScroll:true}), 40); }
   });
   [widthInput,wicketWidthInput,heightInput,wicketHeightInput].filter(Boolean).forEach(input => {
     input.addEventListener('input', () => setTimeout(updateSizeSummary,0));
@@ -70,6 +85,7 @@
   function openLead() {
     if (!mobile.matches || leadOpen) return;
     leadOpen = true;
+    trackGoal('lead_form_open');
     document.body.classList.add('mobile-lead-open');
     leadBackdrop?.removeAttribute('hidden');
     syncMobileCta();

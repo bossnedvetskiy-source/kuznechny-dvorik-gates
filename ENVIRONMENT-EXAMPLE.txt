@@ -4,3 +4,8 @@
 # Серверные привязки
 DB=D1_or_compatible_database
 BUCKET=R2_or_compatible_object_storage_optional
+
+# Необязательное мгновенное уведомление о новой заявке во внешний сервис.
+# URL и токен храните только в Cloudflare variables/secrets, не коммитьте реальные значения.
+LEAD_NOTIFY_WEBHOOK_URL=https://example.invalid/new-lead
+LEAD_NOTIFY_WEBHOOK_TOKEN=secret_optional

@@ -1,6 +1,24 @@
 const LEAD_STATUSES = new Set(['new', 'contacted', 'done', 'archived']);
 const LEAD_CATEGORIES = new Set(['gates', 'canopy', 'forged-fence', 'profsheet-fence', 'picket-fence']);
 
+async function notifyNewLead(env, lead) {
+  const endpoint = String(env.LEAD_NOTIFY_WEBHOOK_URL || '').trim();
+  if (!endpoint) return;
+  const headers = {'content-type':'application/json'};
+  const token = String(env.LEAD_NOTIFY_WEBHOOK_TOKEN || '').trim();
+  if (token) headers.authorization = `Bearer ${token}`;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 1500);
+  try {
+    const response = await fetch(endpoint, {method:'POST', headers, body:JSON.stringify({event:'new_lead', lead}), signal:controller.signal});
+    if (!response.ok) console.warn('Lead notification webhook returned', response.status);
+  } catch (error) {
+    console.warn('Lead notification webhook failed', String(error?.message || error));
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function ensureLeadSchema(env) {
   if (!env.DB) throw new Error('База данных временно недоступна');
   await env.DB.prepare(`CREATE TABLE IF NOT EXISTS site_leads (
@@ -25,6 +43,9 @@ async function ensureLeadSchema(env) {
     color TEXT NOT NULL DEFAULT '',
     total INTEGER NOT NULL DEFAULT 0,
     delivery_pending INTEGER NOT NULL DEFAULT 0,
+    consent INTEGER NOT NULL DEFAULT 0,
+    consent_at TEXT NOT NULL DEFAULT '',
+    policy_version TEXT NOT NULL DEFAULT '',
     comment TEXT NOT NULL DEFAULT '',
     message TEXT NOT NULL
   )`).run();
@@ -32,7 +53,10 @@ async function ensureLeadSchema(env) {
     'ALTER TABLE site_leads ADD COLUMN wicket_height REAL',
     "ALTER TABLE site_leads ADD COLUMN category TEXT NOT NULL DEFAULT 'gates'",
     "ALTER TABLE site_leads ADD COLUMN source TEXT NOT NULL DEFAULT ''",
-    "ALTER TABLE site_leads ADD COLUMN configuration_json TEXT NOT NULL DEFAULT '{}'"
+    "ALTER TABLE site_leads ADD COLUMN configuration_json TEXT NOT NULL DEFAULT '{}'",
+    "ALTER TABLE site_leads ADD COLUMN consent INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE site_leads ADD COLUMN consent_at TEXT NOT NULL DEFAULT ''",
+    "ALTER TABLE site_leads ADD COLUMN policy_version TEXT NOT NULL DEFAULT ''"
   ];
   for (const statement of migrations) {
     try {
@@ -82,6 +106,8 @@ async function createLead(request, env, url) {
   const color = leadText(body.color, 100);
   const comment = leadText(body.comment, 1000);
   const message = leadText(body.message, 8000);
+  const consent = body.consent === true;
+  const policyVersion = leadText(body.policyVersion, 64);
   const width = leadNumber(body.width);
   const wicketWidth = leadNumber(body.wicketWidth);
   const wicketHeight = leadNumber(body.wicketHeight);
@@ -105,6 +131,7 @@ async function createLead(request, env, url) {
   if (configurationJson.length > 8000) return json({error: 'Слишком много параметров в заявке'}, 413);
 
   if (phoneDigits.length < 10 || phoneDigits.length > 11) return json({error: 'Укажите корректный номер телефона'}, 400);
+  if (!consent) return json({error: 'Подтвердите согласие на обработку данных'}, 400);
   if (!city || !message) return json({error: 'В заявке не хватает обязательных данных'}, 400);
   for (const value of [width, wicketWidth, wicketHeight, height]) {
     if (value !== null && (value <= 0 || value > 100)) return json({error: 'Некорректные размеры в заявке'}, 400);
@@ -113,23 +140,25 @@ async function createLead(request, env, url) {
   await ensureLeadSchema(env);
   const result = await env.DB.prepare(`INSERT INTO site_leads (
     status, name, phone, city, category, source, article, product_title, configuration_json,
-    width, wicket_width, wicket_height, height, install, posts, color, total, delivery_pending, comment, message
-  ) VALUES ('new', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+    width, wicket_width, wicket_height, height, install, posts, color, total, delivery_pending, consent, consent_at, policy_version, comment, message
+  ) VALUES ('new', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?)`)
     .bind(
       name, phone, city, category, source, article, productTitle, configurationJson,
       width, wicketWidth, wicketHeight, height,
       body.install ? 1 : 0, body.posts ? 1 : 0, color, total,
-      body.deliveryPending ? 1 : 0, comment, message
+      body.deliveryPending ? 1 : 0, consent ? 1 : 0, policyVersion, comment, message
     ).run();
 
-  return json({ok: true, id: result.meta?.last_row_id || null}, 201);
+  const leadId = result.meta?.last_row_id || null;
+  await notifyNewLead(env, {id:leadId, category, name, phone, city, article, productTitle, total, source, message});
+  return json({ok: true, id: leadId}, 201);
 }
 
 async function listLeads(env) {
   await ensureLeadSchema(env);
   const result = await env.DB.prepare(`SELECT id, created_at, updated_at, status, name, phone, city, category, source, article,
     product_title, configuration_json, width, wicket_width, wicket_height, height, install, posts, color, total,
-    delivery_pending, comment, message
+    delivery_pending, consent, consent_at, policy_version, comment, message
     FROM site_leads ORDER BY id DESC LIMIT 200`).all();
   const leads = (result.results || []).map(row => ({
     ...row,
@@ -137,7 +166,8 @@ async function listLeads(env) {
     configuration_json: undefined,
     install: Boolean(row.install),
     posts: Boolean(row.posts),
-    delivery_pending: Boolean(row.delivery_pending)
+    delivery_pending: Boolean(row.delivery_pending),
+    consent: Boolean(row.consent)
   }));
   const counts = {new: 0, contacted: 0, done: 0, archived: 0};
   for (const lead of leads) if (lead.status in counts) counts[lead.status] += 1;

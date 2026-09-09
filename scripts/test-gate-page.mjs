@@ -1,7 +1,7 @@
 import {readFile} from 'node:fs/promises';
 import assert from 'node:assert/strict';
 
-const [html, app, runtime, ui, build, delivery, customer, leads] = await Promise.all([
+const [html, app, runtime, ui, build, delivery, customer, leads, workerLeads, adminLeads] = await Promise.all([
   readFile('index.html','utf8'),
   readFile('app.js','utf8'),
   readFile('public-site-settings.js','utf8'),
@@ -9,7 +9,9 @@ const [html, app, runtime, ui, build, delivery, customer, leads] = await Promise
   readFile('scripts/build.mjs','utf8'),
   readFile('shared/delivery.js','utf8'),
   readFile('shared/customer-context.js','utf8'),
-  readFile('shared/leads.js','utf8')
+  readFile('shared/leads.js','utf8'),
+  readFile('worker/leads-d1.js','utf8'),
+  readFile('admin-leads.js','utf8')
 ]);
 
 for (const obsolete of ['priceFilters','sortSelect','articleSearch','installCheck','colorSelect','data-client-ux-pass']) {
@@ -27,6 +29,8 @@ assert(app.includes('priceData.catalogInstallation'), 'Gate page must still use 
 assert(app.includes('priceData.catalogPosts'), 'Gate page must still use the configured posts price');
 assert(app.includes('dimensionState()'), 'Gate page must validate all four dimensions');
 assert(app.includes('deliveryKind'), 'Gate page must expose delivery state to mobile CTA');
+assert(app.includes("['fixed','calculated','error'].includes(deliveryState.kind)"), 'Lead submission must require a resolved delivery state');
+assert(html.includes('data-desktop-src="/hero-gates.jpg"') && !html.includes('img src="/hero-gates.jpg" alt="Готовые распашные'), 'Mobile HTML must not eagerly request the desktop hero');
 assert(ui.includes('deliveryCanProceed'), 'Mobile CTA must require delivery before opening the lead form');
 assert(!runtime.includes("document.createElement('style')"), 'Runtime settings must not inject CSS patches');
 assert(!ui.includes("fetch('/api/leads'"), 'UI controller must not duplicate lead submission');
@@ -34,6 +38,9 @@ assert(delivery.includes('window.KUZDVOR_DELIVERY'), 'Shared delivery API missin
 assert(delivery.includes('window.KUZDVOR_CUSTOMER'), 'Delivery must reuse shared customer city');
 assert(customer.includes('window.KUZDVOR_CUSTOMER'), 'Shared customer context API missing');
 assert(leads.includes('window.KUZDVOR_LEADS'), 'Shared lead API missing');
+assert(workerLeads.includes('consent_at') && workerLeads.includes('policy_version'), 'Server must store consent evidence');
+assert(workerLeads.includes('LEAD_NOTIFY_WEBHOOK_URL'), 'Optional lead notification webhook missing');
+assert(adminLeads.includes('Notification.requestPermission') && adminLeads.includes('30000'), 'Admin new-lead polling/notifications missing');
 assert(build.includes('gatePageCss') && build.includes('customerContextSource') && build.includes('gatePageUiSource'), 'Production build does not bundle the gate foundation');
 
 console.log('Gate page foundation checks: OK');

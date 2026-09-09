@@ -5,6 +5,7 @@ if (!catalogImageData) throw new Error('Не найден файл catalog-image
 if (!window.KUZDVOR_DELIVERY || !window.KUZDVOR_LEADS || !window.KUZDVOR_CUSTOMER) throw new Error('Не загружены общие модули сайта');
 
 const money = value => new Intl.NumberFormat('ru-RU').format(Math.round(Number(value) || 0)) + ' ₽';
+const reachGoal = (name, params = {}) => { try { if (typeof window.ym === 'function') window.ym(107269914, 'reachGoal', name, params); } catch {} };
 const escapeHTML = value => String(value).replace(/[&<>'"]/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[character]));
 const sketchArticles = new Set(['Арт.4','Арт.11','Арт.34','Арт.37']);
 const orderedCatalogPrices = [...priceData.catalog]
@@ -179,7 +180,7 @@ function showCardImage(visual,index) {
   if(counter) counter.textContent=product.media==='sketch'?'Эскиз':count>1?`${next+1} из ${count}`:'1 фото';
 }
 
-showMoreButton.addEventListener('click',()=>{visibleCount+=pageSize();renderProducts()});
+showMoreButton.addEventListener('click',()=>{visibleCount+=pageSize();reachGoal('catalog_show_more',{visible:Math.min(visibleCount,catalogProducts.length),total:catalogProducts.length});renderProducts()});
 mobileCatalogMedia.addEventListener('change',()=>{visibleCount=pageSize();renderProducts()});
 
 async function loadPublishedGalleries() {
@@ -360,11 +361,13 @@ function calculate() {
 });
 postsCheck.addEventListener('change',()=>{
   try{sessionStorage.setItem(POSTS_MEMORY_KEY,postsCheck.checked?'1':'0')}catch{}
+  reachGoal('gate_posts_toggle',{article:selectedProduct().art,enabled:postsCheck.checked?1:0});
   updateSelectedPreview();
   calculate();
 });
 
 window.KUZDVOR_CUSTOMER.bindContact({nameInput,phoneInput});
+let lastDeliveryGoalKey='';
 deliveryController=window.KUZDVOR_DELIVERY.createController({
   input:cityInput,
   datalist:document.getElementById('citySuggestions'),
@@ -374,7 +377,14 @@ deliveryController=window.KUZDVOR_DELIVERY.createController({
   summary:document.getElementById('deliverySummary'),
   summaryValue:document.getElementById('deliverySummaryValue'),
   changeButton:document.getElementById('deliveryChange'),
-  onChange:()=>calculate()
+  onChange:(state)=>{
+    calculate();
+    if(['fixed','calculated','error'].includes(state?.kind)){
+      const city=deliveryController?.selectedCityName?.()||cityInput.value.trim();
+      const key=`${state.kind}:${city}`;
+      if(key!==lastDeliveryGoalKey){lastDeliveryGoalKey=key;reachGoal('delivery_result',{kind:state.kind,city});}
+    }
+  }
 });
 
 function selectedCityName(){return deliveryController?.selectedCityName()||cityInput.value.trim()}
@@ -409,7 +419,7 @@ function leadPayload(){
     wicketWidth:Number(wicketWidthInput.value)||null,wicketHeight:Number(wicketHeightInput.value)||null,
     install:true,posts:Boolean(postsCheck.checked),color:'',
     configuration:{article:product.art,width:Number(widthInput.value)||null,height:Number(heightInput.value)||null,wicketWidth:Number(wicketWidthInput.value)||null,wicketHeight:Number(wicketHeightInput.value)||null,posts:Boolean(postsCheck.checked)},
-    total:Math.round(total),deliveryPending:Boolean(deliveryPending),comment:commentInput.value.trim(),message:buildMessage()
+    total:Math.round(total),deliveryPending:Boolean(deliveryPending),consent:true,policyVersion:'2026-09-09',comment:commentInput.value.trim(),message:buildMessage()
   };
 }
 
@@ -429,11 +439,21 @@ sendButton.addEventListener('click',async()=>{
     showToast('Проверьте размеры ворот и калитки');
     return;
   }
+  const deliveryState=deliveryController?.getState?.()||{kind:'empty'};
+  if(!['fixed','calculated','error'].includes(deliveryState.kind)){
+    const message=deliveryState.kind==='confirm'?'Подтвердите найденный населённый пункт':deliveryState.kind==='loading'?'Дождитесь расчёта доставки':'Сначала укажите населённый пункт и рассчитайте доставку';
+    reachGoal('lead_validation_error',{field:'delivery',kind:deliveryState.kind});
+    document.getElementById('deliveryChooser')?.closest('.form-block')?.scrollIntoView({behavior:'smooth',block:'start'});
+    if(['empty','pending'].includes(deliveryState.kind)) setTimeout(()=>cityInput.focus({preventScroll:true}),260);
+    showToast(message);
+    return;
+  }
   const validation=window.KUZDVOR_LEADS.validate({phone:phoneInput.value,city:selectedCityName(),consent:consentInput.checked});
   if(!validation.ok){
     if(validation.field==='phone'){phoneInput.setAttribute('aria-invalid','true');phoneInput.focus();}
     else if(validation.field==='city'){cityInput.focus();}
     else {consentInput.setAttribute('aria-invalid','true');consentInput.focus();}
+    reachGoal('lead_validation_error',{field:validation.field});
     showToast(validation.message);return;
   }
   const payload=leadPayload();
@@ -442,7 +462,7 @@ sendButton.addEventListener('click',async()=>{
   try{
     await window.KUZDVOR_LEADS.submit(payload);
     window.KUZDVOR_CUSTOMER.set({name:nameInput.value,phone:phoneInput.value,city:selectedCityName()});
-    if(window.ym)ym(107269914,'reachGoal','lead_saved',{article:selectedProduct().art,city:selectedCityName()});
+    reachGoal('lead_saved',{article:selectedProduct().art,city:selectedCityName()});
     document.dispatchEvent(new CustomEvent('lead-sent',{detail:{payload}}));
     showToast('Заявка отправлена');
   }catch(error){showToast(error?.message||'Не удалось отправить заявку')}
@@ -452,7 +472,7 @@ sendButton.addEventListener('click',async()=>{
 document.getElementById('copyButton').addEventListener('click',async()=>{
   try{await navigator.clipboard.writeText(buildMessage());showToast('Расчёт скопирован')}catch{showToast('Не удалось скопировать')}
 });
-document.querySelectorAll('a[href^="tel:"]').forEach(link=>link.addEventListener('click',()=>{if(window.ym)ym(107269914,'reachGoal','phone_click')}));
+document.querySelectorAll('a[href^="tel:"]').forEach(link=>link.addEventListener('click',()=>reachGoal('phone_click')));
 
 const lightbox=document.getElementById('lightbox');
 const lightboxImage=document.getElementById('lightboxImage');

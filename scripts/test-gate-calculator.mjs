@@ -75,7 +75,17 @@ for (const [article, model] of Object.entries(context.GATE_CALC_MODELS.models)) 
   }
 }
 
+const correctedRegressions = [
+  ['9-3','Ворота 3,8; калитка 0,9',3.8,1.8,0.9,1.8,109400],
+];
+for (const [article, scenario, gateWidth, gateHeight, wicketWidth, wicketHeight, expectedTotal] of correctedRegressions) {
+  const actual = context.GATE_CALC.calculateGate({article, gateWidth, gateHeight, wicketWidth, wicketHeight});
+  const ok = actual.total === expectedTotal;
+  if (!ok) failures += 1;
+  rows.push({article, scenario, excelTotal: expectedTotal, siteTotal: actual.total, diffRub: actual.total - expectedTotal, ok});
+}
+
 console.table(rows);
-console.log(`Control cases: ${cases.length}; failures: ${failures}`);
+console.log(`Control cases: ${cases.length + correctedRegressions.length}; failures: ${failures}`);
 console.log(`Imported article models: ${Object.keys(context.GATE_CALC_MODELS.models).length}`);
 if (failures) process.exit(1);

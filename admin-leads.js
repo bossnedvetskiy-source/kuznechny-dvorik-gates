@@ -21,7 +21,7 @@
     </div>
     <div class="lead-toolbar">
       <div class="lead-stats" id="leadStats"></div>
-      <button class="reset-button" id="reloadLeadsButton" type="button">Обновить</button>
+      <div class="lead-toolbar-actions"><button class="reset-button" id="enableLeadNotifications" type="button">🔔 Уведомления</button><button class="reset-button" id="reloadLeadsButton" type="button">Обновить</button></div>
     </div>
     <div class="lead-filters" id="leadFilters">
       <button class="active" data-lead-filter="all" type="button">Все</button>
@@ -36,7 +36,7 @@
 
   const style = document.createElement('style');
   style.textContent = `
-    .lead-toolbar{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:13px}.lead-stats{display:flex;gap:8px;flex-wrap:wrap}.lead-stat{padding:8px 11px;border:1px solid var(--line);border-radius:999px;background:#fff;color:var(--muted);font-size:10px;font-weight:800}.lead-stat b{color:var(--ink)}
+    .lead-toolbar{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:13px}.lead-toolbar-actions{display:flex;gap:8px}.lead-stats{display:flex;gap:8px;flex-wrap:wrap}.lead-stat{padding:8px 11px;border:1px solid var(--line);border-radius:999px;background:#fff;color:var(--muted);font-size:10px;font-weight:800}.lead-stat b{color:var(--ink)}
     .lead-filters{display:flex;gap:7px;overflow:auto;margin-bottom:16px;padding-bottom:2px}.lead-filters button{min-height:38px;padding:0 13px;border:1px solid var(--line);border-radius:999px;background:#fff;color:var(--muted);font-size:11px;font-weight:800;white-space:nowrap}.lead-filters button.active{background:var(--ink);border-color:var(--ink);color:#fff}
     .lead-list{display:grid;gap:10px}.lead-card{padding:16px;border:1px solid #e2ddd4;border-radius:16px;background:#fff;box-shadow:0 10px 30px rgba(18,16,13,.045)}.lead-card.is-new{border-color:rgba(198,147,63,.52);box-shadow:0 0 0 1px rgba(198,147,63,.12),0 10px 30px rgba(18,16,13,.045)}
     .lead-card-head{display:flex;align-items:start;justify-content:space-between;gap:18px;margin-bottom:13px}.lead-main{display:grid;gap:4px}.lead-main b{font-size:15px}.lead-main span{color:var(--muted);font-size:10px}.lead-total{font:20px Prata,serif;color:#8a6326;white-space:nowrap}
@@ -44,7 +44,7 @@
     .lead-note{margin:0 0 12px;padding:10px 12px;border-left:3px solid #d1a95f;background:#faf7f1;color:#5f584f;font-size:11px;line-height:1.55}.lead-card-actions{display:flex;align-items:center;justify-content:space-between;gap:10px}.lead-contact-actions{display:flex;gap:7px}.lead-contact-actions a{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:0 12px;border:1px solid var(--line);border-radius:10px;background:#fff;font-size:11px;font-weight:800}.lead-contact-actions a:first-child{background:var(--ink);border-color:var(--ink);color:#fff}
     .lead-status{height:38px;padding:0 10px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);font-size:11px;font-weight:800}.lead-details{margin-top:10px}.lead-details summary{cursor:pointer;color:var(--muted);font-size:10px;font-weight:800}.lead-details pre{overflow:auto;max-height:220px;margin:8px 0 0;padding:10px;border-radius:10px;background:#111315;color:#eee8de;font:10px/1.5 monospace;white-space:pre-wrap}
     @media(max-width:900px){.lead-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-    @media(max-width:620px){.lead-toolbar{align-items:stretch;flex-direction:column}.lead-toolbar .reset-button{width:100%}.lead-card{padding:13px}.lead-card-head{gap:8px}.lead-total{font-size:17px}.lead-grid{grid-template-columns:1fr 1fr}.lead-card-actions{align-items:stretch;flex-direction:column}.lead-contact-actions{display:grid;grid-template-columns:1fr 1fr}.lead-status{width:100%}}
+    @media(max-width:620px){.lead-toolbar{align-items:stretch;flex-direction:column}.lead-toolbar-actions{display:grid;grid-template-columns:1fr 1fr}.lead-toolbar .reset-button{width:100%}.lead-card{padding:13px}.lead-card-head{gap:8px}.lead-total{font-size:17px}.lead-grid{grid-template-columns:1fr 1fr}.lead-card-actions{align-items:stretch;flex-direction:column}.lead-contact-actions{display:grid;grid-template-columns:1fr 1fr}.lead-status{width:100%}}
   `;
   document.head.append(style);
 
@@ -52,10 +52,13 @@
   const empty = panel.querySelector('#emptyLeads');
   const stats = panel.querySelector('#leadStats');
   const reloadButton = panel.querySelector('#reloadLeadsButton');
+  const notificationButton = panel.querySelector('#enableLeadNotifications');
   const filters = [...panel.querySelectorAll('[data-lead-filter]')];
   let leads = [];
   let activeFilter = 'all';
   let loaded = false;
+  let latestLeadId = 0;
+  let pollingTimer = 0;
 
   const escape = value => String(value ?? '').replace(/[&<>'"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));
   const money = value => new Intl.NumberFormat('ru-RU').format(Number(value) || 0) + ' ₽';
@@ -73,7 +76,24 @@
   }
 
   function renderStats(counts = {}) {
-    stats.innerHTML = `<span class="lead-stat">Новые <b>${Number(counts.new)||0}</b></span><span class="lead-stat">Связались <b>${Number(counts.contacted)||0}</b></span><span class="lead-stat">Закрытые <b>${Number(counts.done)||0}</b></span>`;
+    const newCount=Number(counts.new)||0;
+    stats.innerHTML = `<span class="lead-stat">Новые <b>${newCount}</b></span><span class="lead-stat">Связались <b>${Number(counts.contacted)||0}</b></span><span class="lead-stat">Закрытые <b>${Number(counts.done)||0}</b></span>`;
+    tab.textContent = newCount ? `📥 Заявки · ${newCount}` : '📥 Заявки';
+  }
+
+  function notifyArrivals(items) {
+    if (!items.length) return;
+    showToast(items.length===1?'Получена новая заявка':`Новых заявок: ${items.length}`);
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    const lead=items[0];
+    try { new Notification(items.length===1?'Новая заявка с сайта':`Новых заявок: ${items.length}`, {body:`${categoryLabel(lead.category||'gates')} · ${lead.city} · ${money(lead.total)}`, tag:`lead-${lead.id}`}); } catch {}
+  }
+
+  function syncNotificationButton() {
+    if (!notificationButton) return;
+    if (!('Notification' in window)) { notificationButton.hidden=true; return; }
+    notificationButton.textContent = Notification.permission==='granted' ? '🔔 Включены' : Notification.permission==='denied' ? '🔕 Запрещены' : '🔔 Уведомления';
+    notificationButton.disabled = Notification.permission==='denied';
   }
 
   function render() {
@@ -128,21 +148,24 @@
     }));
   }
 
-  async function load(force = false) {
+  async function load(force = false, silent = false) {
     if (loaded && !force) { render(); return; }
-    reloadButton.disabled = true;
-    reloadButton.textContent = 'Загружаем…';
+    if (!silent) { reloadButton.disabled = true; reloadButton.textContent = 'Загружаем…'; }
     try {
       const data = await api('/api/admin/leads');
-      leads = Array.isArray(data.leads) ? data.leads : [];
+      const nextLeads = Array.isArray(data.leads) ? data.leads : [];
+      const newestId = nextLeads.reduce((max,lead)=>Math.max(max,Number(lead.id)||0),0);
+      const arrivals = latestLeadId ? nextLeads.filter(lead => Number(lead.id)>latestLeadId) : [];
+      leads = nextLeads;
       renderStats(data.counts || {});
+      if (newestId > latestLeadId) latestLeadId = newestId;
       loaded = true;
       render();
+      notifyArrivals(arrivals);
     } catch (error) {
-      showToast(error.message, true);
+      if (!silent) showToast(error.message, true);
     } finally {
-      reloadButton.disabled = false;
-      reloadButton.textContent = 'Обновить';
+      if (!silent) { reloadButton.disabled = false; reloadButton.textContent = 'Обновить'; }
     }
   }
 
@@ -152,6 +175,12 @@
     render();
   }));
   reloadButton.addEventListener('click', () => load(true));
+  notificationButton?.addEventListener('click', async () => {
+    if (!('Notification' in window)) return;
+    try { await Notification.requestPermission(); } catch {}
+    syncNotificationButton();
+  });
+  syncNotificationButton();
 
   tab.addEventListener('click', event => {
     if (hasUnsavedChanges()) {
@@ -175,5 +204,7 @@
     document.querySelectorAll('.admin-tab-panel').forEach(item => { item.hidden = item !== panel; });
     nav.querySelectorAll('.admin-tab').forEach(item => item.classList.toggle('active', item === tab));
     load(true);
+    if (!pollingTimer) pollingTimer = window.setInterval(() => load(true, true), 30000);
   });
+  document.addEventListener('visibilitychange',()=>{ if(!document.hidden) load(true,true); });
 })();
