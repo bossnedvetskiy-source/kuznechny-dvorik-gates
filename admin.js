@@ -8,15 +8,6 @@ const photoGrid = document.getElementById('photoGrid');
 const coverPreview = document.getElementById('coverPreview');
 const cardPreview = document.getElementById('cardPreview');
 const previewPhotoBadge = document.getElementById('previewPhotoBadge');
-const cropHelp = document.getElementById('cropHelp');
-const centerPhotoButton = document.getElementById('centerPhotoButton');
-const bottomPhotoButton = document.getElementById('bottomPhotoButton');
-const fitPhotoButton = document.getElementById('fitPhotoButton');
-const fillPhotoButton = document.getElementById('fillPhotoButton');
-const cropZoom = document.getElementById('cropZoom');
-const cropZoomValue = document.getElementById('cropZoomValue');
-const cropZoomMinus = document.getElementById('cropZoomMinus');
-const cropZoomPlus = document.getElementById('cropZoomPlus');
 const previewArticle = document.getElementById('previewArticle');
 const articleBadge = document.getElementById('articleBadge');
 const photoCounter = document.getElementById('photoCounter');
@@ -34,11 +25,6 @@ let dirty = false;
 let removedUrls = [];
 let selectedPhotoIndex = 0;
 let toastTimer;
-const DRAG_RESERVE = .08;
-
-function displayZoom(zoom) {
-  return zoom >= 1 ? zoom + DRAG_RESERVE : zoom;
-}
 
 function showToast(message, error = false) {
   window.clearTimeout(toastTimer);
@@ -137,7 +123,7 @@ function renderPhotos() {
     const thumb = document.createElement('button');
     thumb.type = 'button';
     thumb.className = `photo-thumb fit-${draft.fitMode}`;
-    thumb.title = `Настроить область показа фотографии ${index + 1}`;
+    thumb.title = `Показать фотографию ${index + 1} в предпросмотре`;
     thumb.setAttribute('aria-label', thumb.title);
     thumb.addEventListener('click', () => {
       selectedPhotoIndex = index;
@@ -145,8 +131,6 @@ function renderPhotos() {
     });
     const image = document.createElement('img');
     image.src = url;
-    const position = draft.positions[url] || {x: 50, y: 50};
-    const zoom = draft.zooms[url] || 1;
     image.style.objectPosition = 'center';
     image.style.objectFit = 'contain';
     image.style.transformOrigin = 'center';
@@ -174,8 +158,6 @@ function renderPhotos() {
 function render() {
   selectedPhotoIndex = Math.max(0, Math.min(selectedPhotoIndex, draft.photos.length - 1));
   const selectedUrl = draft.photos[selectedPhotoIndex] || '';
-  const selectedPosition = draft.positions[selectedUrl] || {x: 50, y: 50};
-  const selectedZoom = draft.zooms[selectedUrl] || 1;
   previewArticle.textContent = activeArticle;
   articleBadge.textContent = activeArticle;
   photoCounter.textContent = `${draft.photos.length} ${pluralPhotos(draft.photos.length)}`;
@@ -188,134 +170,9 @@ function render() {
   coverPreview.style.transform = 'none';
   cardPreview.className = 'card-preview fit-contain';
   cardPreview.classList.remove('can-drag');
-  cropHelp.hidden = true;
-  cropZoom.value = String(Math.round(selectedZoom * 100));
-  cropZoomValue.value = `${Math.round(selectedZoom * 100)}%`;
-  cropZoomValue.textContent = cropZoomValue.value;
-  document.querySelectorAll('input[name="fitMode"]').forEach(input => { input.checked = input.value === draft.fitMode; });
   resetButton.disabled = !draft.customized && !dirty;
   renderPhotos();
 }
-
-function setSelectedPosition(x, y) {
-  const url = draft.photos[selectedPhotoIndex];
-  if (!url) return;
-  const next = {
-    x: Math.round(Math.max(0, Math.min(100, x)) * 10) / 10,
-    y: Math.round(Math.max(0, Math.min(100, y)) * 10) / 10
-  };
-  draft.positions[url] = next;
-  coverPreview.style.objectPosition = `${next.x}% ${next.y}%`;
-  coverPreview.style.transformOrigin = `${next.x}% ${next.y}%`;
-  const thumbnail = photoGrid.children[selectedPhotoIndex]?.querySelector('img');
-  if (thumbnail) {
-    thumbnail.style.objectPosition = `${next.x}% ${next.y}%`;
-    thumbnail.style.transformOrigin = `${next.x}% ${next.y}%`;
-  }
-  setDirty();
-}
-
-function setSelectedZoom(value) {
-  const url = draft.photos[selectedPhotoIndex];
-  if (!url) return;
-  const zoom = Math.round(Math.max(.4, Math.min(4, value)) * 100) / 100;
-  draft.zooms[url] = zoom;
-  if (zoom < 1) draft.positions[url] = {x: 50, y: 50};
-  const position = draft.positions[url] || {x: 50, y: 50};
-  coverPreview.style.objectFit = draft.fitMode === 'cover' && zoom >= 1 ? 'cover' : 'contain';
-  coverPreview.style.objectPosition = `${position.x}% ${position.y}%`;
-  coverPreview.style.transformOrigin = `${position.x}% ${position.y}%`;
-  coverPreview.style.transform = draft.fitMode === 'cover' ? `scale(${displayZoom(zoom)})` : 'none';
-  const thumbnail = photoGrid.children[selectedPhotoIndex]?.querySelector('img');
-  if (thumbnail) {
-    thumbnail.style.objectFit = draft.fitMode === 'cover' && zoom >= 1 ? 'cover' : 'contain';
-    thumbnail.style.objectPosition = `${position.x}% ${position.y}%`;
-    thumbnail.style.transformOrigin = `${position.x}% ${position.y}%`;
-    thumbnail.style.transform = draft.fitMode === 'cover' ? `scale(${displayZoom(zoom)})` : 'none';
-  }
-  cardPreview.classList.toggle('can-drag', draft.fitMode === 'cover' && zoom >= 1);
-  cropZoom.value = String(Math.round(zoom * 100));
-  cropZoomValue.value = `${Math.round(zoom * 100)}%`;
-  cropZoomValue.textContent = cropZoomValue.value;
-  setDirty();
-}
-
-let dragState = null;
-
-cardPreview.addEventListener('pointerdown', event => {
-  if (draft?.fitMode !== 'cover' || !draft.photos[selectedPhotoIndex]) return;
-  if ((draft.zooms[draft.photos[selectedPhotoIndex]] || 1) < 1) return;
-  const position = draft.positions[draft.photos[selectedPhotoIndex]] || {x: 50, y: 50};
-  dragState = {pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, position: {...position}};
-  cardPreview.setPointerCapture(event.pointerId);
-  cardPreview.classList.add('dragging');
-  event.preventDefault();
-});
-
-cardPreview.addEventListener('pointermove', event => {
-  if (!dragState || dragState.pointerId !== event.pointerId || !coverPreview.naturalWidth) return;
-  const width = cardPreview.clientWidth;
-  const height = cardPreview.clientHeight;
-  const zoom = draft.zooms[draft.photos[selectedPhotoIndex]] || 1;
-  const renderedZoom = displayZoom(zoom);
-  const scale = zoom >= 1
-    ? Math.max(width / coverPreview.naturalWidth, height / coverPreview.naturalHeight)
-    : Math.min(width / coverPreview.naturalWidth, height / coverPreview.naturalHeight);
-  const overflowX = Math.max(0, coverPreview.naturalWidth * scale * renderedZoom - width);
-  const overflowY = Math.max(0, coverPreview.naturalHeight * scale * renderedZoom - height);
-  const deltaX = event.clientX - dragState.startX;
-  const deltaY = event.clientY - dragState.startY;
-  const x = overflowX > .5 ? dragState.position.x - deltaX / width * 100 : 50;
-  const y = overflowY > .5 ? dragState.position.y - deltaY / height * 100 : 50;
-  setSelectedPosition(x, y);
-});
-
-function finishDragging(event) {
-  if (!dragState || dragState.pointerId !== event.pointerId) return;
-  dragState = null;
-  cardPreview.classList.remove('dragging');
-}
-
-cardPreview.addEventListener('pointerup', finishDragging);
-cardPreview.addEventListener('pointercancel', finishDragging);
-
-centerPhotoButton.addEventListener('click', () => {
-  setSelectedPosition(50, 50);
-  render();
-});
-
-bottomPhotoButton.addEventListener('click', () => {
-  const url = draft.photos[selectedPhotoIndex];
-  const position = draft.positions[url] || { x: 50, y: 50 };
-  setSelectedPosition(position.x, 100);
-  render();
-});
-
-fitPhotoButton.addEventListener('click', () => {
-  setSelectedPosition(50, 50);
-  setSelectedZoom(.95);
-  render();
-});
-
-fillPhotoButton.addEventListener('click', () => {
-  setSelectedPosition(50, 50);
-  setSelectedZoom(1);
-  render();
-});
-
-cropZoom.addEventListener('input', () => setSelectedZoom(Number(cropZoom.value) / 100));
-
-cropZoomMinus.addEventListener('click', () => {
-  const url = draft.photos[selectedPhotoIndex];
-  if (!url) return;
-  setSelectedZoom((draft.zooms[url] || 1) - .01);
-});
-
-cropZoomPlus.addEventListener('click', () => {
-  const url = draft.photos[selectedPhotoIndex];
-  if (!url) return;
-  setSelectedZoom((draft.zooms[url] || 1) + .01);
-});
 
 function movePhoto(index, direction) {
   const next = index + direction;
@@ -456,12 +313,6 @@ articleSelect.addEventListener('change', () => {
   }
   selectArticle(articleSelect.value);
 });
-
-document.querySelectorAll('input[name="fitMode"]').forEach(input => input.addEventListener('change', () => {
-  draft.fitMode = 'contain';
-  setDirty();
-  render();
-}));
 
 photoInput.addEventListener('change', () => uploadFiles(photoInput.files));
 

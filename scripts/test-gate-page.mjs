@@ -1,7 +1,7 @@
 import {readFile} from 'node:fs/promises';
 import assert from 'node:assert/strict';
 
-const [html, app, runtime, ui, build, delivery, customer, leads, workerLeads, adminLeads] = await Promise.all([
+const [html, app, runtime, ui, build, delivery, customer, leads, workerLeads, adminLeads, adminHtml, adminJs] = await Promise.all([
   readFile('index.html','utf8'),
   readFile('app.js','utf8'),
   readFile('public-site-settings.js','utf8'),
@@ -11,7 +11,9 @@ const [html, app, runtime, ui, build, delivery, customer, leads, workerLeads, ad
   readFile('shared/customer-context.js','utf8'),
   readFile('shared/leads.js','utf8'),
   readFile('worker/leads-d1.js','utf8'),
-  readFile('admin-leads.js','utf8')
+  readFile('admin-leads.js','utf8'),
+  readFile('admin.html','utf8'),
+  readFile('admin.js','utf8')
 ]);
 
 for (const obsolete of ['priceFilters','sortSelect','articleSearch','installCheck','colorSelect','data-client-ux-pass']) {
@@ -53,6 +55,8 @@ assert(!delivery.includes('Пункта нет в прайсе') && delivery.inc
 assert(html.includes('Если подходящие столбы уже есть') && html.includes('без доставки'), 'Initial prices must clearly state posts condition and delivery exclusion');
 assert(html.includes('Даю согласие на обработку персональных данных.'), 'Consent wording must explicitly mention personal data');
 assert(ui.includes('Указать место установки'), 'Mobile CTA must work for cities, villages and settlements');
+assert(!adminHtml.includes('cropHelp') && !adminHtml.includes('name="fitMode"'), 'Admin must not contain hidden crop UI');
+assert(!adminJs.includes('setSelectedZoom') && !adminJs.includes('dragState'), 'Admin must not contain inactive crop/drag logic');
 assert(html.includes('связка между столбами под землёй'), 'Posts wording must explain what the linkage means');
 assert(html.includes('свяжемся с вами в рабочее время'), 'Lead confirmation must set a realistic contact expectation');
 assert(html.includes('class="skip-link"'), 'Gate page must include a keyboard skip link');
