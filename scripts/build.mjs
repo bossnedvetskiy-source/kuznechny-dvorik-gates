@@ -5,18 +5,23 @@ await mkdir('dist/server', { recursive: true });
 await mkdir('dist/client', { recursive: true });
 await mkdir('dist/.openai', { recursive: true });
 
-const [htmlSource, homeHtmlSource, homeCss, productCategoriesSource, css, storefrontCss, catalogImages, pricesSource, deliveryPricesSource, js, publicSiteJsSource, adminHtmlSource, adminCss, adminJsSource, adminPricesJsSource, adminSiteJsSource, adminLeadsJsSource, workerSource, adminAuthSource, siteSettingsSource, catalogMediaSource, leadsSource] = await Promise.all([
+const [htmlSource, homeHtmlSource, homeCss, productCategoriesSource, css, storefrontCss, gatePageCss, catalogImages, pricesSource, deliveryPricesSource, customerContextSource, deliverySharedSource, leadsSharedSource, js, publicSiteJsSource, gatePageUiSource, adminHtmlSource, adminCss, adminJsSource, adminPricesJsSource, adminSiteJsSource, adminLeadsJsSource, workerSource, adminAuthSource, siteSettingsSource, catalogMediaSource, leadsSource] = await Promise.all([
   readFile('index.html', 'utf8'),
   readFile('home.html', 'utf8'),
   readFile('home.css', 'utf8'),
   readFile('product-categories.js', 'utf8'),
   readFile('styles.css', 'utf8'),
   readFile('storefront.css', 'utf8'),
+  readFile('gate-page.css', 'utf8'),
   readFile('catalog-images.js', 'utf8'),
   readFile('prices.js', 'utf8'),
   readFile('delivery-prices.json', 'utf8'),
+  readFile('shared/customer-context.js', 'utf8'),
+  readFile('shared/delivery.js', 'utf8'),
+  readFile('shared/leads.js', 'utf8'),
   readFile('app.js', 'utf8'),
   readFile('public-site-settings.js', 'utf8'),
+  readFile('gate-page-ui.js', 'utf8'),
   readFile('admin.html', 'utf8'),
   readFile('admin.css', 'utf8'),
   readFile('admin.js', 'utf8'),
@@ -53,23 +58,16 @@ const pricesMatch = pricesSource.match(/window\.PRICE_DATA\s*=\s*({[\s\S]*?});\s
 if (!pricesMatch) throw new Error('Некорректный файл prices.js');
 const defaultPrices = Function(`"use strict"; return (${pricesMatch[1]});`)();
 
-let publicJs = js.replace(
-  "const catalogProducts = priceData.catalog.map(({art,price},index)=>{",
-  "const orderedCatalogPrices = [...priceData.catalog].filter(item=>item.visible!==false).sort((a,b)=>(Number(a.order)||9999)-(Number(b.order)||9999));\nconst catalogProducts = orderedCatalogPrices.map(({art,price},index)=>{"
-);
-if (publicJs === js) throw new Error('Не найден блок каталога в app.js');
-
-publicJs = publicJs.replace(
-  'const priceData = window.PRICE_DATA;',
-  'const siteSettings = window.SITE_SETTINGS || {};\nconst priceData = window.PRICE_DATA;'
-);
+const publicJs = js;
 
 const homeHtml = homeHtmlSource
   .replace('<link rel="stylesheet" href="home.css">', `<style>${homeCss}</style>`)
   .replace('<script src="product-categories.js"></script>', `<script>${productCategoriesSource}</script>`);
 
 const html = htmlSource
-  .replace('<link rel="stylesheet" href="styles.css">', `<style>${css}\n${storefrontCss}</style>`)
+  .replace('<link rel="stylesheet" href="styles.css">', `<style>${css}\n${storefrontCss}\n${gatePageCss}</style>`)
+  .replace('<link rel="stylesheet" href="storefront.css">', '')
+  .replace('<link rel="stylesheet" href="gate-page.css">', '')
   .replace('<script id="deliveryData" type="application/json">{}</script>', `<script id="deliveryData" type="application/json">${embeddedDeliveryPrices}</script>`)
   .replace('<script src="catalog-images.js"></script>', `<script>${catalogImages}</script>`)
   .replace('<script src="prices.js"></script>', '<script>window.PRICE_DATA=__RUNTIME_PRICE_DATA__;window.SITE_SETTINGS=__RUNTIME_SITE_DATA__;</script>')
@@ -80,7 +78,12 @@ const html = htmlSource
   .replace('<script src="gate-calc-models-chunk4.js"></script>', '')
   .replace('<script src="gate-calc-models.js"></script>', '')
   .replace('<script src="gate-calc-engine.js"></script>', '')
-  .replace('<script src="app.js"></script>', `<script>${publicJs}</script><script>${publicSiteJsSource}</script>`);
+  .replace('<script src="shared/customer-context.js"></script>', `<script>${customerContextSource}</script>`)
+  .replace('<script src="shared/delivery.js"></script>', `<script>${deliverySharedSource}</script>`)
+  .replace('<script src="shared/leads.js"></script>', `<script>${leadsSharedSource}</script>`)
+  .replace('<script src="app.js"></script>', `<script>${publicJs}</script>`)
+  .replace('<script src="public-site-settings.js"></script>', `<script>${publicSiteJsSource}</script>`)
+  .replace('<script src="gate-page-ui.js"></script>', `<script>${gatePageUiSource}</script>`);
 
 let adminJs = adminJsSource
   .replace(
