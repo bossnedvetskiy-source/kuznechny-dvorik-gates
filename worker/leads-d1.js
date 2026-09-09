@@ -1,4 +1,5 @@
 const LEAD_STATUSES = new Set(['new', 'contacted', 'done', 'archived']);
+const LEAD_CATEGORIES = new Set(['gates', 'canopy', 'forged-fence', 'profsheet-fence', 'picket-fence']);
 
 async function ensureLeadSchema(env) {
   if (!env.DB) throw new Error('База данных временно недоступна');
@@ -10,8 +11,11 @@ async function ensureLeadSchema(env) {
     name TEXT NOT NULL DEFAULT '',
     phone TEXT NOT NULL,
     city TEXT NOT NULL,
-    article TEXT NOT NULL,
+    category TEXT NOT NULL DEFAULT 'gates',
+    source TEXT NOT NULL DEFAULT '',
+    article TEXT NOT NULL DEFAULT '',
     product_title TEXT NOT NULL DEFAULT '',
+    configuration_json TEXT NOT NULL DEFAULT '{}',
     width REAL,
     wicket_width REAL,
     wicket_height REAL,
@@ -24,13 +28,22 @@ async function ensureLeadSchema(env) {
     comment TEXT NOT NULL DEFAULT '',
     message TEXT NOT NULL
   )`).run();
-  try {
-    await env.DB.prepare('ALTER TABLE site_leads ADD COLUMN wicket_height REAL').run();
-  } catch (error) {
-    if (!/duplicate column/i.test(String(error?.message || error))) throw error;
+  const migrations = [
+    'ALTER TABLE site_leads ADD COLUMN wicket_height REAL',
+    "ALTER TABLE site_leads ADD COLUMN category TEXT NOT NULL DEFAULT 'gates'",
+    "ALTER TABLE site_leads ADD COLUMN source TEXT NOT NULL DEFAULT ''",
+    "ALTER TABLE site_leads ADD COLUMN configuration_json TEXT NOT NULL DEFAULT '{}'"
+  ];
+  for (const statement of migrations) {
+    try {
+      await env.DB.prepare(statement).run();
+    } catch (error) {
+      if (!/duplicate column/i.test(String(error?.message || error))) throw error;
+    }
   }
   await env.DB.prepare('CREATE INDEX IF NOT EXISTS site_leads_created_idx ON site_leads(created_at DESC)').run();
   await env.DB.prepare('CREATE INDEX IF NOT EXISTS site_leads_status_idx ON site_leads(status)').run();
+  await env.DB.prepare('CREATE INDEX IF NOT EXISTS site_leads_category_idx ON site_leads(category)').run();
 }
 
 const leadText = (value, max = 200) => String(value ?? '').trim().slice(0, max);
@@ -38,6 +51,15 @@ const leadNumber = value => {
   const number = Number(value);
   return Number.isFinite(number) ? number : null;
 };
+
+function parseLeadConfiguration(value) {
+  try {
+    const parsed = JSON.parse(String(value || '{}'));
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
 
 async function createLead(request, env, url) {
   if (!sameOrigin(request, url)) return json({error: 'Недопустимый источник запроса'}, 403);
@@ -52,6 +74,9 @@ async function createLead(request, env, url) {
   const phone = leadText(body.phone, 40);
   const phoneDigits = phone.replace(/\D/g, '');
   const city = leadText(body.city, 150);
+  const requestedCategory = leadText(body.category, 40) || 'gates';
+  const category = LEAD_CATEGORIES.has(requestedCategory) ? requestedCategory : 'gates';
+  const source = leadText(body.source, 100);
   const article = leadText(body.article, 50);
   const productTitle = leadText(body.productTitle, 120);
   const color = leadText(body.color, 100);
@@ -62,20 +87,37 @@ async function createLead(request, env, url) {
   const wicketHeight = leadNumber(body.wicketHeight);
   const height = leadNumber(body.height);
   const total = Math.round(Math.max(0, Math.min(10000000, Number(body.total) || 0)));
+  const defaultConfiguration = {
+    article,
+    width,
+    height,
+    wicketWidth,
+    wicketHeight,
+    install: Boolean(body.install),
+    posts: Boolean(body.posts),
+    color
+  };
+  const configuration = body.configuration && typeof body.configuration === 'object' && !Array.isArray(body.configuration)
+    ? body.configuration
+    : defaultConfiguration;
+  let configurationJson = '{}';
+  try { configurationJson = JSON.stringify(configuration); } catch { configurationJson = JSON.stringify(defaultConfiguration); }
+  if (configurationJson.length > 8000) return json({error: 'Слишком много параметров в заявке'}, 413);
 
   if (phoneDigits.length < 10 || phoneDigits.length > 11) return json({error: 'Укажите корректный номер телефона'}, 400);
-  if (!city || !article || !message) return json({error: 'В заявке не хватает обязательных данных'}, 400);
+  if (!city || !message) return json({error: 'В заявке не хватает обязательных данных'}, 400);
   for (const value of [width, wicketWidth, wicketHeight, height]) {
     if (value !== null && (value <= 0 || value > 100)) return json({error: 'Некорректные размеры в заявке'}, 400);
   }
 
   await ensureLeadSchema(env);
   const result = await env.DB.prepare(`INSERT INTO site_leads (
-    status, name, phone, city, article, product_title, width, wicket_width, wicket_height, height,
-    install, posts, color, total, delivery_pending, comment, message
-  ) VALUES ('new', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+    status, name, phone, city, category, source, article, product_title, configuration_json,
+    width, wicket_width, wicket_height, height, install, posts, color, total, delivery_pending, comment, message
+  ) VALUES ('new', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
     .bind(
-      name, phone, city, article, productTitle, width, wicketWidth, wicketHeight, height,
+      name, phone, city, category, source, article, productTitle, configurationJson,
+      width, wicketWidth, wicketHeight, height,
       body.install ? 1 : 0, body.posts ? 1 : 0, color, total,
       body.deliveryPending ? 1 : 0, comment, message
     ).run();
@@ -85,12 +127,14 @@ async function createLead(request, env, url) {
 
 async function listLeads(env) {
   await ensureLeadSchema(env);
-  const result = await env.DB.prepare(`SELECT id, created_at, updated_at, status, name, phone, city, article,
-    product_title, width, wicket_width, wicket_height, height, install, posts, color, total,
+  const result = await env.DB.prepare(`SELECT id, created_at, updated_at, status, name, phone, city, category, source, article,
+    product_title, configuration_json, width, wicket_width, wicket_height, height, install, posts, color, total,
     delivery_pending, comment, message
     FROM site_leads ORDER BY id DESC LIMIT 200`).all();
   const leads = (result.results || []).map(row => ({
     ...row,
+    configuration: parseLeadConfiguration(row.configuration_json),
+    configuration_json: undefined,
     install: Boolean(row.install),
     posts: Boolean(row.posts),
     delivery_pending: Boolean(row.delivery_pending)
