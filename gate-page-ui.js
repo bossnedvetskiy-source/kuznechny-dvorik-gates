@@ -96,6 +96,12 @@
   const policyBackdrop = document.getElementById('policyBackdrop');
   const policyModal = document.getElementById('policyModal');
   const openPolicy = () => {
+    const policyBody = policyModal?.querySelector('.policy-body');
+    const policySource = document.querySelector('#privacyPolicy .privacy-content');
+    if (policyBody && policySource && !policyBody.dataset.synced) {
+      policyBody.innerHTML = policySource.innerHTML;
+      policyBody.dataset.synced = '1';
+    }
     policyBackdrop?.removeAttribute('hidden');
     policyModal?.removeAttribute('hidden');
     document.body.classList.add('modal-open');

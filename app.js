@@ -90,6 +90,8 @@ function productById(id) { return catalogProducts.find(item => item.id === id) |
 function selectedProduct() { return productById(selectedProductId) || catalogProducts[0]; }
 
 function renderProducts() {
+  const openProductId = calculatorPanel.hidden ? '' : selectedProductId;
+  if (calculatorPanel.parentElement === grid) calculatorPanel.remove();
   const visible = catalogProducts.slice(0, visibleCount);
   grid.innerHTML = visible.map(product => `<article class="product-card ${product.media}" data-card-product="${product.id}">
     <div class="product-visual" data-gallery-card="${product.id}" data-image-index="0">
@@ -147,6 +149,20 @@ function renderProducts() {
       openLightbox(button.dataset.zoom,Number(visual?.dataset.imageIndex)||0);
     });
   });
+  if(openProductId){
+    const openCard=grid.querySelector(`[data-card-product="${CSS.escape(openProductId)}"]`);
+    if(openCard){
+      placeCalculatorAfterRow(openCard);
+      calculatorPanel.hidden=false;
+      document.body.classList.add('calculator-open');
+      openCard.querySelector('.select-product')?.setAttribute('aria-expanded','true');
+      calculate();
+    } else {
+      calculatorPanel.hidden=true;
+      document.body.classList.remove('calculator-open');
+    }
+  }
+
 }
 
 function showCardImage(visual,index) {

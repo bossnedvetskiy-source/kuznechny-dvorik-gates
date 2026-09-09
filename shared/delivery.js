@@ -31,6 +31,11 @@
     window.KUZDVOR_CUSTOMER?.set({city});
   }
 
+  function clearSaved() {
+    try { sessionStorage.removeItem(MEMORY_KEY); } catch {}
+    window.KUZDVOR_CUSTOMER?.set({city:''});
+  }
+
   function createController({input, datalist, result, routeButton, chooser, summary, summaryValue, changeButton, onChange} = {}) {
     const data = readData();
     const destinations = [...data.destinations].sort((a,b)=>String(a.name).localeCompare(String(b.name),'ru'));
@@ -139,6 +144,7 @@
 
     const chooseMeleuz = () => resolveFixed(byKey.get(normalize('Мелеуз')) || {name:'Мелеуз',price:0});
     const chooseOther = () => {
+      clearSaved();
       editingOther = true;
       state = {kind:'empty', name:'', resolvedName:'', shortName:'', price:null};
       if (input) input.value = '';
@@ -147,6 +153,7 @@
       setTimeout(() => input?.focus(), 40);
     };
     const edit = () => {
+      clearSaved();
       editingOther = false;
       state = {kind:'empty', name:'', resolvedName:'', shortName:'', price:null};
       if (input) input.value = '';
