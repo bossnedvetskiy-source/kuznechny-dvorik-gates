@@ -1,0 +1,36 @@
+name: Apply gate foundation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/apply-gate-foundation.yml'
+      - '.github/patch-gate-foundation.py'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Patch build pipeline
+        run: python3 .github/patch-gate-foundation.py
+      - name: Verify calculator
+        run: node scripts/test-gate-calculator.mjs
+      - name: Build production worker
+        run: npm run build
+      - name: Commit build changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add scripts/build.mjs
+          if git diff --cached --quiet; then
+            echo "No build changes"
+            exit 0
+          fi
+          git commit -m "Wire shared gate page modules into production build"
+          git push
