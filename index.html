@@ -8,7 +8,7 @@
   <meta name="robots" content="index,follow,max-image-preview:large">
   <meta property="og:type" content="website">
   <meta property="og:title" content="Ворота с калиткой на заказ в Мелеузе — Кузнечный ДворикЪ">
-  <meta property="og:description" content="Каталог ворот с реальными ценами. Рассчитайте монтаж, столбы и доставку онлайн.">
+  <meta property="og:description" content="Каталог ворот с реальными ценами. Рассчитайте размеры, столбы и доставку онлайн.">
   <meta property="og:image" content="https://kuznechny-dvorik-gates.boss-nedvetskiy.workers.dev/hero-gates.jpg">
   <meta property="og:url" content="https://kuznechny-dvorik-gates.boss-nedvetskiy.workers.dev/">
   <meta property="og:locale" content="ru_RU">
@@ -19,6 +19,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Prata&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="storefront.css">
+  <link rel="stylesheet" href="gate-page.css">
   <script type="text/javascript">
     (function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};m[i].l=1*new Date();for(var j=0;j<document.scripts.length;j++){if(document.scripts[j].src===r){return}}k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)})(window,document,'script','https://mc.yandex.ru/metrika/tag.js','ym');
     ym(107269914,'init',{clickmap:true,trackLinks:true,accurateTrackBounce:true,webvisor:true});
@@ -40,62 +42,37 @@
     <section class="hero section-shell">
       <div class="eyebrow">Собственное производство · Мелеуз</div>
       <h1><span>Ворота с калиткой</span><em>по вашим размерам</em></h1>
-      <p>Выберите дизайн и сразу узнайте предварительную стоимость с монтажом, столбами и доставкой.</p>
+      <p>Выберите дизайн и сразу узнайте предварительную стоимость с установкой, столбами и доставкой.</p>
       <div class="hero-prices" aria-label="Минимальная стоимость стандартного комплекта">
-        <div><small>Если столбы уже есть</small><strong id="heroInstalledPrice">от 64 600 ₽</strong><span>ворота, калитка и монтаж</span></div>
+        <div><small>Если столбы уже есть</small><strong id="heroInstalledPrice">от 64 600 ₽</strong><span>ворота, калитка и установка</span></div>
         <div><small>Под ключ с новыми столбами</small><strong id="heroTurnkeyPrice">от 89 600 ₽</strong><span>с новыми усиленными столбами</span></div>
       </div>
       <div class="hero-size-note">Цены указаны для стандартного размера: ворота 3,4×1,8 м и калитка 1×1,8 м. Другие размеры можно рассчитать на сайте.</div>
-      <div class="hero-actions">
-        <a class="button button-primary" href="#catalog">Выбрать ворота и узнать стоимость <span>↓</span></a>
-      </div>
+      <div class="hero-actions"><a class="button button-primary" href="#catalog">Выбрать ворота и узнать стоимость <span>↓</span></a></div>
       <div class="hero-points">
         <span><b>3 года</b> гарантии на конструкцию</span>
         <span><b>до 30 раб. дней</b> срок изготовления</span>
-        <span><b>Бесплатно</b> замер и точная смета</span>
+        <span><b>Бесплатно</b> замер и окончательный расчёт</span>
       </div>
-      <figure class="hero-photo">
-        <img src="/hero-gates.jpg" alt="Готовые распашные ворота с калиткой производства Кузнечного Дворика" fetchpriority="high">
-      </figure>
+      <figure class="hero-photo"><img src="/hero-gates.jpg" alt="Готовые распашные ворота с калиткой производства Кузнечного Дворика" fetchpriority="high"></figure>
     </section>
 
     <section class="catalog section-shell" id="catalog">
       <div class="section-head">
         <div><span class="section-number">01</span><h2>Каталог и цены</h2></div>
-        <p>Выберите дизайн. Стандарт: ворота 3,4×1,8 м и калитка 1×1,8 м. Предварительный расчёт откроется под выбранной моделью.</p>
-      </div>
-      <div class="filterbar" role="group" aria-label="Фильтры каталога">
-        <div class="filter-tabs" id="priceFilters">
-          <button class="filter active" data-filter="all">Все</button>
-          <button class="filter" data-filter="value">До 80 000 ₽</button>
-          <button class="filter" data-filter="middle">80–100 000 ₽</button>
-          <button class="filter" data-filter="premium">От 100 000 ₽</button>
-        </div>
-        <div class="catalog-tools">
-          <label class="search-label"><span>Найти артикул</span><input id="articleSearch" type="search" placeholder="Например, 17С"></label>
-          <label class="sort-label"><span>Сортировка</span>
-            <select id="sortSelect">
-              <option value="recommended">Как в каталоге</option>
-              <option value="price-asc">Сначала дешевле</option>
-              <option value="price-desc">Сначала дороже</option>
-            </select>
-          </label>
-        </div>
+        <p>Выберите понравившийся дизайн. В карточке показана цена стандартного размера, а свои размеры можно указать после выбора модели.</p>
       </div>
       <div class="catalog-summary"><span id="catalogCount">38 моделей</span></div>
       <div class="catalog-grid" id="catalogGrid"></div>
       <div class="catalog-trust-strip" aria-label="Почему нам доверяют"><span>Собственное производство</span><span>Бесплатный замер</span><span>Договор</span><span>Гарантия 3 года</span></div>
-      <div class="empty-state" id="emptyState" hidden>По выбранным параметрам вариантов нет.</div>
-      <div class="catalog-more" id="catalogMore">
-        <span id="catalogProgress">Показано 6 из 38</span>
-        <button class="show-more" id="showMoreButton" type="button">Показать ещё 6 моделей</button>
-      </div>
+      <div class="empty-state" id="emptyState" hidden>В каталоге пока нет доступных моделей.</div>
+      <div class="catalog-more" id="catalogMore"><span id="catalogProgress">Показано 6 из 38</span><button class="show-more" id="showMoreButton" type="button">Показать ещё 6 моделей</button></div>
     </section>
 
     <section class="package section-shell" id="package">
       <div class="section-head">
         <div><span class="section-number">02</span><h2>Что входит в цену, если столбы уже есть</h2></div>
-        <p>В базовую цену входит изготовление ворот с калиткой и их установка на ваши существующие столбы.</p>
+        <p>В базовую цену входит изготовление ворот с калиткой и установка на ваши подходящие существующие столбы.</p>
       </div>
       <div class="package-grid">
         <article><span>01</span><b>Прочный каркас</b><p>Профильная труба 40×25×2 мм.</p></article>
@@ -103,76 +80,66 @@
         <article><span>03</span><b>Ковка и декор</b><p>Рисунок соответствует выбранному артикулу.</p></article>
         <article><span>04</span><b>Фурнитура</b><p>Петли, замок, ручка, ключи и запоры.</p></article>
         <article><span>05</span><b>Порошковая окраска</b><p>Подготовка металла, окраска и защитный лак.</p></article>
-        <article><span>06</span><b>Изготовление</b><p>По размерам вашего проёма, до 30 рабочих дней.</p></article>
+        <article data-package="production"><span>06</span><b>Изготовление</b><p>По размерам вашего проёма, до 30 рабочих дней.</p></article>
+        <article><span>07</span><b>Установка</b><p>Монтаж ворот и калитки на подходящие столбы уже включён.</p></article>
       </div>
-      <p class="package-note">Стандарт: ворота 3,4×1,8 м и калитка 1×1,8 м. В цену входят изготовление и установка ворот с калиткой, если подходящие столбы уже есть. Новые усиленные столбы и доставка рассчитываются отдельно.</p>
+      <p class="package-note">Новые усиленные столбы и доставка рассчитываются отдельно. Цвет профнастила выберете при оформлении заказа — он не усложняет предварительный расчёт.</p>
     </section>
 
     <section class="calculator inline-calculator" id="calculator" hidden>
-      <div class="mobile-calc-summary" aria-live="polite">
-        <div>
-          <span id="mobileEstimateProduct">Арт.6 · текущая цена</span>
-          <strong id="mobileEstimateTotal">64 600 ₽</strong>
-          <small id="mobileEstimateLabel">Предварительно с доставкой</small>
-        </div>
-        <button id="mobileLeadButton" type="button">К заявке</button>
-      </div>
       <div class="section-head light">
         <div><h2>Расчёт выбранной модели</h2></div>
-        <p>Размеры можно изменить. Если они отличаются от стандарта, итоговую цену подтвердим после бесплатного замера.</p>
+        <p>Можно оставить стандартный размер или указать свой. Если точных размеров нет, замерщик измерит проём бесплатно.</p>
       </div>
-
       <div class="calculator-layout">
         <form class="calc-form" id="calcForm">
           <figure class="selected-product-preview">
             <img id="selectedProductImage" alt="Выбранная модель ворот">
             <figcaption><span>Выбранная модель</span><strong id="selectedProductCaption">Арт.6</strong></figcaption>
+            <button class="change-product" id="changeProductButton" type="button">← Выбрать другие ворота</button>
           </figure>
+
           <div class="form-block">
             <span class="step-label">01 · Размеры</span>
-            <label class="product-picker-label">Выберите модель
-              <select id="productSelect" name="product"></select>
-            </label>
-            <div class="dimensions">
-              <label><span id="widthLabelText">Ширина ворот без калитки, м</span><input id="widthInput" type="number" min="0.8" max="8" step="0.1" value="3.4" inputmode="decimal"></label>
-              <label id="wicketWidthWrap">Ширина калитки, м<input id="wicketWidthInput" type="number" min="0.7" max="2.5" step="0.05" value="1" inputmode="decimal"></label>
+            <div class="mobile-size-summary"><div><small id="sizeSummaryLabel">Стандартный размер</small><strong id="sizeSummaryValue">Ворота 3,4 × 1,8 м · калитка 1 × 1,8 м</strong></div><button id="sizeToggle" type="button" aria-expanded="false">Изменить</button></div>
+            <div class="dimensions" id="gateDimensions">
+              <label>Ширина ворот без калитки, м<input id="widthInput" type="number" min="0.8" max="8" step="0.1" value="3.4" inputmode="decimal"></label>
+              <label>Ширина калитки, м<input id="wicketWidthInput" type="number" min="0.7" max="2.5" step="0.05" value="1" inputmode="decimal"></label>
               <label>Высота ворот, м<input id="heightInput" type="number" min="1" max="3" step="0.1" value="1.8" inputmode="decimal"></label>
-              <label id="wicketHeightWrap">Высота калитки, м<input id="wicketHeightInput" type="number" min="1" max="3" step="0.1" value="1.8" inputmode="decimal"></label>
+              <label>Высота калитки, м<input id="wicketHeightInput" type="number" min="1" max="3" step="0.1" value="1.8" inputmode="decimal"></label>
             </div>
-            <small class="dimension-help" id="dimensionHelp">Ворота и калитка указываются отдельно. Не знаете точные размеры? Оставьте стандартные — замерщик измерит проём бесплатно.</small>
+            <small class="dimension-help">Ворота и калитка указываются отдельно. Не знаете точные размеры? Оставьте стандартные — замерщик измерит проём бесплатно.</small>
             <div class="size-notice" id="sizeNotice" hidden>Цена пересчитана по выбранным размерам</div>
             <div class="size-memory-note" id="sizeMemoryNote" hidden>✓ Размер сохранён — можно сравнивать другие дизайны</div>
           </div>
 
           <div class="form-block">
-            <span class="step-label">02 · Комплектация</span>
+            <span class="step-label">02 · Столбы</span>
+            <div class="base-install-note" id="baseInstallNote">Установка ворот и калитки на ваши подходящие столбы уже входит в цену</div>
             <div class="option-list">
-              <label class="choice"><input type="checkbox" id="installCheck" checked><span><b>Монтаж</b><small id="installHint">Если столбы уже есть</small></span><strong id="installPrice">+8 000 ₽</strong></label>
-              <label class="choice"><input type="checkbox" id="postsCheck"><span><b id="postsTitle">Новые усиленные столбы</b><small id="postsHint">Со связкой, установкой и бетонированием</small></span><strong id="postsPrice">+25 000 ₽</strong></label>
+              <label class="choice"><input type="checkbox" id="postsCheck"><span><b id="postsTitle">Добавить новые усиленные столбы</b><small id="postsHint">Связка, установка и бетонирование</small></span><strong id="postsPrice">+25 000 ₽</strong></label>
             </div>
-            <label class="color-label" id="colorLabel">Цвет профнастила
-              <select id="colorSelect">
-                <option>Графитовый</option><option>Шоколадно-коричневый</option><option>Зелёный мох</option><option>Вишнёвый</option><option>Другой цвет</option>
-              </select>
-            </label>
+            <p class="color-note">Любой цвет профнастила — выберете при оформлении заказа.</p>
           </div>
 
           <div class="form-block">
             <span class="step-label">03 · Доставка</span>
-            <label class="city-label">Населённый пункт
-              <input id="cityInput" list="citySuggestions" type="text" value="" placeholder="Введите ваш населённый пункт" autocomplete="address-level2" required>
-              <datalist id="citySuggestions"></datalist>
-            </label>
-            <div class="delivery-result" id="deliveryResult">Выберите, где устанавливаем ворота.</div>
+            <div class="delivery-choice-buttons" id="deliveryChooser"><button type="button" data-delivery-choice="meleuz">Мелеуз</button><button type="button" data-delivery-choice="other">Другой населённый пункт</button></div>
+            <div class="delivery-selected-summary" id="deliverySummary" hidden><div><span>Доставка</span><strong id="deliverySummaryValue"></strong></div><button type="button" id="deliveryChange">Изменить</button></div>
+            <label class="city-label">Населённый пункт<input id="cityInput" list="citySuggestions" type="text" value="" placeholder="Введите ваш населённый пункт" autocomplete="address-level2"><datalist id="citySuggestions"></datalist></label>
+            <div class="delivery-result pending" id="deliveryResult">Выберите, где устанавливаем.</div>
             <button class="route-button" id="routeButton" type="button" hidden>Рассчитать доставку</button>
-            <details class="delivery-help">
-              <summary>Как рассчитывается доставка?</summary>
-              <p>Если пункта нет в прайсе, определим автомобильный маршрут от Мелеуза по данным <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>. Если маршрут не найдётся, заявку всё равно можно отправить — стоимость уточним вручную.</p>
-            </details>
+            <details class="delivery-help"><summary>Как рассчитывается доставка?</summary><p>По Мелеузу — бесплатно. Для населённых пунктов из прайса используется готовая стоимость, для остальных — автомобильный маршрут от Мелеуза по общей ставке доставки. Если маршрут не найдётся, заявку всё равно можно отправить.</p></details>
           </div>
+
+          <details class="mobile-price-breakdown">
+            <summary><span>Ваш расчёт</span><strong id="mobilePriceTotal">64 600 ₽</strong><small>Нажмите, чтобы посмотреть состав</small></summary>
+            <div class="mobile-price-breakdown-body"><div class="mobile-price-lines" id="mobilePriceLines"></div><p class="mobile-price-note" id="mobilePriceNote"></p></div>
+          </details>
         </form>
 
         <aside class="estimate-card" id="leadRequest" aria-live="polite">
+          <button class="lead-sheet-close" id="leadSheetClose" type="button" aria-label="Закрыть форму заявки">×</button>
           <div class="estimate-top"><span>Ваш расчёт</span><span class="estimate-status">Предварительно</span></div>
           <h3 id="estimateProduct">Ворота с калиткой · Арт.6</h3>
           <details class="estimate-breakdown" id="estimateBreakdown" open>
@@ -181,30 +148,26 @@
             <div class="estimate-total"><span id="estimateTotalLabel">Итого</span><strong id="estimateTotal">64 600 ₽</strong></div>
             <p class="estimate-note" id="estimateNote">Окончательная стоимость фиксируется в договоре после замера.</p>
           </details>
-          <div class="mobile-lead-heading"><span>Последний шаг</span><h3>Заказать бесплатный замер</h3><p>Оставьте телефон — мы свяжемся, согласуем замер и окончательную стоимость.</p></div>
+          <div class="mobile-lead-heading"><span>Последний шаг</span><h3>Заказать бесплатный замер</h3><p>Оставьте телефон — согласуем удобное время замера.</p></div>
           <div class="lead-fields">
-            <label>Как к вам обращаться<input id="nameInput" type="text" placeholder="Ваше имя" autocomplete="name"></label>
             <label><span>Телефон <b class="required-mark">· обязательно</b></span><input id="phoneInput" type="tel" placeholder="+7 900 000-00-00" autocomplete="tel" inputmode="tel" maxlength="18" required aria-required="true"></label>
-            <label class="lead-comment">Комментарий<textarea id="commentInput" placeholder="Например: нужен демонтаж старых ворот"></textarea></label>
+            <label>Как к вам обращаться · необязательно<input id="nameInput" type="text" placeholder="Ваше имя" autocomplete="name"></label>
+            <button class="mobile-comment-toggle" id="commentToggle" type="button">Добавить комментарий</button>
+            <label class="lead-comment" id="commentLabel">Комментарий<textarea id="commentInput" placeholder="Например: нужен демонтаж старых ворот"></textarea></label>
           </div>
-          <label class="consent-row"><input id="consentInput" type="checkbox" required><span>Согласен на обработку данных для расчёта и связи по заявке. <a href="#privacyPolicy">Политика обработки данных</a></span></label>
+          <label class="consent-row"><input id="consentInput" type="checkbox" required><span>Согласен на обработку данных. <a href="#privacyPolicy">Политика обработки данных</a></span></label>
           <button class="button button-primary wide" id="sendButton" type="button">Отправить заявку</button>
-          <button class="copy-button" id="copyButton" type="button">Скопировать смету</button>
-          <small class="privacy-copy">После отправки заявка сохранится в защищённой админ-панели. Написать в WhatsApp можно будет по желанию.</small>
+          <button class="copy-button" id="copyButton" type="button">Скопировать расчёт</button>
+          <small class="privacy-copy">Заявка сохранится в защищённой админ-панели. WhatsApp после отправки — только по желанию.</small>
         </aside>
       </div>
     </section>
 
     <section class="trust section-shell">
       <div class="trust-copy">
-        <span class="section-number">03</span>
-        <h2>Реальные работы.<br>Понятные гарантии.</h2>
+        <span class="section-number">03</span><h2>Реальные работы.<br>Понятные гарантии.</h2>
         <p>Собственное производство в Мелеузе. Бесплатно замерим проём, согласуем комплектацию и зафиксируем стоимость в договоре. Гарантия на конструкцию — 3 года.</p>
-        <div class="trust-points">
-          <div><b>Бесплатный замер</b><span>Выезд мастера и точный расчёт перед заключением договора.</span></div>
-          <div><b>Фиксированная стоимость</b><span>Согласованная сумма указывается в договоре.</span></div>
-          <div><b>Гарантия — 3 года</b><span>На сварную конструкцию ворот и калитки.</span></div>
-        </div>
+        <div class="trust-points"><div><b>Бесплатный замер</b><span>Выезд мастера и точный расчёт перед заключением договора.</span></div><div><b>Фиксированная стоимость</b><span>Согласованная сумма указывается в договоре.</span></div><div><b>Гарантия — 3 года</b><span>На сварную конструкцию ворот и калитки.</span></div></div>
       </div>
       <div class="work-gallery" aria-label="Выполненные работы">
         <button data-proof-image="/catalog/art-6-1.webp" type="button"><img src="/catalog/art-6-1.webp" alt="Установленные ворота с калиткой Арт.6" loading="lazy"></button>
@@ -215,56 +178,55 @@
     </section>
 
     <section class="faq section-shell">
-      <div class="section-head">
-        <div><span class="section-number">04</span><h2>Ответы на вопросы</h2></div>
-        <p>Коротко о размерах, установке, сроках и доставке.</p>
-      </div>
+      <div class="section-head"><div><span class="section-number">04</span><h2>Ответы на вопросы</h2></div><p>Коротко о размерах, установке, сроках и доставке.</p></div>
       <div class="faq-list">
         <details><summary>Можно изменить размеры ворот и калитки?</summary><p>Да. Стандарт — ворота 3,4×1,8 м и калитка 1×1,8 м. Измените размеры в калькуляторе — стоимость пересчитается сразу. Окончательно подтвердим размеры и цену после бесплатного замера.</p></details>
-        <details><summary>Можно выбрать другой цвет профнастила?</summary><p>Да. Доступны стандартные цвета профнастила, а нужный вариант согласуем перед изготовлением.</p></details>
-        <details><summary>Установите ворота на мои столбы?</summary><p>Да, если столбы подходят по прочности и состоянию. Мастер проверит их во время бесплатного замера.</p></details>
-        <details><summary>Как рассчитывается доставка?</summary><p>По Мелеузу доставка бесплатная. Для населённых пунктов из списка действует фиксированная стоимость, для остальных используем автомобильный маршрут от Мелеуза. Доставка учитывается только в общей сумме.</p></details>
+        <details><summary>Можно выбрать другой цвет профнастила?</summary><p>Да. Цвет не влияет на предварительный расчёт — нужный вариант согласуем при оформлении заказа.</p></details>
+        <details><summary>Установите ворота на мои столбы?</summary><p>Да, если столбы подходят по прочности и состоянию. Установка ворот и калитки уже входит в базовую цену, а мастер проверит столбы во время бесплатного замера.</p></details>
+        <details><summary>Как рассчитывается доставка?</summary><p>По Мелеузу доставка бесплатная. Для населённых пунктов из списка действует готовая стоимость, для остальных используем автомобильный маршрут от Мелеуза. Во всех направлениях сайта будет использоваться одна и та же логика доставки.</p></details>
         <details><summary>Когда будет известна окончательная цена?</summary><p>После замера согласуем размеры и комплектацию, затем зафиксируем итоговую стоимость в договоре.</p></details>
       </div>
     </section>
 
     <section class="privacy-section section-shell" id="privacyPolicy">
-      <details>
-        <summary>Политика обработки персональных данных</summary>
-        <div class="privacy-content">
-          <h2>Как используются данные заявки</h2>
-          <p>Оператор: ИП Недвецкий М. И., ИНН 026309248628, ОГРНИП 322028000029602. Для связи по заявке сайт может сохранять имя, номер телефона, населённый пункт, выбранный артикул, параметры расчёта и комментарий клиента.</p>
-          <p>Данные используются только для обработки обращения, предварительного расчёта, согласования замера, изготовления и связанных с заказом коммуникаций. Данные не предназначены для продажи третьим лицам.</p>
-          <p>На сайте используется Яндекс Метрика, включая Вебвизор, для анализа посещаемости и улучшения удобства сайта. При работе аналитики могут применяться технические идентификаторы и cookies сервиса Яндекса.</p>
-          <p>Данные заявки хранятся в базе сайта до достижения целей обработки или до получения требования о прекращении обработки, если иной срок не требуется законодательством. По вопросам обработки или удаления данных можно обратиться по телефону, указанному на сайте.</p>
-          <p>Отправляя заявку после установки отметки согласия, пользователь подтверждает согласие на обработку указанных им данных для перечисленных целей.</p>
-        </div>
-      </details>
+      <details><summary>Политика обработки персональных данных</summary><div class="privacy-content">
+        <h2>Как используются данные заявки</h2>
+        <p>Оператор: ИП Недвецкий М. И., ИНН 026309248628, ОГРНИП 322028000029602. Для связи по заявке сайт может сохранять имя, номер телефона, населённый пункт, выбранный артикул, параметры расчёта и комментарий клиента.</p>
+        <p>Данные используются только для обработки обращения, предварительного расчёта, согласования замера, изготовления и связанных с заказом коммуникаций. Данные не предназначены для продажи третьим лицам.</p>
+        <p>На сайте используется Яндекс Метрика, включая Вебвизор, для анализа посещаемости и улучшения удобства сайта. При работе аналитики могут применяться технические идентификаторы и cookies сервиса Яндекса.</p>
+        <p>Данные заявки хранятся в базе сайта до достижения целей обработки или до получения требования о прекращении обработки, если иной срок не требуется законодательством. По вопросам обработки или удаления данных можно обратиться по телефону, указанному на сайте.</p>
+        <p>Отправляя заявку после установки отметки согласия, пользователь подтверждает согласие на обработку указанных им данных для перечисленных целей.</p>
+      </div></details>
     </section>
 
-    <section class="final-cta section-shell">
-      <div>
-        <span>Бесплатный замер · Мелеуз и районы</span>
-        <h2>Выберите модель и получите предварительную стоимость</h2>
-        <p>Калькулятор учтёт комплектацию и доставку. Итоговую сумму зафиксируем в договоре после замера.</p>
-      </div>
-      <div class="final-cta-actions">
-        <a class="button button-primary" href="#catalog">Выбрать ворота и рассчитать</a>
-      </div>
-    </section>
+    <section class="final-cta section-shell"><div><span>Бесплатный замер · Мелеуз и районы</span><h2>Выберите модель и получите предварительную стоимость</h2><p>Калькулятор учтёт ваши размеры, новые столбы при необходимости и доставку. Итоговую сумму зафиксируем в договоре после замера.</p></div><div class="final-cta-actions"><a class="button button-primary" href="#catalog">Выбрать ворота и рассчитать</a></div></section>
   </main>
 
   <footer><span>© Кузнечный ДворикЪ</span><span>ИП Недвецкий М. И. · ИНН 026309248628 · ОГРНИП 322028000029602</span><a href="#privacyPolicy">Обработка данных</a><a href="tel:+79373296750">8 937 329-67-50</a></footer>
-  <div class="mobile-cta"><a href="tel:+79373296750">Позвонить</a><a id="mobilePrimaryCta" href="#calculator">Рассчитать стоимость</a></div>
+  <div class="mobile-cta"><a href="tel:+79373296750">Позвонить</a><a id="mobilePrimaryCta" href="#catalog">Выбрать ворота</a></div>
+  <div class="lead-sheet-backdrop" id="leadBackdrop" hidden></div>
+
   <div class="lightbox" id="lightbox" hidden role="dialog" aria-modal="true" aria-label="Фотография ворот">
     <button class="lightbox-close" id="lightboxClose" type="button" aria-label="Закрыть">×</button>
-    <div class="lightbox-stage">
-      <button class="lightbox-arrow lightbox-previous" id="lightboxPrevious" type="button" aria-label="Предыдущая фотография">‹</button>
-      <img id="lightboxImage" alt="">
-      <button class="lightbox-arrow lightbox-next" id="lightboxNext" type="button" aria-label="Следующая фотография">›</button>
-    </div>
+    <div class="lightbox-stage"><button class="lightbox-arrow lightbox-previous" id="lightboxPrevious" type="button" aria-label="Предыдущая фотография">‹</button><img id="lightboxImage" alt=""><button class="lightbox-arrow lightbox-next" id="lightboxNext" type="button" aria-label="Следующая фотография">›</button></div>
     <div class="lightbox-caption"><strong id="lightboxTitle"></strong><span id="lightboxPrice"></span><small id="lightboxCounter"></small></div>
   </div>
+
+  <div class="modal-backdrop" id="policyBackdrop" hidden></div>
+  <section class="site-modal" id="policyModal" hidden role="dialog" aria-modal="true" aria-label="Политика обработки персональных данных">
+    <button class="site-modal-close" id="policyClose" type="button" aria-label="Закрыть">×</button>
+    <h2>Политика обработки данных</h2>
+    <div class="policy-body"><h2>Как используются данные заявки</h2><p>Для связи по заявке сайт может сохранять имя, номер телефона, населённый пункт, выбранный артикул, параметры расчёта и комментарий клиента.</p><p>Данные используются для обработки обращения, предварительного расчёта, согласования замера, изготовления и связанных с заказом коммуникаций.</p><p>На сайте используется Яндекс Метрика для анализа посещаемости и улучшения удобства сайта.</p><p>По вопросам обработки или удаления данных можно обратиться по телефону, указанному на сайте.</p></div>
+    <div class="site-modal-actions"><button class="site-modal-primary" id="policyContinue" type="button">Продолжить</button></div>
+  </section>
+
+  <div class="modal-backdrop" id="successBackdrop" hidden></div>
+  <section class="site-modal" id="successModal" hidden role="dialog" aria-modal="true" aria-label="Заявка получена">
+    <button class="site-modal-close" id="successClose" type="button" aria-label="Закрыть">×</button>
+    <h2>Спасибо! Заявка получена</h2><p><b>Мы свяжемся с вами</b>, чтобы согласовать бесплатный замер и окончательную стоимость.</p>
+    <div class="site-modal-actions"><button class="site-modal-primary" id="successDone" type="button">Готово</button><a class="site-modal-secondary" id="successWhatsApp" target="_blank" rel="noopener">Написать в WhatsApp</a></div>
+  </section>
+
   <div class="toast" id="toast" role="status"></div>
   <noscript><div><img src="https://mc.yandex.ru/watch/107269914" style="position:absolute;left:-9999px" alt=""></div></noscript>
   <script id="deliveryData" type="application/json">{}</script>
@@ -277,608 +239,11 @@
   <script src="gate-calc-models-chunk4.js"></script>
   <script src="gate-calc-models.js"></script>
   <script src="gate-calc-engine.js"></script>
+  <script src="shared/customer-context.js"></script>
+  <script src="shared/delivery.js"></script>
+  <script src="shared/leads.js"></script>
   <script src="app.js"></script>
-  <script>
-    (() => {
-      const mq = window.matchMedia('(max-width: 620px)');
-      if (!mq.matches) return;
-
-      const calculator = document.getElementById('calculator');
-      const calcForm = document.getElementById('calcForm');
-      const leadRequest = document.getElementById('leadRequest');
-      const oldCta = document.getElementById('mobilePrimaryCta');
-      const mobileEstimateTotal = document.getElementById('mobileEstimateTotal');
-      const estimateLines = document.getElementById('estimateLines');
-      const estimateNote = document.getElementById('estimateNote');
-      const sendButton = document.getElementById('sendButton');
-      const phoneInput = document.getElementById('phoneInput');
-      if (!calculator || !calcForm || !leadRequest || !oldCta || !mobileEstimateTotal) return;
-
-      const postsCheck = document.getElementById('postsCheck');
-      const postsTitle = document.getElementById('postsTitle');
-      const postsHint = document.getElementById('postsHint');
-      const postsChoice = postsCheck?.closest('.choice');
-      if (postsChoice) postsChoice.classList.add('compact-post-switch');
-      if (postsTitle) postsTitle.textContent = 'Новые усиленные столбы';
-      if (postsHint) postsHint.textContent = 'Связка, установка и бетонирование';
-
-      const style = document.createElement('style');
-      style.textContent = `
-        @media(max-width:620px){
-          body.calculator-open{padding-bottom:64px!important}
-          body.mobile-lead-open{overflow:hidden!important}
-          .calculator-layout{display:block!important}
-          .calc-form{margin:0!important;padding-bottom:12px!important}
-          .calculator-open .mobile-cta{grid-template-columns:1fr!important;height:60px!important;padding:7px 9px!important;z-index:320!important}
-          .calculator-open .mobile-cta>a:first-child{display:none!important}
-          .calculator-open .mobile-cta>a:last-child{display:flex!important;width:100%!important;min-height:46px!important;border-radius:12px!important;font-size:13px!important;font-weight:800!important}
-
-          .simplified-posts-block{padding-bottom:12px!important;margin-bottom:12px!important}
-          .simplified-posts-block .step-label{margin-bottom:5px!important}
-          .simplified-posts-block .base-install-note{margin:0 0 7px!important;font-size:9px!important;line-height:1.35!important}
-          .simplified-posts-block .option-list{gap:0!important}
-          .simplified-posts-block .compact-post-switch{display:grid!important;grid-template-columns:minmax(0,1fr) auto 38px!important;align-items:center!important;gap:7px!important;min-height:48px!important;padding:8px 9px!important;border-radius:10px!important}
-          .simplified-posts-block .compact-post-switch>span{grid-column:1!important;grid-row:1!important;min-width:0!important}
-          .simplified-posts-block .compact-post-switch b{font-size:12px!important;line-height:1.2!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
-          .simplified-posts-block .compact-post-switch small{display:block!important;margin-top:3px!important;font-size:11px!important;line-height:1.35!important;color:rgba(255,255,255,.56)!important}
-          .simplified-posts-block .compact-post-switch>strong{grid-column:2!important;grid-row:1!important;font-size:11px!important;white-space:nowrap!important}
-          .simplified-posts-block .compact-post-switch>input{grid-column:3!important;grid-row:1!important;appearance:none!important;-webkit-appearance:none!important;position:relative!important;width:36px!important;height:20px!important;min-width:36px!important;min-height:20px!important;margin:0!important;border:1px solid rgba(255,255,255,.24)!important;border-radius:999px!important;background:#24262a!important;box-shadow:none!important}
-          .simplified-posts-block .compact-post-switch>input::after{content:""!important;position:absolute!important;left:2px!important;top:2px!important;width:14px!important;height:14px!important;border-radius:50%!important;background:#8c8f94!important;transform:none!important;transition:left .18s ease,background .18s ease!important}
-          .simplified-posts-block .compact-post-switch>input:checked{background:var(--gold)!important;border-color:var(--gold)!important}
-          .simplified-posts-block .compact-post-switch>input:checked::after{left:18px!important;top:2px!important;background:#111!important;font-size:0!important}
-          .simplified-posts-block .color-label{margin-top:8px!important}
-
-          .mobile-price-breakdown{display:block!important;margin:12px 0 0!important;border:1px solid rgba(230,189,105,.28)!important;border-radius:13px!important;background:#101113!important;overflow:hidden!important;color:#fff!important}
-          .mobile-price-breakdown>summary{display:grid!important;grid-template-columns:1fr auto!important;align-items:center!important;gap:4px 12px!important;padding:12px 13px!important;list-style:none!important;cursor:pointer!important}
-          .mobile-price-breakdown>summary::-webkit-details-marker{display:none!important}
-          .mobile-price-breakdown>summary span{font-size:11px!important;color:rgba(255,255,255,.64)!important}
-          .mobile-price-breakdown>summary strong{grid-column:2;grid-row:1/3;font:19px/1 Prata,serif!important;color:var(--gold-light)!important;white-space:nowrap!important}
-          .mobile-price-breakdown>summary small{font-size:9px!important;color:rgba(255,255,255,.42)!important}
-          .mobile-price-breakdown-body{padding:0 13px 12px!important;border-top:1px solid rgba(255,255,255,.08)!important}
-          .mobile-price-lines{display:grid!important;gap:6px!important;padding-top:10px!important}
-          .mobile-price-lines .estimate-line{display:flex!important;justify-content:space-between!important;gap:12px!important;font-size:10px!important;color:rgba(255,255,255,.62)!important}
-          .mobile-price-lines .estimate-line strong{color:#fff!important;font-size:10px!important}
-          .mobile-price-note{margin:8px 0 0!important;color:rgba(255,255,255,.42)!important;font-size:9px!important;line-height:1.45!important}
-
-          .lead-sheet-backdrop{position:fixed!important;inset:0!important;background:rgba(0,0,0,.58)!important;backdrop-filter:blur(2px)!important;z-index:280!important;opacity:0!important;pointer-events:none!important;transition:opacity .2s ease!important}
-          body.mobile-lead-open .lead-sheet-backdrop{opacity:1!important;pointer-events:auto!important}
-          #leadRequest{position:fixed!important;left:10px!important;right:10px!important;bottom:66px!important;top:auto!important;width:auto!important;max-width:none!important;max-height:calc(100dvh - 92px)!important;overflow:auto!important;overscroll-behavior:contain!important;margin:0!important;padding:18px 15px 16px!important;border:1px solid rgba(230,189,105,.24)!important;border-radius:22px 22px 14px 14px!important;background:#141517!important;color:#fff!important;box-shadow:0 -18px 60px rgba(0,0,0,.48)!important;z-index:300!important;transform:translateY(calc(100% + 90px))!important;opacity:0!important;pointer-events:none!important;transition:transform .24s ease,opacity .2s ease!important}
-          body.mobile-lead-open #leadRequest{transform:translateY(0)!important;opacity:1!important;pointer-events:auto!important}
-          body.lead-keyboard-open .mobile-cta{display:none!important}
-          body.lead-keyboard-open #leadRequest{top:calc(var(--lead-vv-top,0px) + 6px)!important;bottom:auto!important;max-height:calc(var(--lead-vv-height,100dvh) - 12px)!important;border-radius:16px!important;padding-bottom:18px!important}
-          body.lead-keyboard-open #leadRequest .mobile-lead-heading{margin-top:0!important}
-          #leadRequest .estimate-top,#leadRequest>#estimateProduct,#leadRequest .estimate-breakdown,#leadRequest .privacy-copy,#leadRequest .copy-button,#leadRequest #sendButton{display:none!important}
-          #leadRequest .mobile-lead-heading{display:block!important;margin:8px 0 14px!important}
-          #leadRequest .mobile-lead-heading>span{display:none!important}
-          #leadRequest .mobile-lead-heading h3{margin:0 0 5px!important;color:#fff!important;font:25px/1.16 Prata,serif!important}
-          #leadRequest .mobile-lead-heading p{margin:0!important;color:rgba(255,255,255,.6)!important;font-size:11px!important;line-height:1.45!important}
-          .lead-sheet-handle{display:block!important;width:42px!important;height:4px!important;margin:0 auto 12px!important;border-radius:99px!important;background:rgba(255,255,255,.22)!important}
-          .lead-sheet-close{position:absolute!important;right:12px!important;top:10px!important;width:34px!important;height:34px!important;border:0!important;border-radius:50%!important;background:rgba(255,255,255,.07)!important;color:#fff!important;font-size:22px!important;line-height:1!important}
-          #leadRequest .lead-fields{display:grid!important;gap:10px!important;margin:0 0 10px!important}
-          #leadRequest .lead-fields label{display:grid!important;gap:6px!important;color:rgba(255,255,255,.62)!important;font-size:10px!important}
-          #leadRequest .lead-fields input,#leadRequest .lead-fields textarea{width:100%!important;min-height:50px!important;border:1px solid rgba(255,255,255,.14)!important;border-radius:12px!important;background:#0d0e10!important;color:#fff!important;font-size:16px!important;padding:12px 13px!important;box-shadow:none!important}
-          #leadRequest .lead-fields input::placeholder,#leadRequest .lead-fields textarea::placeholder{color:rgba(255,255,255,.38)!important}
-          #leadRequest .required-mark{color:var(--gold-light)!important}
-          #leadRequest .mobile-comment-toggle{background:#0d0e10!important;border-color:rgba(255,255,255,.14)!important;color:#fff!important;padding:11px 13px!important}
-          #leadRequest .lead-comment{display:none!important}
-          #leadRequest .lead-comment.is-open{display:grid!important}
-          #leadRequest .consent-row{display:grid!important;grid-template-columns:auto 1fr!important;gap:8px!important;margin:10px 0 0!important;color:rgba(255,255,255,.6)!important;font-size:9px!important;line-height:1.4!important}
-          #leadRequest .consent-row a{color:var(--gold-light)!important}
-          #leadRequest .consent-row input{width:19px!important;height:19px!important;margin-top:0!important}
-
-          body.mobile-policy-open{overflow:hidden!important}
-          body.mobile-policy-open .mobile-cta{display:none!important}
-          .policy-modal-backdrop{position:fixed!important;inset:0!important;background:rgba(0,0,0,.72)!important;backdrop-filter:blur(3px)!important;z-index:350!important}
-          .policy-modal{position:fixed!important;left:12px!important;right:12px!important;top:calc(env(safe-area-inset-top,0px) + 14px)!important;bottom:calc(env(safe-area-inset-bottom,0px) + 14px)!important;display:grid!important;grid-template-rows:auto minmax(0,1fr) auto!important;background:#f4f1e9!important;color:#181818!important;border-radius:20px!important;overflow:hidden!important;z-index:360!important;box-shadow:0 24px 80px rgba(0,0,0,.52)!important}
-          .policy-modal[hidden],.policy-modal-backdrop[hidden]{display:none!important}
-          .policy-modal-head{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:12px!important;padding:15px 15px 12px!important;border-bottom:1px solid rgba(17,18,20,.1)!important}
-          .policy-modal-head strong{font:18px/1.25 Prata,serif!important}
-          .policy-modal-close{flex:0 0 36px!important;width:36px!important;height:36px!important;border:0!important;border-radius:50%!important;background:#1a1b1d!important;color:#fff!important;font-size:23px!important;line-height:1!important}
-          .policy-modal-body{overflow:auto!important;-webkit-overflow-scrolling:touch!important;padding:14px 15px 18px!important}
-          .policy-modal-body h2{font:20px/1.25 Prata,serif!important;margin:0 0 12px!important}
-          .policy-modal-body p{margin:0 0 11px!important;color:#625d55!important;font-size:11px!important;line-height:1.58!important}
-          .policy-modal-actions{padding:10px 12px 12px!important;border-top:1px solid rgba(17,18,20,.1)!important;background:#f4f1e9!important}
-          .policy-modal-continue{width:100%!important;min-height:50px!important;border:0!important;border-radius:13px!important;background:var(--gold)!important;color:#17130b!important;font-size:13px!important;font-weight:800!important}
-        }
-      `;
-      document.head.append(style);
-
-      const backdrop = document.createElement('div');
-      backdrop.className = 'lead-sheet-backdrop';
-      document.body.append(backdrop);
-
-      const handle = document.createElement('span');
-      handle.className = 'lead-sheet-handle';
-      leadRequest.prepend(handle);
-      const closeButton = document.createElement('button');
-      closeButton.type = 'button';
-      closeButton.className = 'lead-sheet-close';
-      closeButton.setAttribute('aria-label','Закрыть форму заявки');
-      closeButton.textContent = '×';
-      leadRequest.append(closeButton);
-
-      const policyBackdrop = document.createElement('div');
-      policyBackdrop.className = 'policy-modal-backdrop';
-      policyBackdrop.hidden = true;
-      const policyModal = document.createElement('section');
-      policyModal.className = 'policy-modal';
-      policyModal.hidden = true;
-      policyModal.setAttribute('role','dialog');
-      policyModal.setAttribute('aria-modal','true');
-      policyModal.setAttribute('aria-label','Политика обработки персональных данных');
-      policyModal.innerHTML = `
-        <div class="policy-modal-head"><strong>Политика обработки данных</strong><button class="policy-modal-close" type="button" aria-label="Закрыть">×</button></div>
-        <div class="policy-modal-body"></div>
-        <div class="policy-modal-actions"><button class="policy-modal-continue" type="button">Продолжить оформление заказа</button></div>
-      `;
-      const policySource = document.querySelector('#privacyPolicy .privacy-content');
-      if (policySource) policyModal.querySelector('.policy-modal-body').innerHTML = policySource.innerHTML;
-      document.body.append(policyBackdrop, policyModal);
-
-      const leadHeading = leadRequest.querySelector('.mobile-lead-heading p');
-      if (leadHeading) leadHeading.textContent = 'Оставьте телефон — согласуем бесплатный замер.';
-
-      const leadFields = leadRequest.querySelector('.lead-fields');
-      if (leadFields) {
-        const labels = [...leadFields.children];
-        const phoneLabel = labels.find(label => label.querySelector('#phoneInput'));
-        const nameLabel = labels.find(label => label.querySelector('#nameInput'));
-        if (phoneLabel) leadFields.prepend(phoneLabel);
-        if (nameLabel) {
-          const nameInput = nameLabel.querySelector('#nameInput');
-          nameLabel.replaceChildren(document.createTextNode('Имя · необязательно'), nameInput);
-          if (phoneLabel) phoneLabel.after(nameLabel);
-        }
-      }
-
-      if (phoneInput) {
-        phoneInput.setAttribute('enterkeyhint','done');
-        phoneInput.addEventListener('keydown',event=>{
-          if (event.key === 'Enter') {
-            event.preventDefault();
-            phoneInput.blur();
-          }
-        });
-      }
-
-      const estimateDetails = document.createElement('details');
-      estimateDetails.className = 'mobile-price-breakdown';
-      const estimateSummary = document.createElement('summary');
-      const estimateTitle = document.createElement('span');
-      estimateTitle.textContent = 'Итого';
-      const estimatePrice = document.createElement('strong');
-      const estimateHint = document.createElement('small');
-      estimateHint.textContent = 'Что входит в цену';
-      estimateSummary.append(estimateTitle, estimatePrice, estimateHint);
-      const estimateBody = document.createElement('div');
-      estimateBody.className = 'mobile-price-breakdown-body';
-      const estimateLinesCopy = document.createElement('div');
-      estimateLinesCopy.className = 'mobile-price-lines';
-      const estimateNoteCopy = document.createElement('p');
-      estimateNoteCopy.className = 'mobile-price-note';
-      estimateBody.append(estimateLinesCopy, estimateNoteCopy);
-      estimateDetails.append(estimateSummary, estimateBody);
-      calcForm.append(estimateDetails);
-
-      const syncBreakdown = () => {
-        estimatePrice.textContent = mobileEstimateTotal.textContent.trim();
-        if (estimateLines) estimateLinesCopy.innerHTML = estimateLines.innerHTML;
-        if (estimateNote) estimateNoteCopy.textContent = estimateNote.textContent;
-      };
-      syncBreakdown();
-      if (estimateLines) new MutationObserver(syncBreakdown).observe(estimateLines,{childList:true,subtree:true,characterData:true});
-      new MutationObserver(syncBreakdown).observe(mobileEstimateTotal,{childList:true,subtree:true,characterData:true});
-      if (estimateNote) new MutationObserver(syncBreakdown).observe(estimateNote,{childList:true,subtree:true,characterData:true});
-
-      const cta = oldCta.cloneNode(true);
-      oldCta.replaceWith(cta);
-      let sheetOpen = false;
-
-      const syncViewport = () => {
-        const vv = window.visualViewport;
-        const height = vv?.height || window.innerHeight;
-        const top = vv?.offsetTop || 0;
-        document.documentElement.style.setProperty('--lead-vv-height', `${height}px`);
-        document.documentElement.style.setProperty('--lead-vv-top', `${top}px`);
-        const keyboardOpen = sheetOpen && height < window.innerHeight - 120;
-        document.body.classList.toggle('lead-keyboard-open', keyboardOpen);
-      };
-      window.visualViewport?.addEventListener('resize', syncViewport);
-      window.visualViewport?.addEventListener('scroll', syncViewport);
-      window.addEventListener('resize', syncViewport);
-      leadRequest.addEventListener('focusin',event=>{
-        window.setTimeout(()=>{
-          syncViewport();
-          event.target?.scrollIntoView?.({block:'center',behavior:'smooth'});
-        },220);
-      });
-
-      const syncCta = () => {
-        const price = mobileEstimateTotal.textContent.trim();
-        if (calculator.hidden) cta.textContent = 'Рассчитать стоимость';
-        else if (sheetOpen) cta.textContent = `Отправить заявку · ${price}`;
-        else cta.textContent = `Получить точную цену · ${price}`;
-      };
-
-      const openSheet = () => {
-        if (sheetOpen) return;
-        sheetOpen = true;
-        document.body.classList.add('mobile-lead-open');
-        syncViewport();
-        syncCta();
-      };
-      const closeSheet = () => {
-        if (!sheetOpen) return;
-        sheetOpen = false;
-        document.body.classList.remove('mobile-lead-open','lead-keyboard-open');
-        phoneInput?.blur();
-        syncViewport();
-        syncCta();
-      };
-
-      let policyOpen = false;
-      const openPolicy = () => {
-        phoneInput?.blur();
-        policyOpen = true;
-        document.body.classList.remove('lead-keyboard-open');
-        document.body.classList.add('mobile-policy-open');
-        policyBackdrop.hidden = false;
-        policyModal.hidden = false;
-        const body = policyModal.querySelector('.policy-modal-body');
-        if (body) body.scrollTop = 0;
-      };
-      const closePolicy = () => {
-        if (!policyOpen) return;
-        policyOpen = false;
-        document.body.classList.remove('mobile-policy-open');
-        policyBackdrop.hidden = true;
-        policyModal.hidden = true;
-        syncViewport();
-      };
-
-      backdrop.addEventListener('click',closeSheet);
-      closeButton.addEventListener('click',closeSheet);
-      policyBackdrop.addEventListener('click',closePolicy);
-      policyModal.querySelector('.policy-modal-close')?.addEventListener('click',closePolicy);
-      policyModal.querySelector('.policy-modal-continue')?.addEventListener('click',closePolicy);
-      document.addEventListener('keydown',event=>{
-        if(event.key!=='Escape') return;
-        if(policyOpen) closePolicy();
-        else closeSheet();
-      });
-      const privacyLink = leadRequest.querySelector('a[href="#privacyPolicy"]');
-      privacyLink?.addEventListener('click', event => {
-        event.preventDefault();
-        openPolicy();
-      });
-
-      cta.addEventListener('click',event=>{
-        event.preventDefault();
-        if (calculator.hidden) {
-          const selected = document.querySelector(`[data-card-product="${CSS.escape(document.getElementById('productSelect')?.value || '')}"] .select-product`) || document.querySelector('#catalogGrid .select-product');
-          selected?.click();
-          return;
-        }
-        if (!sheetOpen) {
-          openSheet();
-          return;
-        }
-        sendButton?.click();
-      });
-
-      document.addEventListener('lead-sent',closeSheet);
-
-      const calculatorObserver = new MutationObserver(()=>{
-        if (calculator.hidden) closeSheet();
-        syncCta();
-      });
-      calculatorObserver.observe(calculator,{attributes:true,attributeFilter:['hidden']});
-      new MutationObserver(syncCta).observe(mobileEstimateTotal,{childList:true,subtree:true,characterData:true});
-      syncViewport();
-      syncCta();
-
-      const mobileLeadButton = document.getElementById('mobileLeadButton');
-      mobileLeadButton?.addEventListener('click',event=>{
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        openSheet();
-      },true);
-    })();
-  </script>
-
-  <style data-client-ux-pass="2026-09-08">
-    .hero-standard-note{margin:10px 0 0;color:rgba(255,255,255,.58);font-size:13px;line-height:1.45}
-    .success-order-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.68);backdrop-filter:blur(3px);z-index:520}
-    .success-order-modal{position:fixed;z-index:530;left:50%;top:50%;transform:translate(-50%,-50%);width:min(520px,calc(100% - 28px));background:#f4f1e9;color:#181818;border-radius:22px;padding:24px;box-shadow:0 24px 80px rgba(0,0,0,.48)}
-    .success-order-modal[hidden],.success-order-backdrop[hidden]{display:none!important}
-    .success-order-modal h2{font:30px/1.15 Prata,serif;margin:0 0 10px}
-    .success-order-modal p{margin:0 0 18px;color:#676158;line-height:1.55}
-    .success-order-actions{display:grid;gap:10px}
-    .success-order-actions button,.success-order-actions a{display:flex;align-items:center;justify-content:center;min-height:50px;border-radius:13px;text-decoration:none;font-weight:800;font-size:14px}
-    .success-order-done{border:0;background:#d5a13b;color:#17130b}
-    .success-order-wa{border:1px solid rgba(17,18,20,.16);background:#fff;color:#171717}
-
-    @media(max-width:620px){
-      .filter-tabs{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important;overflow:visible!important;width:100%!important}
-      .filter-tabs .filter{width:100%!important;min-width:0!important;justify-content:center!important;text-align:center!important;padding-left:8px!important;padding-right:8px!important}
-      .catalog-tools{width:100%!important}
-      .catalog-tools .search-label{display:none!important}
-      .catalog-tools .sort-label{width:100%!important}
-      .catalog-tools .sort-label select{width:100%!important}
-      .hero-standard-note{font-size:12px!important;margin-top:9px!important;color:rgba(255,255,255,.66)!important}
-      .selected-product-preview{position:relative!important;padding-bottom:48px!important}
-      .change-product-mobile{position:absolute!important;left:12px!important;right:12px!important;bottom:8px!important;min-height:34px!important;border:0!important;background:transparent!important;color:var(--gold-light)!important;text-align:left!important;font-size:13px!important;font-weight:800!important;padding:0!important}
-      .base-install-note{font-size:12px!important;line-height:1.45!important;color:rgba(255,255,255,.66)!important}
-      .simplified-posts-block .compact-post-switch{min-height:44px!important;padding:8px 10px!important}
-      .simplified-posts-block .compact-post-switch b{font-size:13px!important}
-      .simplified-posts-block .compact-post-switch>strong{font-size:12px!important}
-      .color-label,.city-label{font-size:13px!important}
-      .delivery-result,.delivery-help summary,.delivery-help p{font-size:12px!important;line-height:1.45!important}
-      .mobile-price-breakdown>summary span{font-size:13px!important}
-      .mobile-price-breakdown>summary small{font-size:12px!important}
-      .mobile-price-lines .estimate-line,.mobile-price-lines .estimate-line strong{font-size:12px!important}
-      .mobile-price-note{font-size:12px!important;line-height:1.5!important}
-      #leadRequest .mobile-lead-heading p{font-size:13px!important}
-      #leadRequest .lead-fields label{font-size:13px!important}
-      #leadRequest .consent-row{font-size:12px!important;line-height:1.45!important}
-      .mobile-delivery-summary{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;align-items:center!important;gap:4px 10px!important;padding:12px 13px!important;border:1px solid rgba(255,255,255,.11)!important;border-radius:12px!important;background:#0d0e10!important}
-      .mobile-delivery-summary span{font-size:11px!important;color:rgba(255,255,255,.5)!important}
-      .mobile-delivery-summary strong{grid-column:1!important;font-size:14px!important;color:#fff!important}
-      .mobile-delivery-summary button{grid-column:2!important;grid-row:1/3!important;border:1px solid rgba(230,189,105,.48)!important;border-radius:9px!important;background:transparent!important;color:var(--gold-light)!important;min-height:36px!important;padding:0 12px!important;font-size:12px!important;font-weight:800!important}
-      .mobile-delivery-wrap .city-label{display:none!important}
-      .mobile-delivery-wrap:not(.is-editing) #cityInput,.mobile-delivery-wrap:not(.is-editing) .delivery-result,.mobile-delivery-wrap:not(.is-editing) .route-button,.mobile-delivery-wrap:not(.is-editing) .delivery-help{display:none!important}
-      .mobile-delivery-wrap.is-editing .mobile-delivery-summary{display:none!important}
-      .mobile-delivery-wrap.is-editing #cityInput{display:block!important}
-      .mobile-delivery-wrap.is-editing .delivery-result{margin-top:8px!important}
-      .success-order-modal{padding:20px 18px!important;border-radius:18px!important}
-      .success-order-modal h2{font-size:26px!important}
-    }
-  </style>
-  <script data-client-ux-pass="2026-09-08">
-    (()=>{
-      const calculator=document.getElementById('calculator');
-      const catalog=document.getElementById('catalog');
-      const mobileCta=document.getElementById('mobilePrimaryCta');
-      const mobileTotal=document.getElementById('mobileEstimateTotal');
-      const postsCheck=document.getElementById('postsCheck');
-      const postsTitle=document.getElementById('postsTitle');
-      const productSelect=document.getElementById('productSelect');
-      const cityInput=document.getElementById('cityInput');
-      const deliveryResult=document.getElementById('deliveryResult');
-      const sendButton=document.getElementById('sendButton');
-      const phoneInput=document.getElementById('phoneInput');
-      const consentInput=document.getElementById('consentInput');
-
-      const heroPrices=document.querySelector('.hero-prices');
-      if(heroPrices&&!document.querySelector('.hero-standard-note')&&!document.querySelector('.hero-size-note')){
-        const note=document.createElement('p');
-        note.className='hero-standard-note';
-        note.textContent='Цена указана для стандартного размера: ворота 3,4 × 1,8 м и калитка 1 × 1,8 м. Измените размеры в калькуляторе — стоимость пересчитается сразу.';
-        heroPrices.after(note);
-      }
-
-      const packageNote=document.querySelector('.package-note');
-      if(packageNote) packageNote.textContent='В базовую цену входит установка ворот с калиткой, если подходящие столбы уже есть. Новые усиленные столбы и доставка рассчитываются отдельно.';
-
-      const sortSelect=document.getElementById('sortSelect');
-      sortSelect?.querySelector('option[value="recommended"]')?.remove();
-      if(sortSelect&&(!sortSelect.value||sortSelect.value==='recommended')){
-        sortSelect.value='price-asc';
-        sortSelect.dispatchEvent(new Event('change',{bubbles:true}));
-      }
-
-      const preview=document.querySelector('.selected-product-preview');
-      if(preview&&!preview.querySelector('.change-product-mobile')){
-        const back=document.createElement('button');
-        back.type='button';
-        back.className='change-product-mobile';
-        back.textContent='← Выбрать другие ворота';
-        back.addEventListener('click',()=>{
-          try{ if(typeof closeInlineCalculator==='function') closeInlineCalculator(); else calculator.hidden=true; }catch{ calculator.hidden=true; }
-          document.body.classList.remove('calculator-open','mobile-lead-open','lead-keyboard-open');
-          const activeId=productSelect?.value||'';
-          const activeCard=activeId?catalog?.querySelector(`[data-card-product="${CSS.escape(activeId)}"]`):null;
-          (activeCard||catalog)?.scrollIntoView({behavior:'smooth',block:'center'});
-        });
-        preview.append(back);
-      }
-
-      const syncPosts=()=>{
-        if(!postsTitle||!postsCheck)return;
-        const next=postsCheck.checked?'✓ Новые усиленные столбы добавлены':'Добавить новые усиленные столбы';
-        if(postsTitle.textContent!==next) postsTitle.textContent=next;
-      };
-      postsCheck?.addEventListener('change',syncPosts);
-      productSelect?.addEventListener('change',()=>setTimeout(syncPosts,0));
-      if(postsTitle) new MutationObserver(syncPosts).observe(postsTitle,{childList:true,subtree:true,characterData:true});
-      syncPosts();
-
-      const deliveryBlock=cityInput?.closest('.form-block');
-      if(deliveryBlock&&!deliveryBlock.classList.contains('delivery-choice-wrap')){
-        deliveryBlock.classList.add('delivery-choice-wrap');
-        const cityLabel=deliveryBlock.querySelector('.city-label');
-        const chooser=document.createElement('div');
-        chooser.className='delivery-choice-buttons';
-        chooser.innerHTML='<button type="button" data-delivery-choice="meleuz">Мелеуз</button><button type="button" data-delivery-choice="other">Другой населённый пункт</button>';
-        cityLabel?.before(chooser);
-        const selectedSummary=document.createElement('div');
-        selectedSummary.className='delivery-selected-summary';
-        selectedSummary.hidden=true;
-        selectedSummary.innerHTML='<div><span>Доставка</span><strong></strong></div><button type="button">Изменить</button>';
-        chooser.after(selectedSummary);
-        const selectedValue=selectedSummary.querySelector('strong');
-        const meleuzButton=chooser.querySelector('[data-delivery-choice="meleuz"]');
-        const otherButton=chooser.querySelector('[data-delivery-choice="other"]');
-        const normalized=value=>String(value||'').trim().toLocaleLowerCase('ru-RU').replace(/ё/g,'е');
-        const syncDeliveryChoice=()=>{
-          const city=(cityInput?.value||'').trim();
-          const result=(deliveryResult?.textContent||'').toLocaleLowerCase('ru-RU');
-          const isMeleuz=normalized(city)==='мелеуз';
-          const isOther=Boolean(city)&&!isMeleuz;
-          const chosen=deliveryBlock.dataset.editing!=='1'&&Boolean(city)&&(result.includes('бесплат')||result.includes('учтена')||result.includes('подтвержд')||result.includes('населённый пункт выбран'));
-          meleuzButton?.classList.toggle('is-active',isMeleuz);
-          otherButton?.classList.toggle('is-active',isOther||deliveryBlock.dataset.mode==='other');
-          meleuzButton?.setAttribute('aria-pressed',String(isMeleuz));
-          otherButton?.setAttribute('aria-pressed',String(isOther||deliveryBlock.dataset.mode==='other'));
-          cityLabel?.classList.toggle('is-visible',!chosen&&(isOther||deliveryBlock.dataset.mode==='other'));
-          deliveryBlock.classList.toggle('is-selected',chosen);
-          selectedSummary.hidden=!chosen;
-          if(chosen&&selectedValue) selectedValue.textContent=isMeleuz?'Мелеуз — бесплатно':`${city} — доставка учтена в цене`;
-        };
-        meleuzButton?.addEventListener('click',()=>{
-          deliveryBlock.dataset.mode='meleuz';
-          deliveryBlock.dataset.editing='';
-          deliveryBlock.dataset.editOriginal='';
-          if(cityInput){cityInput.value='Мелеуз';cityInput.dispatchEvent(new Event('input',{bubbles:true}));cityInput.blur();}
-          syncDeliveryChoice();
-        });
-        otherButton?.addEventListener('click',()=>{
-          deliveryBlock.dataset.mode='other';
-          deliveryBlock.dataset.editing='1';
-          deliveryBlock.dataset.editOriginal=(cityInput?.value||'').trim();
-          if(cityInput&&normalized(cityInput.value)==='мелеуз'){cityInput.value='';cityInput.dispatchEvent(new Event('input',{bubbles:true}));}
-          deliveryBlock.classList.remove('is-selected');
-          selectedSummary.hidden=true;
-          syncDeliveryChoice();
-          setTimeout(()=>cityInput?.focus(),60);
-        });
-        selectedSummary.querySelector('button')?.addEventListener('click',()=>{
-          deliveryBlock.classList.remove('is-selected');
-          selectedSummary.hidden=true;
-          deliveryBlock.dataset.editing='1';
-          deliveryBlock.dataset.editOriginal=(cityInput?.value||'').trim();
-          deliveryBlock.dataset.mode=normalized(cityInput?.value)==='мелеуз'?'meleuz':'other';
-          syncDeliveryChoice();
-          if(deliveryBlock.dataset.mode==='other') setTimeout(()=>cityInput?.focus(),60);
-        });
-        cityInput?.addEventListener('input',()=>{const current=cityInput.value.trim();if(deliveryBlock.dataset.editing==='1'&&current!==deliveryBlock.dataset.editOriginal)deliveryBlock.dataset.editing='';if(current&&normalized(current)!=='мелеуз')deliveryBlock.dataset.mode='other';syncDeliveryChoice();});
-        cityInput?.addEventListener('change',syncDeliveryChoice);
-        if(deliveryResult) new MutationObserver(syncDeliveryChoice).observe(deliveryResult,{childList:true,subtree:true,characterData:true});
-        syncDeliveryChoice();
-      }
-
-      const sizeMemoryNote=document.getElementById('sizeMemoryNote');
-      const sizeNotice=document.getElementById('sizeNotice');
-      const syncSizeMemoryNote=()=>{if(sizeMemoryNote)sizeMemoryNote.hidden=!sizeNotice||sizeNotice.hidden;};
-      if(sizeNotice)new MutationObserver(syncSizeMemoryNote).observe(sizeNotice,{attributes:true,attributeFilter:['hidden']});
-      syncSizeMemoryNote();
-
-      const consentRow=document.querySelector('#leadRequest .consent-row span');
-      const privacyLink=consentRow?.querySelector('a[href="#privacyPolicy"]');
-      if(consentRow&&privacyLink){
-        consentRow.replaceChildren(document.createTextNode('Согласен на обработку данных · '),privacyLink);
-        privacyLink.textContent='Политика';
-      }
-
-      const syncFriendlyCta=()=>{};
-      mobileCta?.addEventListener('click',event=>{
-        if(!calculator?.hidden)return;
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        catalog?.scrollIntoView({behavior:'smooth',block:'start'});
-      },true);
-      if(mobileTotal) new MutationObserver(syncFriendlyCta).observe(mobileTotal,{childList:true,subtree:true,characterData:true});
-      new MutationObserver(syncFriendlyCta).observe(document.body,{attributes:true,attributeFilter:['class']});
-      syncFriendlyCta();
-
-      const successBackdrop=document.createElement('div');
-      successBackdrop.className='success-order-backdrop';
-      successBackdrop.hidden=true;
-      const successModal=document.createElement('section');
-      successModal.className='success-order-modal';
-      successModal.hidden=true;
-      successModal.setAttribute('role','dialog');
-      successModal.setAttribute('aria-modal','true');
-      successModal.innerHTML=`<h2>Заявка получена</h2><p>Спасибо. Мы свяжемся с вами для согласования бесплатного замера и окончательной стоимости.</p><div class="success-order-actions"><a class="success-order-wa" href="#">Написать нам в WhatsApp</a><button class="success-order-done" type="button">Готово</button></div>`;
-      document.body.append(successBackdrop,successModal);
-      const waButton=successModal.querySelector('.success-order-wa');
-      const doneButton=successModal.querySelector('.success-order-done');
-      const closeSuccess=()=>{successBackdrop.hidden=true;successModal.hidden=true;};
-      successBackdrop.addEventListener('click',closeSuccess);
-      doneButton.addEventListener('click',closeSuccess);
-
-      document.addEventListener('lead-sent',event=>{
-        const payload=event.detail?.payload||null;
-        if(payload){
-          const whatsappDigits=String((window.SITE_SETTINGS||{}).whatsappDigits||'79373296750');
-          waButton.href=`https://wa.me/${whatsappDigits}?text=${encodeURIComponent(payload.message||'Здравствуйте! Хочу уточнить заказ.')}`;
-        }
-        successBackdrop.hidden=false;
-        successModal.hidden=false;
-        syncFriendlyCta();
-      });
-    })();
-  </script>
-
-
-<style data-catalog-mobile-polish="2026-09-08">
-@media(max-width:620px){
-  .catalog{padding-top:46px!important}.catalog .section-head{margin-bottom:14px!important}
-  .catalog-price-context{margin:0 0 8px!important;color:#777168!important;font-size:11px!important;line-height:1.35!important}
-  .filterbar{display:grid!important;grid-template-columns:1fr!important;gap:9px!important;padding-bottom:13px!important;margin-bottom:14px!important}
-  .filter-tabs{gap:6px!important;padding-bottom:0!important}.filter-tabs .filter{min-height:38px!important;padding:7px 8px!important;font-size:12px!important}
-  .catalog-tools{display:flex!important;align-items:center!important;justify-content:flex-start!important;width:100%!important}
-  .catalog-tools .sort-label{display:flex!important;align-items:center!important;gap:9px!important;width:auto!important;font-size:11px!important}
-  .catalog-tools .sort-label select{width:auto!important;min-width:168px!important;height:40px!important;min-height:40px!important;padding:0 34px 0 11px!important;font-size:13px!important}
-  .catalog-summary{margin:-1px 0 12px!important;font-size:11px!important}
-  .product-card .product-visual{aspect-ratio:1.9/1!important;min-height:0!important}
-  .product-card.photo .product-image-open img{object-fit:contain!important;object-position:center!important;transform:none!important}
-  .product-info{padding-top:13px!important}.product-meta{margin-bottom:11px!important}.product-meta span{padding:5px 8px!important;font-size:10px!important}
-  .card-gallery-arrow{width:38px!important;height:38px!important;font-size:25px!important}.product-photo-count{font-size:11px!important;padding:6px 9px!important}
-  .mobile-cta{min-height:58px!important;height:58px!important;padding:6px 8px!important;gap:7px!important;grid-template-columns:.55fr 1.45fr!important}
-  .mobile-cta a{min-height:46px!important;height:46px!important;border-radius:12px!important;font-size:12px!important;line-height:1.1!important;padding:0 8px!important;display:flex!important;align-items:center!important;justify-content:center!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
-  #mobilePrimaryCta::before,#mobilePrimaryCta::after{content:none!important;display:none!important}
-}
-</style>
-<script data-catalog-mobile-polish="2026-09-08">
-(()=>{
-  const catalog=document.getElementById('catalog');
-  const filterbar=catalog?.querySelector('.filterbar');
-  if(filterbar&&!catalog.querySelector('.catalog-price-context')){
-    const note=document.createElement('p');note.className='catalog-price-context';note.textContent='Цены в фильтре — если столбы уже есть';filterbar.before(note);
-  }
-  const cta=document.getElementById('mobilePrimaryCta'),calculator=document.getElementById('calculator'),total=document.getElementById('mobileEstimateTotal');
-  if(!cta||!calculator)return;
-  const sync=()=>{const price=(total?.textContent||'').trim();let text='Выбрать ворота';if(!calculator.hidden)text=document.body.classList.contains('mobile-lead-open')?`Отправить заявку · ${price}`:`Заказать замер · ${price}`;if(cta.textContent!==text)cta.replaceChildren(document.createTextNode(text));cta.setAttribute('aria-label',text)};
-  const schedule=()=>requestAnimationFrame(sync);
-  new MutationObserver(schedule).observe(calculator,{attributes:true,attributeFilter:['hidden']});new MutationObserver(schedule).observe(document.body,{attributes:true,attributeFilter:['class']});if(total)new MutationObserver(schedule).observe(total,{childList:true,subtree:true,characterData:true});new MutationObserver(schedule).observe(cta,{childList:true,subtree:true,characterData:true});sync();
-})();
-</script>
-
-<style data-final-clarity-polish="2026-09-09">
-@media(max-width:620px){
-  .simplified-posts-block .compact-post-switch{min-height:58px!important}
-  .delivery-selected-summary{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:10px;padding:12px 13px;border:1px solid rgba(255,255,255,.11);border-radius:12px;background:#0d0e10}
-  .delivery-selected-summary[hidden]{display:none!important}
-  .delivery-selected-summary div{display:grid;gap:3px;min-width:0}
-  .delivery-selected-summary span{font-size:11px;color:rgba(255,255,255,.5)}
-  .delivery-selected-summary strong{font-size:14px;color:#fff;white-space:normal}
-  .delivery-selected-summary button{min-height:44px;border:1px solid rgba(230,189,105,.48);border-radius:9px;background:transparent;color:var(--gold-light);padding:0 12px;font-size:12px;font-weight:800}
-  .delivery-choice-wrap.is-selected .delivery-choice-buttons,
-  .delivery-choice-wrap.is-selected .city-label,
-  .delivery-choice-wrap.is-selected .delivery-result,
-  .delivery-choice-wrap.is-selected .route-button,
-  .delivery-choice-wrap.is-selected .delivery-help{display:none!important}
-  .size-memory-note{margin:8px 0 0;padding:8px 10px;border-radius:9px;background:rgba(230,189,105,.10);color:var(--gold-light);font-size:12px;line-height:1.4;font-weight:700}
-  .size-memory-note[hidden]{display:none!important}
-}
-</style>
-
-<style data-delivery-summary-global="2026-09-09">
-.delivery-selected-summary{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:10px;padding:12px 13px;border:1px solid rgba(255,255,255,.11);border-radius:12px;background:#0d0e10;color:#fff}
-.delivery-selected-summary[hidden]{display:none!important}
-.delivery-selected-summary div{display:grid;gap:3px;min-width:0}
-.delivery-selected-summary span{font-size:11px;color:rgba(255,255,255,.5)}
-.delivery-selected-summary strong{font-size:14px;color:#fff;white-space:normal}
-.delivery-selected-summary button{min-height:44px;border:1px solid rgba(230,189,105,.48);border-radius:9px;background:transparent;color:var(--gold-light);padding:0 12px;font-size:12px;font-weight:800;cursor:pointer}
-.delivery-choice-wrap.is-selected .delivery-choice-buttons,
-.delivery-choice-wrap.is-selected .city-label,
-.delivery-choice-wrap.is-selected .delivery-result,
-.delivery-choice-wrap.is-selected .route-button,
-.delivery-choice-wrap.is-selected .delivery-help{display:none!important}
-.size-memory-note{margin:8px 0 0;padding:8px 10px;border-radius:9px;background:rgba(230,189,105,.10);color:var(--gold-light);font-size:12px;line-height:1.4;font-weight:700}
-.size-memory-note[hidden]{display:none!important}
-</style>
-
+  <script src="public-site-settings.js"></script>
+  <script src="gate-page-ui.js"></script>
 </body>
 </html>
