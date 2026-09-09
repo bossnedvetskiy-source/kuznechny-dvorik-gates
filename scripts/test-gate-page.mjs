@@ -39,6 +39,8 @@ assert(delivery.includes('window.KUZDVOR_CUSTOMER'), 'Delivery must reuse shared
 assert(customer.includes('window.KUZDVOR_CUSTOMER'), 'Shared customer context API missing');
 assert(leads.includes('window.KUZDVOR_LEADS'), 'Shared lead API missing');
 assert(workerLeads.includes('consent_at') && workerLeads.includes('policy_version'), 'Server must store consent evidence');
+const leadInsertSql = workerLeads.match(/INSERT INTO site_leads \([\s\S]*?\)\s*VALUES \([\s\S]*?\)`\)/)?.[0] || '';
+assert.equal((leadInsertSql.match(/\?/g)||[]).length, 21, 'Lead INSERT must have exactly 21 bound placeholders');
 assert(workerLeads.includes('LEAD_NOTIFY_WEBHOOK_URL'), 'Optional lead notification webhook missing');
 assert(adminLeads.includes('Notification.requestPermission') && adminLeads.includes('30000'), 'Admin new-lead polling/notifications missing');
 assert(build.includes('gatePageCss') && build.includes('customerContextSource') && build.includes('gatePageUiSource'), 'Production build does not bundle the gate foundation');

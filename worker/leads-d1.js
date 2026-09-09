@@ -141,7 +141,7 @@ async function createLead(request, env, url) {
   const result = await env.DB.prepare(`INSERT INTO site_leads (
     status, name, phone, city, category, source, article, product_title, configuration_json,
     width, wicket_width, wicket_height, height, install, posts, color, total, delivery_pending, consent, consent_at, policy_version, comment, message
-  ) VALUES ('new', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?)`)
+  ) VALUES ('new', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?)`)
     .bind(
       name, phone, city, category, source, article, productTitle, configurationJson,
       width, wicketWidth, wicketHeight, height,
