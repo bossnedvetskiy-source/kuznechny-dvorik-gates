@@ -54,13 +54,33 @@ test('gate dimensions persist when comparing another design', async ({page}) => 
   await expect(page.locator('#widthInput')).toHaveValue('3.8');
 });
 
-test('fixed destination outside 150 km becomes an individual delivery quote', async ({page}) => {
+test('explicit delivery tariff is honored without inferring distance from its price', async ({page}) => {
   await openMobile(page);
   await chooseFirstGate(page);
   await page.locator('[data-delivery-choice="other"]').click();
   await page.locator('#cityInput').fill('Уфа');
 
   await expect(page.locator('#deliverySummary')).toBeVisible();
+  await expect(page.locator('#deliverySummaryValue')).toContainText('Уфа — доставка учтена в итоговой сумме');
+  await expect(page.locator('#estimateTotalLabel')).toHaveText('Предварительно с доставкой');
+  await expect(page.locator('#mobilePrimaryCta')).toContainText('Заказать бесплатный замер');
+});
+
+test('unknown destination outside standard area becomes an individual delivery quote', async ({page}) => {
+  await page.route('**/api/delivery?*', route => route.fulfill({
+    status:200,
+    contentType:'application/json',
+    body:JSON.stringify({
+      requestedName:'Дальнее',resolvedName:'Дальнее, Республика Башкортостан',shortName:'Дальнее',
+      price:null,distanceKm:180,rate:90,serviceAreaKm:150,outOfArea:true
+    })
+  }));
+
+  await openMobile(page);
+  await chooseFirstGate(page);
+  await page.locator('[data-delivery-choice="other"]').click();
+  await page.locator('#cityInput').fill('Дальнее');
+  await page.locator('#routeButton').click();
   await expect(page.locator('#deliverySummaryValue')).toContainText('индивидуально');
   await expect(page.locator('#estimateTotalLabel')).toHaveText('Ориентир без доставки');
   await expect(page.locator('#mobilePrimaryCta')).toContainText('Заказать бесплатный замер');
