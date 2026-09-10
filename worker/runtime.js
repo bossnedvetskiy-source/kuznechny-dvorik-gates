@@ -351,8 +351,8 @@ async function searchPlace(place) {
     const response = await fetch(searchUrl, {
       headers: {
         'accept': 'application/json',
-        'user-agent': 'KuznechnyDvorikDeliveryCalculator/1.1 (https://kuznechny-dvorik-gates.dragnaledon1284.chatgpt.site)',
-        'referer': 'https://kuznechny-dvorik-gates.dragnaledon1284.chatgpt.site/'
+        'user-agent': 'KuznechnyDvorikDeliveryCalculator/1.1 (https://kuznechny-dvorik-gates.boss-nedvetskiy.workers.dev)',
+        'referer': 'https://kuznechny-dvorik-gates.boss-nedvetskiy.workers.dev/'
       }
     });
     if (!response.ok) throw new Error('Сервис поиска населённых пунктов временно недоступен');
@@ -362,8 +362,11 @@ async function searchPlace(place) {
   }
 }
 
-async function calculateUnknownDelivery(place) {
-  const cacheKey = place.toLocaleLowerCase('ru-RU').replace(/ё/g, 'е').replace(/[^а-яa-z0-9]/gi, '');
+async function calculateUnknownDelivery(place, env) {
+  const site = await loadSiteProfile(env);
+  const runtimeRate = Math.max(0, Number(site.deliveryRate) || FALLBACK_RATE);
+  const serviceAreaKm = Math.max(0, Number(site.serviceAreaKm) || 150);
+  const cacheKey = `${place.toLocaleLowerCase('ru-RU').replace(/ё/g, 'е').replace(/[^а-яa-z0-9]/gi, '')}:${runtimeRate}:${serviceAreaKm}`;
   const cached = deliveryCache.get(cacheKey);
   if (cached) return cached;
   const results = await searchPlace(place);
@@ -379,7 +382,7 @@ async function calculateUnknownDelivery(place) {
   routeUrl.searchParams.set('alternatives', 'false');
   routeUrl.searchParams.set('steps', 'false');
   const routeResponse = await fetch(routeUrl, {
-    headers: {'accept': 'application/json', 'user-agent': 'KuznechnyDvorikDeliveryCalculator/1.1 (https://kuznechny-dvorik-gates.dragnaledon1284.chatgpt.site)'}
+    headers: {'accept': 'application/json', 'user-agent': 'KuznechnyDvorikDeliveryCalculator/1.1 (https://kuznechny-dvorik-gates.boss-nedvetskiy.workers.dev)'}
   });
   if (!routeResponse.ok) throw new Error('Сервис маршрутов временно недоступен');
   const routeData = await routeResponse.json();
@@ -392,9 +395,11 @@ async function calculateUnknownDelivery(place) {
     requestedName: place,
     resolvedName: selected.display_name,
     shortName: [...new Set(shortNameParts)].join(', ') || selected.display_name,
-    price: distanceKm * FALLBACK_RATE,
+    price: distanceKm > serviceAreaKm ? null : distanceKm * runtimeRate,
     distanceKm,
-    rate: FALLBACK_RATE,
+    rate: runtimeRate,
+    serviceAreaKm,
+    outOfArea: distanceKm > serviceAreaKm,
     attribution: '© OpenStreetMap contributors'
   };
   if (deliveryCache.size >= 200) deliveryCache.clear();
@@ -461,7 +466,7 @@ export default {
       const place = (url.searchParams.get('place') || '').trim().replace(/\s+/g, ' ');
       if (place.length < 2 || place.length > 100) return json({error: 'Укажите название населённого пункта'}, 400);
       try {
-        return json(await calculateUnknownDelivery(place), 200, 'public, max-age=86400');
+        return json(await calculateUnknownDelivery(place, env), 200, 'public, max-age=86400');
       } catch (error) {
         return json({error: errorMessage(error) || 'Не удалось рассчитать доставку'}, error.status || 502);
       }

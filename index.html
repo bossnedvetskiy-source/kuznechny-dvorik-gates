@@ -65,7 +65,7 @@
       </div>
       <div class="catalog-summary"><span id="catalogCount">38 моделей</span></div>
       <div class="catalog-grid" id="catalogGrid"></div>
-      <div class="catalog-trust-strip" aria-label="Почему нам доверяют"><span>Собственное производство</span><span>Бесплатный замер</span><span>Договор</span><span>Гарантия 3 года</span></div>
+      <div class="catalog-trust-strip" aria-label="Почему нам доверяют"><span>Собственное производство</span><span>Бесплатный замер</span><span>Договор</span><span id="catalogWarranty">Гарантия 3 года</span></div>
       <div class="empty-state" id="emptyState" hidden>В каталоге пока нет доступных моделей.</div>
       <div class="catalog-more" id="catalogMore"><span id="catalogProgress">Показано 6 из 38</span><button class="show-more" id="showMoreButton" type="button">Показать ещё 6 моделей</button></div>
     </section>
@@ -130,7 +130,7 @@
             <label class="city-label">Место установки<input id="cityInput" list="citySuggestions" type="text" value="" placeholder="Введите ваш населённый пункт" autocomplete="address-level2"><datalist id="citySuggestions"></datalist></label>
             <div class="delivery-result pending" id="deliveryResult">Выберите место установки.</div>
             <button class="route-button" id="routeButton" type="button" hidden>Рассчитать доставку</button>
-            <details class="delivery-help"><summary>Как рассчитывается доставка?</summary><p>По Мелеузу — бесплатно. Для некоторых населённых пунктов используется готовая стоимость доставки, для остальных она рассчитывается по автомобильному маршруту от Мелеуза. Если маршрут не найдётся, заявку всё равно можно отправить — стоимость доставки уточним при подтверждении заявки.</p></details>
+            <details class="delivery-help"><summary>Как рассчитывается доставка?</summary><p>По Мелеузу — бесплатно. Для некоторых населённых пунктов используется готовая стоимость доставки, для остальных она рассчитывается по автомобильному маршруту от Мелеуза. Если место установки дальше стандартной зоны выезда, доставку рассчитаем индивидуально. Если маршрут не найдётся, заявку всё равно можно отправить — стоимость доставки уточним при подтверждении заявки.</p></details>
           </div>
 
           <details class="mobile-price-breakdown">
@@ -155,6 +155,7 @@
             <label>Как к вам обращаться · необязательно<input id="nameInput" type="text" placeholder="Ваше имя" autocomplete="name"></label>
             <button class="mobile-comment-toggle" id="commentToggle" type="button">Добавить комментарий</button>
             <label class="lead-comment" id="commentLabel">Комментарий<textarea id="commentInput" placeholder="Например: нужен демонтаж старых ворот"></textarea></label>
+            <label class="anti-spam-field" aria-hidden="true">Ваш сайт<input id="websiteInput" name="website" type="text" tabindex="-1" autocomplete="off"></label>
           </div>
           <label class="consent-row"><input id="consentInput" type="checkbox" required><span>Даю согласие на обработку персональных данных. <a href="#privacyPolicy">Политика обработки персональных данных</a></span></label>
           <button class="button button-primary wide" id="sendButton" type="button">Отправить заявку</button>
@@ -184,7 +185,7 @@
         <details><summary>Можно изменить размеры ворот и калитки?</summary><p>Да. Стандарт — ворота 3,4×1,8 м и калитка 1×1,8 м. Измените размеры в калькуляторе — стоимость пересчитается сразу. Окончательно подтвердим размеры и цену после бесплатного замера.</p></details>
         <details><summary>Можно выбрать другой цвет профнастила?</summary><p>Да. Цвет не влияет на предварительный расчёт — нужный вариант согласуем при оформлении заказа.</p></details>
         <details><summary>Установите ворота на мои столбы?</summary><p>Да, если столбы подходят по прочности и состоянию. Установка ворот и калитки уже входит в базовую цену, а мастер проверит столбы во время бесплатного замера.</p></details>
-        <details><summary>Как рассчитывается доставка?</summary><p>По Мелеузу доставка бесплатная. Для некоторых населённых пунктов действует готовая стоимость, для остальных она рассчитывается по автомобильному маршруту от Мелеуза. После выбора места установки доставка учитывается в итоговой сумме; если маршрут не найдётся, стоимость уточним при подтверждении заявки.</p></details>
+        <details><summary>Как рассчитывается доставка?</summary><p>По Мелеузу доставка бесплатная. Для некоторых населённых пунктов действует готовая стоимость, для остальных она рассчитывается по автомобильному маршруту от Мелеуза. В пределах стандартной зоны выезда доставка учитывается в итоговой сумме; за её пределами или если маршрут не найдётся, стоимость уточним при подтверждении заявки.</p></details>
         <details><summary>Когда будет известна окончательная цена?</summary><p>После замера согласуем размеры и комплектацию, затем зафиксируем итоговую стоимость в договоре.</p></details>
       </div>
     </section>

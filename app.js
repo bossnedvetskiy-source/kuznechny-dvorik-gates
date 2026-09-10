@@ -316,7 +316,7 @@ function calcData() {
   const base=productPrice.price+product.install;
   const lines=[['Ворота с калиткой + установка',base]];
   if(postsCheck.checked)lines.push(['Новые усиленные столбы',product.posts]);
-  const delivery=deliveryController?.line() || {name:'Населённый пункт',value:null,display:cityInput.value.trim()||'Не выбран',resolved:false};
+  const delivery=deliveryController?.line() || {name:'Место установки',value:null,display:cityInput.value.trim()||'Не выбран',resolved:false};
   const deliveryKind=deliveryController?.getState()?.kind||'empty';
   const total=lines.reduce((sum,[,value])=>sum+(Number(value)||0),0)+(delivery.resolved?(Number(delivery.value)||0):0);
   return {product,lines,delivery,total,deliveryPending:!delivery.resolved,deliveryKind,dimensionsValid:dimensions.valid,dimensionsCalculated:productPrice.calculated,invalidDimensionInput:dimensions.invalidInput};
@@ -349,7 +349,8 @@ function calculate() {
   let note='Доставка учтена в общей сумме. Окончательная стоимость фиксируется в договоре после бесплатного замера.';
   if(!dimensionsValid)note='Проверьте размеры ворот и калитки — пока показываем ориентир по стандартному размеру.';
   else if(nonStandard&&dimensionsCalculated)note='Стоимость пересчитана по вашим размерам и формуле выбранной модели. Итоговую цену зафиксируем после бесплатного замера.';
-  if(deliveryKind==='error') note='Доставку автоматически рассчитать не удалось. Уточним её при подтверждении заявки.';
+  if(deliveryKind==='out-of-area') note=`Место установки дальше стандартной зоны выезда ${Number((window.SITE_SETTINGS||{}).serviceAreaKm)||150} км. Доставку рассчитаем индивидуально при подтверждении заявки.`;
+  else if(deliveryKind==='error') note='Доставку автоматически рассчитать не удалось. Уточним её при подтверждении заявки.';
   else if(deliveryPending)note+=' Укажите и подтвердите место установки, чтобы учесть доставку.';
   document.getElementById('estimateNote').textContent=note;
   if(mobilePriceNote)mobilePriceNote.textContent=note;
@@ -380,7 +381,7 @@ deliveryController=window.KUZDVOR_DELIVERY.createController({
   changeButton:document.getElementById('deliveryChange'),
   onChange:(state)=>{
     calculate();
-    if(['fixed','calculated','error'].includes(state?.kind)){
+    if(['fixed','calculated','out-of-area','error'].includes(state?.kind)){
       const city=deliveryController?.selectedCityName?.()||cityInput.value.trim();
       const key=`${state.kind}:${city}`;
       if(key!==lastDeliveryGoalKey){lastDeliveryGoalKey=key;reachGoal('delivery_result',{kind:state.kind,city});}
@@ -391,7 +392,7 @@ deliveryController=window.KUZDVOR_DELIVERY.createController({
 function selectedCityName(){return deliveryController?.selectedCityName()||cityInput.value.trim()}
 function sizeMessageLines(){return [`Размер ворот: ${widthInput.value} × ${heightInput.value} м`,`Размер калитки: ${wicketWidthInput.value} × ${wicketHeightInput.value} м`]}
 function buildMessage(){
-  const {product,lines,total,deliveryPending}=calcData();
+  const {product,lines,total,deliveryPending,deliveryKind}=calcData();
   const city=selectedCityName();
   const nonStandard=isNonStandard(product);
   return [
@@ -403,7 +404,7 @@ function buildMessage(){
     ...sizeMessageLines(),
     ...lines.map(([name,value])=>`${name}: ${money(value)}`),
     `${deliveryPending?'Ориентир без доставки':'Предварительно с доставкой'}: ${nonStandard||deliveryPending?'от ':''}${money(total)}`,
-    deliveryPending?'Доставка ещё не рассчитана — нужно уточнить.':'Доставка учтена в общей сумме.',
+    deliveryKind==='out-of-area'?`Доставка: место установки дальше стандартной зоны ${Number((window.SITE_SETTINGS||{}).serviceAreaKm)||150} км — индивидуальный расчёт.`:deliveryPending?'Доставка ещё не рассчитана — нужно уточнить.':'Доставка учтена в общей сумме.',
     commentInput.value.trim()?`Комментарий: ${commentInput.value.trim()}`:''
   ].filter(Boolean).join('\n');
 }
@@ -420,7 +421,7 @@ function leadPayload(){
     wicketWidth:Number(wicketWidthInput.value)||null,wicketHeight:Number(wicketHeightInput.value)||null,
     install:true,posts:Boolean(postsCheck.checked),color:'',
     configuration:{article:product.art,width:Number(widthInput.value)||null,height:Number(heightInput.value)||null,wicketWidth:Number(wicketWidthInput.value)||null,wicketHeight:Number(wicketHeightInput.value)||null,posts:Boolean(postsCheck.checked)},
-    total:Math.round(total),deliveryPending:Boolean(deliveryPending),consent:true,policyVersion:'2026-09-09',comment:commentInput.value.trim(),message:buildMessage()
+    total:Math.round(total),deliveryPending:Boolean(deliveryPending),deliveryKind:deliveryController?.getState?.()?.kind||'empty',website:document.getElementById('websiteInput')?.value||'',consent:true,policyVersion:'2026-09-09',comment:commentInput.value.trim(),message:buildMessage()
   };
 }
 
@@ -441,7 +442,7 @@ sendButton.addEventListener('click',async()=>{
     return;
   }
   const deliveryState=deliveryController?.getState?.()||{kind:'empty'};
-  if(!['fixed','calculated','error'].includes(deliveryState.kind)){
+  if(!['fixed','calculated','out-of-area','error'].includes(deliveryState.kind)){
     const message=deliveryState.kind==='confirm'?'Подтвердите найденный населённый пункт':deliveryState.kind==='loading'?'Дождитесь расчёта доставки':'Сначала укажите место установки и рассчитайте доставку';
     reachGoal('lead_validation_error',{field:'delivery',kind:deliveryState.kind});
     document.getElementById('deliveryChooser')?.closest('.form-block')?.scrollIntoView({behavior:'smooth',block:'start'});

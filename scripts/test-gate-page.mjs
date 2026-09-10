@@ -1,7 +1,7 @@
 import {readFile} from 'node:fs/promises';
 import assert from 'node:assert/strict';
 
-const [html, app, runtime, ui, build, delivery, customer, leads, workerLeads, adminLeads, adminHtml, adminJs] = await Promise.all([
+const [html, app, runtime, ui, build, delivery, customer, leads, workerLeads, gateQuote, antiSpam, workerRuntime, adminLeads, adminHtml, adminJs] = await Promise.all([
   readFile('index.html','utf8'),
   readFile('app.js','utf8'),
   readFile('public-site-settings.js','utf8'),
@@ -11,6 +11,9 @@ const [html, app, runtime, ui, build, delivery, customer, leads, workerLeads, ad
   readFile('shared/customer-context.js','utf8'),
   readFile('shared/leads.js','utf8'),
   readFile('worker/leads-d1.js','utf8'),
+  readFile('worker/gate-quote-d1.js','utf8'),
+  readFile('worker/lead-antispam.js','utf8'),
+  readFile('worker/runtime.js','utf8'),
   readFile('admin-leads.js','utf8'),
   readFile('admin.html','utf8'),
   readFile('admin.js','utf8')
@@ -31,7 +34,7 @@ assert(app.includes('priceData.catalogInstallation'), 'Gate page must still use 
 assert(app.includes('priceData.catalogPosts'), 'Gate page must still use the configured posts price');
 assert(app.includes('dimensionState()'), 'Gate page must validate all four dimensions');
 assert(app.includes('deliveryKind'), 'Gate page must expose delivery state to mobile CTA');
-assert(app.includes("['fixed','calculated','error'].includes(deliveryState.kind)"), 'Lead submission must require a resolved delivery state');
+assert(app.includes("['fixed','calculated','out-of-area','error'].includes(deliveryState.kind)"), 'Lead submission must require a resolved or intentionally manual delivery state');
 assert(html.includes('data-desktop-src="/hero-gates.jpg"') && !html.includes('img src="/hero-gates.jpg" alt="Готовые распашные'), 'Mobile HTML must not eagerly request the desktop hero');
 assert(ui.includes('deliveryCanProceed'), 'Mobile CTA must require delivery before opening the lead form');
 assert(!runtime.includes("document.createElement('style')"), 'Runtime settings must not inject CSS patches');
@@ -42,7 +45,7 @@ assert(customer.includes('window.KUZDVOR_CUSTOMER'), 'Shared customer context AP
 assert(leads.includes('window.KUZDVOR_LEADS'), 'Shared lead API missing');
 assert(workerLeads.includes('consent_at') && workerLeads.includes('policy_version'), 'Server must store consent evidence');
 const leadInsertSql = workerLeads.match(/INSERT INTO site_leads \([\s\S]*?\)\s*VALUES \([\s\S]*?\)`\)/)?.[0] || '';
-assert.equal((leadInsertSql.match(/\?/g)||[]).length, 21, 'Lead INSERT must have exactly 21 bound placeholders');
+assert.equal((leadInsertSql.match(/\?/g)||[]).length, 25, 'Lead INSERT must have exactly 25 bound placeholders');
 assert(workerLeads.includes('LEAD_NOTIFY_WEBHOOK_URL'), 'Optional lead notification webhook missing');
 assert(adminLeads.includes('Notification.requestPermission') && adminLeads.includes('30000'), 'Admin new-lead polling/notifications missing');
 assert(build.includes('gatePageCss') && build.includes('customerContextSource') && build.includes('gatePageUiSource'), 'Production build does not bundle the gate foundation');
@@ -60,5 +63,12 @@ assert(!adminJs.includes('setSelectedZoom') && !adminJs.includes('dragState'), '
 assert(html.includes('связка между столбами под землёй'), 'Posts wording must explain what the linkage means');
 assert(html.includes('свяжемся с вами в рабочее время'), 'Lead confirmation must set a realistic contact expectation');
 assert(html.includes('class="skip-link"'), 'Gate page must include a keyboard skip link');
+assert(workerLeads.includes('calculateAuthoritativeGateQuote') && workerLeads.includes('client_total') && workerLeads.includes('quote_verified'), 'Gate leads must be recalculated and audited server-side');
+assert(gateQuote.includes('calculateGateProductServer') && !gateQuote.includes('new Function') && !gateQuote.includes('eval('), 'Server gate quote must not use runtime code evaluation');
+assert(antiSpam.includes('honeypotTriggered') && antiSpam.includes('LEAD_RATE_MAX'), 'Public lead anti-spam guard missing');
+assert(html.includes('websiteInput') && app.includes('website:document.getElementById'), 'Lead honeypot must be wired end-to-end');
+assert(workerRuntime.includes('serviceAreaKm') && workerRuntime.includes('outOfArea') && workerRuntime.includes('calculateUnknownDelivery(place, env)'), 'Delivery API must enforce runtime service area');
+assert(delivery.includes('out-of-area') && ui.includes("['out-of-area','error']"), 'Out-of-area delivery must still allow a manual lead');
+assert(html.includes('id="catalogWarranty"') && runtime.includes('catalogWarranty'), 'Warranty must use the shared runtime setting everywhere');
 
 console.log('Gate page foundation checks: OK');

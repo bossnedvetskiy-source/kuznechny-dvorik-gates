@@ -217,7 +217,7 @@
   mobile.addEventListener('change', installDesktopThumbnails);
   document.addEventListener('gate:calculated', event => {
     deliveryKind = event.detail?.deliveryKind || 'empty';
-    deliveryCanProceed = event.detail?.deliveryPending === false || deliveryKind === 'error';
+    deliveryCanProceed = event.detail?.deliveryPending === false || ['out-of-area','error'].includes(deliveryKind);
     dimensionsValid = event.detail?.dimensionsValid !== false;
     updateSizeSummary();
     syncMobileCta();

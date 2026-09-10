@@ -4,8 +4,8 @@
   function validate({phone, city, consent} = {}) {
     const digits = phoneDigits(phone);
     if (digits.length < 10 || digits.length > 11) return {ok:false, field:'phone', message:'Укажите номер телефона'};
-    if (!String(city || '').trim()) return {ok:false, field:'city', message:'Укажите населённый пункт'};
-    if (!consent) return {ok:false, field:'consent', message:'Подтвердите согласие на обработку данных'};
+    if (!String(city || '').trim()) return {ok:false, field:'city', message:'Укажите место установки'};
+    if (!consent) return {ok:false, field:'consent', message:'Подтвердите согласие на обработку персональных данных'};
     return {ok:true};
   }
 

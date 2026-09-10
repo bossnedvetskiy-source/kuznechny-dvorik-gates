@@ -1,11 +1,12 @@
 import { readFile, rm, mkdir, writeFile, copyFile, cp } from 'node:fs/promises';
+import { gunzipSync } from 'node:zlib';
 
 await rm('dist', { recursive: true, force: true });
 await mkdir('dist/server', { recursive: true });
 await mkdir('dist/client', { recursive: true });
 await mkdir('dist/.openai', { recursive: true });
 
-const [htmlSource, homeHtmlSource, homeCss, productCategoriesSource, css, storefrontCss, gatePageCss, catalogImages, pricesSource, deliveryPricesSource, customerContextSource, deliverySharedSource, leadsSharedSource, js, publicSiteJsSource, gatePageUiSource, adminHtmlSource, adminCss, adminJsSource, adminPricesJsSource, adminSiteJsSource, adminLeadsJsSource, workerSource, adminAuthSource, siteSettingsSource, catalogMediaSource, leadsSource] = await Promise.all([
+const [htmlSource, homeHtmlSource, homeCss, productCategoriesSource, css, storefrontCss, gatePageCss, catalogImages, pricesSource, deliveryPricesSource, customerContextSource, deliverySharedSource, leadsSharedSource, js, publicSiteJsSource, gatePageUiSource, adminHtmlSource, adminCss, adminJsSource, adminPricesJsSource, adminSiteJsSource, adminLeadsJsSource, workerSource, adminAuthSource, siteSettingsSource, catalogMediaSource, gateQuoteSource, leadAntispamSource, leadsSource] = await Promise.all([
   readFile('index.html', 'utf8'),
   readFile('home.html', 'utf8'),
   readFile('home.css', 'utf8'),
@@ -32,6 +33,8 @@ const [htmlSource, homeHtmlSource, homeCss, productCategoriesSource, css, storef
   readFile('worker/auth-d1.js', 'utf8'),
   readFile('worker/site-settings-d1.js', 'utf8'),
   readFile('worker/catalog-media-d1.js', 'utf8'),
+  readFile('worker/gate-quote-d1.js', 'utf8'),
+  readFile('worker/lead-antispam.js', 'utf8'),
   readFile('worker/leads-d1.js', 'utf8')
 ]);
 
@@ -45,6 +48,22 @@ const gateCalcSources = await Promise.all([
   readFile('gate-calc-engine.js', 'utf8')
 ]);
 const gateCalcBundle = gateCalcSources.join('\n');
+
+const gatePricesMatch = gateCalcSources[0].match(/window\.GATE_CALC_PRICES\s*=\s*({[\s\S]*});?\s*$/);
+if (!gatePricesMatch) throw new Error('Не удалось подготовить серверные цены формул ворот');
+const defaultGateCalcPrices = Function(`"use strict"; return (${gatePricesMatch[1]});`)();
+const compressedGateModels = gateCalcSources.slice(1,5).map((source,index) => {
+  const match = source.match(/\+\s*'([^']+)'\s*;?\s*$/);
+  if (!match) throw new Error(`Не удалось прочитать часть расчётных моделей ${index+1}`);
+  return match[1];
+}).join('');
+const gateModelsScript = gunzipSync(Buffer.from(compressedGateModels, 'base64')).toString('utf8');
+const rawGateModels = Function('window', '"use strict";\n' + gateModelsScript + '\nreturn window.GATE_CALC_MODELS;')({});
+if (!rawGateModels?.models) throw new Error('Не удалось распаковать серверные модели ворот');
+const serverGateModelSource = `{models:{${Object.entries(rawGateModels.models || {}).map(([key,model]) => {
+  const formulas = Object.entries(model.formulas || {}).map(([ref,expr]) => `${JSON.stringify(ref)}:(ctx,p,v,sum,roundExcel,roundUp)=>(${expr})`).join(',');
+  return `${JSON.stringify(key)}:{gateRef:${JSON.stringify(model.gateRef)},wicketRef:${JSON.stringify(model.wicketRef)},literals:${JSON.stringify(model.literals || {})},formulas:{${formulas}}}`;
+}).join(',')}}}`;
 
 const deliveryPrices = JSON.parse(deliveryPricesSource);
 if (!Number.isFinite(deliveryPrices.fallbackRatePerKm) || !deliveryPrices.origin) {
@@ -145,6 +164,8 @@ if (authStart < 0 || authEnd < 0) throw new Error('Не найден блок а
 let patchedWorkerSource = workerSource.slice(0, authStart)
   + adminAuthSource.trim() + '\n\n'
   + siteSettingsSource.trim() + '\n\n'
+  + leadAntispamSource.trim() + '\n\n'
+  + gateQuoteSource.trim() + '\n\n'
   + catalogMediaSource.trim() + '\n\n'
   + leadsSource.trim()
   + workerSource.slice(authEnd);
@@ -156,7 +177,7 @@ patchedWorkerSource = patchedWorkerSource.replace(
 
 patchedWorkerSource = patchedWorkerSource.replace(
   'const DEFAULT_GALLERIES = __DEFAULT_GALLERIES__;',
-  'const DEFAULT_GALLERIES = __DEFAULT_GALLERIES__;\nconst DEFAULT_PRICES = __DEFAULT_PRICES__;'
+  'const DEFAULT_GALLERIES = __DEFAULT_GALLERIES__;\nconst DEFAULT_PRICES = __DEFAULT_PRICES__;\nconst DEFAULT_GATE_CALC_PRICES = __DEFAULT_GATE_CALC_PRICES__;\nconst DEFAULT_GATE_CALC_MODELS = __DEFAULT_GATE_CALC_MODELS__;\nconst DEFAULT_DELIVERY_PRICES = __DEFAULT_DELIVERY_PRICES__;'
 );
 
 patchedWorkerSource = patchedWorkerSource.replaceAll(
@@ -209,12 +230,19 @@ patchedWorkerSource = patchedWorkerSource.replace(
 );
 patchedWorkerSource = patchedWorkerSource.replace('return html(PAGE);\n  }\n};', 'return html(await renderPublicPage(env));\n  }\n};');
 
+for (const requiredWorkerFeature of ['calculateAuthoritativeGateQuote','consumeLeadAttempt','DEFAULT_GATE_CALC_MODELS','DEFAULT_DELIVERY_PRICES']) {
+  if (!patchedWorkerSource.includes(requiredWorkerFeature)) throw new Error(`Worker assembly missing ${requiredWorkerFeature}`);
+}
+
 const worker = patchedWorkerSource
   .replace('__PUBLIC_PAGE__', JSON.stringify(html))
   .replace('__HOME_PAGE__', JSON.stringify(homeHtml))
   .replace('__ADMIN_PAGE__', JSON.stringify(adminHtml))
   .replace('__DEFAULT_GALLERIES__', JSON.stringify(defaultGalleries))
   .replace('__DEFAULT_PRICES__', JSON.stringify(defaultPrices))
+  .replace('__DEFAULT_GATE_CALC_PRICES__', JSON.stringify(defaultGateCalcPrices))
+  .replace('__DEFAULT_GATE_CALC_MODELS__', serverGateModelSource)
+  .replace('__DEFAULT_DELIVERY_PRICES__', JSON.stringify(deliveryPrices))
   .replace('__DELIVERY_ORIGIN__', JSON.stringify(deliveryPrices.origin))
   .replace('__DELIVERY_RATE__', String(deliveryPrices.fallbackRatePerKm));
 
