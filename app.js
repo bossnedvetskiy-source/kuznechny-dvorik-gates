@@ -110,6 +110,7 @@ function renderProducts() {
       <div class="product-bottom"><div class="price-stack">
         <div class="price-row"><small>Если подходящие столбы уже есть</small><strong>${money(product.price+product.install)}</strong></div>
         <div class="price-row turnkey"><small>С новыми усиленными столбами</small><strong>${money(product.price+product.install+product.posts)}</strong></div>
+        <div class="price-delivery-note">Доставка рассчитывается после выбора места установки</div>
       </div><button class="select-product" data-product="${product.id}" type="button" aria-expanded="false">Рассчитать стоимость</button></div>
     </div>
   </article>`).join('');

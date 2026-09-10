@@ -88,27 +88,17 @@
       onChange?.(state);
     };
 
-    const fixedDistanceEstimate = known => {
-      if (normalize(known?.name) === normalize('Мелеуз')) return 0;
-      const price = Math.max(0, Number(known?.price) || 0);
-      return Math.ceil(price / Math.max(1, data.referenceRatePerKm));
-    };
-
     const resolveFixed = known => {
       const city = String(known.name || '').trim();
       const price = Number(known.price) || 0;
-      const distanceKm = fixedDistanceEstimate(known);
-      const outOfArea = distanceKm > data.serviceAreaKm;
       if (input) input.value = city;
-      state = outOfArea
-        ? {kind:'out-of-area', name:city, resolvedName:city, shortName:city, price:null, distanceKm, serviceAreaKm:data.serviceAreaKm, outOfArea:true}
-        : {kind:'fixed', name:city, resolvedName:city, shortName:city, price, distanceKm, serviceAreaKm:data.serviceAreaKm, outOfArea:false};
+      // A listed destination is an explicit business tariff and may be a deliberate exception
+      // to the normal service radius. Never try to derive kilometres from its price.
+      state = {kind:'fixed', name:city, resolvedName:city, shortName:city, price, distanceKm:null, serviceAreaKm:data.serviceAreaKm, outOfArea:false};
       editingOther = false;
-      setResult(outOfArea
-        ? `Место установки дальше стандартной зоны выезда ${data.serviceAreaKm} км. Стоимость доставки рассчитаем индивидуально.`
-        : normalize(city) === normalize('Мелеуз')
-          ? 'Доставка по Мелеузу — бесплатно'
-          : `${city} · доставка учтена в итоговой сумме`, outOfArea ? 'pending' : 'success');
+      setResult(normalize(city) === normalize('Мелеуз')
+        ? 'Доставка по Мелеузу — бесплатно'
+        : `${city} · доставка учтена в итоговой сумме`, 'success');
       saveSelected(state);
       emit();
     };

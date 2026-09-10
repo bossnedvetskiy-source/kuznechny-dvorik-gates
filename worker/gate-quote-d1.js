@@ -76,19 +76,16 @@ function fixedDeliveryForCity(city, site) {
   const destinations = Array.isArray(DEFAULT_DELIVERY_PRICES?.destinations) ? DEFAULT_DELIVERY_PRICES.destinations : [];
   const known = destinations.find(item => normalizeDeliveryServer(item.name) === normalizeDeliveryServer(city));
   if (!known) return null;
-  const price = Math.max(0, Math.round(Number(known.price) || 0));
-  const referenceRate = Math.max(1, Number(DEFAULT_DELIVERY_PRICES?.fallbackRatePerKm) || 90);
-  const distanceKm = normalizeDeliveryServer(known.name) === normalizeDeliveryServer(DEFAULT_DELIVERY_PRICES?.origin?.name || 'Мелеуз') ? 0 : Math.ceil(price / referenceRate);
-  const serviceAreaKm = Math.max(0, Number(site?.serviceAreaKm) || 150);
-  const outOfArea = distanceKm > serviceAreaKm;
+  // Listed destinations are explicit business tariffs. Some may intentionally be outside
+  // the normal radius, so price must never be used as a proxy for distance.
   return {
-    kind: outOfArea ? 'out-of-area' : 'fixed',
-    city: String(known.name || city),
-    price: outOfArea ? null : price,
-    distanceKm,
-    serviceAreaKm,
-    outOfArea,
-    resolved: !outOfArea
+    kind:'fixed',
+    city:String(known.name || city),
+    price:Math.max(0, Math.round(Number(known.price) || 0)),
+    distanceKm:null,
+    serviceAreaKm:Math.max(0, Number(site?.serviceAreaKm) || 150),
+    outOfArea:false,
+    resolved:true
   };
 }
 
