@@ -5,15 +5,24 @@
 
   function readData() {
     const node = document.getElementById('deliveryData');
+    const site = window.SITE_SETTINGS || {};
     try {
       const data = JSON.parse(node?.textContent || '{}');
+      const referenceRatePerKm = Number(data.fallbackRatePerKm) || 90;
       return {
         destinations: Array.isArray(data.destinations) ? data.destinations : [],
-        fallbackRatePerKm: Number(data.fallbackRatePerKm) || 90,
+        referenceRatePerKm,
+        fallbackRatePerKm: Number(site.deliveryRate) || referenceRatePerKm,
+        serviceAreaKm: Number(site.serviceAreaKm) || 150,
         origin: data.origin || 'Мелеуз'
       };
     } catch {
-      return {destinations:[], fallbackRatePerKm:90, origin:'Мелеуз'};
+      return {
+        destinations:[], referenceRatePerKm:90,
+        fallbackRatePerKm:Number(site.deliveryRate)||90,
+        serviceAreaKm:Number(site.serviceAreaKm)||150,
+        origin:'Мелеуз'
+      };
     }
   }
 
@@ -21,8 +30,8 @@
     try { return JSON.parse(sessionStorage.getItem(MEMORY_KEY) || 'null'); } catch { return null; }
   }
 
-  function saveResolved(state) {
-    if (!['fixed','calculated'].includes(state.kind)) return;
+  function saveSelected(state) {
+    if (!['fixed','calculated','out-of-area'].includes(state.kind)) return;
     const city = String(state.shortName || state.resolvedName || state.name || '').trim();
     if (!city) return;
     try {
@@ -52,19 +61,26 @@
       result.className = `delivery-result${kind ? ` ${kind}` : ''}`;
     };
 
-    const selectedCityName = () => ['fixed','calculated'].includes(state.kind)
+    const selectedCityName = () => ['fixed','calculated','out-of-area'].includes(state.kind)
       ? String(state.shortName || state.resolvedName || state.name || input?.value || '').trim()
       : String(input?.value || '').trim();
 
     const syncUi = () => {
       const resolved = ['fixed','calculated'].includes(state.kind);
+      const selected = resolved || state.kind === 'out-of-area';
       const city = selectedCityName();
-      if (chooser) chooser.hidden = resolved || editingOther;
-      if (summary) summary.hidden = !resolved;
-      if (summaryValue && resolved) summaryValue.textContent = normalize(city) === normalize('Мелеуз') ? 'Мелеуз — бесплатно' : `${city} — доставка учтена в итоговой сумме`;
-      input?.closest('.city-label')?.classList.toggle('is-visible', editingOther && !resolved);
-      if (result) result.hidden = resolved;
-      if (routeButton) routeButton.hidden = resolved || state.kind === 'empty';
+      if (chooser) chooser.hidden = selected || editingOther;
+      if (summary) summary.hidden = !selected;
+      if (summaryValue && selected) {
+        summaryValue.textContent = state.kind === 'out-of-area'
+          ? `${city} — доставка рассчитывается индивидуально`
+          : normalize(city) === normalize('Мелеуз')
+            ? 'Мелеуз — бесплатно'
+            : `${city} — доставка учтена в итоговой сумме`;
+      }
+      input?.closest('.city-label')?.classList.toggle('is-visible', editingOther && !selected);
+      if (result) result.hidden = selected;
+      if (routeButton) routeButton.hidden = selected || state.kind === 'empty';
     };
 
     const emit = () => {
@@ -72,13 +88,28 @@
       onChange?.(state);
     };
 
+    const fixedDistanceEstimate = known => {
+      if (normalize(known?.name) === normalize('Мелеуз')) return 0;
+      const price = Math.max(0, Number(known?.price) || 0);
+      return Math.ceil(price / Math.max(1, data.referenceRatePerKm));
+    };
+
     const resolveFixed = known => {
       const city = String(known.name || '').trim();
+      const price = Number(known.price) || 0;
+      const distanceKm = fixedDistanceEstimate(known);
+      const outOfArea = distanceKm > data.serviceAreaKm;
       if (input) input.value = city;
-      state = {kind:'fixed', name:city, resolvedName:city, shortName:city, price:Number(known.price)||0};
+      state = outOfArea
+        ? {kind:'out-of-area', name:city, resolvedName:city, shortName:city, price:null, distanceKm, serviceAreaKm:data.serviceAreaKm, outOfArea:true}
+        : {kind:'fixed', name:city, resolvedName:city, shortName:city, price, distanceKm, serviceAreaKm:data.serviceAreaKm, outOfArea:false};
       editingOther = false;
-      setResult(normalize(city) === normalize('Мелеуз') ? 'Доставка по Мелеузу — бесплатно' : `${city} · доставка учтена в итоговой сумме`, 'success');
-      saveResolved(state);
+      setResult(outOfArea
+        ? `Место установки дальше стандартной зоны выезда ${data.serviceAreaKm} км. Стоимость доставки рассчитаем индивидуально.`
+        : normalize(city) === normalize('Мелеуз')
+          ? 'Доставка по Мелеузу — бесплатно'
+          : `${city} · доставка учтена в итоговой сумме`, outOfArea ? 'pending' : 'success');
+      saveSelected(state);
       emit();
     };
 
@@ -117,7 +148,7 @@
         state = {...state, kind:'calculated'};
         editingOther = false;
         setResult(`${state.shortName} · доставка учтена в итоговой сумме`, 'success');
-        saveResolved(state);
+        saveSelected(state);
         emit();
         return;
       }
@@ -131,7 +162,20 @@
         if (!response.ok) throw new Error(payload.error || 'Не удалось рассчитать доставку');
         if (String(input?.value || '').trim() !== place) return;
         const shortName = payload.shortName || payload.resolvedName || place;
-        state = {kind:'confirm', name:place, resolvedName:payload.resolvedName || shortName, shortName, price:Number(payload.price)||0};
+        if (payload.outOfArea) {
+          state = {
+            kind:'out-of-area', name:place, resolvedName:payload.resolvedName || shortName, shortName,
+            price:null, distanceKm:Number(payload.distanceKm)||null,
+            serviceAreaKm:Number(payload.serviceAreaKm)||data.serviceAreaKm, outOfArea:true
+          };
+          editingOther = false;
+          if (routeButton) { routeButton.hidden = true; routeButton.disabled = false; routeButton.textContent = 'Рассчитать доставку'; }
+          setResult(`Расстояние около ${state.distanceKm || '—'} км — дальше стандартной зоны выезда ${state.serviceAreaKm} км. Стоимость доставки рассчитаем индивидуально.`, 'pending');
+          saveSelected(state);
+          emit();
+          return;
+        }
+        state = {kind:'confirm', name:place, resolvedName:payload.resolvedName || shortName, shortName, price:Number(payload.price)||0, distanceKm:Number(payload.distanceKm)||null, serviceAreaKm:Number(payload.serviceAreaKm)||data.serviceAreaKm};
         if (routeButton) { routeButton.hidden = false; routeButton.disabled = false; routeButton.textContent = 'Да, это нужный пункт'; }
         setResult(`Найдено: ${shortName}. Подтвердите населённый пункт.`, 'pending');
       } catch (error) {
@@ -175,11 +219,13 @@
       if (!city) { emit(); return false; }
       const known = byKey.get(normalize(city));
       if (known) { resolveFixed(known); return true; }
-      if (saved && normalize(saved.city) === normalize(city) && saved.kind === 'calculated' && Number.isFinite(Number(saved.price))) {
+      if (saved && normalize(saved.city) === normalize(city) && ['calculated','out-of-area'].includes(saved.kind)) {
         if (input) input.value = city;
-        state = {kind:'calculated', name:saved.name || city, resolvedName:saved.resolvedName || city, shortName:saved.shortName || city, price:Number(saved.price)||0};
+        state = saved.kind === 'out-of-area'
+          ? {kind:'out-of-area', name:saved.name || city, resolvedName:saved.resolvedName || city, shortName:saved.shortName || city, price:null, distanceKm:Number(saved.distanceKm)||null, serviceAreaKm:Number(saved.serviceAreaKm)||data.serviceAreaKm, outOfArea:true}
+          : {kind:'calculated', name:saved.name || city, resolvedName:saved.resolvedName || city, shortName:saved.shortName || city, price:Number(saved.price)||0, distanceKm:Number(saved.distanceKm)||null, serviceAreaKm:Number(saved.serviceAreaKm)||data.serviceAreaKm};
         editingOther = false;
-        saveResolved(state);
+        saveSelected(state);
         emit();
         return true;
       }
@@ -192,7 +238,14 @@
     const line = () => {
       const city = selectedCityName();
       const resolved = ['fixed','calculated'].includes(state.kind);
-      return {name:'Место установки', value:resolved ? Number(state.price)||0 : null, display:city || 'Не выбрано', resolved};
+      const outOfArea = state.kind === 'out-of-area';
+      return {
+        name:'Место установки',
+        value:resolved ? Number(state.price)||0 : null,
+        display:outOfArea ? `${city} · доставка индивидуально` : city || 'Не выбрано',
+        resolved,
+        outOfArea
+      };
     };
 
     restore();
