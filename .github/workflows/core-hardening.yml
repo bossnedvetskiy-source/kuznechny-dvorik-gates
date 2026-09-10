@@ -18,6 +18,7 @@ jobs:
         run: |
           python3 .github/core-hardening.py
           python3 .github/fix-core-hardening-test.py
+          python3 .github/fix-core-build-models.py
       - name: Check JavaScript syntax
         run: |
           node --check app.js
