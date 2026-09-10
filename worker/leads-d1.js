@@ -42,7 +42,11 @@ async function ensureLeadSchema(env) {
     posts INTEGER NOT NULL DEFAULT 0,
     color TEXT NOT NULL DEFAULT '',
     total INTEGER NOT NULL DEFAULT 0,
+    client_total INTEGER NOT NULL DEFAULT 0,
+    quote_verified INTEGER NOT NULL DEFAULT 0,
     delivery_pending INTEGER NOT NULL DEFAULT 0,
+    delivery_out_of_area INTEGER NOT NULL DEFAULT 0,
+    delivery_distance_km REAL,
     consent INTEGER NOT NULL DEFAULT 0,
     consent_at TEXT NOT NULL DEFAULT '',
     policy_version TEXT NOT NULL DEFAULT '',
@@ -54,6 +58,10 @@ async function ensureLeadSchema(env) {
     "ALTER TABLE site_leads ADD COLUMN category TEXT NOT NULL DEFAULT 'gates'",
     "ALTER TABLE site_leads ADD COLUMN source TEXT NOT NULL DEFAULT ''",
     "ALTER TABLE site_leads ADD COLUMN configuration_json TEXT NOT NULL DEFAULT '{}'",
+    "ALTER TABLE site_leads ADD COLUMN client_total INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE site_leads ADD COLUMN quote_verified INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE site_leads ADD COLUMN delivery_out_of_area INTEGER NOT NULL DEFAULT 0",
+    'ALTER TABLE site_leads ADD COLUMN delivery_distance_km REAL',
     "ALTER TABLE site_leads ADD COLUMN consent INTEGER NOT NULL DEFAULT 0",
     "ALTER TABLE site_leads ADD COLUMN consent_at TEXT NOT NULL DEFAULT ''",
     "ALTER TABLE site_leads ADD COLUMN policy_version TEXT NOT NULL DEFAULT ''"
@@ -93,6 +101,11 @@ async function createLead(request, env, url) {
 
   let body;
   try { body = await request.json(); } catch { return json({error: 'Некорректная заявка'}, 400); }
+  if (honeypotTriggered(body)) return json({ok:true, id:null}, 201);
+  const rate = consumeLeadAttempt(request);
+  if (!rate.allowed) {
+    return json({error:'Слишком много заявок за короткое время. Попробуйте немного позже.'}, 429, 'no-store', {'retry-after':String(rate.retryAfterSeconds)});
+  }
 
   const name = leadText(body.name, 100);
   const phone = leadText(body.phone, 40);
@@ -105,73 +118,118 @@ async function createLead(request, env, url) {
   const productTitle = leadText(body.productTitle, 120);
   const color = leadText(body.color, 100);
   const comment = leadText(body.comment, 1000);
-  const message = leadText(body.message, 8000);
+  const clientMessage = leadText(body.message, 8000);
   const consent = body.consent === true;
   const policyVersion = leadText(body.policyVersion, 64);
   const width = leadNumber(body.width);
   const wicketWidth = leadNumber(body.wicketWidth);
   const wicketHeight = leadNumber(body.wicketHeight);
   const height = leadNumber(body.height);
-  const total = Math.round(Math.max(0, Math.min(10000000, Number(body.total) || 0)));
+  const clientTotal = Math.round(Math.max(0, Math.min(10000000, Number(body.total) || 0)));
+
+  if (phoneDigits.length < 10 || phoneDigits.length > 11) return json({error: 'Укажите корректный номер телефона'}, 400);
+  if (!consent) return json({error: 'Подтвердите согласие на обработку персональных данных'}, 400);
+  if (!city || !clientMessage) return json({error: 'В заявке не хватает обязательных данных'}, 400);
+  for (const value of [width, wicketWidth, wicketHeight, height]) {
+    if (value !== null && (value <= 0 || value > 100)) return json({error: 'Некорректные размеры в заявке'}, 400);
+  }
+
+  let quote = null;
+  if (category === 'gates') {
+    try {
+      quote = await calculateAuthoritativeGateQuote({...body, article, city, width, wicketWidth, wicketHeight, height}, env);
+    } catch (error) {
+      return json({error:errorMessage(error)}, Number(error?.status) || 400);
+    }
+  }
+
+  const storedArticle = quote?.article || article;
+  const storedProductTitle = category === 'gates' ? 'Ворота с калиткой' : productTitle;
+  const storedInstall = category === 'gates' ? 1 : (body.install ? 1 : 0);
+  const storedPosts = body.posts ? 1 : 0;
+  const total = quote?.total ?? clientTotal;
+  const deliveryPending = quote ? quote.deliveryPending : Boolean(body.deliveryPending);
+  const deliveryOutOfArea = Boolean(quote?.delivery?.outOfArea);
+  const deliveryDistanceKm = quote?.delivery?.distanceKm ?? null;
+  const quoteVerified = Boolean(quote?.quoteVerified);
+  const message = quote
+    ? buildAuthoritativeGateMessage({
+        name, phone, city, article:storedArticle,
+        dimensions:quote.dimensions, posts:Boolean(storedPosts), quote, comment
+      })
+    : clientMessage;
+
   const defaultConfiguration = {
-    article,
+    article:storedArticle,
     width,
     height,
     wicketWidth,
     wicketHeight,
-    install: Boolean(body.install),
-    posts: Boolean(body.posts),
+    install:Boolean(storedInstall),
+    posts:Boolean(storedPosts),
     color
   };
   const configuration = body.configuration && typeof body.configuration === 'object' && !Array.isArray(body.configuration)
-    ? body.configuration
+    ? {...body.configuration, ...defaultConfiguration}
     : defaultConfiguration;
   let configurationJson = '{}';
   try { configurationJson = JSON.stringify(configuration); } catch { configurationJson = JSON.stringify(defaultConfiguration); }
   if (configurationJson.length > 8000) return json({error: 'Слишком много параметров в заявке'}, 413);
 
-  if (phoneDigits.length < 10 || phoneDigits.length > 11) return json({error: 'Укажите корректный номер телефона'}, 400);
-  if (!consent) return json({error: 'Подтвердите согласие на обработку данных'}, 400);
-  if (!city || !message) return json({error: 'В заявке не хватает обязательных данных'}, 400);
-  for (const value of [width, wicketWidth, wicketHeight, height]) {
-    if (value !== null && (value <= 0 || value > 100)) return json({error: 'Некорректные размеры в заявке'}, 400);
-  }
-
   await ensureLeadSchema(env);
   const result = await env.DB.prepare(`INSERT INTO site_leads (
     status, name, phone, city, category, source, article, product_title, configuration_json,
-    width, wicket_width, wicket_height, height, install, posts, color, total, delivery_pending, consent, consent_at, policy_version, comment, message
-  ) VALUES ('new', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?)`)
+    width, wicket_width, wicket_height, height, install, posts, color, total, client_total, quote_verified,
+    delivery_pending, delivery_out_of_area, delivery_distance_km, consent, consent_at, policy_version, comment, message
+  ) VALUES ('new', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?)`)
     .bind(
-      name, phone, city, category, source, article, productTitle, configurationJson,
+      name, phone, city, category, source, storedArticle, storedProductTitle, configurationJson,
       width, wicketWidth, wicketHeight, height,
-      body.install ? 1 : 0, body.posts ? 1 : 0, color, total,
-      body.deliveryPending ? 1 : 0, consent ? 1 : 0, policyVersion, comment, message
+      storedInstall, storedPosts, color, total, clientTotal, quoteVerified ? 1 : 0,
+      deliveryPending ? 1 : 0, deliveryOutOfArea ? 1 : 0, deliveryDistanceKm,
+      consent ? 1 : 0, policyVersion, comment, message
     ).run();
 
   const leadId = result.meta?.last_row_id || null;
-  await notifyNewLead(env, {id:leadId, category, name, phone, city, article, productTitle, total, source, message});
-  return json({ok: true, id: leadId}, 201);
+  await notifyNewLead(env, {id:leadId, category, name, phone, city, article:storedArticle, productTitle:storedProductTitle, total, source, message});
+  return json({
+    ok:true,
+    id:leadId,
+    quote: quote ? {
+      total,
+      verified:true,
+      deliveryPending,
+      deliveryOutOfArea,
+      deliveryDistanceKm
+    } : null
+  }, 201);
 }
 
 async function listLeads(env) {
   await ensureLeadSchema(env);
-  const result = await env.DB.prepare(`SELECT id, created_at, updated_at, status, name, phone, city, category, source, article,
-    product_title, configuration_json, width, wicket_width, wicket_height, height, install, posts, color, total,
-    delivery_pending, consent, consent_at, policy_version, comment, message
-    FROM site_leads ORDER BY id DESC LIMIT 200`).all();
+  const [result, countResult] = await Promise.all([
+    env.DB.prepare(`SELECT id, created_at, updated_at, status, name, phone, city, category, source, article,
+      product_title, configuration_json, width, wicket_width, wicket_height, height, install, posts, color, total,
+      client_total, quote_verified, delivery_pending, delivery_out_of_area, delivery_distance_km,
+      consent, consent_at, policy_version, comment, message
+      FROM site_leads ORDER BY id DESC LIMIT 200`).all(),
+    env.DB.prepare('SELECT status, COUNT(*) AS count FROM site_leads GROUP BY status').all()
+  ]);
   const leads = (result.results || []).map(row => ({
     ...row,
     configuration: parseLeadConfiguration(row.configuration_json),
     configuration_json: undefined,
     install: Boolean(row.install),
     posts: Boolean(row.posts),
+    quote_verified: Boolean(row.quote_verified),
     delivery_pending: Boolean(row.delivery_pending),
-    consent: Boolean(row.consent)
+    delivery_out_of_area: Boolean(row.delivery_out_of_area),
+    consent: Boolean(row.consent),
+    quote_mismatch: Boolean(row.quote_verified) && Number(row.client_total) !== Number(row.total)
   }));
-  const counts = {new: 0, contacted: 0, done: 0, archived: 0};
-  for (const lead of leads) if (lead.status in counts) counts[lead.status] += 1;
-  return {leads, counts};
+  const counts = {new:0, contacted:0, done:0, archived:0};
+  for (const row of countResult.results || []) if (row.status in counts) counts[row.status] = Number(row.count) || 0;
+  return {leads, counts, limited:leads.length >= 200};
 }
 
 async function updateLeadStatus(request, env, id) {
