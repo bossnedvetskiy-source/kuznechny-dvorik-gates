@@ -35,7 +35,11 @@ jobs:
           node --check admin-leads.js
           node --check worker/auth-d1.js
           node --check worker/site-settings-d1.js
+          node --check worker/gate-quote-d1.js
+          node --check worker/lead-antispam.js
+          node --check worker/catalog-media-d1.js
           node --check worker/leads-d1.js
+          node --check scripts/build.mjs
 
       - name: Verify gate page foundation
         run: node scripts/test-gate-page.mjs
@@ -45,6 +49,9 @@ jobs:
 
       - name: Verify production build
         run: npm run build
+
+      - name: Check built Worker syntax
+        run: node --check dist/server/index.js
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
