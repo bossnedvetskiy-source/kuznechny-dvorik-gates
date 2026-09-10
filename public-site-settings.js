@@ -53,10 +53,8 @@
   if (trustCopy && site.trustText) trustCopy.textContent = `${site.trustText} Гарантия на конструкцию — ${site.warrantyYears} ${yearWord(site.warrantyYears)}.`;
   const trustWarranty = document.querySelector('.trust-points > div:nth-child(3) b');
   if (trustWarranty && site.warrantyYears) trustWarranty.textContent = `Гарантия — ${site.warrantyYears} ${yearWord(site.warrantyYears)}`;
-  const catalogWarranty = document.querySelector('.catalog-trust-strip > span:last-child');
+  const catalogWarranty = document.getElementById('catalogWarranty');
   if (catalogWarranty && site.warrantyYears) catalogWarranty.textContent = `Гарантия ${site.warrantyYears} ${yearWord(site.warrantyYears)}`;
-  const catalogWarrantyId = document.getElementById('catalogWarranty');
-  if (catalogWarrantyId && site.warrantyYears) catalogWarrantyId.textContent = `Гарантия ${site.warrantyYears} ${yearWord(site.warrantyYears)}`;
 
   setText('.final-cta h2', site.finalCtaTitle);
   setText('.final-cta p', site.finalCtaText);
