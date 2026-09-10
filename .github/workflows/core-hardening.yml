@@ -15,7 +15,9 @@ jobs:
         with:
           ref: main
       - name: Apply hardening patch
-        run: python3 .github/core-hardening.py
+        run: |
+          python3 .github/core-hardening.py
+          python3 .github/fix-core-hardening-test.py
       - name: Check JavaScript syntax
         run: |
           node --check app.js
