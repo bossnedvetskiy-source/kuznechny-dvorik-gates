@@ -35,13 +35,13 @@ jobs:
         run: npm run build
       - name: Built Worker syntax
         run: node --check dist/server/index.js
-      - name: Commit verified changes
+      - name: Commit verified code changes
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add shared/delivery.js worker/gate-quote-d1.js public-site-settings.js app.js gate-page.css scripts/test-gate-page.mjs .github/workflows/deploy-preview.yml
+          git add shared/delivery.js worker/gate-quote-d1.js public-site-settings.js app.js gate-page.css scripts/test-gate-page.mjs
           if git diff --cached --quiet; then
-            echo "No hardening changes"
+            echo "No hardening code changes"
             exit 0
           fi
           git commit -m "Finish gate hardening and delivery rules"
