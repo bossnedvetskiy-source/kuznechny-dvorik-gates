@@ -47,6 +47,9 @@ jobs:
       - name: Verify gate calculator
         run: node scripts/test-gate-calculator.mjs
 
+      - name: Verify server gate quote
+        run: node scripts/test-server-gate-quote.mjs
+
       - name: Verify production build
         run: npm run build
 
