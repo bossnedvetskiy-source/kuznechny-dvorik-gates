@@ -63,6 +63,7 @@ assert(!adminJs.includes('setSelectedZoom') && !adminJs.includes('dragState'), '
 assert(html.includes('связка между столбами под землёй'), 'Posts wording must explain what the linkage means');
 assert(html.includes('свяжемся с вами в рабочее время'), 'Lead confirmation must set a realistic contact expectation');
 assert(html.includes('class="skip-link"'), 'Gate page must include a keyboard skip link');
+assert(html.includes('id="calculatorParking"') && app.includes('calculatorParking.append(calculatorPanel)'), 'Closed calculator must remain parked in the DOM for reliable model switching');
 assert(workerLeads.includes('calculateAuthoritativeGateQuote') && workerLeads.includes('client_total') && workerLeads.includes('quote_verified'), 'Gate leads must be recalculated and audited server-side');
 assert(gateQuote.includes('calculateGateProductServer') && !gateQuote.includes('new Function') && !gateQuote.includes('eval('), 'Server gate quote must not use runtime code evaluation');
 assert(antiSpam.includes('honeypotTriggered') && antiSpam.includes('LEAD_RATE_MAX'), 'Public lead anti-spam guard missing');

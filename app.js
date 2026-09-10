@@ -39,6 +39,7 @@ if (!catalogProducts.length) throw new Error('Каталог ворот пуст
 
 const grid = document.getElementById('catalogGrid');
 const calculatorPanel = document.getElementById('calculator');
+const calculatorParking = document.getElementById('calculatorParking');
 const showMoreButton = document.getElementById('showMoreButton');
 const catalogMore = document.getElementById('catalogMore');
 const catalogProgress = document.getElementById('catalogProgress');
@@ -259,8 +260,8 @@ function placeCalculatorAfterRow(card) {
 }
 
 function closeCalculator() {
-  if (calculatorPanel.parentElement===grid) calculatorPanel.remove();
   calculatorPanel.hidden=true;
+  if (calculatorParking && calculatorPanel.parentElement !== calculatorParking) calculatorParking.append(calculatorPanel);
   document.body.classList.remove('calculator-open');
   grid.querySelectorAll('.select-product').forEach(button=>button.setAttribute('aria-expanded','false'));
 }
