@@ -21,6 +21,19 @@ vm.runInContext(pricesJs, context, {filename:'gate-calc-prices.js'});
 for (let i=0;i<chunks.length;i+=1) vm.runInContext(chunks[i], context, {filename:`chunk-${i+1}.js`});
 const modelSource = gunzipSync(Buffer.from(context.__GATE_CALC_B64, 'base64')).toString('utf8');
 vm.runInContext(modelSource, context, {filename:'excel-derived-models.js'});
+
+// Browser models store formula expressions as strings and compile them on demand.
+// Production build converts the same expressions to static functions for the Worker.
+// Compile them here so this regression suite exercises the server quote implementation
+// against exactly the same Excel-derived formula expressions.
+for (const model of Object.values(context.GATE_CALC_MODELS.models || {})) {
+  const compiled = {};
+  for (const [ref, expr] of Object.entries(model.formulas || {})) {
+    compiled[ref] = new Function('ctx','p','v','sum','roundExcel','roundUp', `return (${expr});`);
+  }
+  model.formulas = compiled;
+}
+
 context.DEFAULT_GATE_CALC_PRICES = context.GATE_CALC_PRICES;
 context.DEFAULT_GATE_CALC_MODELS = context.GATE_CALC_MODELS;
 context.DEFAULT_DELIVERY_PRICES = {destinations:[], fallbackRatePerKm:90, origin:{name:'Мелеуз'}};
