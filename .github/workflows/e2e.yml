@@ -6,6 +6,7 @@ on:
     paths:
       - 'index.html'
       - 'app.js'
+      - 'public-site-settings.js'
       - 'gate-page-ui.js'
       - 'gate-page.css'
       - 'styles.css'
