@@ -2,12 +2,12 @@ import {test, expect} from '@playwright/test';
 
 async function openMobile(page) {
   await page.setViewportSize({width:390,height:844});
-  await page.goto('/');
+  await page.goto('/', {waitUntil:'domcontentloaded'});
   await expect(page.locator('#catalogGrid .product-card').first()).toBeVisible();
 }
 
 async function chooseFirstGate(page) {
-  await page.locator('.select-product').first().click();
+  await page.locator('.product-card').first().locator('.select-product').click();
   await expect(page.locator('#calculator')).toBeVisible();
 }
 
@@ -26,7 +26,8 @@ test('mobile customer can select gates, choose Meleuz and submit a lead', async 
   await expect(page.locator('#leadRequest')).toBeVisible();
   await page.locator('#phoneInput').fill('+7 937 111-22-33');
   await page.locator('#consentInput').check();
-  await page.locator('#sendButton').click();
+  await expect(page.locator('#mobilePrimaryCta')).toContainText('Отправить заявку');
+  await page.locator('#mobilePrimaryCta').click();
 
   await expect(page.locator('#successModal')).toBeVisible();
   expect(submitted).toBeTruthy();
@@ -45,7 +46,11 @@ test('gate dimensions persist when comparing another design', async ({page}) => 
   await page.locator('#widthInput').blur();
   await expect(page.locator('#sizeSummaryValue')).toContainText('3,8');
   await page.locator('#changeProductButton').click();
-  await page.locator('.select-product').nth(1).click();
+
+  const secondGate = page.locator('.product-card').nth(1).locator('.select-product');
+  await secondGate.scrollIntoViewIfNeeded();
+  await secondGate.click();
+  await expect(page.locator('#calculator')).toBeVisible();
   await expect(page.locator('#widthInput')).toHaveValue('3.8');
 });
 
