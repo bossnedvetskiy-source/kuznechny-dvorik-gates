@@ -1,0 +1,129 @@
+name: Real mobile lazy production check
+
+on:
+  push:
+    branches:
+      - diag/lazy-production
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm ci --include=dev --no-audit --no-fund
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Verify live production lazy loading on mobile
+        run: |
+          node --input-type=module <<'NODE'
+          import { chromium } from '@playwright/test';
+
+          const origin = 'https://kuznechny-dvorik-gates.boss-nedvetskiy.workers.dev';
+          const url = `${origin}/?lazy_browser_diag=${Date.now()}`;
+          const browser = await chromium.launch({headless:true});
+          let failure = '';
+          try {
+            const page = await browser.newPage({
+              viewport: {width:390,height:844},
+              deviceScaleFactor: 1,
+              isMobile: true,
+              hasTouch: true
+            });
+            const requested = [];
+            const pageErrors = [];
+            const consoleErrors = [];
+            const sameOriginFailures = [];
+            page.on('request', req => requested.push(req.url()));
+            page.on('pageerror', err => pageErrors.push(String(err?.stack || err)));
+            page.on('console', msg => { if (msg.type() === 'error') consoleErrors.push(msg.text()); });
+            page.on('requestfailed', req => {
+              if (req.url().startsWith(origin)) sameOriginFailures.push(`${req.url()} :: ${req.failure()?.errorText || 'failed'}`);
+            });
+            page.on('response', res => {
+              if (res.url().startsWith(origin) && res.status() >= 400) sameOriginFailures.push(`${res.status()} ${res.url()}`);
+            });
+
+            const response = await page.goto(url, {waitUntil:'domcontentloaded', timeout:20000});
+            if (!response?.ok()) throw new Error(`Main page HTTP ${response?.status() || 'none'}`);
+            await page.waitForSelector('#catalogGrid .product-card', {timeout:10000});
+            await page.waitForTimeout(800);
+
+            const before = await page.evaluate(() => ({
+              ready: document.readyState,
+              cards: document.querySelectorAll('#catalogGrid .product-card').length,
+              models: document.querySelector('#catalogCount')?.textContent || '',
+              heroPrice: document.querySelector('#heroInstalledPrice')?.textContent || '',
+              calculatorLoaded: window.KUZDVOR_CALCULATOR_LOADED === true,
+              calculatorApi: Boolean(window.GATE_CALC?.calculateGate),
+              calculatorHidden: document.querySelector('#calculator')?.hidden ?? true
+            }));
+            const calculatorRequestedBefore = requested.some(item => item.includes('/calculator.bundle.js'));
+            console.log('BEFORE_CLICK', JSON.stringify(before));
+            console.log('CALCULATOR_REQUESTED_BEFORE', calculatorRequestedBefore);
+            if (before.cards < 1) throw new Error('Catalog cards did not render');
+            if (!before.models.includes('38')) throw new Error(`Expected 38 models, got: ${before.models}`);
+            if (!before.heroPrice) throw new Error('Hero price did not initialize');
+            if (before.calculatorLoaded || before.calculatorApi || calculatorRequestedBefore) throw new Error('Heavy calculator loaded before user intent');
+
+            await page.evaluate(() => {
+              window.__diagCalculated = 0;
+              document.addEventListener('gate:calculated', () => { window.__diagCalculated += 1; });
+            });
+
+            const firstButton = page.locator('.select-product').first();
+            await firstButton.click({timeout:10000});
+            await page.waitForFunction(() => window.KUZDVOR_CALCULATOR_LOADED === true && Boolean(window.GATE_CALC?.calculateGate), null, {timeout:10000});
+            await page.waitForFunction(() => document.querySelector('#calculator')?.hidden === false, null, {timeout:10000});
+            const calculatorRequestedAfter = requested.some(item => item.includes('/calculator.bundle.js'));
+            if (!calculatorRequestedAfter) throw new Error('Calculator bundle was not requested after user intent');
+
+            const beforeWidthPrice = await page.locator('#mobilePriceTotal').textContent();
+            await page.locator('#widthInput').fill('3.8');
+            await page.locator('#widthInput').dispatchEvent('change');
+            await page.waitForFunction(() => window.__diagCalculated > 0, null, {timeout:10000});
+            await page.waitForTimeout(300);
+            const afterWidthPrice = await page.locator('#mobilePriceTotal').textContent();
+
+            await page.locator('#catalog').scrollIntoViewIfNeeded();
+            await page.waitForTimeout(800);
+            const enhancementsRequested = requested.some(item => item.includes('/catalog-enhancements.bundle.js'));
+            const galleryApiRequested = requested.some(item => item.includes('/api/catalog-images'));
+
+            const after = await page.evaluate(() => ({
+              calculatorLoaded: window.KUZDVOR_CALCULATOR_LOADED === true,
+              calculatedEvents: window.__diagCalculated,
+              calculatorHidden: document.querySelector('#calculator')?.hidden ?? true,
+              width: document.querySelector('#widthInput')?.value || '',
+              cards: document.querySelectorAll('#catalogGrid .product-card').length
+            }));
+            console.log('AFTER_CLICK', JSON.stringify(after));
+            console.log('PRICE_BEFORE_WIDTH', beforeWidthPrice);
+            console.log('PRICE_AFTER_WIDTH', afterWidthPrice);
+            console.log('CATALOG_ENHANCEMENTS_REQUESTED', enhancementsRequested);
+            console.log('GALLERY_API_REQUESTED', galleryApiRequested);
+            console.log('PAGE_ERRORS', JSON.stringify(pageErrors));
+            console.log('CONSOLE_ERRORS', JSON.stringify(consoleErrors));
+            console.log('SAME_ORIGIN_FAILURES', JSON.stringify(sameOriginFailures));
+
+            if (!after.calculatorLoaded || after.calculatorHidden) throw new Error('Calculator did not open after lazy load');
+            if (after.width !== '3.8') throw new Error(`Width change did not stick: ${after.width}`);
+            if (after.calculatedEvents < 1) throw new Error('Calculator did not recalculate after dimension change');
+            if (!enhancementsRequested) throw new Error('Catalog enhancement bundle did not lazy-load near catalog');
+            if (!galleryApiRequested) throw new Error('Catalog gallery API did not defer-load near catalog');
+            if (pageErrors.length) throw new Error(`Page errors: ${pageErrors.join(' | ')}`);
+            if (sameOriginFailures.length) throw new Error(`Same-origin request failures: ${sameOriginFailures.join(' | ')}`);
+          } catch (error) {
+            failure = String(error?.stack || error);
+          } finally {
+            await browser.close();
+          }
+          if (failure) throw new Error(failure);
+          NODE
