@@ -42,6 +42,7 @@ jobs:
           node --check worker/leads-d1.js
           node --check scripts/build.mjs
           node --check scripts/test-catalog-images.mjs
+          node --check scripts/check-production.mjs
 
       - name: Verify catalog images
         run: node scripts/test-catalog-images.mjs
@@ -68,6 +69,10 @@ jobs:
 
       - name: Run browser E2E tests
         run: npm run test:e2e
+
+      - name: Smoke check production endpoint
+        continue-on-error: true
+        run: node scripts/check-production.mjs
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
