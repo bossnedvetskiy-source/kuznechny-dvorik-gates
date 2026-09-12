@@ -1,6 +1,11 @@
 const PAGE = __PUBLIC_PAGE__;
+const HOME_PAGE = __HOME_PAGE__;
 const ADMIN_PAGE = __ADMIN_PAGE__;
 const DEFAULT_GALLERIES = __DEFAULT_GALLERIES__;
+const DEFAULT_PRICES = __DEFAULT_PRICES__;
+const DEFAULT_GATE_CALC_PRICES = __DEFAULT_GATE_CALC_PRICES__;
+const DEFAULT_GATE_CALC_MODELS = __DEFAULT_GATE_CALC_MODELS__;
+const DEFAULT_DELIVERY_PRICES = __DEFAULT_DELIVERY_PRICES__;
 const ORIGIN = __DELIVERY_ORIGIN__;
 const FALLBACK_RATE = __DELIVERY_RATE__;
 
@@ -74,77 +79,7 @@ function constantTimeEqual(left, right) {
   return mismatch === 0;
 }
 
-async function createSessionCookie(env) {
-  const expires = String(Date.now() + SESSION_SECONDS * 1000);
-  const signature = await hmacHex(env.ADMIN_SESSION_SECRET, expires);
-  return `${SESSION_COOKIE}=${expires}.${signature}; Max-Age=${SESSION_SECONDS}; Path=/; HttpOnly; Secure; SameSite=Strict`;
-}
-
-async function hasAdminSession(request, env) {
-  if (!env.ADMIN_SESSION_SECRET) return false;
-  const session = parseCookies(request)[SESSION_COOKIE] || '';
-  const [expires, signature, extra] = session.split('.');
-  if (!expires || !signature || extra || !/^\d+$/.test(expires) || Number(expires) <= Date.now()) return false;
-  const expected = await hmacHex(env.ADMIN_SESSION_SECRET, expires);
-  return constantTimeEqual(signature, expected);
-}
-
-function sameOrigin(request, url) {
-  return request.headers.get('origin') === url.origin;
-}
-
-function clientKey(request) {
-  return request.headers.get('cf-connecting-ip') || 'unknown';
-}
-
-function canAttemptLogin(request) {
-  const key = clientKey(request);
-  const now = Date.now();
-  const attempt = loginAttempts.get(key);
-  if (!attempt || attempt.resetAt <= now) {
-    loginAttempts.delete(key);
-    return true;
-  }
-  return attempt.count < 5;
-}
-
-function registerFailedLogin(request) {
-  const key = clientKey(request);
-  const now = Date.now();
-  const current = loginAttempts.get(key);
-  if (!current || current.resetAt <= now) {
-    loginAttempts.set(key, {count: 1, resetAt: now + 15 * 60 * 1000});
-  } else {
-    current.count += 1;
-  }
-  if (loginAttempts.size > 500) loginAttempts.clear();
-}
-
-async function handleLogin(request, env, url) {
-  if (!sameOrigin(request, url)) return json({error: 'Недопустимый источник запроса'}, 403);
-  if (!env.ADMIN_USERNAME || !env.ADMIN_PASSWORD || !env.ADMIN_SESSION_SECRET) {
-    return json({error: 'Вход в редактор ещё не настроен'}, 503);
-  }
-  if (!canAttemptLogin(request)) return json({error: 'Слишком много попыток. Попробуйте через 15 минут.'}, 429);
-  try {
-    const length = Number(request.headers.get('content-length') || 0);
-    if (length > 4096) return json({error: 'Слишком большой запрос'}, 413);
-    const body = await request.json();
-    const username = String(body.username || '').trim();
-    const passwordHash = await digestHex(String(body.password || ''));
-    const expectedPasswordHash = await digestHex(env.ADMIN_PASSWORD);
-    const validUsername = constantTimeEqual(username, env.ADMIN_USERNAME);
-    const validPassword = constantTimeEqual(passwordHash, expectedPasswordHash);
-    if (!validUsername || !validPassword) {
-      registerFailedLogin(request);
-      return json({error: 'Неверный логин или пароль'}, 401);
-    }
-    loginAttempts.delete(clientKey(request));
-    return json({ok: true}, 200, 'no-store', {'set-cookie': await createSessionCookie(env)});
-  } catch {
-    return json({error: 'Не удалось выполнить вход'}, 400);
-  }
-}
+/*__WORKER_MODULES__*/
 
 function defaultGallery(article) {
   const photos = [...(DEFAULT_GALLERIES[article] || [])];
@@ -238,7 +173,7 @@ async function storedGallery(env, article) {
 }
 
 async function saveGallery(request, env, article) {
-  if (!env.DB || !env.BUCKET) return json({error: 'Хранилище фотографий временно недоступно'}, 503);
+  if (!env.DB) return json({error: 'База данных временно недоступна'}, 503);
   const length = Number(request.headers.get('content-length') || 0);
   if (length > 65536) return json({error: 'Слишком большой запрос'}, 413);
   const body = await request.json();
@@ -277,51 +212,25 @@ async function saveGallery(request, env, article) {
     ...(previous?.photos || []).map(mediaKeyFromUrl).filter(Boolean),
     ...(Array.isArray(body.removedUrls) ? body.removedUrls.map(mediaKeyFromUrl).filter(Boolean) : [])
   ]);
-  await Promise.allSettled([...removed].filter(key => !retained.has(key)).map(key => env.BUCKET.delete(key)));
+  await Promise.allSettled([...removed].filter(key => !retained.has(key)).map(key => deleteCatalogMediaObject(env, key)));
   return json({ok: true, gallery: {photos, positions, zooms, fitMode, mediaType, customized: true}});
 }
 
 async function resetGallery(env, article) {
-  if (!env.DB || !env.BUCKET) return json({error: 'Хранилище фотографий временно недоступно'}, 503);
+  if (!env.DB) return json({error: 'База данных временно недоступна'}, 503);
   const previous = await storedGallery(env, article);
   await env.DB.prepare('DELETE FROM catalog_galleries WHERE article = ?').bind(article).run();
   const keys = (previous?.photos || []).map(mediaKeyFromUrl).filter(Boolean);
-  await Promise.allSettled(keys.map(key => env.BUCKET.delete(key)));
+  await Promise.allSettled(keys.map(key => deleteCatalogMediaObject(env, key)));
   return json({ok: true, gallery: defaultGallery(article)});
 }
 
 async function uploadPhoto(request, env, article) {
-  if (!env.BUCKET) return json({error: 'Хранилище фотографий временно недоступно'}, 503);
-  const type = (request.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
-  if (!['image/webp', 'image/jpeg', 'image/png'].includes(type)) return json({error: 'Поддерживаются фотографии JPG, PNG и WebP'}, 415);
-  const statedLength = Number(request.headers.get('content-length') || 0);
-  if (statedLength > MAX_UPLOAD_BYTES) return json({error: 'Файл слишком большой. Максимум 8 МБ.'}, 413);
-  const bytes = await request.arrayBuffer();
-  if (!bytes.byteLength || bytes.byteLength > MAX_UPLOAD_BYTES) return json({error: 'Файл пустой или превышает 8 МБ'}, 413);
-  const extension = type === 'image/png' ? 'png' : type === 'image/jpeg' ? 'jpg' : 'webp';
-  const key = `catalog/${articleSlug(article)}/${crypto.randomUUID()}.${extension}`;
-  await env.BUCKET.put(key, bytes, {
-    httpMetadata: {contentType: type, cacheControl: 'public, max-age=31536000, immutable'},
-    customMetadata: {article}
-  });
-  return json({photo: {url: `/catalog-media/${encodeURI(key)}`}}, 201);
+  return storeCatalogMedia(request, env, article);
 }
 
 async function serveCatalogMedia(env, pathname) {
-  if (!env.BUCKET) return new Response('Файл не найден', {status: 404});
-  let key;
-  try {
-    key = decodeURIComponent(pathname.slice('/catalog-media/'.length));
-  } catch {
-    return new Response('Файл не найден', {status: 404});
-  }
-  if (!key.startsWith('catalog/') || key.includes('..') || key.startsWith('/')) return new Response('Файл не найден', {status: 404});
-  const object = await env.BUCKET.get(key);
-  if (!object) return new Response('Файл не найден', {status: 404});
-  const headers = new Headers({'cache-control': 'public, max-age=31536000, immutable', ...securityHeaders});
-  object.writeHttpMetadata(headers);
-  headers.set('etag', object.httpEtag);
-  return new Response(object.body, {headers});
+  return readCatalogMedia(env, pathname);
 }
 
 const haversine = (lat1, lon1, lat2, lon2) => {
@@ -410,9 +319,41 @@ async function calculateUnknownDelivery(place, env) {
 async function handleAdminApi(request, env, url) {
   if (request.method !== 'GET' && !sameOrigin(request, url)) return json({error: 'Недопустимый источник запроса'}, 403);
   if (!await hasAdminSession(request, env)) return json({error: 'Требуется вход'}, 401);
+  if (url.pathname === '/api/admin/site-settings') {
+    try {
+      if (request.method === 'GET') return json({site: await loadSiteProfile(env)});
+      if (request.method === 'POST') return await saveSiteProfile(request, env);
+      return json({error: 'Метод не поддерживается'}, 405);
+    } catch (error) {
+      return json({error: 'Не удалось сохранить настройки сайта: ' + errorMessage(error)}, 500);
+    }
+  }
+  if (url.pathname === '/api/admin/prices') {
+    try {
+      if (request.method === 'GET') return json({prices: await loadPrices(env)});
+      if (request.method === 'POST') return await savePrices(request, env);
+      return json({error: 'Метод не поддерживается'}, 405);
+    } catch (error) {
+      return json({error: 'Не удалось сохранить цены: ' + errorMessage(error)}, 500);
+    }
+  }
+  if (url.pathname === '/api/admin/leads' && request.method === 'GET') {
+    try {
+      return json(await listLeads(env));
+    } catch (error) {
+      return json({error: 'Не удалось загрузить заявки: ' + errorMessage(error)}, 500);
+    }
+  }
+  if (url.pathname.startsWith('/api/admin/leads/') && request.method === 'POST') {
+    try {
+      return await updateLeadStatus(request, env, url.pathname.slice('/api/admin/leads/'.length));
+    } catch (error) {
+      return json({error: 'Не удалось обновить заявку: ' + errorMessage(error)}, 500);
+    }
+  }
   if (url.pathname === '/api/admin/catalog' && request.method === 'GET') {
     try {
-      return json({galleries: await allGalleries(env, true)});
+      return json({galleries: await allGalleries(env, true), photoUploadEnabled: Boolean(env.BUCKET || env.DB)});
     } catch (error) {
       return json({error: 'Не удалось загрузить карточки: ' + errorMessage(error)}, 503);
     }
@@ -454,6 +395,14 @@ export default {
     if (url.pathname.startsWith('/api/admin/')) return handleAdminApi(request, env, url);
     if (url.pathname === '/admin' || url.pathname === '/admin/') return html(ADMIN_PAGE, 200, true);
     if (url.pathname.startsWith('/catalog-media/')) return serveCatalogMedia(env, url.pathname);
+    if (url.pathname === '/api/leads') {
+      if (request.method !== 'POST') return json({error: 'Метод не поддерживается'}, 405);
+      try {
+        return await createLead(request, env, url);
+      } catch (error) {
+        return json({error: 'Не удалось сохранить заявку: ' + errorMessage(error)}, 500);
+      }
+    }
     if (url.pathname === '/api/catalog-images' && request.method === 'GET') {
       try {
         return json({galleries: await allGalleries(env)}, 200, 'no-store');
@@ -472,7 +421,8 @@ export default {
       }
     }
     if (url.pathname === '/favicon.ico') return new Response(null, {status: 204});
-    if (url.pathname !== '/' && url.pathname !== '/index.html') return new Response('Страница не найдена', {status: 404, headers: {'content-type': 'text/plain; charset=utf-8'}});
-    return html(PAGE);
+    if (url.pathname === '/napravleniya' || url.pathname === '/napravleniya/') return html(await renderProductHub(env));
+    if (url.pathname !== '/' && url.pathname !== '/index.html' && url.pathname !== '/vorota' && url.pathname !== '/vorota/') return new Response('Страница не найдена', {status: 404, headers: {'content-type': 'text/plain; charset=utf-8'}});
+    return html(await renderPublicPage(env));
   }
 };

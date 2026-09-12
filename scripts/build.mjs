@@ -158,77 +158,16 @@ const adminHtml = adminHtmlSource
   .replace('<script src="admin.js"></script>', `<script>${adminJs}</script>`)
   .replace('<script src="admin-prices.js"></script>', `<script>${adminPricesJsSource}</script><script>${adminSiteJsSource}</script><script>${adminLeadsJsSource}</script>`);
 
-const authStart = workerSource.indexOf('async function createSessionCookie(env)');
-const authEnd = workerSource.indexOf('\nfunction defaultGallery(article)', authStart);
-if (authStart < 0 || authEnd < 0) throw new Error('Не найден блок авторизации Worker');
-let patchedWorkerSource = workerSource.slice(0, authStart)
-  + adminAuthSource.trim() + '\n\n'
-  + siteSettingsSource.trim() + '\n\n'
-  + leadAntispamSource.trim() + '\n\n'
-  + gateQuoteSource.trim() + '\n\n'
-  + catalogMediaSource.trim() + '\n\n'
-  + leadsSource.trim()
-  + workerSource.slice(authEnd);
-
-patchedWorkerSource = patchedWorkerSource.replace(
-  'const PAGE = __PUBLIC_PAGE__;',
-  'const PAGE = __PUBLIC_PAGE__;\nconst HOME_PAGE = __HOME_PAGE__;'
-);
-
-patchedWorkerSource = patchedWorkerSource.replace(
-  'const DEFAULT_GALLERIES = __DEFAULT_GALLERIES__;',
-  'const DEFAULT_GALLERIES = __DEFAULT_GALLERIES__;\nconst DEFAULT_PRICES = __DEFAULT_PRICES__;\nconst DEFAULT_GATE_CALC_PRICES = __DEFAULT_GATE_CALC_PRICES__;\nconst DEFAULT_GATE_CALC_MODELS = __DEFAULT_GATE_CALC_MODELS__;\nconst DEFAULT_DELIVERY_PRICES = __DEFAULT_DELIVERY_PRICES__;'
-);
-
-patchedWorkerSource = patchedWorkerSource.replaceAll(
-  "if (!env.DB || !env.BUCKET) return json({error: 'Хранилище фотографий временно недоступно'}, 503);",
-  "if (!env.DB) return json({error: 'База данных временно недоступна'}, 503);"
-);
-
-const uploadStart = patchedWorkerSource.indexOf('async function uploadPhoto(request, env, article) {');
-const uploadEnd = patchedWorkerSource.indexOf('\nasync function serveCatalogMedia', uploadStart);
-if (uploadStart < 0 || uploadEnd < 0) throw new Error('Не найден блок загрузки фотографий Worker');
-patchedWorkerSource = patchedWorkerSource.slice(0, uploadStart)
-  + "async function uploadPhoto(request, env, article) {\n  return storeCatalogMedia(request, env, article);\n}\n"
-  + patchedWorkerSource.slice(uploadEnd);
-
-const serveStart = patchedWorkerSource.indexOf('async function serveCatalogMedia(env, pathname) {');
-const serveEnd = patchedWorkerSource.indexOf('\nconst haversine', serveStart);
-if (serveStart < 0 || serveEnd < 0) throw new Error('Не найден блок выдачи фотографий Worker');
-patchedWorkerSource = patchedWorkerSource.slice(0, serveStart)
-  + "async function serveCatalogMedia(env, pathname) {\n  return readCatalogMedia(env, pathname);\n}\n"
-  + patchedWorkerSource.slice(serveEnd);
-
-patchedWorkerSource = patchedWorkerSource
-  .replace(
-    "await Promise.allSettled([...removed].filter(key => !retained.has(key)).map(key => env.BUCKET.delete(key)));",
-    "await Promise.allSettled([...removed].filter(key => !retained.has(key)).map(key => deleteCatalogMediaObject(env, key)));"
-  )
-  .replace(
-    "await Promise.allSettled(keys.map(key => env.BUCKET.delete(key)));",
-    "await Promise.allSettled(keys.map(key => deleteCatalogMediaObject(env, key)));"
-  )
-  .replace(
-    "  const result = {\n    requestedName: place,\n    resolvedName: selected.display_name,\n    shortName: [...new Set(shortNameParts)].join(', ') || selected.display_name,\n    price: distanceKm * FALLBACK_RATE,\n    distanceKm,\n    rate: FALLBACK_RATE,",
-    "  const runtimeDeliveryRate = (await loadSiteProfile(env)).deliveryRate;\n  const result = {\n    requestedName: place,\n    resolvedName: selected.display_name,\n    shortName: [...new Set(shortNameParts)].join(', ') || selected.display_name,\n    price: distanceKm * runtimeDeliveryRate,\n    distanceKm,\n    rate: runtimeDeliveryRate,"
-  )
-  .replaceAll('https://kuznechny-dvorik-gates.dragnaledon1284.chatgpt.site', 'https://kuznechny-dvorik-gates.boss-nedvetskiy.workers.dev');
-
-patchedWorkerSource = patchedWorkerSource.replace(
-  "if (url.pathname === '/api/admin/catalog' && request.method === 'GET') {\n    try {\n      return json({galleries: await allGalleries(env, true)});",
-  "if (url.pathname === '/api/admin/site-settings') {\n    try {\n      if (request.method === 'GET') return json({site: await loadSiteProfile(env)});\n      if (request.method === 'POST') return await saveSiteProfile(request, env);\n      return json({error: 'Метод не поддерживается'}, 405);\n    } catch (error) {\n      return json({error: 'Не удалось сохранить настройки сайта: ' + errorMessage(error)}, 500);\n    }\n  }\n  if (url.pathname === '/api/admin/prices') {\n    try {\n      if (request.method === 'GET') return json({prices: await loadPrices(env)});\n      if (request.method === 'POST') return await savePrices(request, env);\n      return json({error: 'Метод не поддерживается'}, 405);\n    } catch (error) {\n      return json({error: 'Не удалось сохранить цены: ' + errorMessage(error)}, 500);\n    }\n  }\n  if (url.pathname === '/api/admin/leads' && request.method === 'GET') {\n    try {\n      return json(await listLeads(env));\n    } catch (error) {\n      return json({error: 'Не удалось загрузить заявки: ' + errorMessage(error)}, 500);\n    }\n  }\n  if (url.pathname.startsWith('/api/admin/leads/') && request.method === 'POST') {\n    try {\n      return await updateLeadStatus(request, env, url.pathname.slice('/api/admin/leads/'.length));\n    } catch (error) {\n      return json({error: 'Не удалось обновить заявку: ' + errorMessage(error)}, 500);\n    }\n  }\n  if (url.pathname === '/api/admin/catalog' && request.method === 'GET') {\n    try {\n      return json({galleries: await allGalleries(env, true), photoUploadEnabled: Boolean(env.BUCKET || env.DB)});"
-);
-
-patchedWorkerSource = patchedWorkerSource.replace(
-  "if (url.pathname.startsWith('/catalog-media/')) return serveCatalogMedia(env, url.pathname);\n    if (url.pathname === '/api/catalog-images' && request.method === 'GET') {",
-  "if (url.pathname.startsWith('/catalog-media/')) return serveCatalogMedia(env, url.pathname);\n    if (url.pathname === '/api/leads') {\n      if (request.method !== 'POST') return json({error: 'Метод не поддерживается'}, 405);\n      try {\n        return await createLead(request, env, url);\n      } catch (error) {\n        return json({error: 'Не удалось сохранить заявку: ' + errorMessage(error)}, 500);\n      }\n    }\n    if (url.pathname === '/api/catalog-images' && request.method === 'GET') {"
-);
-
-patchedWorkerSource = patchedWorkerSource.replace(
-  "    if (url.pathname !== '/' && url.pathname !== '/index.html')",
-  "    if (url.pathname === '/napravleniya' || url.pathname === '/napravleniya/') return html(await renderProductHub(env));\n    if (url.pathname !== '/' && url.pathname !== '/index.html' && url.pathname !== '/vorota' && url.pathname !== '/vorota/')"
-);
-patchedWorkerSource = patchedWorkerSource.replace('return html(PAGE);\n  }\n};', 'return html(await renderPublicPage(env));\n  }\n};');
+const workerModules = [
+  adminAuthSource,
+  siteSettingsSource,
+  leadAntispamSource,
+  gateQuoteSource,
+  catalogMediaSource,
+  leadsSource
+].map(source => source.trim()).join('\n\n');
+if (!workerSource.includes('/*__WORKER_MODULES__*/')) throw new Error('Не найден маркер модулей Worker');
+const patchedWorkerSource = workerSource.replace('/*__WORKER_MODULES__*/', workerModules);
 
 for (const requiredWorkerFeature of ['calculateAuthoritativeGateQuote','consumeLeadAttempt','DEFAULT_GATE_CALC_MODELS','DEFAULT_DELIVERY_PRICES']) {
   if (!patchedWorkerSource.includes(requiredWorkerFeature)) throw new Error(`Worker assembly missing ${requiredWorkerFeature}`);

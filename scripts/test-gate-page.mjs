@@ -70,6 +70,12 @@ assert(html.includes('id="calculatorParking"') && app.includes('calculatorParkin
 assert(workerLeads.includes('calculateAuthoritativeGateQuote') && workerLeads.includes('client_total') && workerLeads.includes('quote_verified'), 'Gate leads must be recalculated and audited server-side');
 assert(gateQuote.includes('calculateGateProductServer') && !gateQuote.includes('new Function') && !gateQuote.includes('eval('), 'Server gate quote must not use runtime code evaluation');
 assert(antiSpam.includes('honeypotTriggered') && antiSpam.includes('LEAD_RATE_MAX'), 'Public lead anti-spam guard missing');
+assert(antiSpam.includes('lead_rate_limits') && antiSpam.includes('env.DB.prepare'), 'Lead rate limit must be globally backed by D1');
+assert(workerLeads.includes('await consumeLeadAttempt(request, env)'), 'Lead endpoint must await global rate limiting');
+assert(workerLeads.includes('quote?.total ?? clientTotal') && workerLeads.includes('quote_mismatch'), 'Server quote must override and audit client totals');
+assert(workerRuntime.includes('/*__WORKER_MODULES__*/'), 'Worker runtime must expose a module composition marker');
+assert(workerRuntime.includes("url.pathname === '/api/leads'") && workerRuntime.includes("url.pathname === '/api/admin/site-settings'"), 'Worker routes must live in runtime source');
+assert(!build.includes('const authStart = workerSource.indexOf') && !build.includes('const uploadStart = patchedWorkerSource.indexOf') && !build.includes('const serveStart = patchedWorkerSource.indexOf'), 'Build must not surgically rewrite Worker function bodies');
 assert(html.includes('websiteInput') && app.includes('website:document.getElementById'), 'Lead honeypot must be wired end-to-end');
 assert(workerRuntime.includes('serviceAreaKm') && workerRuntime.includes('outOfArea') && workerRuntime.includes('calculateUnknownDelivery(place, env)'), 'Delivery API must enforce runtime service area');
 assert(delivery.includes('out-of-area') && ui.includes("['out-of-area','error']"), 'Out-of-area delivery must still allow a manual lead');

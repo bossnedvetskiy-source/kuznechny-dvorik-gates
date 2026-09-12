@@ -82,6 +82,25 @@ for (const [article, model] of Object.entries(context.GATE_CALC_MODELS.models)) 
   }
 }
 
+context.DEFAULT_DELIVERY_PRICES = {destinations:[{name:'Мелеуз',price:0}], fallbackRatePerKm:90, origin:{name:'Мелеуз'}};
+context.loadPrices = async () => ({catalogInstallation:8000,catalogPosts:25000,catalog:[{art:'Арт.6',visible:true}]});
+context.loadSiteProfile = async () => ({serviceAreaKm:150,deliveryRate:90});
+context.calculateUnknownDelivery = async () => ({shortName:'Тестово',price:9000,distanceKm:100,serviceAreaKm:150,outOfArea:false});
+const authoritative = await context.calculateAuthoritativeGateQuote({
+  article:'Арт.6',width:3.4,height:1.8,wicketWidth:1,wicketHeight:1.8,posts:false,city:'Мелеуз',total:1
+}, {});
+if (authoritative.total !== 64600 || !authoritative.quoteVerified) {
+  failures += 1;
+  console.error(`AUTHORITATIVE QUOTE FAIL: expected 64600 verified, got ${authoritative.total}`);
+}
+const authoritativePosts = await context.calculateAuthoritativeGateQuote({
+  article:'Арт.6',width:3.4,height:1.8,wicketWidth:1,wicketHeight:1.8,posts:true,city:'Мелеуз',total:9999999
+}, {});
+if (authoritativePosts.total !== 89600) {
+  failures += 1;
+  console.error(`AUTHORITATIVE POSTS FAIL: expected 89600, got ${authoritativePosts.total}`);
+}
+
 console.log(`Server quote control cases: ${cases.length}; failures: ${failures}`);
 console.log(`Server quote article models: ${Object.keys(context.GATE_CALC_MODELS.models).length}`);
 if (failures) process.exit(1);

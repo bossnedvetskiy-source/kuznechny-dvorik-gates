@@ -102,7 +102,7 @@ async function createLead(request, env, url) {
   let body;
   try { body = await request.json(); } catch { return json({error: 'Некорректная заявка'}, 400); }
   if (honeypotTriggered(body)) return json({ok:true, id:null}, 201);
-  const rate = consumeLeadAttempt(request);
+  const rate = await consumeLeadAttempt(request, env);
   if (!rate.allowed) {
     return json({error:'Слишком много заявок за короткое время. Попробуйте немного позже.'}, 429, 'no-store', {'retry-after':String(rate.retryAfterSeconds)});
   }
