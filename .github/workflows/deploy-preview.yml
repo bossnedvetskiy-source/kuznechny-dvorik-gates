@@ -25,11 +25,13 @@ jobs:
         run: |
           node --check app.js
           node --check gate-page-ui.js
+          node --check color-photo-site.js
           node --check shared/customer-context.js
           node --check shared/delivery.js
           node --check shared/leads.js
           node --check public-site-settings.js
           node --check admin.js
+          node --check admin-colors.js
           node --check admin-prices.js
           node --check admin-site.js
           node --check admin-leads.js
@@ -39,13 +41,18 @@ jobs:
           node --check worker/gate-quote-d1.js
           node --check worker/lead-antispam.js
           node --check worker/catalog-media-d1.js
+          node --check worker/catalog-colors-d1.js
           node --check worker/leads-d1.js
           node --check scripts/build.mjs
           node --check scripts/test-catalog-images.mjs
+          node --check scripts/test-color-photos.mjs
           node --check scripts/check-production.mjs
 
       - name: Verify catalog images
         run: node scripts/test-catalog-images.mjs
+
+      - name: Verify color photo flow
+        run: node scripts/test-color-photos.mjs
 
       - name: Verify gate page foundation
         run: node scripts/test-gate-page.mjs
@@ -84,7 +91,7 @@ jobs:
           rm -rf _site
           mkdir -p _site/catalog _site/shared _site/napravleniya
 
-          cp index.html styles.css storefront.css gate-page.css app.js public-site-settings.js gate-page-ui.js prices.js catalog-images.js _site/
+          cp index.html styles.css storefront.css gate-page.css app.js public-site-settings.js gate-page-ui.js color-photo-site.js prices.js catalog-images.js _site/
           cp gate-calc-prices.js gate-calc-models-chunk1.js gate-calc-models-chunk2.js gate-calc-models-chunk3.js gate-calc-models-chunk4.js gate-calc-models.js gate-calc-engine.js _site/
           cp shared/customer-context.js shared/delivery.js shared/leads.js _site/shared/
           cp assets/hero-gates.jpg _site/hero-gates.jpg
@@ -92,7 +99,7 @@ jobs:
           cp delivery-prices.json _site/delivery-prices.json
 
           cp home.html home.css product-categories.js _site/napravleniya/
-          cp admin.html admin.css admin.js admin-prices.js admin-site.js admin-leads.js _site/
+          cp admin.html admin.css admin.js admin-colors.js admin-prices.js admin-site.js admin-leads.js _site/
           touch _site/.nojekyll
 
           node <<'NODE'
@@ -101,6 +108,7 @@ jobs:
 
           let html = fs.readFileSync('_site/index.html', 'utf8');
           html = html.replace('<script id="deliveryData" type="application/json">{}</script>', `<script id="deliveryData" type="application/json">${delivery.replace(/</g,'\\u003c')}</script>`);
+          html = html.replace('<script src="gate-page-ui.js"></script>', '<script src="gate-page-ui.js"></script>\n  <script src="color-photo-site.js"></script>');
           html = html.replaceAll('/hero-gates.jpg', 'hero-gates.jpg');
           html = html.replaceAll('/catalog/', 'catalog/');
           fs.writeFileSync('_site/index.html', html);
@@ -115,6 +123,10 @@ jobs:
           app = app.replaceAll('fetch(`/api/', 'fetch(`api/');
           fs.writeFileSync('_site/app.js', app);
 
+          let colors = fs.readFileSync('_site/color-photo-site.js', 'utf8');
+          colors = colors.replaceAll("fetch('/api/", "fetch('api/");
+          fs.writeFileSync('_site/color-photo-site.js', colors);
+
           let home = fs.readFileSync('_site/napravleniya/home.html', 'utf8');
           home = home.replace('__RUNTIME_SITE_DATA__', '{}');
           home = home.replace('href="/napravleniya"', 'href="./"');
@@ -127,10 +139,11 @@ jobs:
           fs.writeFileSync('_site/napravleniya/product-categories.js', categories);
 
           let admin = fs.readFileSync('_site/admin.html', 'utf8');
+          admin = admin.replace('<script src="admin.js"></script>', '<script src="admin.js"></script>\n  <script src="admin-colors.js"></script>');
           admin = admin.replaceAll('href="/"', 'href="./"');
           fs.writeFileSync('_site/admin.html', admin);
 
-          for (const file of ['admin.js','admin-prices.js','admin-site.js','admin-leads.js']) {
+          for (const file of ['admin.js','admin-colors.js','admin-prices.js','admin-site.js','admin-leads.js']) {
             let js = fs.readFileSync(`_site/${file}`, 'utf8');
             js = js.replaceAll("'/api/", "'api/");
             js = js.replaceAll('"/api/', '"api/');
