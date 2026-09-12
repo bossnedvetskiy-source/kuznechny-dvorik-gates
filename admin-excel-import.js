@@ -180,8 +180,8 @@
     const workbook = XLSX.read(buffer, {type:'array', cellFormula:true, cellText:false, cellDates:false});
     const materialSheet = workbook.Sheets?.['Лист3'];
     if (!materialSheet) throw new Error('Это не тот файл расчёта: не найден лист «Лист3».');
-    const calcSheets = (workbook.SheetNames || []).filter(name => /\(р\)/iu.test(name));
-    if (calcSheets.length < 35) throw new Error(`В файле найдено только ${calcSheets.length} расчётных листов Арт(р). Ожидался полный файл ворот.`);
+    const calcSheets = (workbook.SheetNames || []).filter(name => /\(р\)/iu.test(name)).filter(name => !/арт\s*(?:39|40)\s*\(р\)/iu.test(name));
+    if (calcSheets.length !== 38) throw new Error(`В файле найдено ${calcSheets.length} рабочих расчётных листов Арт(р). Ожидалось 38 используемых моделей.`);
 
     const prices = {};
     for (const [ref, current] of Object.entries(currentState.prices)) {
@@ -194,7 +194,7 @@
     const workbookStandards = cachedWorkbookStandards(workbook);
     const checked = Object.keys(afterStandards).filter(article => Number.isFinite(Number(workbookStandards[article])));
     const mismatches = checked.filter(article => Math.round(Number(workbookStandards[article])) !== Math.round(Number(afterStandards[article])));
-    if (checked.length < 35) throw new Error('Excel не содержит сохранённых итоговых значений для проверки. Откройте файл в Excel, пересчитайте и сохраните его, затем загрузите снова.');
+    if (checked.length < 38) throw new Error('Excel не содержит сохранённых итоговых значений для всех 38 используемых моделей. Откройте файл в Excel, пересчитайте и сохраните его, затем загрузите снова.');
 
     const materialChanges = Object.entries(prices).filter(([ref,item]) => Number(item.value) !== Number(currentState.prices?.[ref]?.value)).map(([ref,item]) => ({ref,label:item.label,old:Number(currentState.prices[ref].value),next:Number(item.value)}));
     const modelChanges = Object.entries(afterStandards).filter(([article,value]) => Number(value) !== Number(beforeStandards[article])).map(([article,value]) => ({article,old:Number(beforeStandards[article]),next:Number(value)}));

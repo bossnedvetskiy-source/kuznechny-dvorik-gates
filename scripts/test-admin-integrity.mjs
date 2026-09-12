@@ -31,6 +31,8 @@ const required = [
   [excelAdmin, "workbook.Sheets?.['Лист3']", 'material price source sheet'],
   [excelAdmin, '/api/admin/gate-excel', 'Excel publish API'],
   [excelAdmin, 'Публикация заблокирована', 'formula drift protection'],
+  [excelAdmin, 'Ожидалось 38 используемых моделей', '38-model Excel validation'],
+  [excelAdmin, 'Boolean(currentState?.fileAvailable)', 'first Excel publication without price changes'],
   [formulaSite, 'KUZDVOR_FORMULA_PRICE_SYNC_READY', 'formula catalog sync'],
   [build, "readFile('admin-excel-import.js'", 'production Excel admin bundle'],
   [build, "readFile('worker/excel-pricing-d1.js'", 'production Excel server module'],
