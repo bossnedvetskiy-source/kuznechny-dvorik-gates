@@ -72,6 +72,22 @@
     hours.textContent = site.businessHours;
   }
 
+  const applyProfileSheetTexture = root => {
+    root?.querySelectorAll?.('.profile-color-option:not(.is-more) .profile-color-dot').forEach(dot => {
+      if (dot.dataset.sheetTexture === '1') return;
+      dot.dataset.sheetTexture = '1';
+      dot.style.backgroundImage = 'linear-gradient(180deg,rgba(255,255,255,.34) 0%,rgba(255,255,255,.08) 38%,rgba(0,0,0,.18) 100%),repeating-linear-gradient(90deg,rgba(255,255,255,.30) 0 1px,rgba(255,255,255,.10) 1px 3px,rgba(0,0,0,.22) 3px 5px,rgba(255,255,255,.08) 5px 8px)';
+      dot.style.backgroundBlendMode = 'soft-light,normal';
+    });
+  };
+
+  const catalogGrid = document.getElementById('catalogGrid');
+  if (catalogGrid) {
+    applyProfileSheetTexture(catalogGrid);
+    new MutationObserver(() => applyProfileSheetTexture(catalogGrid)).observe(catalogGrid, {childList:true, subtree:true});
+    setTimeout(() => applyProfileSheetTexture(catalogGrid), 0);
+  }
+
   if (window.matchMedia('(max-width: 620px)').matches) {
     const packageSection = document.querySelector('.package');
     const trustSection = document.querySelector('.trust');
