@@ -73,6 +73,25 @@ jobs:
             if (!before.heroPrice) throw new Error('Hero price did not initialize');
             if (before.calculatorLoaded || before.calculatorApi || calculatorRequestedBefore) throw new Error('Heavy calculator loaded before user intent');
 
+            const showMore = page.locator('#showMoreButton');
+            await showMore.scrollIntoViewIfNeeded();
+            await page.waitForTimeout(150);
+            const scrollBeforeMore = await page.evaluate(() => window.scrollY);
+            await showMore.click({timeout:10000});
+            await page.waitForFunction(() => document.querySelectorAll('#catalogGrid .product-card').length >= 12, null, {timeout:10000});
+            await page.waitForTimeout(250);
+            const showMoreState = await page.evaluate(() => ({
+              scrollY: window.scrollY,
+              cards: document.querySelectorAll('#catalogGrid .product-card').length,
+              firstNewTop: document.querySelectorAll('#catalogGrid .product-card')[6]?.getBoundingClientRect().top ?? null,
+              viewportHeight: window.innerHeight
+            }));
+            console.log('SHOW_MORE_SCROLL_BEFORE', scrollBeforeMore);
+            console.log('SHOW_MORE_STATE', JSON.stringify(showMoreState));
+            if (Math.abs(showMoreState.scrollY - scrollBeforeMore) > 12) throw new Error(`Show-more changed viewport by ${showMoreState.scrollY - scrollBeforeMore}px`);
+            if (showMoreState.cards < 12) throw new Error('Show-more did not reveal the next six cards');
+            if (showMoreState.firstNewTop === null || showMoreState.firstNewTop > showMoreState.viewportHeight + 20) throw new Error('First newly revealed card is not near the current viewport');
+
             await page.evaluate(() => {
               window.__diagCalculated = 0;
               document.addEventListener('gate:calculated', () => { window.__diagCalculated += 1; });
