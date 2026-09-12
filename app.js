@@ -91,11 +91,8 @@ function pluralModels(count) {
 function productById(id) { return catalogProducts.find(item => item.id === id) || null; }
 function selectedProduct() { return productById(selectedProductId) || catalogProducts[0]; }
 
-function renderProducts() {
-  const openProductId = calculatorPanel.hidden ? '' : selectedProductId;
-  if (calculatorPanel.parentElement === grid) calculatorPanel.remove();
-  const visible = catalogProducts.slice(0, visibleCount);
-  grid.innerHTML = visible.map(product => `<article class="product-card ${product.media}" data-card-product="${product.id}">
+function productCardMarkup(product) {
+  return `<article class="product-card ${product.media}" data-card-product="${product.id}">
     <div class="product-visual" data-gallery-card="${product.id}" data-image-index="0">
       <span class="product-art">${product.art}</span>
       <button class="product-image-open" data-zoom="${product.id}" type="button" aria-label="Открыть ${product.media==='sketch'?'эскиз':'галерею'} ${product.art}">
@@ -112,59 +109,105 @@ function renderProducts() {
         <div class="price-delivery-note">Доставка рассчитывается после выбора места установки</div>
       </div><button class="select-product" data-product="${product.id}" type="button" aria-expanded="false">Рассчитать стоимость</button></div>
     </div>
-  </article>`).join('');
+  </article>`;
+}
 
-  catalogCount.textContent = `${catalogProducts.length} ${pluralModels(catalogProducts.length)}`;
-  emptyState.hidden = catalogProducts.length > 0;
-  catalogMore.hidden = catalogProducts.length === 0;
-  const remaining = Math.max(0,catalogProducts.length-visible.length);
-  const nextCount = Math.min(pageSize(),remaining);
-  catalogProgress.textContent = `Показано ${visible.length} из ${catalogProducts.length}`;
-  showMoreButton.hidden = visible.length >= catalogProducts.length;
-  showMoreButton.textContent = nextCount ? `Показать ещё ${nextCount} ${pluralModels(nextCount)}` : '';
-
-  grid.querySelectorAll('.select-product').forEach(button => button.addEventListener('click', () => {
+function bindSelectButton(button) {
+  if (!button || button.dataset.catalogSelectBound === '1') return;
+  button.dataset.catalogSelectBound = '1';
+  button.addEventListener('click', () => {
     if (window.ym) ym(107269914,'reachGoal','calculator_start',{article:button.dataset.product});
     openCalculatorForProduct(button.dataset.product,true);
-  }));
-  grid.querySelectorAll('[data-gallery-shift]').forEach(button => button.addEventListener('click', event => {
+  });
+}
+
+function bindGalleryShiftButton(button) {
+  if (!button || button.dataset.catalogGalleryBound === '1') return;
+  button.dataset.catalogGalleryBound = '1';
+  button.addEventListener('click', event => {
     event.stopPropagation();
     const visual = button.closest('[data-gallery-card]');
     const current = Number(visual?.dataset.imageIndex)||0;
     showCardImage(visual,current + Number(button.dataset.galleryShift));
-  }));
-  grid.querySelectorAll('[data-zoom]').forEach(button => {
-    let startX=0;
-    let swiped=false;
-    button.addEventListener('touchstart',event=>{startX=event.touches[0]?.clientX||0;swiped=false},{passive:true});
-    button.addEventListener('touchend',event=>{
-      const visual=button.closest('[data-gallery-card]');
-      const delta=(event.changedTouches[0]?.clientX||0)-startX;
-      if(Math.abs(delta)<45)return;
-      swiped=true;
-      const current=Number(visual?.dataset.imageIndex)||0;
-      showCardImage(visual,current+(delta<0?1:-1));
-    },{passive:true});
-    button.addEventListener('click',()=>{
-      if(swiped){swiped=false;return;}
-      const visual=button.closest('[data-gallery-card]');
-      openLightbox(button.dataset.zoom,Number(visual?.dataset.imageIndex)||0);
-    });
   });
-  if(openProductId){
-    const openCard=grid.querySelector(`[data-card-product="${CSS.escape(openProductId)}"]`);
-    if(openCard){
-      placeCalculatorAfterRow(openCard);
-      calculatorPanel.hidden=false;
-      document.body.classList.add('calculator-open');
-      openCard.querySelector('.select-product')?.setAttribute('aria-expanded','true');
-      calculate();
-    } else {
-      calculatorPanel.hidden=true;
-      document.body.classList.remove('calculator-open');
-    }
-  }
+}
 
+function bindZoomButton(button) {
+  if (!button || button.dataset.catalogZoomBound === '1') return;
+  button.dataset.catalogZoomBound = '1';
+  let startX=0;
+  let swiped=false;
+  button.addEventListener('touchstart',event=>{startX=event.touches[0]?.clientX||0;swiped=false},{passive:true});
+  button.addEventListener('touchend',event=>{
+    const visual=button.closest('[data-gallery-card]');
+    const delta=(event.changedTouches[0]?.clientX||0)-startX;
+    if(Math.abs(delta)<45)return;
+    swiped=true;
+    const current=Number(visual?.dataset.imageIndex)||0;
+    showCardImage(visual,current+(delta<0?1:-1));
+  },{passive:true});
+  button.addEventListener('click',()=>{
+    if(swiped){swiped=false;return;}
+    const visual=button.closest('[data-gallery-card]');
+    openLightbox(button.dataset.zoom,Number(visual?.dataset.imageIndex)||0);
+  });
+}
+
+function bindCardInteractions(cards) {
+  for (const card of cards) {
+    bindSelectButton(card.querySelector('.select-product'));
+    card.querySelectorAll('[data-gallery-shift]').forEach(bindGalleryShiftButton);
+    bindZoomButton(card.querySelector('[data-zoom]'));
+  }
+}
+
+function syncCatalogControls() {
+  const shown = Math.min(visibleCount,catalogProducts.length);
+  catalogCount.textContent = `${catalogProducts.length} ${pluralModels(catalogProducts.length)}`;
+  emptyState.hidden = catalogProducts.length > 0;
+  catalogMore.hidden = catalogProducts.length === 0;
+  const remaining = Math.max(0,catalogProducts.length-shown);
+  const nextCount = Math.min(pageSize(),remaining);
+  catalogProgress.textContent = `Показано ${shown} из ${catalogProducts.length}`;
+  showMoreButton.hidden = shown >= catalogProducts.length;
+  showMoreButton.textContent = nextCount ? `Показать ещё ${nextCount} ${pluralModels(nextCount)}` : '';
+}
+
+function restoreOpenCalculator(openProductId) {
+  if (!openProductId) return;
+  const openCard=grid.querySelector(`[data-card-product="${CSS.escape(openProductId)}"]`);
+  if(openCard){
+    placeCalculatorAfterRow(openCard);
+    calculatorPanel.hidden=false;
+    document.body.classList.add('calculator-open');
+    openCard.querySelector('.select-product')?.setAttribute('aria-expanded','true');
+    calculate();
+  } else {
+    calculatorPanel.hidden=true;
+    document.body.classList.remove('calculator-open');
+  }
+}
+
+function renderProducts() {
+  const openProductId = calculatorPanel.hidden ? '' : selectedProductId;
+  if (calculatorPanel.parentElement === grid) calculatorPanel.remove();
+  const visible = catalogProducts.slice(0, visibleCount);
+  grid.innerHTML = visible.map(productCardMarkup).join('');
+  bindCardInteractions(grid.querySelectorAll('.product-card'));
+  syncCatalogControls();
+  restoreOpenCalculator(openProductId);
+}
+
+function appendProducts(fromIndex,toIndex) {
+  const additions = catalogProducts.slice(fromIndex,toIndex);
+  if (!additions.length) { syncCatalogControls(); return []; }
+  const template=document.createElement('template');
+  template.innerHTML=additions.map(productCardMarkup).join('');
+  const cards=[...template.content.querySelectorAll('.product-card')];
+  grid.append(template.content);
+  bindCardInteractions(cards);
+  syncCatalogControls();
+  return cards;
 }
 
 function showCardImage(visual,index) {
@@ -181,8 +224,83 @@ function showCardImage(visual,index) {
   if(counter) counter.textContent=product.media==='sketch'?'Эскиз':count>1?`${next+1} из ${count}`:'1 фото';
 }
 
-showMoreButton.addEventListener('click',()=>{visibleCount+=pageSize();reachGoal('catalog_show_more',{visible:Math.min(visibleCount,catalogProducts.length),total:catalogProducts.length});renderProducts()});
-mobileCatalogMedia.addEventListener('change',()=>{visibleCount=pageSize();renderProducts()});
+function rebuildDesktopThumbnails(card,product) {
+  if (!card || !product) return;
+  card.querySelector('.card-thumbnails')?.remove();
+  if (mobileCatalogMedia.matches || product.gallery.length < 2) return;
+  const visual=card.querySelector('[data-gallery-card]');
+  if(!visual)return;
+  const strip=document.createElement('div');
+  strip.className='card-thumbnails';
+  product.gallery.forEach((url,index)=>{
+    const button=document.createElement('button');
+    button.type='button';
+    button.className='card-thumb';
+    button.setAttribute('aria-label',`Показать фото ${index+1}`);
+    button.innerHTML=`<img src="${url}" alt="" loading="lazy">`;
+    button.addEventListener('click',event=>{event.stopPropagation();showCardImage(visual,index);});
+    strip.append(button);
+  });
+  visual.after(strip);
+}
+
+function syncProductCardMedia(product) {
+  const card=grid.querySelector(`[data-card-product="${CSS.escape(product.id)}"]`);
+  if(!card)return;
+  card.classList.toggle('sketch',product.media==='sketch');
+  card.classList.toggle('photo',product.media!=='sketch');
+  const visual=card.querySelector('[data-gallery-card]');
+  if(!visual)return;
+  visual.dataset.galleryCard=product.id;
+  const imageButton=visual.querySelector('.product-image-open');
+  if(imageButton){
+    imageButton.dataset.zoom=product.id;
+    imageButton.setAttribute('aria-label',`Открыть ${product.media==='sketch'?'эскиз':'галерею'} ${product.art}`);
+  }
+  visual.querySelectorAll('.card-gallery-arrow').forEach(button=>button.remove());
+  const counter=visual.querySelector('[data-photo-count]');
+  if(product.gallery.length>1){
+    const previous=document.createElement('button');
+    previous.className='card-gallery-arrow previous';previous.dataset.galleryShift='-1';previous.type='button';previous.setAttribute('aria-label',`Предыдущая фотография ${product.art}`);previous.textContent='‹';
+    const next=document.createElement('button');
+    next.className='card-gallery-arrow next';next.dataset.galleryShift='1';next.type='button';next.setAttribute('aria-label',`Следующая фотография ${product.art}`);next.textContent='›';
+    if(counter){counter.before(previous,next)}else{visual.append(previous,next)}
+    bindGalleryShiftButton(previous);bindGalleryShiftButton(next);
+    if(visual.dataset.colorPreview){previous.hidden=true;next.hidden=true;}
+  }
+  if(!visual.dataset.colorPreview){
+    const current=Math.max(0,Number(visual.dataset.imageIndex)||0);
+    const safeIndex=Math.min(current,Math.max(0,product.gallery.length-1));
+    if(safeIndex!==current)visual.dataset.imageIndex=String(safeIndex);
+    const image=visual.querySelector('.product-image-open img');
+    const url=product.gallery[safeIndex]||product.image;
+    if(image&&url){image.src=url;image.alt=`${product.media==='sketch'?'Эскиз':'Фотография'} ворот с калиткой ${product.art}${product.gallery.length>1?`, ${safeIndex+1} из ${product.gallery.length}`:''}`;}
+    const backdrop=visual.querySelector('.product-image-backdrop');
+    if(backdrop&&url)backdrop.src=url;
+    if(counter)counter.textContent=product.media==='sketch'?'Эскиз':product.gallery.length>1?`${safeIndex+1} из ${product.gallery.length}`:'1 фото';
+  }
+  rebuildDesktopThumbnails(card,product);
+}
+
+showMoreButton.addEventListener('click',()=>{
+  const previousVisible=Math.min(visibleCount,catalogProducts.length);
+  visibleCount=Math.min(catalogProducts.length,visibleCount+pageSize());
+  reachGoal('catalog_show_more',{visible:visibleCount,total:catalogProducts.length});
+  appendProducts(previousVisible,visibleCount);
+});
+mobileCatalogMedia.addEventListener('change',()=>{
+  const previousVisible=Math.min(visibleCount,catalogProducts.length);
+  visibleCount=Math.min(catalogProducts.length,Math.max(visibleCount,pageSize()));
+  if(visibleCount>previousVisible)appendProducts(previousVisible,visibleCount);
+  else syncCatalogControls();
+  catalogProducts.slice(0,visibleCount).forEach(product=>rebuildDesktopThumbnails(grid.querySelector(`[data-card-product="${CSS.escape(product.id)}"]`),product));
+  if(!calculatorPanel.hidden){
+    requestAnimationFrame(()=>{
+      const card=grid.querySelector(`[data-card-product="${CSS.escape(selectedProductId)}"]`);
+      if(card)placeCalculatorAfterRow(card);
+    });
+  }
+});
 
 function loadCatalogImagesData() {
   if (!window.KUZDVOR_CATALOG_IMAGES_PROMISE) {
@@ -197,7 +315,7 @@ async function loadPublishedGalleries() {
   try {
     const data=await loadCatalogImagesData();
     if(!data)return;
-    let visibleChanged=false;
+    const changedVisible=[];
     for(const product of catalogProducts){
       const published=data.galleries?.[product.art];
       if(!published||!Array.isArray(published.photos)||!published.photos.length)continue;
@@ -206,13 +324,18 @@ async function loadPublishedGalleries() {
       const nextMedia=published.mediaType==='sketch'?'sketch':'photo';
       const changed=product.media!==nextMedia || product.gallery.length!==photos.length || product.gallery.some((url,index)=>url!==photos[index]);
       if(!changed)continue;
-      if(product.rank<=visibleCount)visibleChanged=true;
       product.gallery=photos;
       product.image=photos[0];
       product.media=nextMedia;
+      if(product.rank<=visibleCount)changedVisible.push(product);
     }
-    if(visibleChanged)renderProducts();
-    updateSelectedPreview();
+    changedVisible.forEach(syncProductCardMedia);
+    const selected=selectedProduct();
+    const colorSelection=window.GATE_PAGE_API?.colorSelectionForProduct?.(selected.id);
+    if(!colorSelection&&selectedProductImage){
+      selectedProductImage.src=selected.image;
+      selectedProductImage.alt=`Ворота с калиткой ${selected.art}`;
+    }
   } catch {}
 }
 
