@@ -1,3 +1,4 @@
+# One-time cleanup workflow. Remove after successful run.
 name: Cleanup retired gate models and master Excel
 
 on:
@@ -29,17 +30,14 @@ jobs:
                   raise SystemExit(f'Expected block not found in {path}: {old[:140]!r}')
               p.write_text(s.replace(old, new, 1), encoding='utf-8')
 
-          # Browser/admin model loader: retired models must never be exposed to the calculator.
           replace('gate-calc-models.js',
           """  (0,eval)(text);\n  delete window.__GATE_CALC_B64;\n  return window.GATE_CALC_MODELS;""",
           """  (0,eval)(text);\n  if (window.GATE_CALC_MODELS?.models) {\n    for (const article of ['39','40']) delete window.GATE_CALC_MODELS.models[article];\n  }\n  delete window.__GATE_CALC_B64;\n  return window.GATE_CALC_MODELS;""")
 
-          # Production server bundle independently filters the same retired models.
           replace('scripts/build.mjs',
           """const rawGateModels = Function('window', '\"use strict\";\\n' + gateModelsScript + '\\nreturn window.GATE_CALC_MODELS;')({});\nif (!rawGateModels?.models) throw new Error('Не удалось распаковать серверные модели ворот');\nconst serverGateModelSource = `{models:{${Object.entries(rawGateModels.models || {}).map(([key,model]) => {\n  const formulas = Object.entries(model.formulas || {}).map(([ref,expr]) => `${JSON.stringify(ref)}:(ctx,p,v,sum,roundExcel,roundUp)=>(${expr})`).join(',');\n  return `${JSON.stringify(key)}:{gateRef:${JSON.stringify(model.gateRef)},wicketRef:${JSON.stringify(model.wicketRef)},standard:${JSON.stringify(model.standard || {})},literals:${JSON.stringify(model.literals || {})},formulas:{${formulas}}}`;\n}).join(',')}}}`;""",
           """const rawGateModels = Function('window', '\"use strict\";\\n' + gateModelsScript + '\\nreturn window.GATE_CALC_MODELS;')({});\nif (!rawGateModels?.models) throw new Error('Не удалось распаковать серверные модели ворот');\nconst retiredGateArticles = new Set(['39','40']);\nconst activeGateModelEntries = Object.entries(rawGateModels.models || {}).filter(([key]) => !retiredGateArticles.has(String(key)));\nif (activeGateModelEntries.length !== 38) throw new Error(`Ожидалось 38 используемых моделей ворот, получено ${activeGateModelEntries.length}`);\nconst serverGateModelSource = `{models:{${activeGateModelEntries.map(([key,model]) => {\n  const formulas = Object.entries(model.formulas || {}).map(([ref,expr]) => `${JSON.stringify(ref)}:(ctx,p,v,sum,roundExcel,roundUp)=>(${expr})`).join(',');\n  return `${JSON.stringify(key)}:{gateRef:${JSON.stringify(model.gateRef)},wicketRef:${JSON.stringify(model.wicketRef)},standard:${JSON.stringify(model.standard || {})},literals:${JSON.stringify(model.literals || {})},formulas:{${formulas}}}`;\n}).join(',')}}}`;""")
 
-          # The cleaned master workbook has a human-friendly sheet name. Keep old files compatible too.
           replace('scripts/build.mjs',
           """const xlsxBrowserSafe = xlsxBrowserSource.replace(/<\\/script/gi, '<\\\\/script');\n\nconst publicJs = js;""",
           """const xlsxBrowserSafe = xlsxBrowserSource.replace(/<\\/script/gi, '<\\\\/script');\nconst adminExcelCompatibilitySource = `(() => {\n  if (!window.XLSX?.read || window.KUZDVOR_MASTER_EXCEL_COMPAT) return;\n  window.KUZDVOR_MASTER_EXCEL_COMPAT = true;\n  const originalRead = window.XLSX.read;\n  window.XLSX.read = function(...args) {\n    const workbook = originalRead.apply(this, args);\n    const friendlySheet = workbook?.Sheets?.['ЦЕНЫ МАТЕРИАЛОВ'];\n    if (friendlySheet && !workbook.Sheets['Лист3']) workbook.Sheets['Лист3'] = friendlySheet;\n    return workbook;\n  };\n  queueMicrotask(() => {\n    const intro = document.querySelector('.excel-import-intro');\n    if (intro) intro.innerHTML = '<b>Цена ворот берётся только из Excel.</b> Скачайте текущий расчёт, измените значения на листе «ЦЕНЫ МАТЕРИАЛОВ», пересчитайте и сохраните файл в Excel, затем загрузите его сюда. После публикации сайт хранит сам .xlsx.';\n  });\n})();`;\n\nconst publicJs = js;""")
@@ -48,12 +46,10 @@ jobs:
           """  .replace('<script src=\"admin-prices.js\"></script>', `<script>${adminPricesJsSource}</script><script>${adminSiteJsSource}</script><script>${adminLeadsJsSource}</script><script>${adminEnhancementsJsSource}</script><script>${xlsxBrowserSafe}</script><script>${gateCalcModelLoaderBundle}</script><script>${adminExcelImportSource}</script>`);""",
           """  .replace('<script src=\"admin-prices.js\"></script>', `<script>${adminPricesJsSource}</script><script>${adminSiteJsSource}</script><script>${adminLeadsJsSource}</script><script>${adminEnhancementsJsSource}</script><script>${xlsxBrowserSafe}</script><script>${gateCalcModelLoaderBundle}</script><script>${adminExcelImportSource}\\n${adminExcelCompatibilitySource}</script>`);""")
 
-          # Calculator regression test now reflects the 38 active models.
           replace('scripts/test-gate-calculator.mjs',
           """vm.runInContext(modelSource, context, { filename: 'excel-derived-models.js' });\nvm.runInContext(engineJs, context, { filename: 'gate-calc-engine.js' });""",
           """vm.runInContext(modelSource, context, { filename: 'excel-derived-models.js' });\nfor (const article of ['39','40']) delete context.GATE_CALC_MODELS.models[article];\nvm.runInContext(engineJs, context, { filename: 'gate-calc-engine.js' });\nif (Object.keys(context.GATE_CALC_MODELS.models).length !== 38) {\n  throw new Error(`Ожидалось 38 активных моделей, получено ${Object.keys(context.GATE_CALC_MODELS.models).length}`);\n}\nfor (const article of ['39','40']) {\n  if (context.GATE_CALC.hasArticle(article)) throw new Error(`Исключённая модель ${article} доступна в калькуляторе`);\n}""")
 
-          # Documentation follows the actual 38-model production policy.
           p = Path('GATE_CALCULATOR.md')
           s = p.read_text(encoding='utf-8')
           s = s.replace('Эталон расчёта — файл `ворота (6).xlsx`.', 'Эталон расчёта — текущий мастер-Excel, который скачивается и публикуется через админку.')
@@ -64,7 +60,6 @@ jobs:
           s = s.replace('Изменить соответствующее `value` в `gate-calc-prices.js`, затем обязательно выполнить контрольные тесты и production build.', 'Изменить цены материалов и коэффициенты в мастер-Excel, сохранить и опубликовать файл через админку. Ручное редактирование цены артикула на сайте не используется.')
           p.write_text(s, encoding='utf-8')
 
-          # Remove obsolete one-time integration workflow that could re-add retired models.
           old = Path('.github/workflows/implement-excel-calculator.yml')
           if old.exists(): old.unlink()
 
