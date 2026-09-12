@@ -24,6 +24,7 @@ let draft = null;
 let dirty = false;
 let removedUrls = [];
 let selectedPhotoIndex = 0;
+let photoUploadEnabled = true;
 let toastTimer;
 
 function showToast(message, error = false) {
@@ -37,7 +38,7 @@ async function api(path, options = {}) {
   const response = await fetch(path, {cache: 'no-store', ...options});
   let data = {};
   try { data = await response.json(); } catch {}
-  if (response.status === 401) {
+  if (response.status === 401 && path !== '/api/admin/login') {
     showLogin();
     throw new Error('Сеанс завершён. Войдите снова.');
   }
@@ -222,22 +223,35 @@ async function optimizeImage(file) {
   if (!file.type.startsWith('image/')) throw new Error(`${file.name}: выбран не файл фотографии`);
   if (file.size > 25 * 1024 * 1024) throw new Error(`${file.name}: исходный файл превышает 25 МБ`);
   const image = await loadImage(file);
-  const ratio = Math.min(1, 1800 / Math.max(image.naturalWidth, image.naturalHeight));
-  const width = Math.max(1, Math.round(image.naturalWidth * ratio));
-  const height = Math.max(1, Math.round(image.naturalHeight * ratio));
-  const canvas = document.createElement('canvas');
-  canvas.width = width;
-  canvas.height = height;
-  const context = canvas.getContext('2d', {alpha: false});
-  context.fillStyle = '#ffffff';
-  context.fillRect(0, 0, width, height);
-  context.drawImage(image, 0, 0, width, height);
-  const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/webp', .86));
-  if (!blob) throw new Error(`${file.name}: не удалось подготовить фотографию`);
-  return blob;
+  const targetBytes = 1350000;
+  let maxSide = 1800;
+  let quality = .86;
+
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    const ratio = Math.min(1, maxSide / Math.max(image.naturalWidth, image.naturalHeight));
+    const width = Math.max(1, Math.round(image.naturalWidth * ratio));
+    const height = Math.max(1, Math.round(image.naturalHeight * ratio));
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext('2d', {alpha: false});
+    context.fillStyle = '#ffffff';
+    context.fillRect(0, 0, width, height);
+    context.drawImage(image, 0, 0, width, height);
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/webp', quality));
+    if (!blob) throw new Error(`${file.name}: не удалось подготовить фотографию`);
+    if (blob.size <= targetBytes) return blob;
+    if (quality > .62) quality -= .08;
+    else {
+      maxSide = Math.max(1100, Math.round(maxSide * .84));
+      quality = .76;
+    }
+  }
+  throw new Error(`${file.name}: фотография слишком большая после оптимизации`);
 }
 
 async function uploadFiles(files) {
+  if (!photoUploadEnabled) return showToast('Загрузка фотографий временно недоступна', true);
   const available = 12 - draft.photos.length;
   if (available <= 0) return showToast('В карточке уже 12 фотографий', true);
   const selected = [...files].slice(0, available);
@@ -265,9 +279,11 @@ async function uploadFiles(files) {
     showToast(error.message, true);
   } finally {
     photoInput.value = '';
-    photoInput.disabled = false;
+    photoInput.disabled = !photoUploadEnabled;
     uploadNote.classList.remove('loading');
-    uploadNote.textContent = 'Можно загрузить до 12 фотографий. Большие файлы автоматически уменьшаются без изменения пропорций.';
+    uploadNote.textContent = photoUploadEnabled
+      ? 'Можно загрузить до 12 фотографий. Фото автоматически уменьшаются без обрезки и искажения.'
+      : 'Загрузка фотографий временно недоступна. Порядок и обложку существующих фото можно менять.';
   }
 }
 
@@ -275,10 +291,17 @@ async function loadCatalog() {
   try {
     const data = await api('/api/admin/catalog');
     galleries = data.galleries;
+    photoUploadEnabled = data.photoUploadEnabled !== false;
+    photoInput.disabled = !photoUploadEnabled;
+    document.querySelector('.upload-button')?.classList.toggle('disabled', !photoUploadEnabled);
+    uploadNote.textContent = photoUploadEnabled
+      ? 'Можно загрузить до 12 фотографий. Фото автоматически уменьшаются без обрезки и искажения.'
+      : 'Загрузка фотографий временно недоступна. Порядок и обложку существующих фото можно менять.';
     const articles = Object.keys(galleries);
     articleSelect.innerHTML = articles.map(article => `<option value="${article}">${article}</option>`).join('');
     showEditor();
     selectArticle(articles[0]);
+    window.dispatchEvent(new CustomEvent('admin:ready'));
   } catch (error) {
     if (!loginView.hidden) return;
     showToast(error.message, true);

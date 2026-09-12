@@ -104,54 +104,7 @@ const html = htmlSource
   .replace('<script src="public-site-settings.js"></script>', `<script>${publicSiteJsSource}</script>`)
   .replace('<script src="gate-page-ui.js"></script>', `<script>${gatePageUiSource}</script>`);
 
-let adminJs = adminJsSource
-  .replace(
-    "if (response.status === 401) {\n    showLogin();\n    throw new Error('Сеанс завершён. Войдите снова.');\n  }",
-    "if (response.status === 401 && path !== '/api/admin/login') {\n    showLogin();\n    throw new Error('Сеанс завершён. Войдите снова.');\n  }"
-  )
-  .replace(
-    "galleries = data.galleries;\n    const articles = Object.keys(galleries);",
-    "galleries = data.galleries;\n    const photoUploadEnabled = data.photoUploadEnabled !== false;\n    photoInput.disabled = !photoUploadEnabled;\n    document.querySelector('.upload-button')?.classList.toggle('disabled', !photoUploadEnabled);\n    uploadNote.textContent = photoUploadEnabled ? 'Можно загрузить до 12 фотографий. Фото автоматически уменьшаются без обрезки и искажения.' : 'Загрузка фотографий временно недоступна. Порядок и обложку существующих фото можно менять.';\n    const articles = Object.keys(galleries);"
-  )
-  .replace(
-    "showEditor();\n    selectArticle(articles[0]);",
-    "showEditor();\n    selectArticle(articles[0]);\n    window.dispatchEvent(new CustomEvent('admin:ready'));"
-  );
-
-const optimizeStart = adminJs.indexOf('async function optimizeImage(file) {');
-const optimizeEnd = adminJs.indexOf('\nasync function uploadFiles(files) {', optimizeStart);
-if (optimizeStart < 0 || optimizeEnd < 0) throw new Error('Не найден блок подготовки фотографий');
-const optimizedPhotoFunction = `async function optimizeImage(file) {
-  if (!file.type.startsWith('image/')) throw new Error(\`${'${file.name}'}: выбран не файл фотографии\`);
-  if (file.size > 25 * 1024 * 1024) throw new Error(\`${'${file.name}'}: исходный файл превышает 25 МБ\`);
-  const image = await loadImage(file);
-  const targetBytes = 1350000;
-  let maxSide = 1800;
-  let quality = .86;
-
-  for (let attempt = 0; attempt < 10; attempt += 1) {
-    const ratio = Math.min(1, maxSide / Math.max(image.naturalWidth, image.naturalHeight));
-    const width = Math.max(1, Math.round(image.naturalWidth * ratio));
-    const height = Math.max(1, Math.round(image.naturalHeight * ratio));
-    const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
-    const context = canvas.getContext('2d', {alpha: false});
-    context.fillStyle = '#ffffff';
-    context.fillRect(0, 0, width, height);
-    context.drawImage(image, 0, 0, width, height);
-    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/webp', quality));
-    if (!blob) throw new Error(\`${'${file.name}'}: не удалось подготовить фотографию\`);
-    if (blob.size <= targetBytes) return blob;
-    if (quality > .62) quality -= .08;
-    else {
-      maxSide = Math.max(1100, Math.round(maxSide * .84));
-      quality = .76;
-    }
-  }
-  throw new Error(\`${'${file.name}'}: фотография слишком большая после оптимизации\`);
-}`;
-adminJs = adminJs.slice(0, optimizeStart) + optimizedPhotoFunction + adminJs.slice(optimizeEnd);
+const adminJs = adminJsSource;
 
 const adminHtml = adminHtmlSource
   .replace('<link rel="stylesheet" href="admin.css">', `<style>${adminCss}</style>`)

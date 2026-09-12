@@ -63,6 +63,12 @@ assert(!adminJs.includes('setSelectedZoom') && !adminJs.includes('dragState'), '
 assert(html.includes('связка между столбами под землёй'), 'Posts wording must explain what the linkage means');
 assert(html.includes('свяжемся с вами в рабочее время'), 'Lead confirmation must set a realistic contact expectation');
 assert(html.includes('class="skip-link"'), 'Gate page must include a keyboard skip link');
+assert(adminJs.includes("path !== '/api/admin/login'"), 'Admin source must handle login 401 without production patching');
+assert(adminJs.includes('targetBytes = 1350000') && adminJs.includes('photoUploadEnabled'), 'Admin source must contain production photo handling');
+assert(adminJs.includes("new CustomEvent('admin:ready')"), 'Admin source must emit readiness event itself');
+assert(build.includes('const adminJs = adminJsSource;'), 'Build must embed admin source directly');
+assert(!build.includes('optimizeStart = adminJs.indexOf') && !build.includes("galleries = data.galleries;\n    const articles"), 'Build must not rewrite admin behavior by source-string surgery');
+assert(leads.includes('обработку персональных данных'), 'Shared lead validation must use consistent consent wording');
 assert(app.includes('price-delivery-note'), 'Catalog cards must explain that delivery is calculated after selecting the installation place');
 assert(!delivery.includes('fixedDistanceEstimate'), 'Explicit delivery tariffs must not infer distance from price');
 assert(delivery.includes('A listed destination is an explicit business tariff'), 'Client delivery module must preserve explicit tariff exceptions');
