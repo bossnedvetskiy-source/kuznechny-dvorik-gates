@@ -93,6 +93,21 @@ function parseLeadConfiguration(value) {
   }
 }
 
+function normalizeLeadRow(row) {
+  return {
+    ...row,
+    configuration: parseLeadConfiguration(row.configuration_json),
+    configuration_json: undefined,
+    install: Boolean(row.install),
+    posts: Boolean(row.posts),
+    quote_verified: Boolean(row.quote_verified),
+    delivery_pending: Boolean(row.delivery_pending),
+    delivery_out_of_area: Boolean(row.delivery_out_of_area),
+    consent: Boolean(row.consent),
+    quote_mismatch: Boolean(row.quote_verified) && Number(row.client_total) !== Number(row.total)
+  };
+}
+
 async function createLead(request, env, url) {
   if (!sameOrigin(request, url)) return json({error: 'Недопустимый источник запроса'}, 403);
   if (!env.DB) return json({error: 'База заявок временно недоступна'}, 503);
@@ -205,31 +220,63 @@ async function createLead(request, env, url) {
   }, 201);
 }
 
-async function listLeads(env) {
+async function listLeads(env, searchParams = null) {
   await ensureLeadSchema(env);
+
+  const requestedLimit = Number(searchParams?.get?.('limit'));
+  const limit = Math.max(1, Math.min(200, Number.isInteger(requestedLimit) && requestedLimit > 0 ? requestedLimit : 50));
+  const requestedBeforeId = Number(searchParams?.get?.('before_id'));
+  const beforeId = Number.isInteger(requestedBeforeId) && requestedBeforeId > 0 ? requestedBeforeId : null;
+  const requestedStatus = String(searchParams?.get?.('status') || '').trim();
+  const status = LEAD_STATUSES.has(requestedStatus) ? requestedStatus : null;
+
+  const where = [];
+  const bindings = [];
+  if (beforeId) {
+    where.push('id < ?');
+    bindings.push(beforeId);
+  }
+  if (status) {
+    where.push('status = ?');
+    bindings.push(status);
+  }
+  const whereSql = where.length ? ` WHERE ${where.join(' AND ')}` : '';
+  const pageLimit = limit + 1;
+  bindings.push(pageLimit);
+
   const [result, countResult] = await Promise.all([
     env.DB.prepare(`SELECT id, created_at, updated_at, status, name, phone, city, category, source, article,
       product_title, configuration_json, width, wicket_width, wicket_height, height, install, posts, color, total,
       client_total, quote_verified, delivery_pending, delivery_out_of_area, delivery_distance_km,
       consent, consent_at, policy_version, comment, message
-      FROM site_leads ORDER BY id DESC LIMIT 200`).all(),
+      FROM site_leads${whereSql} ORDER BY id DESC LIMIT ?`).bind(...bindings).all(),
     env.DB.prepare('SELECT status, COUNT(*) AS count FROM site_leads GROUP BY status').all()
   ]);
-  const leads = (result.results || []).map(row => ({
-    ...row,
-    configuration: parseLeadConfiguration(row.configuration_json),
-    configuration_json: undefined,
-    install: Boolean(row.install),
-    posts: Boolean(row.posts),
-    quote_verified: Boolean(row.quote_verified),
-    delivery_pending: Boolean(row.delivery_pending),
-    delivery_out_of_area: Boolean(row.delivery_out_of_area),
-    consent: Boolean(row.consent),
-    quote_mismatch: Boolean(row.quote_verified) && Number(row.client_total) !== Number(row.total)
-  }));
+
+  const rows = result.results || [];
+  const hasMore = rows.length > limit;
+  const pageRows = hasMore ? rows.slice(0, limit) : rows;
+  const leads = pageRows.map(normalizeLeadRow);
   const counts = {new:0, contacted:0, done:0, archived:0};
   for (const row of countResult.results || []) if (row.status in counts) counts[row.status] = Number(row.count) || 0;
-  return {leads, counts, limited:leads.length >= 200};
+  const totalCount = Object.values(counts).reduce((sum, value) => sum + value, 0);
+  const filteredTotal = status ? counts[status] : totalCount;
+  const nextBeforeId = hasMore && leads.length ? Number(leads[leads.length - 1].id) : null;
+
+  return {
+    leads,
+    counts,
+    totalCount,
+    filteredTotal,
+    limited:false,
+    page:{
+      limit,
+      beforeId,
+      nextBeforeId,
+      hasMore,
+      status:status || 'all'
+    }
+  };
 }
 
 async function updateLeadStatus(request, env, id) {
