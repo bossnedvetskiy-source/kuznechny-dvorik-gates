@@ -1,4 +1,5 @@
 /* Фотографии каталога. Цены изменяются только в prices.js. */
+/* Первое фото в массиве — обложка карточки. Обложки выбраны по принципу: изделие целиком, реальный объект, максимально фронтальный ракурс. */
 window.CATALOG_IMAGES = {
   "Арт.6": [
     "/catalog/art-6-1.webp",
@@ -6,13 +7,13 @@ window.CATALOG_IMAGES = {
     "/catalog/art-6-3.webp"
   ],
   "Арт.18": [
-    "/catalog/art-18-1.webp",
     "/catalog/art-18-2.webp",
+    "/catalog/art-18-1.webp",
     "/catalog/art-18-3.webp"
   ],
   "Арт.31": [
-    "/catalog/art-31-2.webp",
     "/catalog/art-31-1.webp",
+    "/catalog/art-31-2.webp",
     "/catalog/art-31-3.webp"
   ],
   "Арт.28": [
@@ -21,8 +22,8 @@ window.CATALOG_IMAGES = {
     "/catalog/art-28-3.webp"
   ],
   "Арт.15": [
-    "/catalog/art-15-1.webp",
     "/catalog/art-15-2.webp",
+    "/catalog/art-15-1.webp",
     "/catalog/art-15-3.webp"
   ],
   "Арт.30": [
@@ -40,9 +41,8 @@ window.CATALOG_IMAGES = {
     "/catalog/art-9-3.webp"
   ],
   "Арт.22-2": [
-    "/catalog/art-22-2-1.webp",
-    "/catalog/art-22-2-2.webp",
-    "/catalog/art-22-2-3.webp"
+    "/catalog/art-22-2-3.webp",
+    "/catalog/art-22-2-2.webp"
   ],
   "Арт.21": [
     "/catalog/art-21-2.webp",
@@ -54,8 +54,8 @@ window.CATALOG_IMAGES = {
     "/catalog/art-29-2.webp"
   ],
   "Арт.14": [
-    "/catalog/art-14-1.webp",
     "/catalog/art-14-2.webp",
+    "/catalog/art-14-1.webp",
     "/catalog/art-14-3.webp"
   ],
   "Арт.36": [
@@ -69,24 +69,24 @@ window.CATALOG_IMAGES = {
     "/catalog/art-24-3.webp"
   ],
   "Арт.1": [
+    "/catalog/art-1-3.webp",
     "/catalog/art-1-1.webp",
-    "/catalog/art-1-2.webp",
-    "/catalog/art-1-3.webp"
+    "/catalog/art-1-2.webp"
   ],
   "Арт.12": [
-    "/catalog/art-12-1.webp",
     "/catalog/art-12-2.webp",
+    "/catalog/art-12-1.webp",
     "/catalog/art-12-3.webp"
   ],
   "Арт.32": [
-    "/catalog/art-32-1.webp",
     "/catalog/art-32-2.webp",
+    "/catalog/art-32-1.webp",
     "/catalog/art-32-3.webp"
   ],
   "Арт.17С": [
+    "/catalog/art-17s-3.webp",
     "/catalog/art-17s-1.webp",
-    "/catalog/art-17s-2.webp",
-    "/catalog/art-17s-3.webp"
+    "/catalog/art-17s-2.webp"
   ],
   "Арт.4": [
     "/catalog/art-4-1.webp"
@@ -97,19 +97,19 @@ window.CATALOG_IMAGES = {
     "/catalog/art-33-3.webp"
   ],
   "Арт.46": [
+    "/catalog/art-46-3.webp",
     "/catalog/art-46-1.webp",
-    "/catalog/art-46-2.webp",
-    "/catalog/art-46-3.webp"
+    "/catalog/art-46-2.webp"
   ],
   "Арт.27": [
+    "/catalog/art-27-3.webp",
     "/catalog/art-27-1.webp",
-    "/catalog/art-27-2.webp",
-    "/catalog/art-27-3.webp"
+    "/catalog/art-27-2.webp"
   ],
   "Арт.8": [
+    "/catalog/art-8-3.webp",
     "/catalog/art-8-1.webp",
-    "/catalog/art-8-2.webp",
-    "/catalog/art-8-3.webp"
+    "/catalog/art-8-2.webp"
   ],
   "Арт.16": [
     "/catalog/art-16-1.webp",
@@ -132,8 +132,8 @@ window.CATALOG_IMAGES = {
     "/catalog/art-25-2.webp"
   ],
   "Арт.10": [
-    "/catalog/art-10-1.webp",
     "/catalog/art-10-2.webp",
+    "/catalog/art-10-1.webp",
     "/catalog/art-10-3.webp"
   ],
   "Арт.35": [
@@ -172,8 +172,8 @@ window.CATALOG_IMAGES = {
     "/catalog/art-3-3.webp"
   ],
   "Арт.5": [
-    "/catalog/art-5-1.webp",
+    "/catalog/art-5-3.webp",
     "/catalog/art-5-2.webp",
-    "/catalog/art-5-3.webp"
+    "/catalog/art-5-1.webp"
   ]
 };
