@@ -14,16 +14,19 @@
 
   const style = document.createElement('style');
   style.textContent = `
-    .excel-import{display:grid;gap:14px}.excel-import-intro{padding:13px 14px;border:1px solid #dfc791;border-radius:13px;background:#fff8e8;color:#67532c;font-size:11px;line-height:1.55}.excel-import-intro b{color:#75531b}.excel-import-source{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:14px;border:1px solid #e4ded5;border-radius:14px;background:#faf8f4}.excel-import-source strong{display:block;font-size:13px}.excel-import-source small{display:block;margin-top:4px;color:var(--muted);font-size:9.5px;line-height:1.45}.excel-file-button{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:0 15px;border:1px solid #c89a49;border-radius:10px;background:#fff;color:#6d4b15;font-size:11px;font-weight:800;cursor:pointer}.excel-preview{display:grid;gap:10px}.excel-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.excel-summary>div{padding:10px;border:1px solid #e6e0d6;border-radius:11px;background:#fff}.excel-summary span{display:block;color:var(--muted);font-size:8px;font-weight:800;text-transform:uppercase}.excel-summary b{display:block;margin-top:3px;font-size:14px}.excel-changes{max-height:320px;overflow:auto;border:1px solid #e6e0d6;border-radius:12px}.excel-change{display:grid;grid-template-columns:minmax(100px,1fr) 100px 24px 100px;gap:8px;align-items:center;padding:9px 11px;border-bottom:1px solid #eee9e1;font-size:10px}.excel-change:last-child{border-bottom:0}.excel-change b{font-size:10.5px}.excel-arrow{text-align:center;color:#9f772f}.excel-model-warning{padding:11px 12px;border-radius:11px;background:#fff0ef;color:#913f39;font-size:10px;line-height:1.5}.excel-model-ok{padding:10px 12px;border-radius:11px;background:#eef7ea;color:#4f6f3b;font-size:10px;line-height:1.5}.excel-actions{display:flex;align-items:center;justify-content:flex-end;gap:10px}.excel-publish{min-height:43px;padding:0 16px;border:0;border-radius:10px;background:var(--ink);color:#fff;font-size:11px;font-weight:800}.excel-publish:disabled{opacity:.4}.excel-error{padding:10px 12px;border-radius:10px;background:#fff0ef;color:#913f39;font-size:10px}.excel-hidden{display:none!important}@media(max-width:620px){.excel-import-source{grid-template-columns:1fr}.excel-file-button{width:100%}.excel-summary{grid-template-columns:1fr 1fr}.excel-change{grid-template-columns:1fr 80px 18px 80px}.excel-actions{display:grid}.excel-publish{width:100%}}
+    .excel-import{display:grid;gap:14px}.excel-import-intro{padding:13px 14px;border:1px solid #dfc791;border-radius:13px;background:#fff8e8;color:#67532c;font-size:11px;line-height:1.55}.excel-import-intro b{color:#75531b}.excel-import-source{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:14px;border:1px solid #e4ded5;border-radius:14px;background:#faf8f4}.excel-import-source strong{display:block;font-size:13px}.excel-import-source small{display:block;margin-top:4px;color:var(--muted);font-size:9.5px;line-height:1.45}.excel-source-actions{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}.excel-file-button,.excel-download-button{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:0 15px;border:1px solid #c89a49;border-radius:10px;background:#fff;color:#6d4b15;font-size:11px;font-weight:800;cursor:pointer}.excel-download-button{border-color:#1f1f1f;color:#1f1f1f}.excel-download-button:disabled{opacity:.42;cursor:not-allowed}.excel-preview{display:grid;gap:10px}.excel-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.excel-summary>div{padding:10px;border:1px solid #e6e0d6;border-radius:11px;background:#fff}.excel-summary span{display:block;color:var(--muted);font-size:8px;font-weight:800;text-transform:uppercase}.excel-summary b{display:block;margin-top:3px;font-size:14px}.excel-changes{max-height:320px;overflow:auto;border:1px solid #e6e0d6;border-radius:12px}.excel-change{display:grid;grid-template-columns:minmax(100px,1fr) 100px 24px 100px;gap:8px;align-items:center;padding:9px 11px;border-bottom:1px solid #eee9e1;font-size:10px}.excel-change:last-child{border-bottom:0}.excel-change b{font-size:10.5px}.excel-arrow{text-align:center;color:#9f772f}.excel-model-warning{padding:11px 12px;border-radius:11px;background:#fff0ef;color:#913f39;font-size:10px;line-height:1.5}.excel-model-ok{padding:10px 12px;border-radius:11px;background:#eef7ea;color:#4f6f3b;font-size:10px;line-height:1.5}.excel-actions{display:flex;align-items:center;justify-content:flex-end;gap:10px}.excel-publish{min-height:43px;padding:0 16px;border:0;border-radius:10px;background:var(--ink);color:#fff;font-size:11px;font-weight:800}.excel-publish:disabled{opacity:.4}.excel-error{padding:10px 12px;border-radius:10px;background:#fff0ef;color:#913f39;font-size:10px}.excel-hidden{display:none!important}@media(max-width:620px){.excel-import-source{grid-template-columns:1fr}.excel-source-actions{display:grid;grid-template-columns:1fr}.excel-file-button,.excel-download-button{width:100%}.excel-summary{grid-template-columns:1fr 1fr}.excel-change{grid-template-columns:1fr 80px 18px 80px}.excel-actions{display:grid}.excel-publish{width:100%}}
   `;
   document.head.append(style);
 
   list.className = 'excel-import';
   list.innerHTML = `
-    <div class="excel-import-intro"><b>Цена ворот берётся только из Excel.</b> Для обычного обновления себестоимости меняйте цены материалов и коэффициенты на листе «Лист3», затем загрузите этот же .xlsx сюда. Карточки, калькулятор и серверный расчёт обновятся одновременно.</div>
+    <div class="excel-import-intro"><b>Цена ворот берётся только из Excel.</b> Скачайте текущий расчёт, измените цены материалов и коэффициенты на листе «Лист3», пересчитайте и сохраните файл в Excel, затем загрузите его сюда. После публикации сайт хранит сам .xlsx, поэтому следующая загрузка начинается с последней опубликованной версии.</div>
     <div class="excel-import-source">
       <div><strong id="excelCurrentTitle">Загружаем текущий расчёт…</strong><small id="excelCurrentMeta">Проверяем данные.</small></div>
-      <label class="excel-file-button" for="gateExcelInput">Выбрать Excel</label>
+      <div class="excel-source-actions">
+        <button class="excel-download-button" id="excelDownload" type="button" disabled>Скачать текущий Excel</button>
+        <label class="excel-file-button" for="gateExcelInput">Загрузить изменённый Excel</label>
+      </div>
       <input id="gateExcelInput" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
     </div>
     <div id="excelError" class="excel-error excel-hidden"></div>
@@ -35,6 +38,7 @@
     </div>`;
 
   const fileInput = document.getElementById('gateExcelInput');
+  const downloadButton = document.getElementById('excelDownload');
   const currentTitle = document.getElementById('excelCurrentTitle');
   const currentMeta = document.getElementById('excelCurrentMeta');
   const errorBox = document.getElementById('excelError');
@@ -47,7 +51,7 @@
   const compiledModels = new WeakMap();
 
   const money = value => new Intl.NumberFormat('ru-RU').format(Math.round(Number(value) || 0)) + ' ₽';
-  const escape = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+  const escape = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[ch]));
   const roundExcel = (value, digits = 0) => { const x=Number(value),d=Math.trunc(Number(digits)||0);if(!Number.isFinite(x))return NaN;const factor=10**Math.abs(d),scaled=d>=0?x*factor:x/factor,rounded=scaled>=0?Math.floor(scaled+.5):Math.ceil(scaled-.5);return d>=0?rounded/factor:rounded*factor; };
   const roundUp = (value, digits = 0) => { const x=Number(value),d=Math.trunc(Number(digits)||0);if(!Number.isFinite(x))return NaN;const factor=10**Math.abs(d);if(d>=0)return (x>=0?Math.ceil(x*factor):Math.floor(x*factor))/factor;return (x>=0?Math.ceil(x/factor):Math.floor(x/factor))*factor; };
   const sum = value => Array.isArray(value) ? value.reduce((acc,item)=>acc+Number(item||0),0) : Number(value||0);
@@ -109,6 +113,13 @@
     return [...new Uint8Array(digest)].map(byte=>byte.toString(16).padStart(2,'0')).join('');
   }
 
+  function refreshDownloadState() {
+    downloadButton.disabled = !currentState?.fileAvailable;
+    downloadButton.title = currentState?.fileAvailable
+      ? 'Скачать последнюю опубликованную версию Excel'
+      : 'На сайте пока нет сохранённого .xlsx. Один раз опубликуйте исходный Excel.';
+  }
+
   async function loadCurrent() {
     try {
       const response = await fetch('/api/admin/gate-excel', {cache:'no-store'});
@@ -117,10 +128,43 @@
       currentState = data;
       const meta = data.meta || {};
       currentTitle.textContent = meta.fileName ? `Сейчас: ${meta.fileName}` : 'Сейчас используется исходный Excel-расчёт';
-      currentMeta.textContent = meta.importedAt ? `Последнее обновление: ${new Date(meta.importedAt).toLocaleString('ru-RU')}` : 'После загрузки нового файла цены материалов будут применены ко всем Арт.';
+      if (meta.importedAt) currentMeta.textContent = `Последнее обновление: ${new Date(meta.importedAt).toLocaleString('ru-RU')}. Текущий .xlsx можно скачать для следующего редактирования.`;
+      else if (data.fileAvailable) currentMeta.textContent = 'Текущий .xlsx сохранён на сайте и готов к скачиванию.';
+      else currentMeta.textContent = 'Сам .xlsx ещё не сохранён на сайте. Один раз загрузите и опубликуйте исходный расчёт — дальше его всегда можно будет скачивать отсюда.';
+      refreshDownloadState();
     } catch (error) {
       currentTitle.textContent = 'Не удалось проверить текущий Excel-расчёт';
       currentMeta.textContent = error.message || '';
+      refreshDownloadState();
+    }
+  }
+
+  async function downloadCurrentExcel() {
+    showError('');
+    downloadButton.disabled = true;
+    const originalText = downloadButton.textContent;
+    downloadButton.textContent = 'Скачиваем…';
+    try {
+      const response = await fetch('/api/admin/gate-excel/file', {cache:'no-store'});
+      if (!response.ok) {
+        const text = await response.text().catch(()=> '');
+        throw new Error(text || 'Текущий Excel пока не сохранён на сайте');
+      }
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = currentState?.meta?.fileName || 'ворота_расчет.xlsx';
+      document.body.append(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+      if (typeof window.showToast === 'function') window.showToast('Текущий Excel скачан');
+    } catch (error) {
+      showError(error.message || 'Не удалось скачать Excel');
+    } finally {
+      downloadButton.textContent = originalText;
+      refreshDownloadState();
     }
   }
 
@@ -166,8 +210,12 @@
     const rows = [...materialChanges.slice(0,18).map(change => `<div class="excel-change"><b>${escape(change.label)} <small>${escape(change.ref)}</small></b><span>${money(change.old)}</span><span class="excel-arrow">→</span><span>${money(change.next)}</span></div>`), ...modelChanges.slice(0,22).map(change => `<div class="excel-change"><b>Арт.${escape(change.article)}</b><span>${money(change.old)}</span><span class="excel-arrow">→</span><span>${money(change.next)}</span></div>`)];
     changesBox.innerHTML = rows.length ? rows.join('') : '<div class="excel-change"><b>Изменений цен не найдено</b><span></span><span></span><span></span></div>';
     preview.classList.remove('excel-hidden');
-    pending = {prices, standardPrices:afterStandards, meta:{fileName:file.name,fileSize:file.size,sha256:hash}, mismatches};
-    publishButton.disabled = Boolean(mismatches.length) || !materialChanges.length;
+    pending = {prices, standardPrices:afterStandards, meta:{fileName:file.name,fileSize:file.size,sha256:hash}, mismatches, buffer};
+    // First publication may only be needed to save the source .xlsx for future downloads.
+    publishButton.disabled = Boolean(mismatches.length) || (!materialChanges.length && Boolean(currentState?.fileAvailable));
+    if (!materialChanges.length && !currentState?.fileAvailable && !mismatches.length) {
+      modelCheck.textContent += ' Цены не изменились, но файл можно опубликовать один раз, чтобы затем всегда скачивать его из админки.';
+    }
   }
 
   fileInput.addEventListener('change', async () => {
@@ -175,22 +223,38 @@
     if (!file) return;
     currentTitle.textContent = `Проверяем: ${file.name}`;
     currentMeta.textContent = 'Сверяем материалы и все стандартные расчёты…';
-    try { await inspectFile(file); currentTitle.textContent=`Готов к публикации: ${file.name}`; currentMeta.textContent='Ни одно изменение не попадёт на сайт до нажатия «Опубликовать».'; }
+    try { await inspectFile(file); currentTitle.textContent=`Готов к публикации: ${file.name}`; currentMeta.textContent='Ни одно изменение не попадёт на сайт до нажатия «Опубликовать». Сам .xlsx тоже будет сохранён как текущая версия.'; }
     catch(error){showError(error.message||'Не удалось прочитать Excel');currentTitle.textContent='Excel не принят';currentMeta.textContent='Исправьте файл и выберите его ещё раз.';}
     finally { fileInput.value=''; }
   });
 
+  downloadButton.addEventListener('click', downloadCurrentExcel);
+
   publishButton.addEventListener('click', async () => {
     if (!pending || pending.mismatches?.length) return;
-    publishButton.disabled=true;publishButton.textContent='Публикуем…';showError('');
+    publishButton.disabled=true;publishButton.textContent='Сохраняем Excel…';showError('');
     try {
-      const response=await fetch('/api/admin/gate-excel',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({prices:pending.prices,standardPrices:pending.standardPrices,meta:pending.meta})});
+      const fileResponse = await fetch('/api/admin/gate-excel/file', {
+        method:'PUT',
+        headers:{
+          'content-type':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          'x-file-name':encodeURIComponent(pending.meta.fileName || 'ворота_расчет.xlsx'),
+          'x-file-sha256':pending.meta.sha256 || ''
+        },
+        body:pending.buffer
+      });
+      const fileData = await fileResponse.json().catch(()=>({}));
+      if(!fileResponse.ok) throw new Error(fileData.error || 'Не удалось сохранить сам Excel-файл');
+
+      publishButton.textContent='Публикуем расчёт…';
+      const response=await fetch('/api/admin/gate-excel',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({prices:pending.prices,standardPrices:pending.standardPrices,meta:{...pending.meta,fileUploadId:fileData.uploadId},fileUploadId:fileData.uploadId})});
       const data=await response.json().catch(()=>({}));
       if(!response.ok)throw new Error(data.error||'Не удалось опубликовать Excel-расчёт');
       currentState=data;pending=null;preview.classList.add('excel-hidden');
       currentTitle.textContent=`Сейчас: ${data.meta?.fileName||'Excel-расчёт'}`;
-      currentMeta.textContent=`Опубликовано: ${new Date(data.meta?.importedAt||Date.now()).toLocaleString('ru-RU')}. Все новые посетители сайта используют эти цены материалов.`;
-      if(typeof window.showToast==='function')window.showToast('Excel-расчёт опубликован на сайте');
+      currentMeta.textContent=`Опубликовано: ${new Date(data.meta?.importedAt||Date.now()).toLocaleString('ru-RU')}. Эта версия .xlsx теперь доступна по кнопке «Скачать текущий Excel».`;
+      refreshDownloadState();
+      if(typeof window.showToast==='function')window.showToast('Excel-расчёт и сам файл опубликованы на сайте');
     } catch(error){showError(error.message||'Ошибка публикации');publishButton.disabled=false;}
     finally{publishButton.textContent='Опубликовать расчёт из Excel';}
   });
