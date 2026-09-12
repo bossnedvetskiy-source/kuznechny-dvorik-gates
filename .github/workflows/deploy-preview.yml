@@ -33,6 +33,7 @@ jobs:
           node --check admin-prices.js
           node --check admin-site.js
           node --check admin-leads.js
+          node --check worker/runtime.js
           node --check worker/auth-d1.js
           node --check worker/site-settings-d1.js
           node --check worker/gate-quote-d1.js
@@ -55,6 +56,14 @@ jobs:
 
       - name: Check built Worker syntax
         run: node --check dist/server/index.js
+
+      - name: Install browser tests
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+
+      - name: Run browser E2E tests
+        run: npm run test:e2e
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
