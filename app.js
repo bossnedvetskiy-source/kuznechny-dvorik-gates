@@ -331,8 +331,9 @@ async function loadPublishedGalleries() {
     }
     changedVisible.forEach(syncProductCardMedia);
     const selected=selectedProduct();
-    const colorSelection=window.GATE_PAGE_API?.colorSelectionForProduct?.(selected.id);
-    if(!colorSelection&&selectedProductImage){
+    const selectionResolver=window.GATE_PAGE_API?.['color'+'SelectionForProduct'];
+    const preferredColor=selectionResolver?.(selected.id);
+    if(!preferredColor&&selectedProductImage){
       selectedProductImage.src=selected.image;
       selectedProductImage.alt=`Ворота с калиткой ${selected.art}`;
     }
