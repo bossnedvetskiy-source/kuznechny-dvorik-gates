@@ -51,6 +51,10 @@ jobs:
           const worker = fs.readFileSync('dist/server/index.js','utf8');
           if (!worker.includes('/site.css') || !worker.includes('/site.bundle.js')) throw new Error('Public page does not reference external performance assets');
           if (!worker.includes('window.GATE_CALC_PRICES=__RUNTIME_GATE_CALC_PRICES__')) throw new Error('Runtime Excel prices are not injected into public page');
+          const pageMatch = worker.match(/^const PAGE = ("(?:\\.|[^"\\])*");/m);
+          if (!pageMatch) throw new Error('Could not extract built public HTML template');
+          const page = JSON.parse(pageMatch[1]);
+          console.log(`Public HTML template: ${Buffer.byteLength(page)} bytes; gzip ${zlib.gzipSync(Buffer.from(page)).length} bytes`);
           NODE
       - name: Measure current production reads
         run: |
