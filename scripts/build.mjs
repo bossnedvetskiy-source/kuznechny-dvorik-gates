@@ -6,7 +6,7 @@ await mkdir('dist/server', { recursive: true });
 await mkdir('dist/client', { recursive: true });
 await mkdir('dist/.openai', { recursive: true });
 
-const [htmlSource, homeHtmlSource, homeCss, productCategoriesSource, css, storefrontCss, gatePageCss, catalogImages, pricesSource, deliveryPricesSource, customerContextSource, deliverySharedSource, leadsSharedSource, js, publicSiteJsSource, gatePageUiSource, colorPhotoSiteSource, adminHtmlSource, adminCss, adminJsSource, adminColorsJsSource, adminPricesJsSource, adminSiteJsSource, adminLeadsJsSource, workerSource, adminAuthSource, siteSettingsSource, catalogMediaSource, catalogColorsSource, gateQuoteSource, leadAntispamSource, leadsSource] = await Promise.all([
+const [htmlSource, homeHtmlSource, homeCss, productCategoriesSource, css, storefrontCss, gatePageCss, catalogImages, pricesSource, deliveryPricesSource, customerContextSource, deliverySharedSource, leadsSharedSource, js, runtimePriceAdjustmentSource, publicSiteJsSource, gatePageUiSource, colorPhotoSiteSource, adminHtmlSource, adminCss, adminJsSource, adminColorsJsSource, adminPricesJsSource, adminSiteJsSource, adminDeliveryJsSource, adminLeadsJsSource, adminWorkflowJsSource, adminTabsFixJsSource, adminHistoryJsSource, workerSource, adminAuthSource, siteSettingsSource, catalogMediaSource, catalogColorsSource, gateQuoteSource, leadAntispamSource, leadsSource, adminEnhancementsSource] = await Promise.all([
   readFile('index.html', 'utf8'),
   readFile('home.html', 'utf8'),
   readFile('home.css', 'utf8'),
@@ -21,6 +21,7 @@ const [htmlSource, homeHtmlSource, homeCss, productCategoriesSource, css, storef
   readFile('shared/delivery.js', 'utf8'),
   readFile('shared/leads.js', 'utf8'),
   readFile('app.js', 'utf8'),
+  readFile('runtime-price-adjustment.js', 'utf8'),
   readFile('public-site-settings.js', 'utf8'),
   readFile('gate-page-ui.js', 'utf8'),
   readFile('color-photo-site.js', 'utf8'),
@@ -30,7 +31,11 @@ const [htmlSource, homeHtmlSource, homeCss, productCategoriesSource, css, storef
   readFile('admin-colors.js', 'utf8'),
   readFile('admin-prices.js', 'utf8'),
   readFile('admin-site.js', 'utf8'),
+  readFile('admin-delivery.js', 'utf8'),
   readFile('admin-leads.js', 'utf8'),
+  readFile('admin-workflow.js', 'utf8'),
+  readFile('admin-tabs-fix.js', 'utf8'),
+  readFile('admin-history.js', 'utf8'),
   readFile('worker/runtime.js', 'utf8'),
   readFile('worker/auth-d1.js', 'utf8'),
   readFile('worker/site-settings-d1.js', 'utf8'),
@@ -38,7 +43,8 @@ const [htmlSource, homeHtmlSource, homeCss, productCategoriesSource, css, storef
   readFile('worker/catalog-colors-d1.js', 'utf8'),
   readFile('worker/gate-quote-d1.js', 'utf8'),
   readFile('worker/lead-antispam.js', 'utf8'),
-  readFile('worker/leads-d1.js', 'utf8')
+  readFile('worker/leads-d1.js', 'utf8'),
+  readFile('worker/admin-enhancements-d1.js', 'utf8')
 ]);
 
 const gateCalcSources = await Promise.all([
@@ -65,14 +71,13 @@ const rawGateModels = Function('window', '"use strict";\n' + gateModelsScript + 
 if (!rawGateModels?.models) throw new Error('Не удалось распаковать серверные модели ворот');
 const serverGateModelSource = `{models:{${Object.entries(rawGateModels.models || {}).map(([key,model]) => {
   const formulas = Object.entries(model.formulas || {}).map(([ref,expr]) => `${JSON.stringify(ref)}:(ctx,p,v,sum,roundExcel,roundUp)=>(${expr})`).join(',');
-  return `${JSON.stringify(key)}:{gateRef:${JSON.stringify(model.gateRef)},wicketRef:${JSON.stringify(model.wicketRef)},literals:${JSON.stringify(model.literals || {})},formulas:{${formulas}}}`;
+  return `${JSON.stringify(key)}:{gateRef:${JSON.stringify(model.gateRef)},wicketRef:${JSON.stringify(model.wicketRef)},standard:${JSON.stringify(model.standard || {})},literals:${JSON.stringify(model.literals || {})},formulas:{${formulas}}}`;
 }).join(',')}}}`;
 
 const deliveryPrices = JSON.parse(deliveryPricesSource);
 if (!Number.isFinite(deliveryPrices.fallbackRatePerKm) || !deliveryPrices.origin) {
   throw new Error('Некорректный файл delivery-prices.json');
 }
-const embeddedDeliveryPrices = JSON.stringify(deliveryPrices).replace(/</g, '\\u003c');
 const galleryMatch = catalogImages.match(/window\.CATALOG_IMAGES\s*=\s*({[\s\S]*?});\s*$/);
 if (!galleryMatch) throw new Error('Некорректный файл catalog-images.js');
 const defaultGalleries = JSON.parse(galleryMatch[1]);
@@ -90,7 +95,7 @@ const html = htmlSource
   .replace('<link rel="stylesheet" href="styles.css">', `<style>${css}\n${storefrontCss}\n${gatePageCss}</style>`)
   .replace('<link rel="stylesheet" href="storefront.css">', '')
   .replace('<link rel="stylesheet" href="gate-page.css">', '')
-  .replace('<script id="deliveryData" type="application/json">{}</script>', `<script id="deliveryData" type="application/json">${embeddedDeliveryPrices}</script>`)
+  .replace('<script id="deliveryData" type="application/json">{}</script>', '<script id="deliveryData" type="application/json">__RUNTIME_DELIVERY_DATA__</script>')
   .replace('<script src="catalog-images.js"></script>', `<script>${catalogImages}</script>`)
   .replace('<script src="prices.js"></script>', '<script>window.PRICE_DATA=__RUNTIME_PRICE_DATA__;window.SITE_SETTINGS=__RUNTIME_SITE_DATA__;</script>')
   .replace('<script src="gate-calc-prices.js"></script>', `<script>${gateCalcBundle}</script>`)
@@ -103,7 +108,7 @@ const html = htmlSource
   .replace('<script src="shared/customer-context.js"></script>', `<script>${customerContextSource}</script>`)
   .replace('<script src="shared/delivery.js"></script>', `<script>${deliverySharedSource}</script>`)
   .replace('<script src="shared/leads.js"></script>', `<script>${leadsSharedSource}</script>`)
-  .replace('<script src="app.js"></script>', `<script>${publicJs}</script>`)
+  .replace('<script src="app.js"></script>', `<script>${runtimePriceAdjustmentSource}\n${publicJs}</script>`)
   .replace('<script src="public-site-settings.js"></script>', `<script>${publicSiteJsSource}</script>`)
   .replace('<script src="gate-page-ui.js"></script>', `<script>${gatePageUiSource}\n${colorPhotoSiteSource}</script>`);
 
@@ -112,7 +117,7 @@ const adminJs = adminJsSource;
 const adminHtml = adminHtmlSource
   .replace('<link rel="stylesheet" href="admin.css">', `<style>${adminCss}</style>`)
   .replace('<script src="admin.js"></script>', `<script>${adminJs}\n${adminColorsJsSource}</script>`)
-  .replace('<script src="admin-prices.js"></script>', `<script>${adminPricesJsSource}</script><script>${adminSiteJsSource}</script><script>${adminLeadsJsSource}</script>`);
+  .replace('<script src="admin-prices.js"></script>', `<script>${adminPricesJsSource}</script><script>${adminSiteJsSource}</script><script>${adminDeliveryJsSource}</script><script>${adminLeadsJsSource}</script><script>${adminWorkflowJsSource}</script><script>${adminTabsFixJsSource}</script><script>${adminHistoryJsSource}</script>`);
 
 const workerModules = [
   adminAuthSource,
@@ -121,12 +126,13 @@ const workerModules = [
   gateQuoteSource,
   catalogMediaSource,
   catalogColorsSource,
-  leadsSource
+  leadsSource,
+  adminEnhancementsSource
 ].map(source => source.trim()).join('\n\n');
 if (!workerSource.includes('/*__WORKER_MODULES__*/')) throw new Error('Не найден маркер модулей Worker');
 const patchedWorkerSource = workerSource.replace('/*__WORKER_MODULES__*/', workerModules);
 
-for (const requiredWorkerFeature of ['calculateAuthoritativeGateQuote','consumeLeadAttempt','DEFAULT_GATE_CALC_MODELS','DEFAULT_DELIVERY_PRICES']) {
+for (const requiredWorkerFeature of ['calculateAuthoritativeGateQuote','consumeLeadAttempt','DEFAULT_GATE_CALC_MODELS','DEFAULT_DELIVERY_PRICES','lead_workflow','delivery_prices']) {
   if (!patchedWorkerSource.includes(requiredWorkerFeature)) throw new Error(`Worker assembly missing ${requiredWorkerFeature}`);
 }
 
