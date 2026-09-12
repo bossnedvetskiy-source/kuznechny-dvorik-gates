@@ -79,9 +79,10 @@ test('real color photo follows customer into calculator and lead', async ({page}
   await expect(card.locator('.profile-color-status')).toContainText('Графит');
 
   await mint.click();
-  await expect(card.locator('.profile-color-status')).toContainText('цвет доступен');
+  await expect(card.locator('.profile-color-status')).toContainText('отдельного фото этой модели пока нет');
   await expect(card.locator('.product-image-open img')).toHaveAttribute('src', /art-6-1\.webp/);
-  await expect(card.locator('.profile-color-reset')).toBeHidden();
+  await expect(card.locator('.profile-color-reset')).toBeVisible();
+  await expect(mint).toHaveAttribute('aria-pressed','true');
 
   await graphite.click();
   await card.locator('.product-image-open').click();
