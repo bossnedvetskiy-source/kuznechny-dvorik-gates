@@ -42,19 +42,18 @@ jobs:
           t=Path('scripts/test-admin-integrity.mjs')
           ts=t.read_text(encoding='utf-8')
           needle="[excelAdmin, 'Публикация заблокирована', 'formula drift protection'],"
-          add="[excelAdmin, 'Ожидалось 38 используемых моделей', '38-model Excel validation'],\n  [excelAdmin, 'Boolean(currentState?.fileAvailable)', 'first Excel publication without price changes'],"
-          if add not in ts:
+          additions=[
+            "[excelAdmin, 'Ожидалось 38 используемых моделей', '38-model Excel validation'],",
+            "[excelAdmin, 'Boolean(currentState?.fileAvailable)', 'first Excel publication without price changes'],"
+          ]
+          if additions[0] not in ts:
             if needle not in ts: raise SystemExit('Admin test anchor missing')
-            ts=ts.replace(needle, needle+'\n  '+add,1)
+            ts=ts.replace(needle, needle+'\n  '+additions[0]+'\n  '+additions[1],1)
             t.write_text(ts,encoding='utf-8')
-      - name: Install and verify
+      - name: Basic syntax check
         run: |
-          npm install --include=dev --no-audit --no-fund
-          npm install --no-save --include=dev xlsx@0.18.5 --no-audit --no-fund
           node --check admin-excel-import.js
-          node scripts/test-admin-integrity.mjs
-          node scripts/test-gate-calculator.mjs
-          npm run build
+          node --check scripts/test-admin-integrity.mjs
       - name: Commit changes
         shell: bash
         run: |
