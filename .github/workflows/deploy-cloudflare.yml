@@ -48,6 +48,7 @@ jobs:
           node --check color-photo-site.js
           node --check gate-formula-prices-site.js
           node --check gate-calc-engine.js
+          node --check public-lazy-runtime.js
           node --check shared/customer-context.js
           node --check shared/delivery.js
           node --check shared/leads.js
@@ -64,6 +65,7 @@ jobs:
           node --check worker/site-settings-d1.js
           node --check worker/excel-pricing-d1.js
           node --check worker/gate-quote-d1.js
+          node --check worker/public-prices-runtime.js
           node --check worker/lead-antispam.js
           node --check worker/catalog-media-d1.js
           node --check worker/catalog-colors-d1.js
@@ -97,8 +99,12 @@ jobs:
         run: |
           node --check dist/server/index.js
           node --check dist/client/site.bundle.js
+          node --check dist/client/calculator.bundle.js
+          node --check dist/client/catalog-enhancements.bundle.js
           test -s dist/client/site.css
           test -s dist/client/site.bundle.js
+          test -s dist/client/calculator.bundle.js
+          test -s dist/client/catalog-enhancements.bundle.js
 
       - name: Deploy to Cloudflare Workers
         shell: bash
@@ -126,10 +132,13 @@ jobs:
       - name: Verify production site
         run: |
           node <<'NODE'
-          const siteUrl = 'https://kuznechny-dvorik-gates.boss-nedvetskiy.workers.dev/';
-          const cssUrl = 'https://kuznechny-dvorik-gates.boss-nedvetskiy.workers.dev/site.css';
-          const bundleUrl = 'https://kuznechny-dvorik-gates.boss-nedvetskiy.workers.dev/site.bundle.js';
-          const adminUrl = 'https://kuznechny-dvorik-gates.boss-nedvetskiy.workers.dev/admin';
+          const base = 'https://kuznechny-dvorik-gates.boss-nedvetskiy.workers.dev';
+          const siteUrl = `${base}/`;
+          const cssUrl = `${base}/site.css`;
+          const bundleUrl = `${base}/site.bundle.js`;
+          const calculatorUrl = `${base}/calculator.bundle.js`;
+          const enhancementsUrl = `${base}/catalog-enhancements.bundle.js`;
+          const adminUrl = `${base}/admin`;
           const requiredSite = [
             'Ворота с калиткой',
             'Сейчас оплачивать ничего не нужно.',
@@ -137,10 +146,25 @@ jobs:
             '/site.css',
             '/site.bundle.js'
           ];
-          const requiredBundle = [
+          const requiredInitialBundle = [
+            'KUZDVOR_ENSURE_CALCULATOR',
+            'KUZDVOR_SCHEDULE_CATALOG_DATA',
+            '/calculator.bundle.js',
+            '/catalog-enhancements.bundle.js'
+          ];
+          const forbiddenInitialBundle = [
+            'GATE_CALC_MODELS_READY',
+            'KUZDVOR_FORMULA_PRICE_SYNC_READY'
+          ];
+          const requiredCalculatorBundle = [
             'syncExcelDerivedGatePrices',
             'standardForArticle',
-            'KUZDVOR_FORMULA_PRICE_SYNC_READY'
+            'KUZDVOR_FORMULA_PRICE_SYNC_READY',
+            'GATE_CALC_MODELS_READY'
+          ];
+          const requiredEnhancementsBundle = [
+            'KUZDVOR_COLOR_PHOTO_SITE_READY',
+            '/api/catalog-images'
           ];
           const forbiddenPublic = ['runtimeCatalogPrice','targetStandardPrice'];
           const requiredAdmin = [
@@ -158,28 +182,40 @@ jobs:
           let lastError;
           for (let attempt = 1; attempt <= 5; attempt += 1) {
             try {
-              const [siteResponse, cssResponse, bundleResponse, adminResponse] = await Promise.all([
+              const [siteResponse, cssResponse, bundleResponse, calculatorResponse, enhancementsResponse, adminResponse] = await Promise.all([
                 fetch(siteUrl, { cache: 'no-store' }),
                 fetch(cssUrl, { cache: 'no-store' }),
                 fetch(bundleUrl, { cache: 'no-store' }),
+                fetch(calculatorUrl, { cache: 'no-store' }),
+                fetch(enhancementsUrl, { cache: 'no-store' }),
                 fetch(adminUrl, { cache: 'no-store' })
               ]);
               if (!siteResponse.ok) throw new Error(`Site HTTP ${siteResponse.status}`);
               if (!cssResponse.ok) throw new Error(`Public CSS HTTP ${cssResponse.status}`);
-              if (!bundleResponse.ok) throw new Error(`Public bundle HTTP ${bundleResponse.status}`);
+              if (!bundleResponse.ok) throw new Error(`Initial public bundle HTTP ${bundleResponse.status}`);
+              if (!calculatorResponse.ok) throw new Error(`Calculator bundle HTTP ${calculatorResponse.status}`);
+              if (!enhancementsResponse.ok) throw new Error(`Catalog enhancements bundle HTTP ${enhancementsResponse.status}`);
               if (!adminResponse.ok) throw new Error(`Admin HTTP ${adminResponse.status}`);
-              const [siteHtml, publicCss, publicBundle, adminHtml] = await Promise.all([siteResponse.text(), cssResponse.text(), bundleResponse.text(), adminResponse.text()]);
+              const [siteHtml, publicCss, publicBundle, calculatorBundle, enhancementsBundle, adminHtml] = await Promise.all([
+                siteResponse.text(), cssResponse.text(), bundleResponse.text(), calculatorResponse.text(), enhancementsResponse.text(), adminResponse.text()
+              ]);
               const missingSite = requiredSite.filter(text => !siteHtml.includes(text));
-              const missingBundle = requiredBundle.filter(text => !publicBundle.includes(text));
-              const forbiddenPresent = forbiddenPublic.filter(text => siteHtml.includes(text) || publicBundle.includes(text));
+              const missingInitial = requiredInitialBundle.filter(text => !publicBundle.includes(text));
+              const leakedInitial = forbiddenInitialBundle.filter(text => publicBundle.includes(text));
+              const missingCalculator = requiredCalculatorBundle.filter(text => !calculatorBundle.includes(text));
+              const missingEnhancements = requiredEnhancementsBundle.filter(text => !enhancementsBundle.includes(text));
+              const forbiddenPresent = forbiddenPublic.filter(text => siteHtml.includes(text) || publicBundle.includes(text) || calculatorBundle.includes(text));
               const missingAdmin = requiredAdmin.filter(text => !adminHtml.includes(text));
               if (missingSite.length) throw new Error(`Missing production site text: ${missingSite.join(' | ')}`);
-              if (missingBundle.length) throw new Error(`Missing production public bundle code: ${missingBundle.join(' | ')}`);
+              if (missingInitial.length) throw new Error(`Missing initial public bundle code: ${missingInitial.join(' | ')}`);
+              if (leakedInitial.length) throw new Error(`Heavy calculator leaked into initial bundle: ${leakedInitial.join(' | ')}`);
+              if (missingCalculator.length) throw new Error(`Missing calculator bundle code: ${missingCalculator.join(' | ')}`);
+              if (missingEnhancements.length) throw new Error(`Missing catalog enhancement code: ${missingEnhancements.join(' | ')}`);
               if (!publicCss.includes('.catalog-grid')) throw new Error('Public CSS does not contain catalog styles');
               if (forbiddenPresent.length) throw new Error(`Forbidden manual pricing logic in production: ${forbiddenPresent.join(' | ')}`);
               if (missingAdmin.length) throw new Error(`Missing production admin text: ${missingAdmin.join(' | ')}`);
               console.log(`Production deployment verified: ${siteUrl}`);
-              console.log(`HTML ${Buffer.byteLength(siteHtml)} bytes; CSS ${Buffer.byteLength(publicCss)} bytes; JS ${Buffer.byteLength(publicBundle)} bytes`);
+              console.log(`HTML ${Buffer.byteLength(siteHtml)} bytes; CSS ${Buffer.byteLength(publicCss)} bytes; initial JS ${Buffer.byteLength(publicBundle)} bytes; calculator JS ${Buffer.byteLength(calculatorBundle)} bytes; catalog enhancements JS ${Buffer.byteLength(enhancementsBundle)} bytes`);
               process.exit(0);
             } catch (error) {
               lastError = error;
