@@ -1,0 +1,161 @@
+name: Fix mobile performance
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/fix-mobile-performance.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+
+      - name: Reduce mobile catalog work
+        shell: python
+        run: |
+          from pathlib import Path
+
+          def replace_once(path, old, new):
+              p = Path(path)
+              text = p.read_text(encoding='utf-8')
+              if new in text:
+                  return
+              if old not in text:
+                  raise SystemExit(f'Expected block not found in {path}: {old[:120]!r}')
+              p.write_text(text.replace(old, new, 1), encoding='utf-8')
+
+          app = Path('app.js')
+          text = app.read_text(encoding='utf-8')
+          backdrop = '      <img class="product-image-backdrop" src="${product.image}" alt="" aria-hidden="true" loading="lazy">\n'
+          if backdrop in text:
+              text = text.replace(backdrop, '', 1)
+          text = text.replace(
+              '<img src="${product.image}" alt="${product.media===\'sketch\'?\'Эскиз\':\'Фотография\'} ворот с калиткой ${product.art}" loading="lazy">',
+              '<img src="${product.image}" alt="${product.media===\'sketch\'?\'Эскиз\':\'Фотография\'} ворот с калиткой ${product.art}" loading="lazy" decoding="async" fetchpriority="low">',
+              1
+          )
+          old_loader = """async function loadPublishedGalleries() {
+            try {
+              const response=await fetch('/api/catalog-images',{cache:'no-store'});
+              if(!response.ok)return;
+              const data=await response.json();
+              for(const product of catalogProducts){
+                const published=data.galleries?.[product.art];
+                if(!published||!Array.isArray(published.photos)||!published.photos.length)continue;
+                const photos=published.photos.filter(url=>typeof url==='string'&&url.startsWith('/'));
+                if(!photos.length)continue;
+                product.gallery=photos;
+                product.image=photos[0];
+                product.media=published.mediaType==='sketch'?'sketch':'photo';
+              }
+              renderProducts();
+              updateSelectedPreview();
+            } catch {}
+          }"""
+          new_loader = """function loadCatalogImagesData() {
+            if (!window.KUZDVOR_CATALOG_IMAGES_PROMISE) {
+              window.KUZDVOR_CATALOG_IMAGES_PROMISE = fetch('/api/catalog-images',{cache:'no-store'})
+                .then(response => response.ok ? response.json() : null)
+                .catch(() => null);
+            }
+            return window.KUZDVOR_CATALOG_IMAGES_PROMISE;
+          }
+
+          async function loadPublishedGalleries() {
+            try {
+              const data=await loadCatalogImagesData();
+              if(!data)return;
+              let visibleChanged=false;
+              for(const product of catalogProducts){
+                const published=data.galleries?.[product.art];
+                if(!published||!Array.isArray(published.photos)||!published.photos.length)continue;
+                const photos=published.photos.filter(url=>typeof url==='string'&&url.startsWith('/'));
+                if(!photos.length)continue;
+                const nextMedia=published.mediaType==='sketch'?'sketch':'photo';
+                const changed=product.media!==nextMedia || product.gallery.length!==photos.length || product.gallery.some((url,index)=>url!==photos[index]);
+                if(!changed)continue;
+                if(product.rank<=visibleCount)visibleChanged=true;
+                product.gallery=photos;
+                product.image=photos[0];
+                product.media=nextMedia;
+              }
+              if(visibleChanged)renderProducts();
+              updateSelectedPreview();
+            } catch {}
+          }"""
+          if new_loader not in text:
+              if old_loader not in text:
+                  raise SystemExit('Expected catalog gallery loader block not found in app.js')
+              text = text.replace(old_loader, new_loader, 1)
+          app.write_text(text, encoding='utf-8')
+
+          replace_once(
+              'color-photo-site.js',
+              """      const response = await fetch('/api/catalog-images', {cache:'no-store'});
+                    if (!response.ok) throw new Error('catalog');
+                    const data = await response.json();""",
+              """      const request = window.KUZDVOR_CATALOG_IMAGES_PROMISE || (window.KUZDVOR_CATALOG_IMAGES_PROMISE = fetch('/api/catalog-images', {cache:'no-store'})
+                      .then(response => response.ok ? response.json() : null)
+                      .catch(() => null));
+                    const data = await request;
+                    if (!data) throw new Error('catalog');"""
+          )
+
+          styles = Path('styles.css')
+          css = styles.read_text(encoding='utf-8')
+          marker = 'Mobile catalog performance guard'
+          if marker not in css:
+              css += """
+
+          /* Mobile catalog performance guard: cards keep natural height and do not stretch into blank rows. */
+          @media(max-width:620px){
+            .catalog-grid{align-items:start!important}
+            .product-card{height:auto!important;min-height:0!important;align-self:start!important}
+            .product-card .product-info{flex:0 0 auto!important;min-height:0!important}
+            .product-image-backdrop{display:none!important}
+          }
+          """
+              styles.write_text(css, encoding='utf-8')
+
+          test = Path('scripts/test-gate-page.mjs')
+          tests = test.read_text(encoding='utf-8')
+          guard = """assert(!app.includes('class=\\\"product-image-backdrop\\\"'), 'Catalog cards must not request duplicate decorative backdrop images');
+          assert(app.includes('KUZDVOR_CATALOG_IMAGES_PROMISE'), 'Catalog image API must be shared instead of fetched independently');
+          const colorPhotoSite = await readFile('color-photo-site.js','utf8');
+          const stylesCss = await readFile('styles.css','utf8');
+          assert(colorPhotoSite.includes('KUZDVOR_CATALOG_IMAGES_PROMISE'), 'Color photos must reuse the shared catalog image request');
+          assert(stylesCss.includes('Mobile catalog performance guard') && stylesCss.includes('.catalog-grid{align-items:start!important}'), 'Mobile card stretch guard missing');
+          """
+          anchor = "console.log('Gate page foundation checks: OK');"
+          if 'duplicate decorative backdrop images' not in tests:
+              if anchor not in tests:
+                  raise SystemExit('Gate page test anchor missing')
+              tests = tests.replace(anchor, guard + '\n' + anchor, 1)
+              test.write_text(tests, encoding='utf-8')
+
+      - name: Verify patch
+        run: |
+          node --check app.js
+          node --check color-photo-site.js
+          node scripts/test-gate-page.mjs
+
+      - name: Commit performance fix
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app.js color-photo-site.js styles.css scripts/test-gate-page.mjs
+          if git diff --cached --quiet; then
+            echo 'Performance patch already applied.'
+            exit 0
+          fi
+          git commit -m 'Speed up mobile catalog and prevent card stretching'
+          git push origin main
