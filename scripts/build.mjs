@@ -6,7 +6,7 @@ await mkdir('dist/server', { recursive: true });
 await mkdir('dist/client', { recursive: true });
 await mkdir('dist/.openai', { recursive: true });
 
-const [htmlSource, homeHtmlSource, homeCss, productCategoriesSource, css, storefrontCss, gatePageCss, catalogImages, pricesSource, deliveryPricesSource, customerContextSource, deliverySharedSource, leadsSharedSource, js, publicSiteJsSource, gatePageUiSource, colorPhotoSiteSource, adminHtmlSource, adminCss, adminJsSource, adminColorsJsSource, adminPricesJsSource, adminSiteJsSource, adminLeadsJsSource, workerSource, adminAuthSource, siteSettingsSource, catalogMediaSource, catalogColorsSource, gateQuoteSource, leadAntispamSource, leadsSource] = await Promise.all([
+const [htmlSource, homeHtmlSource, homeCss, productCategoriesSource, css, storefrontCss, gatePageCss, catalogImages, pricesSource, deliveryPricesSource, customerContextSource, deliverySharedSource, leadsSharedSource, js, publicSiteJsSource, gatePageUiSource, colorPhotoSiteSource, adminHtmlSource, adminCss, adminJsSource, adminColorsJsSource, adminPricesJsSource, adminSiteJsSource, adminLeadsJsSource, adminEnhancementsJsSource, workerSource, adminAuthSource, siteSettingsSource, catalogMediaSource, catalogColorsSource, gateQuoteSource, leadAntispamSource, leadsSource] = await Promise.all([
   readFile('index.html', 'utf8'),
   readFile('home.html', 'utf8'),
   readFile('home.css', 'utf8'),
@@ -31,6 +31,7 @@ const [htmlSource, homeHtmlSource, homeCss, productCategoriesSource, css, storef
   readFile('admin-prices.js', 'utf8'),
   readFile('admin-site.js', 'utf8'),
   readFile('admin-leads.js', 'utf8'),
+  readFile('admin-enhancements.js', 'utf8'),
   readFile('worker/runtime.js', 'utf8'),
   readFile('worker/auth-d1.js', 'utf8'),
   readFile('worker/site-settings-d1.js', 'utf8'),
@@ -112,7 +113,7 @@ const adminJs = adminJsSource;
 const adminHtml = adminHtmlSource
   .replace('<link rel="stylesheet" href="admin.css">', `<style>${adminCss}</style>`)
   .replace('<script src="admin.js"></script>', `<script>${adminJs}\n${adminColorsJsSource}</script>`)
-  .replace('<script src="admin-prices.js"></script>', `<script>${adminPricesJsSource}</script><script>${adminSiteJsSource}</script><script>${adminLeadsJsSource}</script>`);
+  .replace('<script src="admin-prices.js"></script>', `<script>${adminPricesJsSource}</script><script>${adminSiteJsSource}</script><script>${adminLeadsJsSource}</script><script>${adminEnhancementsJsSource}</script>`);
 
 const workerModules = [
   adminAuthSource,
