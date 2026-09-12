@@ -84,14 +84,14 @@ for (const [article, scenario, gateWidth, gateHeight, wicketWidth, wicketHeight,
   rows.push({article, scenario, excelTotal: expectedTotal, siteTotal: actual.total, diffRub: actual.total - expectedTotal, ok});
 }
 
-// Runtime admin price is the authoritative standard-size baseline. Custom-size formulas keep their shape
-// and move by the same rounded adjustment, so card, calculator and server never disagree after an admin edit.
-context.PRICE_DATA = {catalog:[{art:'Арт.6',price:61600}]};
-const adjustedStandard = context.GATE_CALC.calculateGate({article:'Арт.6',gateWidth:3.4,gateHeight:1.8,wicketWidth:1,wicketHeight:1.8});
-const adjustedCustom = context.GATE_CALC.calculateGate({article:'Арт.6',gateWidth:3.8,gateHeight:1.8,wicketWidth:1,wicketHeight:1.8});
-if (adjustedStandard.total !== 61600 || adjustedCustom.total !== 66300) {
+// Even if stale/manual catalog data contains another number, it must never affect Excel-derived formulas.
+context.PRICE_DATA = {catalog:[{art:'Арт.6',price:999999}]};
+const protectedStandard = context.GATE_CALC.calculateGate({article:'Арт.6',gateWidth:3.4,gateHeight:1.8,wicketWidth:1,wicketHeight:1.8});
+const protectedCustom = context.GATE_CALC.calculateGate({article:'Арт.6',gateWidth:3.8,gateHeight:1.8,wicketWidth:1,wicketHeight:1.8});
+const standardInfo = context.GATE_CALC.standardForArticle('Арт.6');
+if (protectedStandard.total !== 56600 || protectedCustom.total !== 61300 || standardInfo?.price !== 56600) {
   failures += 1;
-  console.error(`RUNTIME BASELINE FAIL: expected 61600 / 66300, got ${adjustedStandard.total} / ${adjustedCustom.total}`);
+  console.error(`EXCEL SOURCE FAIL: expected 56600 / 61300 / 56600, got ${protectedStandard.total} / ${protectedCustom.total} / ${standardInfo?.price}`);
 }
 
 console.table(rows);
