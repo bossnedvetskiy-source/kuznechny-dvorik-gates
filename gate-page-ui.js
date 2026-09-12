@@ -21,6 +21,7 @@
     .color-copy strong{color:#e1ae4c;font-size:13px;font-weight:900;letter-spacing:-.15px;white-space:nowrap}
     .color-copy span{margin-top:2px;color:#fff;font-size:12px;font-weight:700;white-space:nowrap}
     .product-meta{display:none!important}
+    .mobile-price-breakdown>summary{cursor:default!important}
     @media(max-width:620px){.color-profile-badge{left:9px;top:9px;width:166px;min-height:48px;padding:5px 8px 5px 6px;gap:6px}.color-fan{flex-basis:38px;width:38px;height:34px}.color-fan i{left:15px;width:8px;height:29px}.color-copy strong{font-size:12px}.color-copy span{font-size:11px}}
     @media(max-width:390px){.color-profile-badge{width:150px;min-height:44px}.color-fan{flex-basis:33px;width:33px;height:31px}.color-fan i{left:13px;width:7px;height:26px}.color-copy strong{font-size:11px}.color-copy span{font-size:10px}}
   `;
@@ -36,6 +37,24 @@
       visual.append(badge);
     });
   };
+
+  const mobilePriceBreakdown = document.querySelector('.mobile-price-breakdown');
+  const mobilePriceSummary = mobilePriceBreakdown?.querySelector('summary');
+  const mobilePriceHint = mobilePriceSummary?.querySelector('small');
+  if (mobilePriceBreakdown) {
+    mobilePriceBreakdown.open = true;
+    mobilePriceBreakdown.addEventListener('toggle', () => {
+      if (!mobilePriceBreakdown.open) mobilePriceBreakdown.open = true;
+    });
+  }
+  if (mobilePriceSummary) {
+    mobilePriceSummary.addEventListener('click', event => event.preventDefault());
+    mobilePriceSummary.addEventListener('keydown', event => {
+      if (event.key === 'Enter' || event.key === ' ') event.preventDefault();
+    });
+    mobilePriceSummary.setAttribute('aria-disabled','true');
+  }
+  if (mobilePriceHint) mobilePriceHint.textContent = 'Состав предварительной стоимости';
 
   const syncHeroImage = () => {
     if (!heroImage) return;
