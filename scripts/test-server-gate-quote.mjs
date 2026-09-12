@@ -98,16 +98,17 @@ if (authoritativePosts.total !== 89600) {
   console.error(`AUTHORITATIVE POSTS FAIL: expected 89600, got ${authoritativePosts.total}`);
 }
 
-runtimeArt6Price = 61600;
-const adjustedStandard = await context.calculateAuthoritativeGateQuote({
+// Stale/manual catalog prices are allowed to exist as metadata but can never change the authoritative Excel formula result.
+runtimeArt6Price = 999999;
+const protectedStandard = await context.calculateAuthoritativeGateQuote({
   article:'Арт.6',width:3.4,height:1.8,wicketWidth:1,wicketHeight:1.8,posts:false,city:'Мелеуз'
 }, {});
-const adjustedCustom = await context.calculateAuthoritativeGateQuote({
+const protectedCustom = await context.calculateAuthoritativeGateQuote({
   article:'Арт.6',width:3.8,height:1.8,wicketWidth:1,wicketHeight:1.8,posts:false,city:'Мелеуз'
 }, {});
-if (adjustedStandard.productPrice !== 61600 || adjustedCustom.productPrice !== 66300) {
+if (protectedStandard.productPrice !== 56600 || protectedCustom.productPrice !== 61300) {
   failures += 1;
-  console.error(`SERVER RUNTIME BASELINE FAIL: expected 61600 / 66300, got ${adjustedStandard.productPrice} / ${adjustedCustom.productPrice}`);
+  console.error(`SERVER EXCEL SOURCE FAIL: expected 56600 / 61300, got ${protectedStandard.productPrice} / ${protectedCustom.productPrice}`);
 }
 
 console.log(`Server quote control cases: ${cases.length}; failures: ${failures}`);
