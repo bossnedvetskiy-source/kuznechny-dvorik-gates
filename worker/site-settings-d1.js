@@ -157,11 +157,12 @@ async function saveDeliverySettings(request,env) {
 }
 
 async function renderPublicPage(env) {
-  const [prices,site,delivery]=await Promise.all([loadPrices(env),loadSiteProfile(env),loadDeliverySettings(env)]);
+  const [prices,site,delivery,gateCalcPrices]=await Promise.all([loadPrices(env),loadSiteProfile(env),loadDeliverySettings(env),loadGateCalcInputs(env)]);
   const serializedPrices=JSON.stringify(prices).replace(/</g,'\\u003c');
   const serializedSite=JSON.stringify(site).replace(/</g,'\\u003c');
   const serializedDelivery=JSON.stringify(delivery).replace(/</g,'\\u003c');
-  return PAGE.replace('__RUNTIME_PRICE_DATA__',serializedPrices).replace('__RUNTIME_SITE_DATA__',serializedSite).replace('__RUNTIME_DELIVERY_DATA__',serializedDelivery);
+  const serializedGateCalcPrices=JSON.stringify(gateCalcPrices).replace(/</g,'\\u003c');
+  return PAGE.replace('__RUNTIME_PRICE_DATA__',serializedPrices).replace('__RUNTIME_SITE_DATA__',serializedSite).replace('__RUNTIME_DELIVERY_DATA__',serializedDelivery).replace('__RUNTIME_GATE_CALC_PRICES__',serializedGateCalcPrices);
 }
 async function renderProductHub(env) {
   const site=await loadSiteProfile(env),serializedSite=JSON.stringify(site).replace(/</g,'\u003c');
