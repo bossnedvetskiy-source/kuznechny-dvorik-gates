@@ -22,13 +22,13 @@
     <div class="lead-toolbar">
       <div class="lead-stats" id="leadStats"></div>
       <div class="lead-toolbar-actions">
-        <button class="reset-button" id="exportLeadsCsv" type="button">Экспорт CSV</button>
-        <button class="reset-button" id="backupLeadsJson" type="button">Резерв JSON</button>
+        <button class="reset-button" id="exportLeadsCsv" type="button">Экспорт всех CSV</button>
+        <button class="reset-button" id="backupLeadsJson" type="button">Полный резерв JSON</button>
         <button class="reset-button" id="enableLeadNotifications" type="button">🔔 Уведомления</button>
         <button class="reset-button" id="reloadLeadsButton" type="button">Обновить</button>
       </div>
     </div>
-    <p class="lead-export-note" id="leadExportNote" hidden></p>
+    <p class="lead-export-note" id="leadExportNote"></p>
     <div class="lead-filters" id="leadFilters">
       <button class="active" data-lead-filter="all" type="button">Все</button>
       <button data-lead-filter="new" type="button">Новые</button>
@@ -37,7 +37,8 @@
       <button data-lead-filter="archived" type="button">Архив</button>
     </div>
     <div class="lead-list" id="leadList"></div>
-    <p class="empty-photos" id="emptyLeads" hidden>Заявок пока нет.</p>`;
+    <p class="empty-photos" id="emptyLeads" hidden>Заявок пока нет.</p>
+    <div class="lead-more-wrap"><button class="reset-button" id="loadMoreLeads" type="button" hidden>Показать ещё</button></div>`;
   shell.append(panel);
 
   const style = document.createElement('style');
@@ -49,7 +50,7 @@
     .lead-card-head{display:flex;align-items:start;justify-content:space-between;gap:18px;margin-bottom:13px}.lead-main{display:grid;gap:4px}.lead-main b{font-size:15px}.lead-main span{color:var(--muted);font-size:10px}.lead-total{font:20px Prata,serif;color:#8a6326;white-space:nowrap}
     .lead-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:12px}.lead-field{display:grid;gap:3px;padding:9px 10px;border-radius:10px;background:#f7f4ef}.lead-field span{color:var(--muted);font-size:9px;text-transform:uppercase;letter-spacing:.4px}.lead-field b{font-size:11px;word-break:break-word}
     .lead-note{margin:0 0 12px;padding:10px 12px;border-left:3px solid #d1a95f;background:#faf7f1;color:#5f584f;font-size:11px;line-height:1.55}.lead-card-actions{display:flex;align-items:center;justify-content:space-between;gap:10px}.lead-contact-actions{display:flex;gap:7px}.lead-contact-actions a{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:0 12px;border:1px solid var(--line);border-radius:10px;background:#fff;font-size:11px;font-weight:800}.lead-contact-actions a:first-child{background:var(--ink);border-color:var(--ink);color:#fff}
-    .lead-status{height:38px;padding:0 10px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);font-size:11px;font-weight:800}.lead-details{margin-top:10px}.lead-details summary{cursor:pointer;color:var(--muted);font-size:10px;font-weight:800}.lead-details pre{overflow:auto;max-height:220px;margin:8px 0 0;padding:10px;border-radius:10px;background:#111315;color:#eee8de;font:10px/1.5 monospace;white-space:pre-wrap}
+    .lead-status{height:38px;padding:0 10px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);font-size:11px;font-weight:800}.lead-details{margin-top:10px}.lead-details summary{cursor:pointer;color:var(--muted);font-size:10px;font-weight:800}.lead-details pre{overflow:auto;max-height:220px;margin:8px 0 0;padding:10px;border-radius:10px;background:#111315;color:#eee8de;font:10px/1.5 monospace;white-space:pre-wrap}.lead-more-wrap{display:flex;justify-content:center;padding:16px 0 4px}.lead-more-wrap .reset-button{min-width:180px}
     @media(max-width:900px){.lead-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
     @media(max-width:620px){.lead-toolbar{align-items:stretch;flex-direction:column}.lead-toolbar-actions{display:grid;grid-template-columns:1fr 1fr}.lead-toolbar .reset-button{width:100%}.lead-card{padding:13px}.lead-card-head{gap:8px}.lead-total{font-size:17px}.lead-grid{grid-template-columns:1fr 1fr}.lead-card-actions{align-items:stretch;flex-direction:column}.lead-contact-actions{display:grid;grid-template-columns:1fr 1fr}.lead-status{width:100%}}
   `;
@@ -59,6 +60,7 @@
   const empty = panel.querySelector('#emptyLeads');
   const stats = panel.querySelector('#leadStats');
   const reloadButton = panel.querySelector('#reloadLeadsButton');
+  const loadMoreButton = panel.querySelector('#loadMoreLeads');
   const notificationButton = panel.querySelector('#enableLeadNotifications');
   const exportCsvButton = panel.querySelector('#exportLeadsCsv');
   const backupJsonButton = panel.querySelector('#backupLeadsJson');
@@ -67,8 +69,11 @@
   let leads = [];
   let activeFilter = 'all';
   let loaded = false;
-  let limited = false;
   let latestLeadId = 0;
+  let nextBeforeId = null;
+  let hasMore = false;
+  let totalCount = 0;
+  let filteredTotal = 0;
   let pollingTimer = 0;
 
   const escape = value => String(value ?? '').replace(/[&<>'"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));
@@ -88,7 +93,7 @@
 
   function renderStats(counts = {}) {
     const newCount=Number(counts.new)||0;
-    stats.innerHTML = `<span class="lead-stat">Новые <b>${newCount}</b></span><span class="lead-stat">Связались <b>${Number(counts.contacted)||0}</b></span><span class="lead-stat">Закрытые <b>${Number(counts.done)||0}</b></span>`;
+    stats.innerHTML = `<span class="lead-stat">Новые <b>${newCount}</b></span><span class="lead-stat">Связались <b>${Number(counts.contacted)||0}</b></span><span class="lead-stat">Закрытые <b>${Number(counts.done)||0}</b></span><span class="lead-stat">Архив <b>${Number(counts.archived)||0}</b></span>`;
     tab.textContent = newCount ? `📥 Заявки · ${newCount}` : '📥 Заявки';
   }
 
@@ -119,26 +124,67 @@
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
-  function exportLeadsCsv() {
-    if (!leads.length) return showToast('Нет заявок для экспорта', true);
-    const columns = ['id','created_at','status','name','phone','city','category','article','product_title','width','height','wicket_width','wicket_height','install','posts','total','client_total','quote_verified','delivery_pending','delivery_out_of_area','delivery_distance_km','source','comment','message'];
-    const quote = value => `"${String(value ?? '').replace(/"/g, '""')}"`;
-    const rows = [columns.join(';'), ...leads.map(lead => columns.map(key => quote(lead[key])).join(';'))];
-    downloadText(`kuznechny-dvorik-leads-${new Date().toISOString().slice(0,10)}.csv`, '\ufeff' + rows.join('\n'), 'text/csv;charset=utf-8');
-    showToast(limited ? 'Экспортированы последние 200 заявок' : 'Заявки экспортированы в CSV');
+  function leadsUrl({beforeId=null, limit=50, status=activeFilter} = {}) {
+    const params = new URLSearchParams({limit:String(limit)});
+    if (beforeId) params.set('before_id', String(beforeId));
+    if (status && status !== 'all') params.set('status', status);
+    return `/api/admin/leads?${params.toString()}`;
   }
 
-  function backupLeadsJson() {
-    if (!leads.length) return showToast('Нет заявок для резервной копии', true);
-    const payload = {exportedAt:new Date().toISOString(), limited, count:leads.length, leads};
-    downloadText(`kuznechny-dvorik-leads-backup-${new Date().toISOString().slice(0,10)}.json`, JSON.stringify(payload, null, 2), 'application/json;charset=utf-8');
-    showToast(limited ? 'Сохранены последние 200 заявок. Для полного архива нужен серверный экспорт.' : 'Резервная копия заявок сохранена');
+  async function fetchAllLeads() {
+    const all = [];
+    const seen = new Set();
+    let cursor = null;
+    let guard = 0;
+    while (guard < 10000) {
+      guard += 1;
+      const data = await api(leadsUrl({beforeId:cursor, limit:200, status:'all'}));
+      const page = Array.isArray(data.leads) ? data.leads : [];
+      for (const lead of page) {
+        const id = Number(lead.id);
+        if (!seen.has(id)) {
+          seen.add(id);
+          all.push(lead);
+        }
+      }
+      if (!data.page?.hasMore || !data.page?.nextBeforeId) break;
+      if (Number(data.page.nextBeforeId) === Number(cursor)) throw new Error('Сервер вернул повторяющийся курсор заявок');
+      cursor = data.page.nextBeforeId;
+    }
+    if (guard >= 10000) throw new Error('Превышен безопасный предел страниц при экспорте');
+    return all;
+  }
+
+  async function runFullExport(button, mode) {
+    const original = button.textContent;
+    button.disabled = true;
+    button.textContent = 'Собираем все заявки…';
+    try {
+      const allLeads = await fetchAllLeads();
+      if (!allLeads.length) return showToast('Нет заявок для экспорта', true);
+      const date = new Date().toISOString().slice(0,10);
+      if (mode === 'csv') {
+        const columns = ['id','created_at','status','name','phone','city','category','article','product_title','width','height','wicket_width','wicket_height','install','posts','total','client_total','quote_verified','delivery_pending','delivery_out_of_area','delivery_distance_km','source','comment','message'];
+        const quote = value => `"${String(value ?? '').replace(/"/g, '""')}"`;
+        const rows = [columns.join(';'), ...allLeads.map(lead => columns.map(key => quote(lead[key])).join(';'))];
+        downloadText(`kuznechny-dvorik-leads-${date}.csv`, '\ufeff' + rows.join('\n'), 'text/csv;charset=utf-8');
+        showToast(`Экспортированы все заявки: ${allLeads.length}`);
+      } else {
+        const payload = {exportedAt:new Date().toISOString(), complete:true, count:allLeads.length, leads:allLeads};
+        downloadText(`kuznechny-dvorik-leads-backup-${date}.json`, JSON.stringify(payload, null, 2), 'application/json;charset=utf-8');
+        showToast(`Полный резерв сохранён: ${allLeads.length} заявок`);
+      }
+    } catch (error) {
+      showToast(error.message, true);
+    } finally {
+      button.disabled = false;
+      button.textContent = original;
+    }
   }
 
   function render() {
-    const shown = activeFilter === 'all' ? leads : leads.filter(lead => lead.status === activeFilter);
-    empty.hidden = shown.length > 0;
-    list.innerHTML = shown.map(lead => {
+    empty.hidden = leads.length > 0;
+    list.innerHTML = leads.map(lead => {
       const category=lead.category||'gates';
       const categoryName=categoryLabel(category);
       const dimensions = [lead.width ? `${lead.width} м` : '', lead.height ? `× ${lead.height} м` : ''].filter(Boolean).join(' ');
@@ -170,6 +216,10 @@
       </article>`;
     }).join('');
 
+    loadMoreButton.hidden = !hasMore;
+    const scopeLabel = activeFilter === 'all' ? 'всего' : `в разделе «${statusLabel(activeFilter)}»`;
+    exportNote.textContent = `Показано ${leads.length} из ${filteredTotal} ${scopeLabel}. Полный CSV и JSON собираются со всех страниц сервера, а не только из видимого списка.`;
+
     list.querySelectorAll('.lead-status').forEach(select => select.addEventListener('change', async () => {
       const card = select.closest('[data-lead-id]');
       const id = Number(card.dataset.leadId);
@@ -187,38 +237,45 @@
     }));
   }
 
-  async function load(force = false, silent = false) {
-    if (loaded && !force) { render(); return; }
-    if (!silent) { reloadButton.disabled = true; reloadButton.textContent = 'Загружаем…'; }
+  async function load(reset = true, silent = false) {
+    if (loaded && !reset) { render(); return; }
+    if (!silent && reset) { reloadButton.disabled = true; reloadButton.textContent = 'Загружаем…'; }
+    if (!silent && !reset) { loadMoreButton.disabled = true; loadMoreButton.textContent = 'Загружаем…'; }
     try {
-      const data = await api('/api/admin/leads');
+      const data = await api(leadsUrl({beforeId:reset?null:nextBeforeId, limit:50, status:activeFilter}));
       const nextLeads = Array.isArray(data.leads) ? data.leads : [];
       const newestId = nextLeads.reduce((max,lead)=>Math.max(max,Number(lead.id)||0),0);
-      const arrivals = latestLeadId ? nextLeads.filter(lead => Number(lead.id)>latestLeadId) : [];
-      leads = nextLeads;
-      limited = Boolean(data.limited);
-      exportNote.hidden = !limited;
-      exportNote.textContent = limited ? 'В админке показаны последние 200 заявок. CSV и JSON ниже сохранят именно их; полный серверный архив нужно выгружать отдельно.' : '';
+      const arrivals = reset && activeFilter === 'all' && latestLeadId ? nextLeads.filter(lead => Number(lead.id)>latestLeadId) : [];
+      leads = reset ? nextLeads : [...leads, ...nextLeads.filter(lead => !leads.some(current => Number(current.id) === Number(lead.id)))];
+      nextBeforeId = data.page?.nextBeforeId || null;
+      hasMore = Boolean(data.page?.hasMore);
+      totalCount = Number(data.totalCount) || 0;
+      filteredTotal = Number(data.filteredTotal ?? totalCount) || 0;
       renderStats(data.counts || {});
-      if (newestId > latestLeadId) latestLeadId = newestId;
+      if (activeFilter === 'all' && newestId > latestLeadId) latestLeadId = newestId;
       loaded = true;
       render();
       notifyArrivals(arrivals);
     } catch (error) {
       if (!silent) showToast(error.message, true);
     } finally {
-      if (!silent) { reloadButton.disabled = false; reloadButton.textContent = 'Обновить'; }
+      if (!silent && reset) { reloadButton.disabled = false; reloadButton.textContent = 'Обновить'; }
+      if (!silent && !reset) { loadMoreButton.disabled = false; loadMoreButton.textContent = 'Показать ещё'; }
     }
   }
 
-  filters.forEach(button => button.addEventListener('click', () => {
+  filters.forEach(button => button.addEventListener('click', async () => {
     filters.forEach(item => item.classList.toggle('active', item === button));
     activeFilter = button.dataset.leadFilter;
-    render();
+    loaded = false;
+    nextBeforeId = null;
+    hasMore = false;
+    await load(true);
   }));
   reloadButton.addEventListener('click', () => load(true));
-  exportCsvButton?.addEventListener('click', exportLeadsCsv);
-  backupJsonButton?.addEventListener('click', backupLeadsJson);
+  loadMoreButton.addEventListener('click', () => load(false));
+  exportCsvButton?.addEventListener('click', () => runFullExport(exportCsvButton, 'csv'));
+  backupJsonButton?.addEventListener('click', () => runFullExport(backupJsonButton, 'json'));
   notificationButton?.addEventListener('click', async () => {
     if (!('Notification' in window)) return;
     try { await Notification.requestPermission(); } catch {}
@@ -248,7 +305,7 @@
     document.querySelectorAll('.admin-tab-panel').forEach(item => { item.hidden = item !== panel; });
     nav.querySelectorAll('.admin-tab').forEach(item => item.classList.toggle('active', item === tab));
     load(true);
-    if (!pollingTimer) pollingTimer = window.setInterval(() => load(true, true), 30000);
+    if (!pollingTimer) pollingTimer = window.setInterval(() => { if (activeFilter === 'all') load(true, true); }, 30000);
   });
-  document.addEventListener('visibilitychange',()=>{ if(!document.hidden) load(true,true); });
+  document.addEventListener('visibilitychange',()=>{ if(!document.hidden && activeFilter === 'all') load(true,true); });
 })();
