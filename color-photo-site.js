@@ -476,9 +476,11 @@
 
   async function loadColorPhotos() {
     try {
-      const response = await fetch('/api/catalog-images', {cache:'no-store'});
-      if (!response.ok) throw new Error('catalog');
-      const data = await response.json();
+      const request = window.KUZDVOR_CATALOG_IMAGES_PROMISE || (window.KUZDVOR_CATALOG_IMAGES_PROMISE = fetch('/api/catalog-images', {cache:'no-store'})
+          .then(response => response.ok ? response.json() : null)
+          .catch(() => null));
+        const data = await request;
+        if (!data) throw new Error('catalog');
       colorPhotosByArticle = Object.fromEntries(Object.entries(data.galleries || {}).map(([article, gallery]) => [article, {...(gallery?.colorPhotos || {})}]));
     } catch {
       colorPhotosByArticle = {};

@@ -127,3 +127,12 @@
 .product-card.photo.fit-cover .product-image-open{inset:10px!important;width:calc(100% - 20px)!important;height:calc(100% - 20px)!important}
 .product-image-backdrop{display:none!important}
 .hero-photo img,.work-gallery img,.selected-product-preview img,.lightbox-stage img{object-fit:contain!important;object-position:center!important;transform:none!important}
+
+
+/* Mobile catalog performance guard: cards keep natural height and never stretch into blank rows. */
+@media(max-width:620px){
+  .catalog-grid{align-items:start!important;grid-auto-rows:max-content!important}
+  .product-card{height:auto!important;min-height:0!important;align-self:start!important}
+  .product-card .product-info{flex:0 0 auto!important;min-height:0!important}
+  .product-image-backdrop{display:none!important}
+}

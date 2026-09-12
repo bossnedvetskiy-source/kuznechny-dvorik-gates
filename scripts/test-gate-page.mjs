@@ -87,4 +87,11 @@ assert(workerRuntime.includes('serviceAreaKm') && workerRuntime.includes('outOfA
 assert(delivery.includes('out-of-area') && ui.includes("['out-of-area','error']"), 'Out-of-area delivery must still allow a manual lead');
 assert(html.includes('id="catalogWarranty"') && runtime.includes('catalogWarranty'), 'Warranty must use the shared runtime setting everywhere');
 
+const colorPhotoSite = await readFile('color-photo-site.js','utf8');
+const stylesCss = await readFile('styles.css','utf8');
+assert(!app.includes('class=\"product-image-backdrop\"'), 'Catalog cards must not request duplicate decorative backdrop images');
+assert(app.includes('KUZDVOR_CATALOG_IMAGES_PROMISE'), 'Catalog image API must be shared instead of fetched independently');
+assert(colorPhotoSite.includes('KUZDVOR_CATALOG_IMAGES_PROMISE'), 'Color photos must reuse the shared catalog image request');
+assert(stylesCss.includes('Mobile catalog performance guard') && stylesCss.includes('grid-auto-rows:max-content'), 'Mobile card stretch guard missing');
+
 console.log('Gate page foundation checks: OK');

@@ -97,10 +97,9 @@ function renderProducts() {
   const visible = catalogProducts.slice(0, visibleCount);
   grid.innerHTML = visible.map(product => `<article class="product-card ${product.media}" data-card-product="${product.id}">
     <div class="product-visual" data-gallery-card="${product.id}" data-image-index="0">
-      <img class="product-image-backdrop" src="${product.image}" alt="" aria-hidden="true" loading="lazy">
       <span class="product-art">${product.art}</span>
       <button class="product-image-open" data-zoom="${product.id}" type="button" aria-label="Открыть ${product.media==='sketch'?'эскиз':'галерею'} ${product.art}">
-        <img src="${product.image}" alt="${product.media==='sketch'?'Эскиз':'Фотография'} ворот с калиткой ${product.art}" loading="lazy">
+        <img src="${product.image}" alt="${product.media==='sketch'?'Эскиз':'Фотография'} ворот с калиткой ${product.art}" loading="lazy" decoding="async" fetchpriority="low">
       </button>
       ${product.gallery.length>1?`<button class="card-gallery-arrow previous" data-gallery-shift="-1" type="button" aria-label="Предыдущая фотография ${product.art}">‹</button><button class="card-gallery-arrow next" data-gallery-shift="1" type="button" aria-label="Следующая фотография ${product.art}">›</button>`:''}
       <span class="product-photo-count" data-photo-count>${product.media==='sketch'?'Эскиз':product.gallery.length>1?`1 из ${product.gallery.length}`:'1 фото'}</span>
@@ -185,21 +184,34 @@ function showCardImage(visual,index) {
 showMoreButton.addEventListener('click',()=>{visibleCount+=pageSize();reachGoal('catalog_show_more',{visible:Math.min(visibleCount,catalogProducts.length),total:catalogProducts.length});renderProducts()});
 mobileCatalogMedia.addEventListener('change',()=>{visibleCount=pageSize();renderProducts()});
 
+function loadCatalogImagesData() {
+  if (!window.KUZDVOR_CATALOG_IMAGES_PROMISE) {
+    window.KUZDVOR_CATALOG_IMAGES_PROMISE = fetch('/api/catalog-images',{cache:'no-store'})
+      .then(response => response.ok ? response.json() : null)
+      .catch(() => null);
+  }
+  return window.KUZDVOR_CATALOG_IMAGES_PROMISE;
+}
+
 async function loadPublishedGalleries() {
   try {
-    const response=await fetch('/api/catalog-images',{cache:'no-store'});
-    if(!response.ok)return;
-    const data=await response.json();
+    const data=await loadCatalogImagesData();
+    if(!data)return;
+    let visibleChanged=false;
     for(const product of catalogProducts){
       const published=data.galleries?.[product.art];
       if(!published||!Array.isArray(published.photos)||!published.photos.length)continue;
       const photos=published.photos.filter(url=>typeof url==='string'&&url.startsWith('/'));
       if(!photos.length)continue;
+      const nextMedia=published.mediaType==='sketch'?'sketch':'photo';
+      const changed=product.media!==nextMedia || product.gallery.length!==photos.length || product.gallery.some((url,index)=>url!==photos[index]);
+      if(!changed)continue;
+      if(product.rank<=visibleCount)visibleChanged=true;
       product.gallery=photos;
       product.image=photos[0];
-      product.media=published.mediaType==='sketch'?'sketch':'photo';
+      product.media=nextMedia;
     }
-    renderProducts();
+    if(visibleChanged)renderProducts();
     updateSelectedPreview();
   } catch {}
 }
