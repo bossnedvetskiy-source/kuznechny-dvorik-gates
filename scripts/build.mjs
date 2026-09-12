@@ -6,7 +6,7 @@ await mkdir('dist/server', { recursive: true });
 await mkdir('dist/client', { recursive: true });
 await mkdir('dist/.openai', { recursive: true });
 
-const [htmlSource, homeHtmlSource, homeCss, productCategoriesSource, css, storefrontCss, gatePageCss, catalogImages, pricesSource, deliveryPricesSource, customerContextSource, deliverySharedSource, leadsSharedSource, js, runtimePriceAdjustmentSource, publicSiteJsSource, gatePageUiSource, colorPhotoSiteSource, adminHtmlSource, adminCss, adminJsSource, adminColorsJsSource, adminPricesJsSource, adminSiteJsSource, adminDeliveryJsSource, adminLeadsJsSource, adminWorkflowJsSource, adminTabsFixJsSource, adminHistoryJsSource, workerSource, adminAuthSource, siteSettingsSource, catalogMediaSource, catalogColorsSource, gateQuoteSource, leadAntispamSource, leadsSource, adminEnhancementsSource] = await Promise.all([
+const [htmlSource, homeHtmlSource, homeCss, productCategoriesSource, css, storefrontCss, gatePageCss, catalogImages, pricesSource, deliveryPricesSource, customerContextSource, deliverySharedSource, leadsSharedSource, js, runtimePriceAdjustmentSource, publicSiteJsSource, gatePageUiSource, colorPhotoSiteSource, adminHtmlSource, adminCss, adminJsSource, adminColorsJsSource, adminColorAtomicJsSource, adminPricesJsSource, adminSiteJsSource, adminDeliveryJsSource, adminLeadsJsSource, adminWorkflowJsSource, adminTabsFixJsSource, adminHistoryJsSource, adminGuidanceJsSource, workerSource, adminAuthSource, siteSettingsSource, catalogMediaSource, catalogColorsSource, gateQuoteSource, leadAntispamSource, leadsSource, adminEnhancementsSource, adminColorAtomicSource, adminMediaCleanupSource] = await Promise.all([
   readFile('index.html', 'utf8'),
   readFile('home.html', 'utf8'),
   readFile('home.css', 'utf8'),
@@ -29,6 +29,7 @@ const [htmlSource, homeHtmlSource, homeCss, productCategoriesSource, css, storef
   readFile('admin.css', 'utf8'),
   readFile('admin.js', 'utf8'),
   readFile('admin-colors.js', 'utf8'),
+  readFile('admin-color-atomic.js', 'utf8'),
   readFile('admin-prices.js', 'utf8'),
   readFile('admin-site.js', 'utf8'),
   readFile('admin-delivery.js', 'utf8'),
@@ -36,6 +37,7 @@ const [htmlSource, homeHtmlSource, homeCss, productCategoriesSource, css, storef
   readFile('admin-workflow.js', 'utf8'),
   readFile('admin-tabs-fix.js', 'utf8'),
   readFile('admin-history.js', 'utf8'),
+  readFile('admin-guidance.js', 'utf8'),
   readFile('worker/runtime.js', 'utf8'),
   readFile('worker/auth-d1.js', 'utf8'),
   readFile('worker/site-settings-d1.js', 'utf8'),
@@ -44,7 +46,9 @@ const [htmlSource, homeHtmlSource, homeCss, productCategoriesSource, css, storef
   readFile('worker/gate-quote-d1.js', 'utf8'),
   readFile('worker/lead-antispam.js', 'utf8'),
   readFile('worker/leads-d1.js', 'utf8'),
-  readFile('worker/admin-enhancements-d1.js', 'utf8')
+  readFile('worker/admin-enhancements-d1.js', 'utf8'),
+  readFile('worker/admin-color-atomic-d1.js', 'utf8'),
+  readFile('worker/admin-media-cleanup-d1.js', 'utf8')
 ]);
 
 const gateCalcSources = await Promise.all([
@@ -92,6 +96,7 @@ const homeHtml = homeHtmlSource
   .replace('<script src="product-categories.js"></script>', `<script>${productCategoriesSource}</script>`);
 
 const html = htmlSource
+  .replace('<meta name="robots" content="index,follow,max-image-preview:large">', '<meta name="robots" content="noindex,follow,noarchive">')
   .replace('<link rel="stylesheet" href="styles.css">', `<style>${css}\n${storefrontCss}\n${gatePageCss}</style>`)
   .replace('<link rel="stylesheet" href="storefront.css">', '')
   .replace('<link rel="stylesheet" href="gate-page.css">', '')
@@ -116,8 +121,8 @@ const adminJs = adminJsSource;
 
 const adminHtml = adminHtmlSource
   .replace('<link rel="stylesheet" href="admin.css">', `<style>${adminCss}</style>`)
-  .replace('<script src="admin.js"></script>', `<script>${adminJs}\n${adminColorsJsSource}</script>`)
-  .replace('<script src="admin-prices.js"></script>', `<script>${adminPricesJsSource}</script><script>${adminSiteJsSource}</script><script>${adminDeliveryJsSource}</script><script>${adminLeadsJsSource}</script><script>${adminWorkflowJsSource}</script><script>${adminTabsFixJsSource}</script><script>${adminHistoryJsSource}</script>`);
+  .replace('<script src="admin.js"></script>', `<script>${adminJs}\n${adminColorsJsSource}\n${adminColorAtomicJsSource}</script>`)
+  .replace('<script src="admin-prices.js"></script>', `<script>${adminPricesJsSource}</script><script>${adminSiteJsSource}</script><script>${adminDeliveryJsSource}</script><script>${adminLeadsJsSource}</script><script>${adminWorkflowJsSource}</script><script>${adminTabsFixJsSource}</script><script>${adminHistoryJsSource}</script><script>${adminGuidanceJsSource}</script>`);
 
 const workerModules = [
   adminAuthSource,
@@ -127,12 +132,14 @@ const workerModules = [
   catalogMediaSource,
   catalogColorsSource,
   leadsSource,
-  adminEnhancementsSource
+  adminEnhancementsSource,
+  adminColorAtomicSource,
+  adminMediaCleanupSource
 ].map(source => source.trim()).join('\n\n');
 if (!workerSource.includes('/*__WORKER_MODULES__*/')) throw new Error('Не найден маркер модулей Worker');
 const patchedWorkerSource = workerSource.replace('/*__WORKER_MODULES__*/', workerModules);
 
-for (const requiredWorkerFeature of ['calculateAuthoritativeGateQuote','consumeLeadAttempt','DEFAULT_GATE_CALC_MODELS','DEFAULT_DELIVERY_PRICES','lead_workflow','delivery_prices']) {
+for (const requiredWorkerFeature of ['calculateAuthoritativeGateQuote','consumeLeadAttempt','DEFAULT_GATE_CALC_MODELS','DEFAULT_DELIVERY_PRICES','lead_workflow','delivery_prices','catalog-color-upload','media-cleanup']) {
   if (!patchedWorkerSource.includes(requiredWorkerFeature)) throw new Error(`Worker assembly missing ${requiredWorkerFeature}`);
 }
 
