@@ -42,7 +42,7 @@
     return result;
   };
 
-  function calculateGate({ article, gateWidth, gateHeight, wicketWidth, wicketHeight }) {
+  function rawGateCalculation({ article, gateWidth, gateHeight, wicketWidth, wicketHeight }) {
     const key = normalizeArticle(article);
     const model = pack()?.models?.[key];
     if (!model) throw new Error(`Нет расчётной модели для артикула ${article}`);
@@ -75,6 +75,41 @@
     const totalRaw = gatePrice + wicketPrice;
     const total = roundExcel(totalRaw, -2);
     return { article: key, gatePrice, wicketPrice, totalRaw, total };
+  }
+
+  function standardDimensions(model) {
+    const standard = model?.standard || {};
+    return {
+      gateWidth: Number(standard.gate_width_m) || 3.4,
+      gateHeight: Number(standard.gate_height_m) || 1.8,
+      wicketWidth: Number(standard.wicket_width_m) || 1,
+      wicketHeight: Number(standard.wicket_height_m) || 1.8
+    };
+  }
+
+  function runtimeCatalogPrice(article) {
+    const key = normalizeArticle(article);
+    const item = (window.PRICE_DATA?.catalog || []).find(entry => normalizeArticle(entry?.art) === key);
+    const value = Number(item?.price);
+    return Number.isFinite(value) && value >= 0 ? value : null;
+  }
+
+  function calculateGate(input) {
+    const result = rawGateCalculation(input);
+    const model = pack()?.models?.[result.article];
+    const targetStandardPrice = runtimeCatalogPrice(input.article);
+    if (!model || targetStandardPrice === null) return result;
+
+    const standard = rawGateCalculation({article:input.article, ...standardDimensions(model)});
+    const adjustment = roundExcel(targetStandardPrice - standard.total, -2);
+    if (!adjustment) return {...result, adjustment:0};
+
+    return {
+      ...result,
+      totalRaw: result.totalRaw + adjustment,
+      total: roundExcel(result.total + adjustment, -2),
+      adjustment
+    };
   }
 
   function hasArticle(article) { return Boolean(pack()?.models?.[normalizeArticle(article)]); }
