@@ -75,22 +75,78 @@ jobs:
 
             const showMore = page.locator('#showMoreButton');
             await showMore.scrollIntoViewIfNeeded();
+            await page.waitForSelector('#catalogGrid .profile-color-option[data-profile-color="other"]', {timeout:10000});
+
+            const preservedSetup = await page.evaluate(() => {
+              const cards = [...document.querySelectorAll('#catalogGrid .product-card')];
+              const first = cards[0];
+              const galleryCard = cards.find(card => card.querySelector('[data-gallery-shift="1"]')) || first;
+              window.__diagFirstCatalogCard = first;
+              window.__diagGalleryCard = galleryCard;
+              first.dataset.diagPersistent = '1';
+              galleryCard.dataset.diagGalleryPersistent = '1';
+              return {
+                firstProduct: first?.dataset.cardProduct || '',
+                galleryProduct: galleryCard?.dataset.cardProduct || '',
+                hasGalleryNext: Boolean(galleryCard?.querySelector('[data-gallery-shift="1"]'))
+              };
+            });
+
+            if (preservedSetup.hasGalleryNext) {
+              await page.locator(`[data-card-product="${preservedSetup.galleryProduct}"] [data-gallery-shift="1"]`).first().click({timeout:10000});
+            }
+            await page.locator(`[data-card-product="${preservedSetup.firstProduct}"] .profile-color-option[data-profile-color="other"]`).click({timeout:10000});
+            await page.waitForTimeout(100);
+
+            const preservedBefore = await page.evaluate(({firstProduct,galleryProduct}) => {
+              const first = document.querySelector(`[data-card-product="${CSS.escape(firstProduct)}"]`);
+              const gallery = document.querySelector(`[data-card-product="${CSS.escape(galleryProduct)}"]`);
+              const visual = gallery?.querySelector('[data-gallery-card]');
+              return {
+                firstMarker: first?.dataset.diagPersistent || '',
+                galleryMarker: gallery?.dataset.diagGalleryPersistent || '',
+                galleryIndex: visual?.dataset.imageIndex || '',
+                gallerySrc: visual?.querySelector('.product-image-open img')?.getAttribute('src') || '',
+                otherPressed: first?.querySelector('.profile-color-option[data-profile-color="other"]')?.getAttribute('aria-pressed') || '',
+                colorStatus: first?.querySelector('.profile-color-status')?.textContent || ''
+              };
+            }, preservedSetup);
+
             await page.waitForTimeout(150);
             const scrollBeforeMore = await page.evaluate(() => window.scrollY);
             await showMore.click({timeout:10000});
             await page.waitForFunction(() => document.querySelectorAll('#catalogGrid .product-card').length >= 12, null, {timeout:10000});
             await page.waitForTimeout(250);
-            const showMoreState = await page.evaluate(() => ({
-              scrollY: window.scrollY,
-              cards: document.querySelectorAll('#catalogGrid .product-card').length,
-              firstNewTop: document.querySelectorAll('#catalogGrid .product-card')[6]?.getBoundingClientRect().top ?? null,
-              viewportHeight: window.innerHeight
-            }));
+            const showMoreState = await page.evaluate(({firstProduct,galleryProduct}) => {
+              const cards = [...document.querySelectorAll('#catalogGrid .product-card')];
+              const first = document.querySelector(`[data-card-product="${CSS.escape(firstProduct)}"]`);
+              const gallery = document.querySelector(`[data-card-product="${CSS.escape(galleryProduct)}"]`);
+              const visual = gallery?.querySelector('[data-gallery-card]');
+              return {
+                scrollY: window.scrollY,
+                cards: cards.length,
+                firstNewTop: cards[6]?.getBoundingClientRect().top ?? null,
+                viewportHeight: window.innerHeight,
+                sameFirstCard: first === window.__diagFirstCatalogCard,
+                sameGalleryCard: gallery === window.__diagGalleryCard,
+                firstMarker: first?.dataset.diagPersistent || '',
+                galleryMarker: gallery?.dataset.diagGalleryPersistent || '',
+                galleryIndex: visual?.dataset.imageIndex || '',
+                gallerySrc: visual?.querySelector('.product-image-open img')?.getAttribute('src') || '',
+                otherPressed: first?.querySelector('.profile-color-option[data-profile-color="other"]')?.getAttribute('aria-pressed') || '',
+                colorStatus: first?.querySelector('.profile-color-status')?.textContent || ''
+              };
+            }, preservedSetup);
             console.log('SHOW_MORE_SCROLL_BEFORE', scrollBeforeMore);
+            console.log('PRESERVED_BEFORE', JSON.stringify(preservedBefore));
             console.log('SHOW_MORE_STATE', JSON.stringify(showMoreState));
             if (Math.abs(showMoreState.scrollY - scrollBeforeMore) > 12) throw new Error(`Show-more changed viewport by ${showMoreState.scrollY - scrollBeforeMore}px`);
             if (showMoreState.cards < 12) throw new Error('Show-more did not reveal the next six cards');
             if (showMoreState.firstNewTop === null || showMoreState.firstNewTop > showMoreState.viewportHeight + 20) throw new Error('First newly revealed card is not near the current viewport');
+            if (!showMoreState.sameFirstCard || !showMoreState.sameGalleryCard) throw new Error('Show-more rebuilt existing catalog cards instead of appending');
+            if (showMoreState.firstMarker !== '1' || showMoreState.galleryMarker !== '1') throw new Error('Existing catalog DOM state was lost');
+            if (showMoreState.galleryIndex !== preservedBefore.galleryIndex || showMoreState.gallerySrc !== preservedBefore.gallerySrc) throw new Error('Selected gallery photo changed after show-more');
+            if (showMoreState.otherPressed !== preservedBefore.otherPressed || showMoreState.colorStatus !== preservedBefore.colorStatus) throw new Error('Selected color state changed after show-more');
 
             await page.evaluate(() => {
               window.__diagCalculated = 0;
