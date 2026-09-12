@@ -43,12 +43,17 @@ jobs:
           node --check app.js
           node --check gate-page-ui.js
           node --check color-photo-site.js
+          node --check gate-calc-engine.js
           node --check shared/customer-context.js
           node --check shared/delivery.js
           node --check shared/leads.js
           node --check public-site-settings.js
           node --check admin.js
           node --check admin-colors.js
+          node --check admin-prices.js
+          node --check admin-site.js
+          node --check admin-leads.js
+          node --check admin-enhancements.js
           node --check worker/runtime.js
           node --check worker/auth-d1.js
           node --check worker/site-settings-d1.js
@@ -59,12 +64,16 @@ jobs:
           node --check worker/leads-d1.js
           node --check scripts/build.mjs
           node --check scripts/test-color-photos.mjs
+          node --check scripts/test-admin-integrity.mjs
 
       - name: Verify catalog images
         run: node scripts/test-catalog-images.mjs
 
       - name: Verify color photo flow
         run: node scripts/test-color-photos.mjs
+
+      - name: Verify admin integrity
+        run: node scripts/test-admin-integrity.mjs
 
       - name: Verify gate page foundation
         run: node scripts/test-gate-page.mjs
@@ -107,30 +116,43 @@ jobs:
       - name: Verify production site
         run: |
           node <<'NODE'
-          const url = 'https://kuznechny-dvorik-gates.boss-nedvetskiy.workers.dev/';
-          const required = [
+          const siteUrl = 'https://kuznechny-dvorik-gates.boss-nedvetskiy.workers.dev/';
+          const adminUrl = 'https://kuznechny-dvorik-gates.boss-nedvetskiy.workers.dev/admin';
+          const requiredSite = [
             'Ворота с калиткой',
             'Сейчас оплачивать ничего не нужно.',
             'Зачем нужен замерщик, если я знаю свои размеры?',
             'Предпочитаемый цвет:',
             'Выберите цвет профнастила',
-            'Нажмите на нужный цвет'
+            'Нажмите на нужный цвет',
+            'runtimeCatalogPrice'
+          ];
+          const requiredAdmin = [
+            'CSV с рекламой',
+            'Цена изделия — это базовая цена стандартного размера',
+            'reconcileTab'
           ];
 
           let lastError;
           for (let attempt = 1; attempt <= 5; attempt += 1) {
             try {
-              const response = await fetch(url, { cache: 'no-store' });
-              if (!response.ok) throw new Error(`HTTP ${response.status}`);
-              const html = await response.text();
-              const missing = required.filter((text) => !html.includes(text));
-              if (missing.length) throw new Error(`Missing production text: ${missing.join(' | ')}`);
-              console.log(`Production deployment verified: ${url}`);
+              const [siteResponse, adminResponse] = await Promise.all([
+                fetch(siteUrl, { cache: 'no-store' }),
+                fetch(adminUrl, { cache: 'no-store' })
+              ]);
+              if (!siteResponse.ok) throw new Error(`Site HTTP ${siteResponse.status}`);
+              if (!adminResponse.ok) throw new Error(`Admin HTTP ${adminResponse.status}`);
+              const [siteHtml, adminHtml] = await Promise.all([siteResponse.text(), adminResponse.text()]);
+              const missingSite = requiredSite.filter(text => !siteHtml.includes(text));
+              const missingAdmin = requiredAdmin.filter(text => !adminHtml.includes(text));
+              if (missingSite.length) throw new Error(`Missing production site text: ${missingSite.join(' | ')}`);
+              if (missingAdmin.length) throw new Error(`Missing production admin text: ${missingAdmin.join(' | ')}`);
+              console.log(`Production deployment verified: ${siteUrl} + /admin`);
               process.exit(0);
             } catch (error) {
               lastError = error;
               console.log(`Production verification attempt ${attempt}/5 failed: ${error.message}`);
-              if (attempt < 5) await new Promise((resolve) => setTimeout(resolve, 2000));
+              if (attempt < 5) await new Promise(resolve => setTimeout(resolve, 2000));
             }
           }
 
