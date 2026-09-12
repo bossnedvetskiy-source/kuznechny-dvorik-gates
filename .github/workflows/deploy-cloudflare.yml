@@ -42,21 +42,29 @@ jobs:
         run: |
           node --check app.js
           node --check gate-page-ui.js
+          node --check color-photo-site.js
           node --check shared/customer-context.js
           node --check shared/delivery.js
           node --check shared/leads.js
           node --check public-site-settings.js
+          node --check admin.js
+          node --check admin-colors.js
           node --check worker/runtime.js
           node --check worker/auth-d1.js
           node --check worker/site-settings-d1.js
           node --check worker/gate-quote-d1.js
           node --check worker/lead-antispam.js
           node --check worker/catalog-media-d1.js
+          node --check worker/catalog-colors-d1.js
           node --check worker/leads-d1.js
           node --check scripts/build.mjs
+          node --check scripts/test-color-photos.mjs
 
       - name: Verify catalog images
         run: node scripts/test-catalog-images.mjs
+
+      - name: Verify color photo flow
+        run: node scripts/test-color-photos.mjs
 
       - name: Verify gate page foundation
         run: node scripts/test-gate-page.mjs
@@ -103,7 +111,8 @@ jobs:
           const required = [
             'Ворота с калиткой',
             'Сейчас оплачивать ничего не нужно.',
-            'Зачем нужен замерщик, если я знаю свои размеры?'
+            'Зачем нужен замерщик, если я знаю свои размеры?',
+            'Предпочитаемый цвет:'
           ];
 
           let lastError;
