@@ -74,7 +74,7 @@ jobs:
         run: npm run build
       - name: Install browser test dependencies
         run: |
-          npm ci
+          npm install --no-audit --no-fund
           npx playwright install --with-deps chromium
       - name: Run browser E2E tests
-        run: npx playwright test
+        run: npm run test:e2e
