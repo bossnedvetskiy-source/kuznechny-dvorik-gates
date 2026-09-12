@@ -32,8 +32,10 @@
     if (Number.isFinite(cheapest)) {
       const installed = document.getElementById('heroInstalledPrice');
       const turnkey = document.getElementById('heroTurnkeyPrice');
-      if (installed) installed.textContent = `от ${money(cheapest + installation)}`;
-      if (turnkey) turnkey.textContent = `от ${money(cheapest + installation + posts)}`;
+      const installedText = `от ${money(cheapest + installation)}`;
+      const turnkeyText = `от ${money(cheapest + installation + posts)}`;
+      if (installed && installed.textContent !== installedText) installed.textContent = installedText;
+      if (turnkey && turnkey.textContent !== turnkeyText) turnkey.textContent = turnkeyText;
     }
     syncVisibleCards();
   }
@@ -47,8 +49,10 @@
       const rows = card.querySelectorAll('.price-row strong');
       const installation = Number(window.PRICE_DATA?.catalogInstallation) || 0;
       const posts = Number(window.PRICE_DATA?.catalogPosts) || 0;
-      if (rows[0]) rows[0].textContent = money(price + installation);
-      if (rows[1]) rows[1].textContent = money(price + installation + posts);
+      const installedText = money(price + installation);
+      const turnkeyText = money(price + installation + posts);
+      if (rows[0] && rows[0].textContent !== installedText) rows[0].textContent = installedText;
+      if (rows[1] && rows[1].textContent !== turnkeyText) rows[1].textContent = turnkeyText;
     });
   }
 
@@ -57,7 +61,10 @@
       await Promise.resolve(window.GATE_CALC?.ready);
       syncProducts();
       const grid = document.getElementById('catalogGrid');
-      if (grid) new MutationObserver(() => queueMicrotask(syncVisibleCards)).observe(grid, {childList:true,subtree:true});
+      // The catalog renderer replaces direct children of #catalogGrid. Observing the
+      // entire subtree also observes the price text that this synchronizer writes,
+      // which can create a self-triggering MutationObserver loop and freeze the page.
+      if (grid) new MutationObserver(() => queueMicrotask(syncVisibleCards)).observe(grid, {childList:true,subtree:false});
     } catch (error) { console.error('Excel formula price sync failed', error); }
   };
   start();
