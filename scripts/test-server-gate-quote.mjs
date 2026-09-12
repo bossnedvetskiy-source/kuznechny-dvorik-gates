@@ -21,6 +21,10 @@ vm.runInContext(pricesJs, context, {filename:'gate-calc-prices.js'});
 for (let i=0;i<chunks.length;i+=1) vm.runInContext(chunks[i], context, {filename:`chunk-${i+1}.js`});
 const modelSource = gunzipSync(Buffer.from(context.__GATE_CALC_B64, 'base64')).toString('utf8');
 vm.runInContext(modelSource, context, {filename:'excel-derived-models.js'});
+for (const article of ['39','40']) delete context.GATE_CALC_MODELS.models[article];
+if (Object.keys(context.GATE_CALC_MODELS.models).length !== 38) {
+  throw new Error(`Ожидалось 38 активных серверных моделей, получено ${Object.keys(context.GATE_CALC_MODELS.models).length}`);
+}
 
 for (const model of Object.values(context.GATE_CALC_MODELS.models || {})) {
   const compiled = {};
@@ -34,6 +38,16 @@ context.DEFAULT_GATE_CALC_PRICES = context.GATE_CALC_PRICES;
 context.DEFAULT_GATE_CALC_MODELS = context.GATE_CALC_MODELS;
 context.DEFAULT_DELIVERY_PRICES = {destinations:[], fallbackRatePerKm:90, origin:{name:'Мелеуз'}};
 vm.runInContext(quoteJs, context, {filename:'worker/gate-quote-d1.js'});
+
+for (const article of ['39','40']) {
+  let rejected = false;
+  try {
+    context.calculateGateProductServer({article,gateWidth:3.4,gateHeight:1.8,wicketWidth:1,wicketHeight:1.8});
+  } catch {
+    rejected = true;
+  }
+  if (!rejected) throw new Error(`Исключённая серверная модель ${article} всё ещё рассчитывается`);
+}
 
 const cases = [
   ['6',3.4,1.8,1,1.8,56600],
