@@ -22,6 +22,8 @@
     .color-copy span{margin-top:2px;color:#fff;font-size:12px;font-weight:700;white-space:nowrap}
     .product-meta{display:none!important}
     .mobile-price-breakdown>summary{cursor:default!important}
+    .mobile-payment-note{margin:10px 0 0;padding:10px 11px;border:1px solid rgba(230,189,105,.22);border-radius:10px;background:rgba(200,152,60,.07);color:rgba(255,255,255,.68);font-size:10px;line-height:1.5}
+    .mobile-payment-note strong{display:block;margin-bottom:2px;color:#fff;font-size:11px}
     @media(max-width:620px){.color-profile-badge{left:9px;top:9px;width:166px;min-height:48px;padding:5px 8px 5px 6px;gap:6px}.color-fan{flex-basis:38px;width:38px;height:34px}.color-fan i{left:15px;width:8px;height:29px}.color-copy strong{font-size:12px}.color-copy span{font-size:11px}}
     @media(max-width:390px){.color-profile-badge{width:150px;min-height:44px}.color-fan{flex-basis:33px;width:33px;height:31px}.color-fan i{left:13px;width:7px;height:26px}.color-copy strong{font-size:11px}.color-copy span{font-size:10px}}
   `;
@@ -53,6 +55,13 @@
     mobilePriceSummary.removeAttribute('tabindex');
   }
   if (mobilePriceHint) mobilePriceHint.textContent = 'Состав предварительной стоимости';
+  const mobilePriceBody = mobilePriceBreakdown?.querySelector('.mobile-price-breakdown-body');
+  if (mobilePriceBody && !mobilePriceBody.querySelector('.mobile-payment-note')) {
+    const paymentNote = document.createElement('div');
+    paymentNote.className = 'mobile-payment-note';
+    paymentNote.innerHTML = '<strong>Сейчас оплачивать ничего не нужно.</strong>Оплата — 50% при заключении договора, оставшиеся 50% после установки.';
+    mobilePriceBody.append(paymentNote);
+  }
 
   const syncHeroImage = () => {
     if (!heroImage) return;
