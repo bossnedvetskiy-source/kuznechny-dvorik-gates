@@ -12,7 +12,7 @@ const [enhancements, build, engine, quote, siteSettings] = await Promise.all([
 const required = [
   [enhancements, 'reconcileTab', 'admin tab reconciliation'],
   [enhancements, 'CSV с рекламой', 'marketing CSV export'],
-  [enhancements, 'Цена изделия — это базовая цена стандартного размера', 'price baseline explanation'],
+  [enhancements, 'цена изделия — это базовая цена стандартного размера', 'price baseline explanation'],
   [enhancements, 'utmCampaign', 'lead campaign rendering'],
   [build, "readFile('admin-enhancements.js'", 'production admin bundle'],
   [engine, 'runtimeCatalogPrice', 'browser runtime price baseline'],
