@@ -60,23 +60,21 @@
   }
 
   function render() {
-    const data = normalizedRows();
-    rows = data;
     list.replaceChildren();
     if (!rows.length) {
       const empty = document.createElement('div'); empty.className='delivery-admin-empty'; empty.textContent='Добавьте населённый пункт'; list.append(empty); return;
     }
     rows.forEach((row,index) => {
-      const origin = row.name.toLocaleLowerCase('ru-RU') === 'мелеуз';
+      const origin = String(row.name || '').toLocaleLowerCase('ru-RU') === 'мелеуз';
       const wrap = document.createElement('div');
       wrap.className = `delivery-admin-row${origin?' is-origin':''}`;
       const name = document.createElement('input');
       name.type='text'; name.value=row.name; name.maxLength=120; name.placeholder='Населённый пункт'; name.disabled=origin;
       name.setAttribute('aria-label', `Населённый пункт ${index+1}`);
       const price = document.createElement('input');
-      price.type='number'; price.min='0'; price.max='1000000'; price.step='100'; price.inputMode='numeric'; price.value=String(row.price);
-      price.disabled=origin; price.setAttribute('aria-label', `Стоимость доставки ${row.name}`);
-      const remove = document.createElement('button'); remove.type='button'; remove.textContent='×'; remove.title=`Удалить ${row.name}`;
+      price.type='number'; price.min='0'; price.max='1000000'; price.step='100'; price.inputMode='numeric'; price.value=String(row.price ?? 0);
+      price.disabled=origin; price.setAttribute('aria-label', `Стоимость доставки ${row.name || index+1}`);
+      const remove = document.createElement('button'); remove.type='button'; remove.textContent='×'; remove.title=`Удалить ${row.name || 'пункт'}`;
       name.addEventListener('input',()=>{rows[index].name=name.value;setDirty();});
       price.addEventListener('input',()=>{rows[index].price=Number(price.value);setDirty();});
       remove.addEventListener('click',()=>{rows.splice(index,1);setDirty();render();});
