@@ -22,6 +22,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Install build dependencies
+        run: npm install --no-audit --no-fund
+
       - name: Check Cloudflare credentials
         shell: bash
         env:
@@ -43,6 +46,7 @@ jobs:
           node --check app.js
           node --check gate-page-ui.js
           node --check color-photo-site.js
+          node --check gate-formula-prices-site.js
           node --check gate-calc-engine.js
           node --check shared/customer-context.js
           node --check shared/delivery.js
@@ -54,9 +58,11 @@ jobs:
           node --check admin-site.js
           node --check admin-leads.js
           node --check admin-enhancements.js
+          node --check admin-excel-import.js
           node --check worker/runtime.js
           node --check worker/auth-d1.js
           node --check worker/site-settings-d1.js
+          node --check worker/excel-pricing-d1.js
           node --check worker/gate-quote-d1.js
           node --check worker/lead-antispam.js
           node --check worker/catalog-media-d1.js
@@ -126,13 +132,17 @@ jobs:
             'Выберите цвет профнастила',
             'Нажмите на нужный цвет',
             'syncExcelDerivedGatePrices',
-            'standardForArticle'
+            'standardForArticle',
+            'KUZDVOR_FORMULA_PRICE_SYNC_READY'
           ];
           const forbiddenSite = ['runtimeCatalogPrice','targetStandardPrice'];
           const requiredAdmin = [
             'CSV с рекламой',
             'Источник цен ворот — Excel',
             'Цены ворот не редактируются вручную',
+            'Выбрать Excel',
+            'Опубликовать расчёт из Excel',
+            '/api/admin/gate-excel',
             'reconcileTab'
           ];
 
@@ -152,7 +162,7 @@ jobs:
               if (missingSite.length) throw new Error(`Missing production site text: ${missingSite.join(' | ')}`);
               if (forbiddenPresent.length) throw new Error(`Forbidden manual pricing logic in production: ${forbiddenPresent.join(' | ')}`);
               if (missingAdmin.length) throw new Error(`Missing production admin text: ${missingAdmin.join(' | ')}`);
-              console.log(`Production deployment verified: ${siteUrl} + /admin`);
+              console.log(`Production deployment verified: ${siteUrl} + /admin + Excel importer`);
               process.exit(0);
             } catch (error) {
               lastError = error;
