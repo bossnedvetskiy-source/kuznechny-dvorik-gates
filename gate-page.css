@@ -6,3 +6,28 @@
 
 @media(min-width:621px){.lead-sheet-close{display:none}.mobile-comment-toggle{display:none}.lead-comment{display:grid!important}.mobile-price-breakdown{display:none!important}}
 .price-delivery-note{margin-top:5px;color:#7f786f;font-size:9px;line-height:1.35;font-weight:600}
+
+@media(max-width:620px){
+  .package{padding-top:44px!important;padding-bottom:52px!important}
+  .package .section-head{gap:11px!important;margin-bottom:18px!important}
+  .package .section-head>div{align-items:flex-start!important;gap:9px!important}
+  .package .section-number{padding-top:4px!important;font-size:11px!important}
+  .package .section-head h2{font-size:0!important;line-height:1!important;letter-spacing:0!important}
+  .package .section-head h2::after{content:"Что входит в базовую цену";display:block;font:28px/1.1 Prata,serif;letter-spacing:-.8px}
+  .package .section-head>p{font-size:0!important;line-height:1!important}
+  .package .section-head>p::after{content:"Изготовление ворот с калиткой и монтаж на ваши подходящие столбы уже включены.";display:block;color:var(--muted);font:12px/1.5 Manrope,Arial,sans-serif}
+  .package-grid{grid-template-columns:1fr 1fr!important;gap:8px!important}
+  .package-grid article{min-height:0!important;padding:12px!important;border-radius:14px!important;gap:4px!important}
+  .package-grid article>span{font-size:10px!important}
+  .package-grid b{font:15px/1.22 Prata,serif!important}
+  .package-grid p{font-size:11px!important;line-height:1.4!important}
+  .package-grid article:last-child{display:none!important}
+  .package-grid article[data-package="production"] b{font-size:0!important;line-height:1!important}
+  .package-grid article[data-package="production"] b::after{content:"Изготовление и монтаж";display:block;font:15px/1.22 Prata,serif}
+  .package-grid article[data-package="production"] p{font-size:0!important;line-height:1!important}
+  .package-grid article[data-package="production"] p::after{content:"По вашим размерам. Монтаж на подходящие столбы включён.";display:block;color:var(--muted);font:11px/1.4 Manrope,Arial,sans-serif}
+  .package-note{margin-top:10px!important;padding:12px 13px!important;border-radius:12px!important;font-size:0!important;line-height:1!important}
+  .package-note::after{content:"Новые столбы и доставка добавляются при необходимости. Цвет профнастила — на выбор, на предварительную цену не влияет.";display:block;color:rgba(255,255,255,.72);font:11px/1.45 Manrope,Arial,sans-serif}
+}
+
+@media(max-width:390px){.package .section-head h2::after{font-size:26px}.package-grid article{padding:11px!important}.package-grid b,.package-grid article[data-package="production"] b::after{font-size:14px!important}.package-grid p,.package-grid article[data-package="production"] p::after{font-size:10.5px!important}}
