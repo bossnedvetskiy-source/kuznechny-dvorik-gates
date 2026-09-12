@@ -78,6 +78,48 @@
     hours.textContent = site.businessHours;
   }
 
+  const money = value => new Intl.NumberFormat('ru-RU').format(Math.round(Number(value) || 0)) + ' ₽';
+  const productIdForArticle = article => `catalog-${String(article || '').replace(/^Арт\.\s*/,'').toLowerCase().replace('с','s')}`;
+
+  async function syncExcelDerivedGatePrices() {
+    if (!window.GATE_CALC?.ready || !window.GATE_PAGE_API?.productById) return;
+    try {
+      await window.GATE_CALC.ready;
+      const visibleProducts = [];
+      for (const item of window.PRICE_DATA?.catalog || []) {
+        const standard = window.GATE_CALC.standardForArticle?.(item.art);
+        if (!standard) continue;
+        const product = window.GATE_PAGE_API.productById(productIdForArticle(item.art));
+        if (!product) continue;
+        product.price = Number(standard.price) || 0;
+        product.standard = [standard.gateWidth, standard.gateHeight];
+        product.wicketWidth = standard.wicketWidth;
+        product.wicketHeight = standard.wicketHeight;
+        if (item.visible !== false) visibleProducts.push(product);
+      }
+
+      document.querySelectorAll('.product-card[data-card-product]').forEach(card => {
+        const product = window.GATE_PAGE_API.productById(card.dataset.cardProduct);
+        if (!product) return;
+        const prices = card.querySelectorAll('.price-row strong');
+        if (prices[0]) prices[0].textContent = money(product.price + product.install);
+        if (prices[1]) prices[1].textContent = money(product.price + product.install + product.posts);
+      });
+
+      if (visibleProducts.length) {
+        const cheapest = visibleProducts.reduce((best, product) => product.price < best.price ? product : best, visibleProducts[0]);
+        const heroInstalled = document.getElementById('heroInstalledPrice');
+        const heroTurnkey = document.getElementById('heroTurnkeyPrice');
+        if (heroInstalled) heroInstalled.textContent = `от ${money(cheapest.price + cheapest.install)}`;
+        if (heroTurnkey) heroTurnkey.textContent = `от ${money(cheapest.price + cheapest.install + cheapest.posts)}`;
+      }
+    } catch (error) {
+      console.error('Excel-derived catalog price sync failed', error);
+    }
+  }
+
+  syncExcelDerivedGatePrices();
+
   if (window.matchMedia('(max-width: 620px)').matches) {
     const packageSection = document.querySelector('.package');
     const trustSection = document.querySelector('.trust');
