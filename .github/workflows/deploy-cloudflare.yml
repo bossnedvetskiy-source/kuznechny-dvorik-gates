@@ -125,11 +125,14 @@ jobs:
             'Предпочитаемый цвет:',
             'Выберите цвет профнастила',
             'Нажмите на нужный цвет',
-            'runtimeCatalogPrice'
+            'syncExcelDerivedGatePrices',
+            'standardForArticle'
           ];
+          const forbiddenSite = ['runtimeCatalogPrice','targetStandardPrice'];
           const requiredAdmin = [
             'CSV с рекламой',
-            'цена изделия — это базовая цена стандартного размера',
+            'Источник цен ворот — Excel',
+            'Цены ворот не редактируются вручную',
             'reconcileTab'
           ];
 
@@ -144,8 +147,10 @@ jobs:
               if (!adminResponse.ok) throw new Error(`Admin HTTP ${adminResponse.status}`);
               const [siteHtml, adminHtml] = await Promise.all([siteResponse.text(), adminResponse.text()]);
               const missingSite = requiredSite.filter(text => !siteHtml.includes(text));
+              const forbiddenPresent = forbiddenSite.filter(text => siteHtml.includes(text));
               const missingAdmin = requiredAdmin.filter(text => !adminHtml.includes(text));
               if (missingSite.length) throw new Error(`Missing production site text: ${missingSite.join(' | ')}`);
+              if (forbiddenPresent.length) throw new Error(`Forbidden manual pricing logic in production: ${forbiddenPresent.join(' | ')}`);
               if (missingAdmin.length) throw new Error(`Missing production admin text: ${missingAdmin.join(' | ')}`);
               console.log(`Production deployment verified: ${siteUrl} + /admin`);
               process.exit(0);
