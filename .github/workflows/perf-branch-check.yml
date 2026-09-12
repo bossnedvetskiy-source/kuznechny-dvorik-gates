@@ -1,0 +1,36 @@
+name: Performance branch check
+
+on:
+  push:
+    branches:
+      - perf/mobile-second-pass
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm ci --include=dev --no-audit --no-fund
+      - name: Check syntax
+        run: |
+          node --check worker/site-settings-d1.js
+          node --check worker/runtime.js
+          node --check scripts/build.mjs
+      - name: Verify gate page foundation
+        run: node scripts/test-gate-page.mjs
+      - name: Verify gate calculator
+        run: node scripts/test-gate-calculator.mjs
+      - name: Verify server gate quote
+        run: node scripts/test-server-gate-quote.mjs
+      - name: Build production Worker
+        run: npm run build
+      - name: Check built Worker syntax
+        run: node --check dist/server/index.js
