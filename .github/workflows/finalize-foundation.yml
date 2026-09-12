@@ -1,0 +1,58 @@
+name: Finalize gate foundation
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+      - name: Apply final foundation changes
+        run: python3 .github/finalize-foundation.py
+      - name: Check syntax
+        run: |
+          node --check app.js
+          node --check gate-page-ui.js
+          node --check shared/delivery.js
+          node --check worker/runtime.js
+          node --check worker/auth-d1.js
+          node --check worker/site-settings-d1.js
+          node --check worker/gate-quote-d1.js
+          node --check worker/lead-antispam.js
+          node --check worker/leads-d1.js
+          node --check scripts/build.mjs
+      - name: Run foundation tests
+        run: node scripts/test-gate-page.mjs
+      - name: Run calculator tests
+        run: node scripts/test-gate-calculator.mjs
+      - name: Run server quote tests
+        run: node scripts/test-server-gate-quote.mjs
+      - name: Build production worker
+        run: npm run build
+      - name: Check built Worker
+        run: node --check dist/server/index.js
+      - name: Install Playwright
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - name: Run E2E browser tests
+        run: npm run test:e2e
+      - name: Commit verified foundation
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add worker/runtime.js scripts/build.mjs worker/lead-antispam.js worker/leads-d1.js package.json .github/workflows/deploy-preview.yml scripts/test-gate-page.mjs scripts/test-server-gate-quote.mjs
+          if git diff --cached --quiet; then
+            echo "No foundation changes"
+            exit 0
+          fi
+          git commit -m "Finalize secure multi-product foundation"
+          git push
