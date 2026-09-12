@@ -112,6 +112,7 @@ jobs:
               };
             }, preservedSetup);
 
+            await showMore.scrollIntoViewIfNeeded();
             await page.waitForTimeout(150);
             const scrollBeforeMore = await page.evaluate(() => window.scrollY);
             await showMore.click({timeout:10000});
