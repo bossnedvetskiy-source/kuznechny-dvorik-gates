@@ -17,6 +17,9 @@ for (const id of expected) {
   assert(worker.includes(`'${id}'`), `Server color allowlist missing ${id}`);
 }
 
+assert(site.includes('Выберите цвет профнастила'), 'Color palette must stay visible even before color photos are uploaded');
+assert(site.includes('Нажмите на нужный цвет'), 'Empty color-photo state must invite the customer to use the palette');
+assert(!site.includes('.profile-color-picker.is-color-empty .profile-color-swatches,'), 'Empty color-photo state must not hide the swatches');
 assert(site.includes('цвет доступен — отдельного фото пока нет'), 'Missing-color copy must stay customer-friendly');
 assert(site.includes('profile-color-reset') && site.includes('Вернуться к фото модели'), 'Color preview must offer a clear return to the regular gallery');
 assert(site.includes('syncCalculatorPreview') && site.includes('selectedProductImage'), 'Selected real color photo must flow into calculator preview');
