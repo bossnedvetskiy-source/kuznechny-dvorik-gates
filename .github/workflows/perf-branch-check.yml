@@ -84,3 +84,45 @@ jobs:
             }
           })().catch(error => { console.error(error); process.exit(1); });
           NODE
+      - name: Install Chromium for production browser diagnostics
+        run: npx playwright install --with-deps chromium
+      - name: Run production in a real mobile browser
+        run: |
+          node --input-type=module <<'NODE'
+          import { chromium } from 'playwright';
+          const base = 'https://kuznechny-dvorik-gates.boss-nedvetskiy.workers.dev/?browser_diag=1';
+          const browser = await chromium.launch({headless:true});
+          const page = await browser.newPage({viewport:{width:390,height:844}, deviceScaleFactor:1, isMobile:true, hasTouch:true});
+          const pageErrors=[];
+          const consoleErrors=[];
+          const failed=[];
+          page.on('pageerror', err => pageErrors.push(String(err?.stack || err)));
+          page.on('console', msg => { if (msg.type()==='error') consoleErrors.push(msg.text()); });
+          page.on('requestfailed', req => failed.push(`${req.resourceType()} ${req.url()} :: ${req.failure()?.errorText || 'failed'}`));
+          const response = await page.goto(base,{waitUntil:'domcontentloaded',timeout:30000});
+          console.log('Main response:', response?.status());
+          await page.waitForTimeout(5000);
+          const state = await page.evaluate(() => ({
+            ready: document.readyState,
+            title: document.title,
+            bodyText: document.body?.innerText?.slice(0,1000) || '',
+            cards: document.querySelectorAll('#catalogGrid .product-card').length,
+            catalogGridExists: !!document.querySelector('#catalogGrid'),
+            catalogCount: document.querySelector('#catalogCount')?.textContent || '',
+            showMore: document.querySelector('#showMoreButton')?.textContent || '',
+            heroInstalled: document.querySelector('#heroInstalledPrice')?.textContent || '',
+            bundleScripts: [...document.scripts].map(s=>s.src).filter(Boolean),
+            cssLinks: [...document.querySelectorAll('link[rel="stylesheet"]')].map(l=>l.href),
+            images: [...document.images].slice(0,12).map(img=>({src:img.currentSrc||img.src,complete:img.complete,naturalWidth:img.naturalWidth,naturalHeight:img.naturalHeight}))
+          }));
+          console.log('STATE', JSON.stringify(state,null,2));
+          console.log('PAGE_ERRORS', JSON.stringify(pageErrors,null,2));
+          console.log('CONSOLE_ERRORS', JSON.stringify(consoleErrors,null,2));
+          console.log('FAILED_REQUESTS', JSON.stringify(failed.slice(0,40),null,2));
+          if (!response?.ok()) throw new Error(`Main page HTTP ${response?.status()}`);
+          if (!state.catalogGridExists) throw new Error('catalogGrid is missing from DOM');
+          if (state.cards < 1) throw new Error('Catalog did not render any product cards');
+          if (!state.heroInstalled) throw new Error('Hero price did not initialize');
+          if (pageErrors.length) throw new Error(`Browser page errors: ${pageErrors.join(' | ')}`);
+          await browser.close();
+          NODE
