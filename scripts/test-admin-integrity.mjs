@@ -22,6 +22,7 @@ const required = [
   [enhancements, 'utmCampaign', 'lead campaign rendering'],
   [adminPrices, 'Цены ворот не редактируются вручную', 'read-only gate price admin'],
   [adminPrices, 'Цена — из Excel-расчёта', 'catalog Excel source label'],
+  [adminPrices, 'if (window.KUZDVOR_ADMIN_EXCEL_READY) return;', 'Excel importer survives settings rerender'],
   [excelAdmin, 'gateExcelInput', 'Excel file chooser'],
   [excelAdmin, 'XLSX.read', 'Excel workbook parser'],
   [excelAdmin, "workbook.Sheets?.['Лист3']", 'material price source sheet'],
