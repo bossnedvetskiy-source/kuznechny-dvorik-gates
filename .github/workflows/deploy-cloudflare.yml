@@ -1,0 +1,91 @@
+name: Deploy production to Cloudflare
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloudflare-production
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://kuznechny-dvorik-gates.boss-nedvetskiy.workers.dev/
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Check Cloudflare credentials
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          if [ -z "${CLOUDFLARE_API_TOKEN:-}" ]; then
+            echo "::error::GitHub secret CLOUDFLARE_API_TOKEN is not configured."
+            exit 1
+          fi
+          if [ -z "${CLOUDFLARE_ACCOUNT_ID:-}" ]; then
+            echo "::error::GitHub secret CLOUDFLARE_ACCOUNT_ID is not configured."
+            exit 1
+          fi
+
+      - name: Check JavaScript syntax
+        run: |
+          node --check app.js
+          node --check gate-page-ui.js
+          node --check shared/customer-context.js
+          node --check shared/delivery.js
+          node --check shared/leads.js
+          node --check public-site-settings.js
+          node --check worker/runtime.js
+          node --check worker/auth-d1.js
+          node --check worker/site-settings-d1.js
+          node --check worker/gate-quote-d1.js
+          node --check worker/lead-antispam.js
+          node --check worker/catalog-media-d1.js
+          node --check worker/leads-d1.js
+          node --check scripts/build.mjs
+
+      - name: Verify catalog images
+        run: node scripts/test-catalog-images.mjs
+
+      - name: Verify gate page foundation
+        run: node scripts/test-gate-page.mjs
+
+      - name: Verify gate calculator
+        run: node scripts/test-gate-calculator.mjs
+
+      - name: Verify server gate quote
+        run: node scripts/test-server-gate-quote.mjs
+
+      - name: Build production Worker
+        run: npm run build
+
+      - name: Check built Worker syntax
+        run: node --check dist/server/index.js
+
+      - name: Deploy to Cloudflare Workers
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx --yes wrangler@4 deploy
+
+      - name: Verify production site
+        shell: bash
+        run: |
+          set -euo pipefail
+          url="https://kuznechny-dvorik-gates.boss-nedvetskiy.workers.dev/"
+          html="$(curl --fail --silent --show-error --location --retry 5 --retry-delay 2 "$url")"
+          echo "$html" | grep -Fq "Ворота с калиткой"
+          echo "$html" | grep -Fq "Сейчас оплачивать ничего не нужно."
+          echo "$html" | grep -Fq "Зачем нужен замерщик, если я знаю свои размеры?"
+          echo "Production deployment verified: $url"
