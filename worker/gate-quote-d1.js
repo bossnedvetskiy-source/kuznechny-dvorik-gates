@@ -49,13 +49,13 @@ function validateGateQuoteDimensions(body) {
   return values;
 }
 
-function calculateGateProductServer({article, gateWidth, gateHeight, wicketWidth, wicketHeight}) {
+function calculateGateProductServer({article, gateWidth, gateHeight, wicketWidth, wicketHeight}, priceInputs = DEFAULT_GATE_CALC_PRICES) {
   const key = normalizeGateArticleServer(article);
   const model = DEFAULT_GATE_CALC_MODELS?.models?.[key];
   if (!model) throw Object.assign(new Error(`Нет расчётной модели для ${article}`), {status: 400});
   const ctx = {gateWidth, gateHeight, wicketWidth, wicketHeight};
   const cache = {...(model.literals || {})};
-  const p = ref => Number(DEFAULT_GATE_CALC_PRICES?.[ref]?.value ?? 0);
+  const p = ref => Number(priceInputs?.[ref]?.value ?? DEFAULT_GATE_CALC_PRICES?.[ref]?.value ?? 0);
   const v = ref => {
     if (Object.prototype.hasOwnProperty.call(cache, ref)) return cache[ref];
     const fn = model.formulas?.[ref];
@@ -147,12 +147,15 @@ function buildAuthoritativeGateMessage({name, phone, city, article, dimensions, 
 async function calculateAuthoritativeGateQuote(body, env) {
   const dimensions = validateGateQuoteDimensions(body);
   const articleKey = normalizeGateArticleServer(body.article);
-  const runtimePrices = await loadPrices(env);
-  const site = await loadSiteProfile(env);
+  const [runtimePrices, site, gateCalcPrices] = await Promise.all([
+    loadPrices(env),
+    loadSiteProfile(env),
+    loadGateCalcInputs(env)
+  ]);
   const catalogItem = (runtimePrices.catalog || []).find(item => normalizeGateArticleServer(item.art) === articleKey && item.visible !== false);
   if (!catalogItem) throw Object.assign(new Error('Выбранная модель ворот недоступна'), {status: 400});
 
-  const productPrice = calculateGateProductServer({article: body.article, ...dimensions});
+  const productPrice = calculateGateProductServer({article: body.article, ...dimensions}, gateCalcPrices);
   const installationPrice = Math.max(0, Math.round(Number(runtimePrices.catalogInstallation) || 0));
   const postsPrice = body.posts ? Math.max(0, Math.round(Number(runtimePrices.catalogPosts) || 0)) : 0;
   const color = String(body.color || '').trim().slice(0, 100);
