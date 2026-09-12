@@ -1,12 +1,15 @@
 import {readFile} from 'node:fs/promises';
 
 const read = name => readFile(new URL(`../${name}`, import.meta.url), 'utf8');
-const [enhancements, adminPrices, build, engine, quote, publicSettings, workerSettings, prices] = await Promise.all([
+const [enhancements, adminPrices, excelAdmin, formulaSite, build, engine, quote, excelWorker, publicSettings, workerSettings, prices] = await Promise.all([
   read('admin-enhancements.js'),
   read('admin-prices.js'),
+  read('admin-excel-import.js'),
+  read('gate-formula-prices-site.js'),
   read('scripts/build.mjs'),
   read('gate-calc-engine.js'),
   read('worker/gate-quote-d1.js'),
+  read('worker/excel-pricing-d1.js'),
   read('public-site-settings.js'),
   read('worker/site-settings-d1.js'),
   read('prices.js')
@@ -19,10 +22,24 @@ const required = [
   [enhancements, 'utmCampaign', 'lead campaign rendering'],
   [adminPrices, 'Цены ворот не редактируются вручную', 'read-only gate price admin'],
   [adminPrices, 'Цена — из Excel-расчёта', 'catalog Excel source label'],
-  [build, "readFile('admin-enhancements.js'", 'production admin bundle'],
+  [excelAdmin, 'gateExcelInput', 'Excel file chooser'],
+  [excelAdmin, 'XLSX.read', 'Excel workbook parser'],
+  [excelAdmin, "workbook.Sheets?.['Лист3']", 'material price source sheet'],
+  [excelAdmin, '/api/admin/gate-excel', 'Excel publish API'],
+  [excelAdmin, 'Публикация заблокирована', 'formula drift protection'],
+  [formulaSite, 'KUZDVOR_FORMULA_PRICE_SYNC_READY', 'formula catalog sync'],
+  [build, "readFile('admin-excel-import.js'", 'production Excel admin bundle'],
+  [build, "readFile('worker/excel-pricing-d1.js'", 'production Excel server module'],
+  [build, 'xlsx.full.min.js', 'bundled XLSX reader'],
+  [build, '__RUNTIME_GATE_CALC_PRICES__', 'runtime formula input injection'],
   [engine, 'standardForArticle', 'Excel standard price API'],
-  [quote, 'const productPrice = calculateGateProductServer', 'server formula-only price'],
+  [quote, 'loadGateCalcInputs(env)', 'server uploaded Excel inputs'],
+  [quote, 'priceInputs = DEFAULT_GATE_CALC_PRICES', 'server formula input parameter'],
+  [excelWorker, "GATE_EXCEL_SETTINGS_KEY = 'gate_excel_prices'", 'Excel D1 storage'],
+  [excelWorker, 'gateExcelStandardPrices', 'server workbook validation'],
+  [excelWorker, '/api/admin/gate-excel', 'authenticated Excel API'],
   [publicSettings, 'syncExcelDerivedGatePrices', 'catalog price sync from formulas'],
+  [workerSettings, 'loadGateCalcInputs(env)', 'public runtime formula inputs'],
   [workerSettings, 'price:defaultItem.price', 'server rejection of manual catalog price overrides'],
   [prices, 'Источник цены ворот — Excel-derived расчёт', 'fallback price file warning'],
   [publicSettings, "technicalHost ? 'noindex,follow'", 'technical-host noindex']
