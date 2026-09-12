@@ -89,3 +89,5 @@ jobs:
           echo "$html" | grep -Fq "Сейчас оплачивать ничего не нужно."
           echo "$html" | grep -Fq "Зачем нужен замерщик, если я знаю свои размеры?"
           echo "Production deployment verified: $url"
+
+# Production deploy is intentionally separate from the GitHub Pages preview.
