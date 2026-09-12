@@ -97,14 +97,33 @@ jobs:
           npx --yes wrangler@4 deploy
 
       - name: Verify production site
-        shell: bash
         run: |
-          set -euo pipefail
-          url="https://kuznechny-dvorik-gates.boss-nedvetskiy.workers.dev/"
-          html="$(curl --fail --silent --show-error --location --retry 5 --retry-delay 2 "$url")"
-          echo "$html" | grep -Fq "Ворота с калиткой"
-          echo "$html" | grep -Fq "Сейчас оплачивать ничего не нужно."
-          echo "$html" | grep -Fq "Зачем нужен замерщик, если я знаю свои размеры?"
-          echo "Production deployment verified: $url"
+          node <<'NODE'
+          const url = 'https://kuznechny-dvorik-gates.boss-nedvetskiy.workers.dev/';
+          const required = [
+            'Ворота с калиткой',
+            'Сейчас оплачивать ничего не нужно.',
+            'Зачем нужен замерщик, если я знаю свои размеры?'
+          ];
+
+          let lastError;
+          for (let attempt = 1; attempt <= 5; attempt += 1) {
+            try {
+              const response = await fetch(url, { cache: 'no-store' });
+              if (!response.ok) throw new Error(`HTTP ${response.status}`);
+              const html = await response.text();
+              const missing = required.filter((text) => !html.includes(text));
+              if (missing.length) throw new Error(`Missing production text: ${missing.join(' | ')}`);
+              console.log(`Production deployment verified: ${url}`);
+              process.exit(0);
+            } catch (error) {
+              lastError = error;
+              console.log(`Production verification attempt ${attempt}/5 failed: ${error.message}`);
+              if (attempt < 5) await new Promise((resolve) => setTimeout(resolve, 2000));
+            }
+          }
+
+          throw lastError;
+          NODE
 
 # Production deploy is intentionally separate from the GitHub Pages preview.
