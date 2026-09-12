@@ -22,6 +22,7 @@ jobs:
       - name: Check syntax
         run: |
           node --check worker/site-settings-d1.js
+          node --check worker/excel-pricing-d1.js
           node --check worker/runtime.js
           node --check scripts/build.mjs
       - name: Verify gate page foundation
@@ -34,3 +35,39 @@ jobs:
         run: npm run build
       - name: Check built Worker syntax
         run: node --check dist/server/index.js
+      - name: Report build size
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const zlib = require('zlib');
+          const worker = fs.readFileSync('dist/server/index.js');
+          console.log(`Built Worker: ${worker.length} bytes; gzip ${zlib.gzipSync(worker).length} bytes`);
+          NODE
+      - name: Measure current production reads
+        run: |
+          node <<'NODE'
+          const { performance } = require('perf_hooks');
+          const base = 'https://kuznechny-dvorik-gates.boss-nedvetskiy.workers.dev';
+          async function timed(path) {
+            const start = performance.now();
+            const response = await fetch(base + path, {cache:'no-store', headers:{'user-agent':'kuzdvor-perf-check/1.0'}});
+            const text = await response.text();
+            const ms = Math.round(performance.now() - start);
+            console.log(`${path}: HTTP ${response.status}; ${ms} ms; ${Buffer.byteLength(text)} bytes`);
+            return {response,text,ms};
+          }
+          (async()=>{
+            await timed('/?perf=1');
+            await timed('/?perf=2');
+            const gallery = await timed('/api/catalog-images?perf=1');
+            try {
+              const data = JSON.parse(gallery.text);
+              const galleries = Object.values(data.galleries || {});
+              const photos = galleries.flatMap(item => Array.isArray(item?.photos) ? item.photos : []);
+              const custom = photos.filter(url => String(url).startsWith('/catalog-media/'));
+              console.log(`Catalog galleries: ${galleries.length}; photos ${photos.length}; custom D1/R2 media ${custom.length}`);
+            } catch (error) {
+              console.log('Catalog JSON parse failed:', error.message);
+            }
+          })().catch(error => { console.error(error); process.exit(1); });
+          NODE
