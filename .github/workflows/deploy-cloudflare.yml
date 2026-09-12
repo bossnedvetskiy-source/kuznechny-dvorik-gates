@@ -41,6 +41,7 @@ jobs:
       - name: Check JavaScript syntax
         run: |
           node --check app.js
+          node --check runtime-price-adjustment.js
           node --check gate-page-ui.js
           node --check color-photo-site.js
           node --check shared/customer-context.js
@@ -49,6 +50,15 @@ jobs:
           node --check public-site-settings.js
           node --check admin.js
           node --check admin-colors.js
+          node --check admin-color-atomic.js
+          node --check admin-prices.js
+          node --check admin-site.js
+          node --check admin-delivery.js
+          node --check admin-leads.js
+          node --check admin-workflow.js
+          node --check admin-tabs-fix.js
+          node --check admin-history.js
+          node --check admin-guidance.js
           node --check worker/runtime.js
           node --check worker/auth-d1.js
           node --check worker/site-settings-d1.js
@@ -57,8 +67,12 @@ jobs:
           node --check worker/catalog-media-d1.js
           node --check worker/catalog-colors-d1.js
           node --check worker/leads-d1.js
+          node --check worker/admin-enhancements-d1.js
+          node --check worker/admin-color-atomic-d1.js
+          node --check worker/admin-media-cleanup-d1.js
           node --check scripts/build.mjs
           node --check scripts/test-color-photos.mjs
+          node --check scripts/e2e-server.mjs
 
       - name: Verify catalog images
         run: node scripts/test-catalog-images.mjs
@@ -80,6 +94,14 @@ jobs:
 
       - name: Check built Worker syntax
         run: node --check dist/server/index.js
+
+      - name: Install browser tests
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+
+      - name: Run browser E2E tests
+        run: npm run test:e2e
 
       - name: Deploy to Cloudflare Workers
         shell: bash
@@ -104,36 +126,50 @@ jobs:
           export CLOUDFLARE_ACCOUNT_ID="$account_id"
           npx --yes wrangler@4 deploy
 
-      - name: Verify production site
+      - name: Verify production site and admin
         run: |
           node <<'NODE'
-          const url = 'https://kuznechny-dvorik-gates.boss-nedvetskiy.workers.dev/';
-          const required = [
+          const rootUrl = 'https://kuznechny-dvorik-gates.boss-nedvetskiy.workers.dev/';
+          const adminUrl = rootUrl + 'admin';
+          const rootRequired = [
             'Ворота с калиткой',
             'Сейчас оплачивать ничего не нужно.',
             'Зачем нужен замерщик, если я знаю свои размеры?',
             'Предпочитаемый цвет:',
             'Выберите цвет профнастила',
-            'Нажмите на нужный цвет'
+            'Нажмите на нужный цвет',
+            'noindex,follow,noarchive'
+          ];
+          const adminRequired = [
+            'Доставка по населённым пунктам',
+            'Работа с заявкой',
+            'История цен',
+            'Очистить неиспользуемые фото',
+            'базовая цена стандартного размера'
           ];
 
           let lastError;
           for (let attempt = 1; attempt <= 5; attempt += 1) {
             try {
-              const response = await fetch(url, { cache: 'no-store' });
-              if (!response.ok) throw new Error(`HTTP ${response.status}`);
-              const html = await response.text();
-              const missing = required.filter((text) => !html.includes(text));
-              if (missing.length) throw new Error(`Missing production text: ${missing.join(' | ')}`);
-              console.log(`Production deployment verified: ${url}`);
+              const [rootResponse, adminResponse] = await Promise.all([
+                fetch(rootUrl, {cache:'no-store'}),
+                fetch(adminUrl, {cache:'no-store'})
+              ]);
+              if (!rootResponse.ok) throw new Error(`Root HTTP ${rootResponse.status}`);
+              if (!adminResponse.ok) throw new Error(`Admin HTTP ${adminResponse.status}`);
+              const [rootHtml, adminHtml] = await Promise.all([rootResponse.text(), adminResponse.text()]);
+              const missingRoot = rootRequired.filter(text => !rootHtml.includes(text));
+              const missingAdmin = adminRequired.filter(text => !adminHtml.includes(text));
+              if (missingRoot.length) throw new Error(`Missing root text: ${missingRoot.join(' | ')}`);
+              if (missingAdmin.length) throw new Error(`Missing admin text: ${missingAdmin.join(' | ')}`);
+              console.log(`Production deployment verified: ${rootUrl}`);
               process.exit(0);
             } catch (error) {
               lastError = error;
               console.log(`Production verification attempt ${attempt}/5 failed: ${error.message}`);
-              if (attempt < 5) await new Promise((resolve) => setTimeout(resolve, 2000));
+              if (attempt < 5) await new Promise(resolve => setTimeout(resolve, 2000));
             }
           }
-
           throw lastError;
           NODE
 
