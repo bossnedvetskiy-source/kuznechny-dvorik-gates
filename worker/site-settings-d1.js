@@ -121,6 +121,32 @@ function normalizePrices(input) {
   };
 }
 
+function normalizeDeliverySettings(input) {
+  const defaults = Array.isArray(DEFAULT_DELIVERY_PRICES?.destinations) ? DEFAULT_DELIVERY_PRICES.destinations : [];
+  const source = input && typeof input === 'object' && Array.isArray(input.destinations) ? input.destinations : defaults;
+  const seen = new Set();
+  const destinations = [];
+  for (const item of source) {
+    const name = cleanText(item?.name, '', 120);
+    if (!name) continue;
+    const key = name.toLocaleLowerCase('ru-RU').replace(/ё/g, 'е').replace(/[^а-яa-z0-9]/gi, '');
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    destinations.push({name, price:positiveMoney(item?.price, 0)});
+    if (destinations.length >= 250) break;
+  }
+  const meleuzKey = 'мелеуз';
+  const meleuzIndex = destinations.findIndex(item => item.name.toLocaleLowerCase('ru-RU').replace(/ё/g, 'е').replace(/[^а-яa-z0-9]/gi, '') === meleuzKey);
+  if (meleuzIndex >= 0) destinations[meleuzIndex].price = 0;
+  else destinations.unshift({name:'Мелеуз', price:0});
+  destinations.sort((a,b) => a.name === 'Мелеуз' ? -1 : b.name === 'Мелеуз' ? 1 : a.name.localeCompare(b.name, 'ru'));
+  return {
+    origin: DEFAULT_DELIVERY_PRICES?.origin || {name:'Мелеуз'},
+    fallbackRatePerKm: Number(DEFAULT_DELIVERY_PRICES?.fallbackRatePerKm) || 90,
+    destinations
+  };
+}
+
 async function loadPrices(env) {
   if (!await ensureSiteSettings(env)) return normalizePrices(DEFAULT_PRICES);
   try {
@@ -140,6 +166,17 @@ async function loadSiteProfile(env) {
     return normalizeSiteProfile(JSON.parse(row.value_json));
   } catch {
     return normalizeSiteProfile(DEFAULT_SITE_PROFILE);
+  }
+}
+
+async function loadDeliverySettings(env) {
+  if (!await ensureSiteSettings(env)) return normalizeDeliverySettings(DEFAULT_DELIVERY_PRICES);
+  try {
+    const row = await env.DB.prepare("SELECT value_json FROM site_settings WHERE key = 'delivery_prices'").first();
+    if (!row?.value_json) return normalizeDeliverySettings(DEFAULT_DELIVERY_PRICES);
+    return normalizeDeliverySettings(JSON.parse(row.value_json));
+  } catch {
+    return normalizeDeliverySettings(DEFAULT_DELIVERY_PRICES);
   }
 }
 
@@ -169,15 +206,35 @@ async function saveSiteProfile(request, env) {
   return json({ok: true, site});
 }
 
-async function renderPublicPage(env) {
-  const [prices, site] = await Promise.all([loadPrices(env), loadSiteProfile(env)]);
-  const serializedPrices = JSON.stringify(prices).replace(/</g, '\\u003c');
-  const serializedSite = JSON.stringify(site).replace(/</g, '\\u003c');
-  return PAGE
-    .replace('__RUNTIME_PRICE_DATA__', serializedPrices)
-    .replace('__RUNTIME_SITE_DATA__', serializedSite);
+async function saveDeliverySettings(request, env) {
+  if (!await ensureSiteSettings(env)) return json({error: 'База данных временно недоступна'}, 503);
+  const length = Number(request.headers.get('content-length') || 0);
+  if (length > 131072) return json({error: 'Слишком большой запрос'}, 413);
+  const body = await request.json();
+  const delivery = normalizeDeliverySettings(body?.delivery);
+  await env.DB.prepare(`INSERT INTO site_settings (key, value_json, updated_at, updated_by)
+    VALUES ('delivery_prices', ?, CURRENT_TIMESTAMP, 'admin')
+    ON CONFLICT(key) DO UPDATE SET value_json = excluded.value_json, updated_at = CURRENT_TIMESTAMP, updated_by = excluded.updated_by`)
+    .bind(JSON.stringify(delivery)).run();
+  deliveryCache.clear();
+  return json({ok:true, delivery});
 }
 
+async function renderPublicPage(env, url = null) {
+  const [prices, site, delivery] = await Promise.all([loadPrices(env), loadSiteProfile(env), loadDeliverySettings(env)]);
+  const serializedPrices = JSON.stringify(prices).replace(/</g, '\\u003c');
+  const serializedSite = JSON.stringify(site).replace(/</g, '\\u003c');
+  const serializedDelivery = JSON.stringify(delivery).replace(/</g, '\\u003c');
+  let page = PAGE
+    .replace('__RUNTIME_PRICE_DATA__', serializedPrices)
+    .replace('__RUNTIME_SITE_DATA__', serializedSite)
+    .replace('__RUNTIME_DELIVERY_DATA__', serializedDelivery);
+  const hostname = String(url?.hostname || '').toLowerCase();
+  if (hostname.endsWith('.workers.dev') || hostname.endsWith('.github.io')) {
+    page = page.replace('content="index,follow,max-image-preview:large"', 'content="noindex,follow,noarchive"');
+  }
+  return page;
+}
 
 async function renderProductHub(env) {
   const site = await loadSiteProfile(env);
