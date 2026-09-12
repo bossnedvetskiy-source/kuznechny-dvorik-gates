@@ -16,8 +16,15 @@ async function fetchChecked(url) {
 }
 
 const page = await (await fetchChecked(BASE + '/')).text();
-for (const required of ['Кузнечный ДворикЪ', 'Ворота с калиткой', 'Как проходит заказ', 'Предпочитаемый цвет:', 'utm_medium']) {
+for (const required of ['Кузнечный ДворикЪ', 'Ворота с калиткой', 'Как проходит заказ', 'Предпочитаемый цвет:']) {
   if (!page.includes(required)) throw new Error(`Рабочая страница не содержит: ${required}`);
+}
+if (!page.includes('/site.css') || !page.includes('/site.bundle.js')) {
+  throw new Error('Рабочая страница ещё не использует оптимизированные статические ресурсы');
+}
+const publicBundle = await (await fetchChecked(BASE + '/site.bundle.js')).text();
+for (const required of ['utm_medium', 'syncExcelDerivedGatePrices', 'standardForArticle', 'KUZDVOR_FORMULA_PRICE_SYNC_READY']) {
+  if (!publicBundle.includes(required)) throw new Error(`Публичный JS-бандл не содержит: ${required}`);
 }
 
 const remote = await (await fetchChecked(BASE + '/api/catalog-images')).json();
