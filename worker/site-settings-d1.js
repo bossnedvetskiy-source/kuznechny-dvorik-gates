@@ -88,7 +88,7 @@ function normalizePrices(input) {
   const inputExtras = new Map((Array.isArray(source.extraProducts) ? source.extraProducts : []).map(item => [String(item?.id || ''), item]));
   const catalog = defaultCatalog.map((defaultItem, index) => {
     const item = inputCatalog.get(defaultItem.art) || {};
-    return {art:defaultItem.art,price:positiveMoney(item.price,defaultItem.price),visible:item.visible!==false,order:positiveOrder(item.order,index+1)};
+    return {art:defaultItem.art,price:defaultItem.price,visible:item.visible!==false,order:positiveOrder(item.order,index+1)};
   }).sort((left,right)=>left.order-right.order||left.art.localeCompare(right.art,'ru'));
   catalog.forEach((item,index)=>{item.order=index+1;});
   if (catalog.length && !catalog.some(item=>item.visible)) catalog[0].visible=true;
