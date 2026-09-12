@@ -15,6 +15,17 @@ jobs:
       - uses: actions/checkout@v6
         with:
           ref: main
+      - name: Repair temporary patch script
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('.github/finalize-foundation.py')
+          s=p.read_text(encoding='utf-8')
+          start=s.index('addition = marker + "\\nassert(workerLeads.includes')
+          end=s.index('\nif addition not in s:', start)
+          replacement='''addition = marker + "\\nassert(workerLeads.includes('await consumeLeadAttempt(request, env)'), 'Lead endpoint must use global async rate limiting');\\nassert(workerLeads.includes('quote?.total ?? clientTotal') && workerLeads.includes('quote_mismatch'), 'Server-calculated quote must override and audit client total');\\nassert(leadAntispam.includes('lead_rate_limits') && leadAntispam.includes('env.DB.prepare'), 'Lead rate limit must be backed by D1, not only isolate memory');\\nassert(workerRuntime.includes('/*__WORKER_MODULES__*/'), 'Worker runtime must expose an explicit module composition marker');\\nassert(workerRuntime.includes(\\\"url.pathname === '/api/leads'\\\") && workerRuntime.includes(\\\"url.pathname === '/api/admin/site-settings'\\\"), 'Worker routes must live in runtime source');\\nassert(!build.includes('const authStart = workerSource.indexOf') && !build.includes('const uploadStart = patchedWorkerSource.indexOf') && !build.includes('const serveStart = patchedWorkerSource.indexOf'), 'Build must not surgically rewrite Worker function bodies');"'''
+          p.write_text(s[:start]+replacement+s[end:],encoding='utf-8')
+          PY
       - name: Apply final foundation changes
         run: python3 .github/finalize-foundation.py
       - name: Check syntax
