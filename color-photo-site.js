@@ -15,8 +15,6 @@
 
   const style = document.createElement('style');
   style.textContent = `
-    .profile-color-wash{display:none!important}
-    .product-visual.is-color-preview .profile-color-wash{display:none!important}
     .profile-color-option.is-photo-missing{opacity:.62;cursor:pointer}
     .profile-color-option.is-photo-missing .profile-color-dot{filter:saturate(.62)}
     .profile-color-option.is-photo-missing .profile-color-dot::after{content:"…";position:absolute;right:-2px;bottom:-2px;display:grid;place-items:center;width:13px;height:13px;border:2px solid #fff;border-radius:50%;background:#aaa39a;color:#fff;font:900 9px/1 Arial,sans-serif;box-shadow:0 1px 3px rgba(0,0,0,.18)}
@@ -24,6 +22,13 @@
     .profile-color-option.is-more{opacity:1!important}
     .profile-color-option.is-more .profile-color-dot::after{content:"+"!important;position:absolute!important;inset:5px!important;width:auto!important;height:auto!important;display:grid!important;place-items:center!important;border:0!important;border-radius:50%!important;background:rgba(0,0,0,.72)!important;color:#fff!important;font-size:17px!important;font-weight:900!important;box-shadow:none!important}
     .profile-color-note b{color:#6e665d;font-weight:900}
+    .profile-color-picker.is-color-empty{padding:9px 12px}
+    .profile-color-picker.is-color-empty .profile-color-picker-head{margin:0;align-items:center}
+    .profile-color-picker.is-color-empty .profile-color-picker-head strong{font-size:10.5px}
+    .profile-color-picker.is-color-empty .profile-color-status{color:#777067;font-size:8.5px}
+    .profile-color-picker.is-color-empty .profile-color-swatches,
+    .profile-color-picker.is-color-empty .profile-color-note{display:none!important}
+    @media(max-width:620px){.profile-color-picker.is-color-empty{padding:8px 10px}.profile-color-picker.is-color-empty .profile-color-picker-head{gap:8px}}
   `;
   document.head.append(style);
 
@@ -55,8 +60,6 @@
       image.alt = `Фотография ворот с калиткой ${product.art}, ${index + 1} из ${Math.max(1, product.gallery?.length || 1)}`;
     }
     if (backdrop && url) backdrop.src = url;
-    visual.classList.remove('is-color-preview');
-    visual.style.removeProperty('--profile-preview-color');
     delete visual.dataset.colorPreview;
     delete visual.dataset.colorPreviewUrl;
     const counter = visual.querySelector('[data-photo-count]');
@@ -90,7 +93,7 @@
     const url = colorPhotosByArticle?.[product.art]?.[colorId];
     if (!color) return;
     if (!url) {
-      setPressed(card, '');
+      restoreGalleryPhoto(card);
       setStatus(card, `${color.label}: фото скоро добавим`);
       if (shouldTrack) {
         try { window.ym?.(107269914, 'reachGoal', 'catalog_color_missing', {article:product.art, color:colorId}); } catch {}
@@ -105,8 +108,6 @@
       image.alt = `${product.art}, профнастил ${color.label}, ${color.ral}`;
     }
     if (backdrop) backdrop.src = url;
-    visual.classList.remove('is-color-preview');
-    visual.style.removeProperty('--profile-preview-color');
     visual.dataset.colorPreview = colorId;
     visual.dataset.colorPreviewUrl = url;
     selectedByProduct.set(card.dataset.cardProduct, colorId);
@@ -142,6 +143,7 @@
     if (counter) counter.textContent = '';
     if (previous) previous.hidden = true;
     if (next) next.hidden = true;
+    lightbox.dataset.colorOnly = '1';
     lightbox.hidden = false;
     document.body.style.overflow = 'hidden';
     return true;
@@ -157,15 +159,26 @@
     const heading = picker.querySelector('.profile-color-picker-head strong');
     const status = picker.querySelector('.profile-color-status');
     const note = picker.querySelector('.profile-color-note');
+    const hasPhotos = Object.keys(colorPhotos).length > 0;
+    picker.classList.toggle('is-color-empty', !hasPhotos);
+
+    if (!hasPhotos) {
+      selectedByProduct.delete(card.dataset.cardProduct);
+      setPressed(card, '');
+      if (heading) heading.textContent = 'Любой цвет профнастила';
+      if (status) status.textContent = 'Цвет выберете при оформлении';
+      return;
+    }
+
     if (heading) heading.textContent = 'Посмотрите цвет на реальном фото';
     if (note) note.innerHTML = '<b>Показаны популярные цвета.</b> Доступны и другие варианты; цвет не влияет на предварительную стоимость.';
 
     for (const button of picker.querySelectorAll('.profile-color-option')) {
       const id = button.dataset.profileColor;
+      button.removeAttribute('aria-disabled');
       if (id === 'other') {
         button.classList.remove('is-photo-missing', 'is-photo-ready');
         button.disabled = false;
-        button.removeAttribute('aria-disabled');
         button.title = 'Доступны и другие цвета профнастила';
         continue;
       }
@@ -174,7 +187,6 @@
       button.classList.toggle('is-photo-ready', ready);
       button.classList.toggle('is-photo-missing', !ready);
       button.disabled = false;
-      button.setAttribute('aria-disabled', String(!ready));
       button.setAttribute('aria-label', ready
         ? `Показать реальное фото: ${color?.label || id}, ${color?.ral || ''}`
         : `${color?.label || id}: фото скоро добавим`);
@@ -189,7 +201,7 @@
     } else {
       selectedByProduct.delete(card.dataset.cardProduct);
       setPressed(card, '');
-      if (status) status.textContent = Object.keys(colorPhotos).length ? 'Выберите цвет' : 'Фото цветов скоро добавим';
+      if (status) status.textContent = 'Выберите цвет';
     }
 
     const visual = visualForCard(card);
@@ -231,6 +243,22 @@
     applyUploadedColor(card, button.dataset.profileColor, true);
   }, true);
 
+  document.addEventListener('keydown', event => {
+    const lightbox = document.getElementById('lightbox');
+    if (!lightbox || lightbox.hidden || lightbox.dataset.colorOnly !== '1') return;
+    if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    }
+  }, true);
+
+  const lightbox = document.getElementById('lightbox');
+  if (lightbox) {
+    new MutationObserver(() => {
+      if (lightbox.hidden) delete lightbox.dataset.colorOnly;
+    }).observe(lightbox, {attributes:true, attributeFilter:['hidden']});
+  }
+
   async function loadColorPhotos() {
     try {
       const response = await fetch('/api/catalog-images', {cache:'no-store'});
@@ -247,11 +275,6 @@
   if (grid) new MutationObserver(() => queueMicrotask(syncCards)).observe(grid, {childList:true, subtree:false});
 
   queueMicrotask(() => {
-    document.querySelectorAll('.profile-color-wash').forEach(node => node.remove());
-    document.querySelectorAll('.product-visual').forEach(visual => {
-      visual.classList.remove('is-color-preview');
-      visual.style.removeProperty('--profile-preview-color');
-    });
     syncCards();
     loadColorPhotos();
   });
