@@ -80,8 +80,10 @@ for (const [article, model] of Object.entries(context.GATE_CALC_MODELS.models)) 
 
 context.DEFAULT_DELIVERY_PRICES = {destinations:[{name:'Мелеуз',price:0}], fallbackRatePerKm:90, origin:{name:'Мелеуз'}};
 let runtimeArt6Price = 56600;
+let runtimeGateInputs = context.DEFAULT_GATE_CALC_PRICES;
 context.loadPrices = async () => ({catalogInstallation:8000,catalogPosts:25000,catalog:[{art:'Арт.6',price:runtimeArt6Price,visible:true}]});
 context.loadSiteProfile = async () => ({serviceAreaKm:150,deliveryRate:90});
+context.loadGateCalcInputs = async () => runtimeGateInputs;
 context.calculateUnknownDelivery = async () => ({shortName:'Тестово',price:9000,distanceKm:100,serviceAreaKm:150,outOfArea:false});
 const authoritative = await context.calculateAuthoritativeGateQuote({
   article:'Арт.6',width:3.4,height:1.8,wicketWidth:1,wicketHeight:1.8,posts:false,city:'Мелеуз',total:1
@@ -109,6 +111,18 @@ const protectedCustom = await context.calculateAuthoritativeGateQuote({
 if (protectedStandard.productPrice !== 56600 || protectedCustom.productPrice !== 61300) {
   failures += 1;
   console.error(`SERVER EXCEL SOURCE FAIL: expected 56600 / 61300, got ${protectedStandard.productPrice} / ${protectedCustom.productPrice}`);
+}
+
+// A material-price update imported from Excel must affect both direct formula calculation and authoritative quote identically.
+runtimeGateInputs = Object.fromEntries(Object.entries(context.DEFAULT_GATE_CALC_PRICES).map(([ref,item]) => [ref, {...item}]));
+runtimeGateInputs.B1 = {...runtimeGateInputs.B1, value: Number(runtimeGateInputs.B1.value) + 40};
+const expectedUploaded = context.calculateGateProductServer({article:'Арт.6',gateWidth:3.4,gateHeight:1.8,wicketWidth:1,wicketHeight:1.8}, runtimeGateInputs);
+const uploadedQuote = await context.calculateAuthoritativeGateQuote({
+  article:'Арт.6',width:3.4,height:1.8,wicketWidth:1,wicketHeight:1.8,posts:false,city:'Мелеуз'
+}, {});
+if (uploadedQuote.productPrice !== expectedUploaded || uploadedQuote.total !== expectedUploaded + 8000) {
+  failures += 1;
+  console.error(`SERVER UPLOADED EXCEL INPUT FAIL: expected ${expectedUploaded} / ${expectedUploaded + 8000}, got ${uploadedQuote.productPrice} / ${uploadedQuote.total}`);
 }
 
 console.log(`Server quote control cases: ${cases.length}; failures: ${failures}`);
