@@ -10,7 +10,6 @@
     {id:'mint',label:'Зелёная мята',short:'Мята',ral:'RAL 6029',hex:'#008754'},
     {id:'wine',label:'Винно-красный',short:'Винный',ral:'RAL 3005',hex:'#5e2028'}
   ];
-  const colorPreviewState = new Map();
 
   const colorBadgeStyle = document.createElement('style');
   colorBadgeStyle.textContent = `
@@ -32,8 +31,6 @@
     .mobile-price-breakdown>summary{cursor:default!important}
     .mobile-payment-note{margin:10px 0 0;padding:10px 11px;border:1px solid rgba(230,189,105,.22);border-radius:10px;background:rgba(200,152,60,.07);color:rgba(255,255,255,.68);font-size:10px;line-height:1.5}
     .mobile-payment-note strong{display:block;margin-bottom:2px;color:#fff;font-size:11px}
-    .profile-color-wash{position:absolute;inset:0;z-index:4;pointer-events:none;background:var(--profile-preview-color,transparent);mix-blend-mode:color;opacity:0;transition:opacity .2s ease;-webkit-mask-image:radial-gradient(ellipse 82% 62% at 50% 62%,#000 26%,rgba(0,0,0,.94) 54%,rgba(0,0,0,.4) 72%,transparent 92%);mask-image:radial-gradient(ellipse 82% 62% at 50% 62%,#000 26%,rgba(0,0,0,.94) 54%,rgba(0,0,0,.4) 72%,transparent 92%)}
-    .product-visual.is-color-preview .profile-color-wash{opacity:.56}
     .profile-color-picker{padding:10px 12px 9px;border-top:1px solid rgba(17,18,20,.08);background:#fff;color:#171717}
     .profile-color-picker-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:8px}
     .profile-color-picker-head strong{font-size:11px;line-height:1.2;font-weight:900}
@@ -62,57 +59,16 @@
     });
   };
 
-  const applyProfileColor = (card, colorId, shouldTrack = true) => {
-    if (!card) return;
-    const visual = card.querySelector('.product-visual');
-    const status = card.querySelector('.profile-color-status');
-    const product = window.GATE_PAGE_API?.productById?.(card.dataset.cardProduct);
-    card.querySelectorAll('.profile-color-option').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.profileColor === colorId)));
-    if (colorId === 'other') {
-      colorPreviewState.set(card.dataset.cardProduct,'other');
-      visual?.classList.remove('is-color-preview');
-      visual?.style.removeProperty('--profile-preview-color');
-      if (status) status.textContent = 'Другой цвет — при оформлении';
-      if (shouldTrack) trackGoal('catalog_color_preview',{article:product?.art||card.dataset.cardProduct,color:'other'});
-      return;
-    }
-    const color = PROFILE_COLORS.find(item => item.id === colorId);
-    if (!color) {
-      colorPreviewState.delete(card.dataset.cardProduct);
-      visual?.classList.remove('is-color-preview');
-      visual?.style.removeProperty('--profile-preview-color');
-      if (status) status.textContent = 'Нажмите на оттенок';
-      return;
-    }
-    colorPreviewState.set(card.dataset.cardProduct,color.id);
-    visual?.style.setProperty('--profile-preview-color',color.hex);
-    visual?.classList.add('is-color-preview');
-    if (status) status.textContent = `${color.label} · ${color.ral}`;
-    if (shouldTrack) trackGoal('catalog_color_preview',{article:product?.art||card.dataset.cardProduct,color:color.id});
-  };
-
   const installColorPickers = () => {
     document.querySelectorAll('.product-card').forEach(card => {
       if (card.querySelector('.profile-color-picker')) return;
       const visual = card.querySelector('.product-visual');
       if (!visual) return;
-      if (!visual.querySelector('.profile-color-wash')) {
-        const wash = document.createElement('span');
-        wash.className = 'profile-color-wash';
-        wash.setAttribute('aria-hidden','true');
-        visual.append(wash);
-      }
       const picker = document.createElement('div');
       picker.className = 'profile-color-picker';
-      picker.innerHTML = `<div class="profile-color-picker-head"><strong>Примерьте цвет профнастила</strong><span class="profile-color-status" aria-live="polite">Нажмите на оттенок</span></div><div class="profile-color-swatches">${PROFILE_COLORS.map(color => `<button class="profile-color-option" type="button" data-profile-color="${color.id}" aria-pressed="false" aria-label="Показать цвет ${color.label}, ${color.ral}" title="${color.label} · ${color.ral}"><span class="profile-color-dot" style="--swatch:${color.hex}"></span><span>${color.short}</span></button>`).join('')}<button class="profile-color-option is-more" type="button" data-profile-color="other" aria-pressed="false" aria-label="Другой цвет профнастила"><span class="profile-color-dot"></span><span>Другой</span></button></div><p class="profile-color-note">Есть и другие цвета. Предпросмотр приблизительный; на предварительную цену цвет не влияет.</p>`;
-      picker.querySelectorAll('.profile-color-option').forEach(button => button.addEventListener('click', event => {
-        event.stopPropagation();
-        applyProfileColor(card,button.dataset.profileColor,true);
-      }));
+      picker.innerHTML = `<div class="profile-color-picker-head"><strong>Посмотрите цвет на реальном фото</strong><span class="profile-color-status" aria-live="polite">Загрузка цветов…</span></div><div class="profile-color-swatches">${PROFILE_COLORS.map(color => `<button class="profile-color-option" type="button" data-profile-color="${color.id}" aria-pressed="false" aria-label="Показать реальное фото: ${color.label}, ${color.ral}" title="${color.label} · ${color.ral}"><span class="profile-color-dot" style="--swatch:${color.hex}"></span><span>${color.short}</span></button>`).join('')}<button class="profile-color-option is-more" type="button" data-profile-color="other" aria-pressed="false" aria-label="Другие цвета профнастила"><span class="profile-color-dot"></span><span>Другой</span></button></div><p class="profile-color-note"><b>Показаны популярные цвета.</b> Доступны и другие варианты; цвет не влияет на предварительную стоимость.</p>`;
       const anchor = card.querySelector('.card-thumbnails') || visual;
       anchor.after(picker);
-      const remembered = colorPreviewState.get(card.dataset.cardProduct);
-      if (remembered) applyProfileColor(card,remembered,false);
     });
   };
 
