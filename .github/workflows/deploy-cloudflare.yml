@@ -140,8 +140,10 @@ jobs:
             'CSV с рекламой',
             'Источник цен ворот — Excel',
             'Цены ворот не редактируются вручную',
-            'Выбрать Excel',
+            'Скачать текущий Excel',
+            'Загрузить изменённый Excel',
             'Опубликовать расчёт из Excel',
+            '/api/admin/gate-excel/file',
             '/api/admin/gate-excel',
             'reconcileTab'
           ];
@@ -162,7 +164,7 @@ jobs:
               if (missingSite.length) throw new Error(`Missing production site text: ${missingSite.join(' | ')}`);
               if (forbiddenPresent.length) throw new Error(`Forbidden manual pricing logic in production: ${forbiddenPresent.join(' | ')}`);
               if (missingAdmin.length) throw new Error(`Missing production admin text: ${missingAdmin.join(' | ')}`);
-              console.log(`Production deployment verified: ${siteUrl} + /admin + Excel importer`);
+              console.log(`Production deployment verified: ${siteUrl} + /admin + Excel upload/download`);
               process.exit(0);
             } catch (error) {
               lastError = error;
