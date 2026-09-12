@@ -33,15 +33,24 @@ jobs:
         run: node scripts/test-server-gate-quote.mjs
       - name: Build production Worker
         run: npm run build
-      - name: Check built Worker syntax
-        run: node --check dist/server/index.js
+      - name: Check built output
+        run: |
+          node --check dist/server/index.js
+          node --check dist/client/site.bundle.js
+          test -s dist/client/site.css
+          test -s dist/client/site.bundle.js
       - name: Report build size
         run: |
           node <<'NODE'
           const fs = require('fs');
           const zlib = require('zlib');
-          const worker = fs.readFileSync('dist/server/index.js');
-          console.log(`Built Worker: ${worker.length} bytes; gzip ${zlib.gzipSync(worker).length} bytes`);
+          for (const file of ['dist/server/index.js','dist/client/site.css','dist/client/site.bundle.js']) {
+            const body = fs.readFileSync(file);
+            console.log(`${file}: ${body.length} bytes; gzip ${zlib.gzipSync(body).length} bytes`);
+          }
+          const worker = fs.readFileSync('dist/server/index.js','utf8');
+          if (!worker.includes('/site.css') || !worker.includes('/site.bundle.js')) throw new Error('Public page does not reference external performance assets');
+          if (!worker.includes('window.GATE_CALC_PRICES=__RUNTIME_GATE_CALC_PRICES__')) throw new Error('Runtime Excel prices are not injected into public page');
           NODE
       - name: Measure current production reads
         run: |
