@@ -41,6 +41,10 @@ jobs:
           node --check worker/catalog-media-d1.js
           node --check worker/leads-d1.js
           node --check scripts/build.mjs
+          node --check scripts/test-catalog-images.mjs
+
+      - name: Verify catalog images
+        run: node scripts/test-catalog-images.mjs
 
       - name: Verify gate page foundation
         run: node scripts/test-gate-page.mjs
