@@ -71,6 +71,14 @@ test('real color photo follows customer into calculator and lead', async ({page}
   const card = await revealGate(page, 'Арт.6');
   const graphite = card.locator('[data-profile-color="graphite"]');
   const mint = card.locator('[data-profile-color="mint"]');
+  const colorToggle = card.locator('.profile-color-toggle');
+
+  await expect(card.locator('.profile-color-picker-head strong')).toHaveText('Любой цвет профнастила');
+  await expect(colorToggle).toHaveText('Посмотреть цвета');
+  await expect(graphite).toBeHidden();
+  await colorToggle.click();
+  await expect(graphite).toBeVisible();
+  await expect(card.locator('.profile-color-note')).toContainText('Цвет можно выбрать позже');
   await expect(graphite).toHaveClass(/is-photo-ready/);
 
   await graphite.click();
