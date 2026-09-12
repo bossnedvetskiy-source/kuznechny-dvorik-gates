@@ -1,8 +1,7 @@
 (() => {
   const calc = window.GATE_CALC;
   const prices = window.PRICE_DATA;
-  const models = window.GATE_CALC_MODELS?.models;
-  if (!calc?.calculateGate || !prices?.catalog || !models) return;
+  if (!calc?.calculateGate || !prices?.catalog) return;
 
   const originalCalculate = calc.calculateGate.bind(calc);
   const catalogByArticle = new Map((prices.catalog || []).map(item => [calc.normalizeArticle(item.art), item]));
@@ -10,7 +9,7 @@
 
   function standardInput(article) {
     const key = calc.normalizeArticle(article);
-    const standard = models?.[key]?.standard || {};
+    const standard = window.GATE_CALC_MODELS?.models?.[key]?.standard || {};
     return {
       article,
       gateWidth:Number(standard.gate_width_m) || 3.4,
