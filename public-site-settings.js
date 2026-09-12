@@ -1,6 +1,12 @@
 (() => {
   const site = window.SITE_SETTINGS || {};
 
+  const robots = document.querySelector('meta[name="robots"]');
+  if (robots) {
+    const technicalHost = /(?:workers\.dev|github\.io)$/i.test(window.location.hostname);
+    robots.content = technicalHost ? 'noindex,follow' : 'index,follow,max-image-preview:large';
+  }
+
   const setText = (selector, value) => {
     const element = document.querySelector(selector);
     if (element && value) element.textContent = value;
