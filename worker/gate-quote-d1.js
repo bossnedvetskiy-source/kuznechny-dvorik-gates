@@ -70,14 +70,31 @@ function calculateGateProductServer({article, gateWidth, gateHeight, wicketWidth
   return gateRoundExcelServer(gatePrice + wicketPrice, -2);
 }
 
+function standardGateDimensionsServer(article) {
+  const model = DEFAULT_GATE_CALC_MODELS?.models?.[normalizeGateArticleServer(article)];
+  const standard = model?.standard || {};
+  return {
+    gateWidth: Number(standard.gate_width_m) || 3.4,
+    gateHeight: Number(standard.gate_height_m) || 1.8,
+    wicketWidth: Number(standard.wicket_width_m) || 1,
+    wicketHeight: Number(standard.wicket_height_m) || 1.8
+  };
+}
+
+function calculateAdjustedGateProductServer(input, runtimeBasePrice) {
+  const formulaPrice = calculateGateProductServer(input);
+  const basePrice = Math.max(0, Math.round(Number(runtimeBasePrice) || 0));
+  if (!basePrice) return formulaPrice;
+  const standardPrice = calculateGateProductServer({article:input.article, ...standardGateDimensionsServer(input.article)});
+  return Math.max(0, gateRoundExcelServer(formulaPrice + (basePrice - standardPrice), -2));
+}
+
 const normalizeDeliveryServer = value => String(value || '').toLocaleLowerCase('ru-RU').replace(/ё/g, 'е').replace(/[^а-яa-z0-9]/gi, '');
 
-function fixedDeliveryForCity(city, site) {
-  const destinations = Array.isArray(DEFAULT_DELIVERY_PRICES?.destinations) ? DEFAULT_DELIVERY_PRICES.destinations : [];
+function fixedDeliveryForCity(city, site, deliverySettings = DEFAULT_DELIVERY_PRICES) {
+  const destinations = Array.isArray(deliverySettings?.destinations) ? deliverySettings.destinations : [];
   const known = destinations.find(item => normalizeDeliveryServer(item.name) === normalizeDeliveryServer(city));
   if (!known) return null;
-  // Listed destinations are explicit business tariffs. Some may intentionally be outside
-  // the normal radius, so price must never be used as a proxy for distance.
   return {
     kind:'fixed',
     city:String(known.name || city),
@@ -90,7 +107,8 @@ function fixedDeliveryForCity(city, site) {
 }
 
 async function authoritativeDeliveryForLead(city, env, site) {
-  const fixed = fixedDeliveryForCity(city, site);
+  const deliverySettings = await loadDeliverySettings(env);
+  const fixed = fixedDeliveryForCity(city, site, deliverySettings);
   if (fixed) return fixed;
   try {
     const routed = await calculateUnknownDelivery(city, env);
@@ -154,7 +172,7 @@ async function calculateAuthoritativeGateQuote(body, env) {
   const catalogItem = (runtimePrices.catalog || []).find(item => normalizeGateArticleServer(item.art) === articleKey && item.visible !== false);
   if (!catalogItem) throw Object.assign(new Error('Выбранная модель ворот недоступна'), {status: 400});
 
-  const productPrice = calculateGateProductServer({article: body.article, ...dimensions});
+  const productPrice = calculateAdjustedGateProductServer({article: body.article, ...dimensions}, catalogItem.price);
   const installationPrice = Math.max(0, Math.round(Number(runtimePrices.catalogInstallation) || 0));
   const postsPrice = body.posts ? Math.max(0, Math.round(Number(runtimePrices.catalogPosts) || 0)) : 0;
   const color = String(body.color || '').trim().slice(0, 100);
