@@ -208,6 +208,7 @@ async function saveGateExcelState(request, env) {
     VALUES (?, ?, CURRENT_TIMESTAMP, 'admin-excel')
     ON CONFLICT(key) DO UPDATE SET value_json = excluded.value_json, updated_at = CURRENT_TIMESTAMP, updated_by = excluded.updated_by`)
     .bind(GATE_EXCEL_SETTINGS_KEY, JSON.stringify(saved)).run();
+  invalidatePublicRenderCache();
 
   if (uploadedFile && previousUploadId && previousUploadId !== uploadedFile.uploadId) {
     await env.DB.prepare('DELETE FROM gate_excel_file_chunks WHERE upload_id = ?').bind(previousUploadId).run().catch(() => {});
