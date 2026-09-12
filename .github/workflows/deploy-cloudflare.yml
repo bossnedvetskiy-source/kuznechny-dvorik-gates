@@ -157,10 +157,10 @@ jobs:
             'KUZDVOR_FORMULA_PRICE_SYNC_READY'
           ];
           const requiredCalculatorBundle = [
-            'syncExcelDerivedGatePrices',
-            'standardForArticle',
             'KUZDVOR_FORMULA_PRICE_SYNC_READY',
-            'GATE_CALC_MODELS_READY'
+            'GATE_CALC_MODELS_READY',
+            'rawGateCalculation',
+            'window.GATE_CALC'
           ];
           const requiredEnhancementsBundle = [
             'KUZDVOR_COLOR_PHOTO_SITE_READY',
