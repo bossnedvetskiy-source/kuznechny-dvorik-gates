@@ -93,8 +93,12 @@ jobs:
       - name: Build production Worker
         run: npm run build
 
-      - name: Check built Worker syntax
-        run: node --check dist/server/index.js
+      - name: Check built output syntax
+        run: |
+          node --check dist/server/index.js
+          node --check dist/client/site.bundle.js
+          test -s dist/client/site.css
+          test -s dist/client/site.bundle.js
 
       - name: Deploy to Cloudflare Workers
         shell: bash
@@ -123,6 +127,7 @@ jobs:
         run: |
           node <<'NODE'
           const siteUrl = 'https://kuznechny-dvorik-gates.boss-nedvetskiy.workers.dev/';
+          const bundleUrl = 'https://kuznechny-dvorik-gates.boss-nedvetskiy.workers.dev/site.bundle.js';
           const adminUrl = 'https://kuznechny-dvorik-gates.boss-nedvetskiy.workers.dev/admin';
           const requiredSite = [
             'Ворота с калиткой',
@@ -131,11 +136,15 @@ jobs:
             'Предпочитаемый цвет:',
             'Выберите цвет профнастила',
             'Нажмите на нужный цвет',
+            '/site.css',
+            '/site.bundle.js'
+          ];
+          const requiredBundle = [
             'syncExcelDerivedGatePrices',
             'standardForArticle',
             'KUZDVOR_FORMULA_PRICE_SYNC_READY'
           ];
-          const forbiddenSite = ['runtimeCatalogPrice','targetStandardPrice'];
+          const forbiddenPublic = ['runtimeCatalogPrice','targetStandardPrice'];
           const requiredAdmin = [
             'CSV с рекламой',
             'Источник цен ворот — Excel',
@@ -151,20 +160,24 @@ jobs:
           let lastError;
           for (let attempt = 1; attempt <= 5; attempt += 1) {
             try {
-              const [siteResponse, adminResponse] = await Promise.all([
+              const [siteResponse, bundleResponse, adminResponse] = await Promise.all([
                 fetch(siteUrl, { cache: 'no-store' }),
+                fetch(bundleUrl, { cache: 'no-store' }),
                 fetch(adminUrl, { cache: 'no-store' })
               ]);
               if (!siteResponse.ok) throw new Error(`Site HTTP ${siteResponse.status}`);
+              if (!bundleResponse.ok) throw new Error(`Public bundle HTTP ${bundleResponse.status}`);
               if (!adminResponse.ok) throw new Error(`Admin HTTP ${adminResponse.status}`);
-              const [siteHtml, adminHtml] = await Promise.all([siteResponse.text(), adminResponse.text()]);
+              const [siteHtml, publicBundle, adminHtml] = await Promise.all([siteResponse.text(), bundleResponse.text(), adminResponse.text()]);
               const missingSite = requiredSite.filter(text => !siteHtml.includes(text));
-              const forbiddenPresent = forbiddenSite.filter(text => siteHtml.includes(text));
+              const missingBundle = requiredBundle.filter(text => !publicBundle.includes(text));
+              const forbiddenPresent = forbiddenPublic.filter(text => siteHtml.includes(text) || publicBundle.includes(text));
               const missingAdmin = requiredAdmin.filter(text => !adminHtml.includes(text));
               if (missingSite.length) throw new Error(`Missing production site text: ${missingSite.join(' | ')}`);
+              if (missingBundle.length) throw new Error(`Missing production public bundle code: ${missingBundle.join(' | ')}`);
               if (forbiddenPresent.length) throw new Error(`Forbidden manual pricing logic in production: ${forbiddenPresent.join(' | ')}`);
               if (missingAdmin.length) throw new Error(`Missing production admin text: ${missingAdmin.join(' | ')}`);
-              console.log(`Production deployment verified: ${siteUrl} + /admin + Excel upload/download`);
+              console.log(`Production deployment verified: ${siteUrl} + /site.bundle.js + /admin + Excel upload/download`);
               process.exit(0);
             } catch (error) {
               lastError = error;
