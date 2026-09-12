@@ -6,11 +6,54 @@
     if (root.nodeType === 1 && root.matches?.('.color-profile-badge')) root.remove();
     root.querySelectorAll?.('.color-profile-badge').forEach(node => node.remove());
   };
+
+  const enhanceColorPicker = picker => {
+    if (!picker || picker.dataset.optionalColorUi === 'true') return;
+    picker.dataset.optionalColorUi = 'true';
+
+    const head = picker.querySelector('.profile-color-picker-head');
+    const title = head?.querySelector('strong');
+    const status = picker.querySelector('.profile-color-status');
+    const swatches = picker.querySelector('.profile-color-swatches');
+    const note = picker.querySelector('.profile-color-note');
+    if (title) title.textContent = 'Любой цвет профнастила';
+    if (note) note.textContent = 'Цвет можно выбрать позже — на предварительную стоимость он не влияет.';
+
+    if (status) status.style.display = 'none';
+    if (swatches) swatches.style.display = 'none';
+    if (note) note.style.display = 'none';
+
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'profile-color-toggle';
+    toggle.textContent = 'Посмотреть цвета';
+    toggle.setAttribute('aria-expanded','false');
+    toggle.style.cssText = 'width:100%;min-height:34px;margin:1px 0 0;padding:7px 10px;border:1px solid rgba(17,18,20,.13);border-radius:9px;background:#f6f3ed;color:#514b43;font:800 9px/1.2 Manrope,Arial,sans-serif;cursor:pointer;text-align:center';
+
+    toggle.addEventListener('click', () => {
+      const open = toggle.getAttribute('aria-expanded') !== 'true';
+      toggle.setAttribute('aria-expanded', String(open));
+      toggle.textContent = open ? 'Скрыть цвета' : 'Посмотреть цвета';
+      if (status) status.style.display = open ? '' : 'none';
+      if (swatches) swatches.style.display = open ? '' : 'none';
+      if (note) note.style.display = open ? '' : 'none';
+    });
+
+    head?.after(toggle);
+  };
+
+  const syncCatalogDecor = root => {
+    if (!root) return;
+    removeColorBadges(root);
+    if (root.nodeType === 1 && root.matches?.('.profile-color-picker')) enhanceColorPicker(root);
+    root.querySelectorAll?.('.profile-color-picker').forEach(enhanceColorPicker);
+  };
+
   const catalogGridForBadges = document.getElementById('catalogGrid');
   if (catalogGridForBadges) {
-    removeColorBadges(catalogGridForBadges);
+    syncCatalogDecor(catalogGridForBadges);
     new MutationObserver(records => {
-      records.forEach(record => record.addedNodes.forEach(node => removeColorBadges(node)));
+      records.forEach(record => record.addedNodes.forEach(node => syncCatalogDecor(node)));
     }).observe(catalogGridForBadges,{childList:true,subtree:true});
   }
 
@@ -91,7 +134,7 @@
     hours.textContent = site.businessHours;
   }
 
-  const money = value => new Intl.NumberFormat('ru-RU').format(Math.round(Number(value) || 0)) + ' ₽';
+  const money = value => new Intl.NumberFormat('ru-RU').format(Math.round(Number(value)) || 0) + ' ₽';
   const productIdForArticle = article => `catalog-${String(article || '').replace(/^Арт\.\s*/,'').toLowerCase().replace('с','s')}`;
 
   async function syncExcelDerivedGatePrices() {
