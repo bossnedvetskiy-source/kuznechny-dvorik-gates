@@ -28,7 +28,7 @@ function moneyInputValue(value) {
 function setPriceDirty(value = true) {
   priceDirty = value;
   savePricesButton.disabled = !value;
-  priceSaveState.textContent = value ? 'Есть несохранённые изменения' : 'Все цены сохранены';
+  priceSaveState.textContent = value ? 'Есть несохранённые изменения' : 'Настройки сохранены';
   priceSaveState.classList.toggle('dirty', value);
 }
 
@@ -54,16 +54,24 @@ function createMoneyInput(value, dataset = {}) {
 
 function renderCatalogPrices() {
   catalogPriceList.replaceChildren();
+  const note = document.createElement('p');
+  note.className = 'upload-note';
+  note.innerHTML = '<b>Цены ворот не редактируются вручную.</b> Они рассчитываются из Excel-модели: стоимость материалов и формулы из расчётного файла определяют цену каждого артикула и любого размера.';
+  catalogPriceList.append(note);
+
   for (const item of priceSettings.catalog || []) {
-    const row = document.createElement('label');
+    const row = document.createElement('div');
     row.className = 'catalog-price-row';
 
     const title = document.createElement('span');
     title.className = 'price-item-title';
-    title.innerHTML = `<b>${item.art}</b><small>Цена изделия</small>`;
+    title.innerHTML = `<b>${item.art}</b><small>Источник цены — Excel-расчёт</small>`;
 
-    const input = createMoneyInput(item.price, {priceArt: item.art});
-    row.append(title, input);
+    const source = document.createElement('strong');
+    source.textContent = 'Из Excel';
+    source.style.fontSize = '11px';
+    source.style.color = '#8a6326';
+    row.append(title, source);
     catalogPriceList.append(row);
   }
 }
@@ -118,7 +126,7 @@ function renderCatalogManagement() {
 
     const name = document.createElement('div');
     name.className = 'catalog-manage-name';
-    name.innerHTML = `<b>${item.art}</b><small>${moneyInputValue(item.price)} ₽</small>`;
+    name.innerHTML = `<b>${item.art}</b><small>Цена — из Excel-расчёта</small>`;
 
     const visibility = document.createElement('label');
     visibility.className = 'catalog-visibility';
@@ -185,7 +193,7 @@ function renderPrices() {
 async function loadPriceSettings(force = false) {
   if (pricesLoading || (pricesLoaded && !force)) return;
   pricesLoading = true;
-  priceSaveState.textContent = 'Загружаем цены…';
+  priceSaveState.textContent = 'Загружаем настройки…';
   catalogSaveState.textContent = 'Загружаем каталог…';
   try {
     const data = await api('/api/admin/prices');
@@ -193,7 +201,7 @@ async function loadPriceSettings(force = false) {
     pricesLoaded = true;
     renderPrices();
   } catch (error) {
-    priceSaveState.textContent = 'Не удалось загрузить цены';
+    priceSaveState.textContent = 'Не удалось загрузить настройки';
     catalogSaveState.textContent = 'Не удалось загрузить каталог';
     showToast(error.message, true);
   } finally {
@@ -202,12 +210,7 @@ async function loadPriceSettings(force = false) {
 }
 
 function collectPrices() {
-  const catalogByArt = new Map((priceSettings.catalog || []).map(item => [item.art, {...item}]));
-  catalogPriceList.querySelectorAll('[data-price-art]').forEach(input => {
-    const item = catalogByArt.get(input.dataset.priceArt);
-    if (item) item.price = Number(input.value);
-  });
-
+  const catalog = (priceSettings.catalog || []).map(item => ({...item}));
   const extraById = new Map((priceSettings.extraProducts || []).map(item => [item.id, {...item}]));
   extraPriceList.querySelectorAll('[data-extra-id]').forEach(input => {
     const item = extraById.get(input.dataset.extraId);
@@ -218,7 +221,7 @@ function collectPrices() {
     ...priceSettings,
     catalogInstallation: Number(catalogInstallationInput.value),
     catalogPosts: Number(catalogPostsInput.value),
-    catalog: [...catalogByArt.values()],
+    catalog,
     extraProducts: [...extraById.values()]
   };
 }
@@ -255,7 +258,7 @@ adminTabs.forEach(button => button.addEventListener('click', () => {
     return;
   }
   if (priceDirty) {
-    showToast('Сначала сохраните изменения цен', true);
+    showToast('Сначала сохраните изменения настроек', true);
     return;
   }
   if (catalogDirty) {
@@ -281,12 +284,12 @@ priceForm?.addEventListener('submit', async event => {
     });
     priceSettings = data.prices;
     renderPrices();
-    showToast('Цены опубликованы на сайте');
+    showToast('Настройки опубликованы на сайте');
   } catch (error) {
     setPriceDirty(true);
     showToast(error.message, true);
   } finally {
-    savePricesButton.textContent = 'Сохранить цены';
+    savePricesButton.textContent = 'Сохранить настройки';
     savePricesButton.disabled = !priceDirty;
   }
 });
@@ -298,7 +301,7 @@ saveCatalogButton?.addEventListener('click', async () => {
   try {
     const data = await api('/api/admin/prices', {
       method: 'POST',
-      headers: {'content-type': 'application/json'},
+      headers:{'content-type':'application/json'},
       body: JSON.stringify({prices: collectCatalogSettings()})
     });
     priceSettings = data.prices;
