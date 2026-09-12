@@ -72,7 +72,10 @@
     hours.textContent = site.businessHours;
   }
 
-  const mobilePackageSpacing = document.createElement('style');
-  mobilePackageSpacing.textContent = '@media(max-width:620px){.package{padding-bottom:20px!important}.trust{padding-top:34px!important}}';
-  document.head.appendChild(mobilePackageSpacing);
+  if (window.matchMedia('(max-width: 620px)').matches) {
+    const packageSection = document.querySelector('.package');
+    const trustSection = document.querySelector('.trust');
+    if (packageSection) packageSection.style.paddingBottom = '20px';
+    if (trustSection) trustSection.style.paddingTop = '34px';
+  }
 })();
