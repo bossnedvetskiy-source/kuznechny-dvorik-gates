@@ -118,11 +118,39 @@ const publicSiteBundle = [
   gateFormulaPricesSiteSource
 ].join('\n');
 
+const googleFontsHref = 'https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Prata&display=swap';
+const googleFontsTag = `<link href="${googleFontsHref}" rel="stylesheet">`;
+if (!htmlSource.includes(googleFontsTag)) throw new Error('Не найдена таблица Google Fonts для оптимизации');
+const asyncGoogleFontsTag = `<link href="${googleFontsHref}" rel="stylesheet" media="print" onload="this.media='all'">\n  <noscript><link href="${googleFontsHref}" rel="stylesheet"></noscript>`;
+const yandexMetrikaPattern = /<script type="text\/javascript">\s*\(function\(m,e,t,r,i,k,a\)\{[\s\S]*?ym\(106543981,'init',\{[\s\S]*?\}\);\s*<\/script>/;
+if (!yandexMetrikaPattern.test(htmlSource)) throw new Error('Не найден блок Яндекс Метрики для отложенной загрузки');
+const delayedMetrikaTag = `<script>
+    window.ym = window.ym || function(){(window.ym.a = window.ym.a || []).push(arguments)};
+    window.ym.l = Date.now();
+    window.ym(106543981,'init',{clickmap:true,trackLinks:true,accurateTrackBounce:true,webvisor:true});
+    (() => {
+      let loaded = false;
+      const load = () => {
+        if (loaded) return;
+        loaded = true;
+        const script = document.createElement('script');
+        script.async = true;
+        script.src = 'https://mc.yandex.ru/metrika/tag.js';
+        document.head.appendChild(script);
+      };
+      if ('requestIdleCallback' in window) window.requestIdleCallback(load, {timeout:2500});
+      else window.addEventListener('load', () => setTimeout(load, 400), {once:true});
+    })();
+  </script>`;
+const optimizedHtmlSource = htmlSource
+  .replace(googleFontsTag, asyncGoogleFontsTag)
+  .replace(yandexMetrikaPattern, delayedMetrikaTag);
+
 const homeHtml = homeHtmlSource
   .replace('<link rel="stylesheet" href="home.css">', `<style>${homeCss}</style>`)
   .replace('<script src="product-categories.js"></script>', `<script>${productCategoriesSource}</script>`);
 
-const html = htmlSource
+const html = optimizedHtmlSource
   .replace('<link rel="stylesheet" href="styles.css">', '<link rel="stylesheet" href="/site.css">')
   .replace('<link rel="stylesheet" href="storefront.css">', '')
   .replace('<link rel="stylesheet" href="gate-page.css">', '')
