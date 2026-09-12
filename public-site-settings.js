@@ -1,6 +1,10 @@
 (() => {
   const site = window.SITE_SETTINGS || {};
 
+  const badgeOverrideStyle = document.createElement('style');
+  badgeOverrideStyle.textContent = '.color-profile-badge{display:none!important}';
+  document.head.append(badgeOverrideStyle);
+
   const robots = document.querySelector('meta[name="robots"]');
   if (robots) {
     const technicalHost = /(?:workers\.dev|github\.io)$/i.test(window.location.hostname);
