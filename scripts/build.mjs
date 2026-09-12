@@ -55,11 +55,6 @@ const gateCalcSources = await Promise.all([
   readFile('gate-calc-models.js', 'utf8'),
   readFile('gate-calc-engine.js', 'utf8')
 ]);
-const gateCalcRuntimeBundle = [
-  gateCalcSources[0],
-  'window.GATE_CALC_PRICES=__RUNTIME_GATE_CALC_PRICES__;',
-  ...gateCalcSources.slice(1)
-].join('\n');
 const gateCalcModelLoaderBundle = gateCalcSources.slice(1, 6).join('\n');
 
 const gatePricesMatch = gateCalcSources[0].match(/window\.GATE_CALC_PRICES\s*=\s*({[\s\S]*});?\s*$/);
@@ -109,32 +104,44 @@ const adminExcelCompatibilitySource = `(() => {
   });
 })();`;
 
-const publicJs = js;
+const publicCssBundle = [css, storefrontCss, gatePageCss].join('\n');
+const publicSiteBundle = [
+  catalogImages,
+  ...gateCalcSources.slice(1),
+  customerContextSource,
+  deliverySharedSource,
+  leadsSharedSource,
+  js,
+  publicSiteJsSource,
+  gatePageUiSource,
+  colorPhotoSiteSource,
+  gateFormulaPricesSiteSource
+].join('\n');
 
 const homeHtml = homeHtmlSource
   .replace('<link rel="stylesheet" href="home.css">', `<style>${homeCss}</style>`)
   .replace('<script src="product-categories.js"></script>', `<script>${productCategoriesSource}</script>`);
 
 const html = htmlSource
-  .replace('<link rel="stylesheet" href="styles.css">', `<style>${css}\n${storefrontCss}\n${gatePageCss}</style>`)
+  .replace('<link rel="stylesheet" href="styles.css">', '<link rel="stylesheet" href="/site.css">')
   .replace('<link rel="stylesheet" href="storefront.css">', '')
   .replace('<link rel="stylesheet" href="gate-page.css">', '')
   .replace('<script id="deliveryData" type="application/json">{}</script>', `<script id="deliveryData" type="application/json">${embeddedDeliveryPrices}</script>`)
-  .replace('<script src="catalog-images.js"></script>', `<script>${catalogImages}</script>`)
-  .replace('<script src="prices.js"></script>', '<script>window.PRICE_DATA=__RUNTIME_PRICE_DATA__;window.SITE_SETTINGS=__RUNTIME_SITE_DATA__;</script>')
-  .replace('<script src="gate-calc-prices.js"></script>', `<script>${gateCalcRuntimeBundle}</script>`)
+  .replace('<script src="catalog-images.js"></script>', '')
+  .replace('<script src="prices.js"></script>', '<script>window.PRICE_DATA=__RUNTIME_PRICE_DATA__;window.SITE_SETTINGS=__RUNTIME_SITE_DATA__;window.GATE_CALC_PRICES=__RUNTIME_GATE_CALC_PRICES__;</script>')
+  .replace('<script src="gate-calc-prices.js"></script>', '')
   .replace('<script src="gate-calc-models-chunk1.js"></script>', '')
   .replace('<script src="gate-calc-models-chunk2.js"></script>', '')
   .replace('<script src="gate-calc-models-chunk3.js"></script>', '')
   .replace('<script src="gate-calc-models-chunk4.js"></script>', '')
   .replace('<script src="gate-calc-models.js"></script>', '')
   .replace('<script src="gate-calc-engine.js"></script>', '')
-  .replace('<script src="shared/customer-context.js"></script>', `<script>${customerContextSource}</script>`)
-  .replace('<script src="shared/delivery.js"></script>', `<script>${deliverySharedSource}</script>`)
-  .replace('<script src="shared/leads.js"></script>', `<script>${leadsSharedSource}</script>`)
-  .replace('<script src="app.js"></script>', `<script>${publicJs}</script>`)
-  .replace('<script src="public-site-settings.js"></script>', `<script>${publicSiteJsSource}</script>`)
-  .replace('<script src="gate-page-ui.js"></script>', `<script>${gatePageUiSource}\n${colorPhotoSiteSource}\n${gateFormulaPricesSiteSource}</script>`);
+  .replace('<script src="shared/customer-context.js"></script>', '')
+  .replace('<script src="shared/delivery.js"></script>', '')
+  .replace('<script src="shared/leads.js"></script>', '')
+  .replace('<script src="app.js"></script>', '')
+  .replace('<script src="public-site-settings.js"></script>', '')
+  .replace('<script src="gate-page-ui.js"></script>', '<script src="/site.bundle.js" defer></script>');
 
 const adminJs = adminJsSource;
 
@@ -173,6 +180,8 @@ const worker = patchedWorkerSource
   .replace('__DELIVERY_RATE__', String(deliveryPrices.fallbackRatePerKm));
 
 await writeFile('dist/server/index.js', worker, 'utf8');
+await writeFile('dist/client/site.css', publicCssBundle, 'utf8');
+await writeFile('dist/client/site.bundle.js', publicSiteBundle, 'utf8');
 await writeFile('dist/client/.keep', '', 'utf8');
 await copyFile('assets/hero-gates.jpg', 'dist/client/hero-gates.jpg');
 await copyFile('storefront.css', 'dist/client/storefront.css');
