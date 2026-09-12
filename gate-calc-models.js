@@ -6,6 +6,9 @@ window.GATE_CALC_MODELS_READY=(async()=>{
   if(!('DecompressionStream' in window)) throw new Error('Браузер не поддерживает распаковку модели расчёта');
   const text=await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
   (0,eval)(text);
+  if (window.GATE_CALC_MODELS?.models) {
+    for (const article of ['39','40']) delete window.GATE_CALC_MODELS.models[article];
+  }
   delete window.__GATE_CALC_B64;
   return window.GATE_CALC_MODELS;
 })();

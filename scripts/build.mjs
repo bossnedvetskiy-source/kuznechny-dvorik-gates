@@ -73,7 +73,10 @@ const compressedGateModels = gateCalcSources.slice(1,5).map((source,index) => {
 const gateModelsScript = gunzipSync(Buffer.from(compressedGateModels, 'base64')).toString('utf8');
 const rawGateModels = Function('window', '"use strict";\n' + gateModelsScript + '\nreturn window.GATE_CALC_MODELS;')({});
 if (!rawGateModels?.models) throw new Error('Не удалось распаковать серверные модели ворот');
-const serverGateModelSource = `{models:{${Object.entries(rawGateModels.models || {}).map(([key,model]) => {
+const retiredGateArticles = new Set(['39','40']);
+const activeGateModelEntries = Object.entries(rawGateModels.models || {}).filter(([key]) => !retiredGateArticles.has(String(key)));
+if (activeGateModelEntries.length !== 38) throw new Error(`Ожидалось 38 используемых моделей ворот, получено ${activeGateModelEntries.length}`);
+const serverGateModelSource = `{models:{${activeGateModelEntries.map(([key,model]) => {
   const formulas = Object.entries(model.formulas || {}).map(([ref,expr]) => `${JSON.stringify(ref)}:(ctx,p,v,sum,roundExcel,roundUp)=>(${expr})`).join(',');
   return `${JSON.stringify(key)}:{gateRef:${JSON.stringify(model.gateRef)},wicketRef:${JSON.stringify(model.wicketRef)},standard:${JSON.stringify(model.standard || {})},literals:${JSON.stringify(model.literals || {})},formulas:{${formulas}}}`;
 }).join(',')}}}`;
@@ -90,6 +93,21 @@ const pricesMatch = pricesSource.match(/window\.PRICE_DATA\s*=\s*({[\s\S]*?});\s
 if (!pricesMatch) throw new Error('Некорректный файл prices.js');
 const defaultPrices = Function(`"use strict"; return (${pricesMatch[1]});`)();
 const xlsxBrowserSafe = xlsxBrowserSource.replace(/<\/script/gi, '<\\/script');
+const adminExcelCompatibilitySource = `(() => {
+  if (!window.XLSX?.read || window.KUZDVOR_MASTER_EXCEL_COMPAT) return;
+  window.KUZDVOR_MASTER_EXCEL_COMPAT = true;
+  const originalRead = window.XLSX.read;
+  window.XLSX.read = function(...args) {
+    const workbook = originalRead.apply(this, args);
+    const friendlySheet = workbook?.Sheets?.['ЦЕНЫ МАТЕРИАЛОВ'];
+    if (friendlySheet && !workbook.Sheets['Лист3']) workbook.Sheets['Лист3'] = friendlySheet;
+    return workbook;
+  };
+  queueMicrotask(() => {
+    const intro = document.querySelector('.excel-import-intro');
+    if (intro) intro.innerHTML = '<b>Цена ворот берётся только из Excel.</b> Скачайте текущий расчёт, измените значения на листе «ЦЕНЫ МАТЕРИАЛОВ», пересчитайте и сохраните файл в Excel, затем загрузите его сюда. После публикации сайт хранит сам .xlsx.';
+  });
+})();`;
 
 const publicJs = js;
 
@@ -123,7 +141,7 @@ const adminJs = adminJsSource;
 const adminHtml = adminHtmlSource
   .replace('<link rel="stylesheet" href="admin.css">', `<style>${adminCss}</style>`)
   .replace('<script src="admin.js"></script>', `<script>${adminJs}\n${adminColorsJsSource}</script>`)
-  .replace('<script src="admin-prices.js"></script>', `<script>${adminPricesJsSource}</script><script>${adminSiteJsSource}</script><script>${adminLeadsJsSource}</script><script>${adminEnhancementsJsSource}</script><script>${xlsxBrowserSafe}</script><script>${gateCalcModelLoaderBundle}</script><script>${adminExcelImportSource}</script>`);
+  .replace('<script src="admin-prices.js"></script>', `<script>${adminPricesJsSource}</script><script>${adminSiteJsSource}</script><script>${adminLeadsJsSource}</script><script>${adminEnhancementsJsSource}</script><script>${xlsxBrowserSafe}</script><script>${gateCalcModelLoaderBundle}</script><script>${adminExcelImportSource}\n${adminExcelCompatibilitySource}</script>`);
 
 const workerModules = [
   adminAuthSource,

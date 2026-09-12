@@ -22,7 +22,14 @@ vm.runInContext(pricesJs, context, { filename: 'gate-calc-prices.js' });
 for (let i = 0; i < chunks.length; i += 1) vm.runInContext(chunks[i], context, { filename: `chunk-${i + 1}.js` });
 const modelSource = gunzipSync(Buffer.from(context.__GATE_CALC_B64, 'base64')).toString('utf8');
 vm.runInContext(modelSource, context, { filename: 'excel-derived-models.js' });
+for (const article of ['39','40']) delete context.GATE_CALC_MODELS.models[article];
 vm.runInContext(engineJs, context, { filename: 'gate-calc-engine.js' });
+if (Object.keys(context.GATE_CALC_MODELS.models).length !== 38) {
+  throw new Error(`Ожидалось 38 активных моделей, получено ${Object.keys(context.GATE_CALC_MODELS.models).length}`);
+}
+for (const article of ['39','40']) {
+  if (context.GATE_CALC.hasArticle(article)) throw new Error(`Исключённая модель ${article} доступна в калькуляторе`);
+}
 
 const cases = [
   ['6','Стандарт',3.4,1.8,1,1.8,38211.31716666667,18422.558583333335,56600],
