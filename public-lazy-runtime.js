@@ -86,6 +86,26 @@
       });
   }, true);
 
+  // The catalog renderer rebuilds the grid when "Показать ещё" is pressed.
+  // A focused button moves down together with the enlarged grid, so mobile
+  // browsers may keep that button anchored and jump the viewport to the bottom.
+  // Preserve the exact viewport instead: newly revealed cards then appear from
+  // the place where the customer was already browsing.
+  document.addEventListener('click', event => {
+    const button = event.target?.closest?.('#showMoreButton');
+    if (!button || button.hidden) return;
+    const scrollLeft = window.scrollX;
+    const scrollTop = window.scrollY;
+    const root = document.documentElement;
+    const previousOverflowAnchor = root.style.overflowAnchor;
+    button.blur();
+    root.style.overflowAnchor = 'none';
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      window.scrollTo({left:scrollLeft, top:scrollTop, behavior:'auto'});
+      setTimeout(() => { root.style.overflowAnchor = previousOverflowAnchor; }, 90);
+    }));
+  }, true);
+
   let catalogWorkStarted = false;
   const catalogJobs = [];
   const startCatalogDeferredWork = () => {
