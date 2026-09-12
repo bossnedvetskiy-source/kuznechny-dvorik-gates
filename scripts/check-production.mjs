@@ -16,7 +16,7 @@ async function fetchChecked(url) {
 }
 
 const page = await (await fetchChecked(BASE + '/')).text();
-for (const required of ['Кузнечный ДворикЪ', 'Ворота с калиткой']) {
+for (const required of ['Кузнечный ДворикЪ', 'Ворота с калиткой', 'Как проходит заказ', 'Предпочитаемый цвет:', 'utm_medium']) {
   if (!page.includes(required)) throw new Error(`Рабочая страница не содержит: ${required}`);
 }
 

@@ -135,6 +135,7 @@ function buildAuthoritativeGateMessage({name, phone, city, article, dimensions, 
     phone ? `Телефон: ${phone}` : '',
     city ? `Место установки: ${city}` : '',
     `Изделие: Ворота с калиткой, ${article}`,
+    quote.color ? `Предпочитаемый цвет: ${quote.color}` : '',
     `Размер ворот: ${dimensions.gateWidth} × ${dimensions.gateHeight} м`,
     `Размер калитки: ${dimensions.wicketWidth} × ${dimensions.wicketHeight} м`,
     `Ворота с калиткой + установка: ${serverMoney(quote.productPrice + quote.installationPrice)}`,
@@ -156,6 +157,7 @@ async function calculateAuthoritativeGateQuote(body, env) {
   const productPrice = calculateGateProductServer({article: body.article, ...dimensions});
   const installationPrice = Math.max(0, Math.round(Number(runtimePrices.catalogInstallation) || 0));
   const postsPrice = body.posts ? Math.max(0, Math.round(Number(runtimePrices.catalogPosts) || 0)) : 0;
+  const color = String(body.color || '').trim().slice(0, 100);
   const city = String(body.city || '').trim();
   if (!city) throw Object.assign(new Error('Укажите место установки'), {status: 400});
   const delivery = await authoritativeDeliveryForLead(city, env, site);
@@ -165,6 +167,7 @@ async function calculateAuthoritativeGateQuote(body, env) {
     productPrice,
     installationPrice,
     postsPrice,
+    color,
     delivery,
     total: Math.round(total),
     deliveryPending: !delivery.resolved,
