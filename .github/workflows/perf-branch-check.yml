@@ -12,6 +12,7 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v5
@@ -90,39 +91,49 @@ jobs:
         run: |
           node --input-type=module <<'NODE'
           import { chromium } from 'playwright';
-          const base = 'https://kuznechny-dvorik-gates.boss-nedvetskiy.workers.dev/?browser_diag=1';
+          const base = 'https://kuznechny-dvorik-gates.boss-nedvetskiy.workers.dev/?browser_diag=2';
           const browser = await chromium.launch({headless:true});
-          const page = await browser.newPage({viewport:{width:390,height:844}, deviceScaleFactor:1, isMobile:true, hasTouch:true});
-          const pageErrors=[];
-          const consoleErrors=[];
-          const failed=[];
-          page.on('pageerror', err => pageErrors.push(String(err?.stack || err)));
-          page.on('console', msg => { if (msg.type()==='error') consoleErrors.push(msg.text()); });
-          page.on('requestfailed', req => failed.push(`${req.resourceType()} ${req.url()} :: ${req.failure()?.errorText || 'failed'}`));
-          const response = await page.goto(base,{waitUntil:'domcontentloaded',timeout:30000});
-          console.log('Main response:', response?.status());
-          await page.waitForTimeout(5000);
-          const state = await page.evaluate(() => ({
-            ready: document.readyState,
-            title: document.title,
-            bodyText: document.body?.innerText?.slice(0,1000) || '',
-            cards: document.querySelectorAll('#catalogGrid .product-card').length,
-            catalogGridExists: !!document.querySelector('#catalogGrid'),
-            catalogCount: document.querySelector('#catalogCount')?.textContent || '',
-            showMore: document.querySelector('#showMoreButton')?.textContent || '',
-            heroInstalled: document.querySelector('#heroInstalledPrice')?.textContent || '',
-            bundleScripts: [...document.scripts].map(s=>s.src).filter(Boolean),
-            cssLinks: [...document.querySelectorAll('link[rel="stylesheet"]')].map(l=>l.href),
-            images: [...document.images].slice(0,12).map(img=>({src:img.currentSrc||img.src,complete:img.complete,naturalWidth:img.naturalWidth,naturalHeight:img.naturalHeight}))
-          }));
-          console.log('STATE', JSON.stringify(state,null,2));
-          console.log('PAGE_ERRORS', JSON.stringify(pageErrors,null,2));
-          console.log('CONSOLE_ERRORS', JSON.stringify(consoleErrors,null,2));
-          console.log('FAILED_REQUESTS', JSON.stringify(failed.slice(0,40),null,2));
-          if (!response?.ok()) throw new Error(`Main page HTTP ${response?.status()}`);
-          if (!state.catalogGridExists) throw new Error('catalogGrid is missing from DOM');
-          if (state.cards < 1) throw new Error('Catalog did not render any product cards');
-          if (!state.heroInstalled) throw new Error('Hero price did not initialize');
-          if (pageErrors.length) throw new Error(`Browser page errors: ${pageErrors.join(' | ')}`);
-          await browser.close();
+          let failedCheck = '';
+          try {
+            const page = await browser.newPage({viewport:{width:390,height:844}, deviceScaleFactor:1, isMobile:true, hasTouch:true});
+            const pageErrors=[];
+            const consoleErrors=[];
+            const failed=[];
+            page.on('pageerror', err => pageErrors.push(String(err?.stack || err)));
+            page.on('console', msg => { if (msg.type()==='error') consoleErrors.push(msg.text()); });
+            page.on('requestfailed', req => failed.push(`${req.resourceType()} ${req.url()} :: ${req.failure()?.errorText || 'failed'}`));
+            let response=null;
+            try {
+              response = await page.goto(base,{waitUntil:'domcontentloaded',timeout:20000});
+            } catch (error) {
+              console.log('GOTO_ERROR', String(error?.stack || error));
+            }
+            console.log('Main response:', response?.status() ?? 'none');
+            await page.waitForTimeout(5000);
+            const state = await page.evaluate(() => ({
+              ready: document.readyState,
+              title: document.title,
+              bodyText: document.body?.innerText?.slice(0,1000) || '',
+              cards: document.querySelectorAll('#catalogGrid .product-card').length,
+              catalogGridExists: !!document.querySelector('#catalogGrid'),
+              catalogCount: document.querySelector('#catalogCount')?.textContent || '',
+              showMore: document.querySelector('#showMoreButton')?.textContent || '',
+              heroInstalled: document.querySelector('#heroInstalledPrice')?.textContent || '',
+              bundleScripts: [...document.scripts].map(s=>s.src).filter(Boolean),
+              cssLinks: [...document.querySelectorAll('link[rel="stylesheet"]')].map(l=>l.href),
+              images: [...document.images].slice(0,12).map(img=>({src:img.currentSrc||img.src,complete:img.complete,naturalWidth:img.naturalWidth,naturalHeight:img.naturalHeight}))
+            }));
+            console.log('STATE', JSON.stringify(state,null,2));
+            console.log('PAGE_ERRORS', JSON.stringify(pageErrors,null,2));
+            console.log('CONSOLE_ERRORS', JSON.stringify(consoleErrors,null,2));
+            console.log('FAILED_REQUESTS', JSON.stringify(failed.slice(0,40),null,2));
+            if (response && !response.ok()) failedCheck = `Main page HTTP ${response.status()}`;
+            else if (!state.catalogGridExists) failedCheck = 'catalogGrid is missing from DOM';
+            else if (state.cards < 1) failedCheck = 'Catalog did not render any product cards';
+            else if (!state.heroInstalled) failedCheck = 'Hero price did not initialize';
+            else if (pageErrors.length) failedCheck = `Browser page errors: ${pageErrors.join(' | ')}`;
+          } finally {
+            await browser.close();
+          }
+          if (failedCheck) throw new Error(failedCheck);
           NODE
