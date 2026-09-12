@@ -1,9 +1,18 @@
 (() => {
   const site = window.SITE_SETTINGS || {};
 
-  const badgeOverrideStyle = document.createElement('style');
-  badgeOverrideStyle.textContent = '.color-profile-badge{display:none!important}';
-  document.head.append(badgeOverrideStyle);
+  const removeColorBadges = root => {
+    if (!root) return;
+    if (root.nodeType === 1 && root.matches?.('.color-profile-badge')) root.remove();
+    root.querySelectorAll?.('.color-profile-badge').forEach(node => node.remove());
+  };
+  const catalogGridForBadges = document.getElementById('catalogGrid');
+  if (catalogGridForBadges) {
+    removeColorBadges(catalogGridForBadges);
+    new MutationObserver(records => {
+      records.forEach(record => record.addedNodes.forEach(node => removeColorBadges(node)));
+    }).observe(catalogGridForBadges,{childList:true,subtree:true});
+  }
 
   const robots = document.querySelector('meta[name="robots"]');
   if (robots) {
