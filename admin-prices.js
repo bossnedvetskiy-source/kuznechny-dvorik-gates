@@ -53,6 +53,9 @@ function createMoneyInput(value, dataset = {}) {
 }
 
 function renderCatalogPrices() {
+  // The gate product price itself is controlled by admin-excel-import.js.
+  // Once that module is mounted, normal settings refreshes must never replace it with manual price rows.
+  if (window.KUZDVOR_ADMIN_EXCEL_READY) return;
   catalogPriceList.replaceChildren();
   const note = document.createElement('p');
   note.className = 'upload-note';
