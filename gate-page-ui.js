@@ -3,6 +3,14 @@
   const desktopHero = window.matchMedia('(min-width: 621px)');
   const heroImage = document.getElementById('heroDesktopImage');
   const trackGoal = (name, params = {}) => { try { if (typeof window.ym === 'function') window.ym(107269914, 'reachGoal', name, params); } catch {} };
+  const PROFILE_COLORS = [
+    {id:'chocolate',label:'Шоколад',short:'Шоколад',ral:'RAL 8017',hex:'#4a2f29'},
+    {id:'graphite',label:'Графит',short:'Графит',ral:'RAL 7024',hex:'#45494e'},
+    {id:'moss',label:'Зелёный мох',short:'Мох',ral:'RAL 6005',hex:'#174533'},
+    {id:'mint',label:'Зелёная мята',short:'Мята',ral:'RAL 6029',hex:'#008754'},
+    {id:'wine',label:'Винно-красный',short:'Винный',ral:'RAL 3005',hex:'#5e2028'}
+  ];
+  const colorPreviewState = new Map();
 
   const colorBadgeStyle = document.createElement('style');
   colorBadgeStyle.textContent = `
@@ -24,8 +32,22 @@
     .mobile-price-breakdown>summary{cursor:default!important}
     .mobile-payment-note{margin:10px 0 0;padding:10px 11px;border:1px solid rgba(230,189,105,.22);border-radius:10px;background:rgba(200,152,60,.07);color:rgba(255,255,255,.68);font-size:10px;line-height:1.5}
     .mobile-payment-note strong{display:block;margin-bottom:2px;color:#fff;font-size:11px}
-    @media(max-width:620px){.color-profile-badge{left:9px;top:9px;width:166px;min-height:48px;padding:5px 8px 5px 6px;gap:6px}.color-fan{flex-basis:38px;width:38px;height:34px}.color-fan i{left:15px;width:8px;height:29px}.color-copy strong{font-size:12px}.color-copy span{font-size:11px}}
-    @media(max-width:390px){.color-profile-badge{width:150px;min-height:44px}.color-fan{flex-basis:33px;width:33px;height:31px}.color-fan i{left:13px;width:7px;height:26px}.color-copy strong{font-size:11px}.color-copy span{font-size:10px}}
+    .profile-color-wash{position:absolute;inset:0;z-index:4;pointer-events:none;background:var(--profile-preview-color,transparent);mix-blend-mode:color;opacity:0;transition:opacity .2s ease;-webkit-mask-image:radial-gradient(ellipse 82% 62% at 50% 62%,#000 26%,rgba(0,0,0,.94) 54%,rgba(0,0,0,.4) 72%,transparent 92%);mask-image:radial-gradient(ellipse 82% 62% at 50% 62%,#000 26%,rgba(0,0,0,.94) 54%,rgba(0,0,0,.4) 72%,transparent 92%)}
+    .product-visual.is-color-preview .profile-color-wash{opacity:.56}
+    .profile-color-picker{padding:10px 12px 9px;border-top:1px solid rgba(17,18,20,.08);background:#fff;color:#171717}
+    .profile-color-picker-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:8px}
+    .profile-color-picker-head strong{font-size:11px;line-height:1.2;font-weight:900}
+    .profile-color-status{min-width:0;color:#8d6b2d;font-size:9px;line-height:1.25;font-weight:800;text-align:right}
+    .profile-color-swatches{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:5px;align-items:start}
+    .profile-color-option{display:grid;justify-items:center;gap:4px;min-width:0;padding:0;border:0;background:transparent;color:#706a62;font:700 8px/1.1 Manrope,Arial,sans-serif;cursor:pointer}
+    .profile-color-dot{position:relative;display:block;width:31px;height:31px;border-radius:50%;background:var(--swatch);border:2px solid #fff;box-shadow:0 0 0 1px rgba(17,18,20,.18),0 2px 6px rgba(0,0,0,.12);transition:transform .15s ease,box-shadow .15s ease}
+    .profile-color-option[aria-pressed="true"]{color:#171717}
+    .profile-color-option[aria-pressed="true"] .profile-color-dot{transform:scale(1.08);box-shadow:0 0 0 2px #c7973c,0 3px 8px rgba(0,0,0,.16)}
+    .profile-color-option.is-more .profile-color-dot{background:conic-gradient(#d92d1f,#f39a22,#f0d329,#2fa64a,#1794b8,#2866c2,#8c3bc2,#d92d1f)}
+    .profile-color-option.is-more .profile-color-dot::after{content:"+";position:absolute;inset:5px;display:grid;place-items:center;border-radius:50%;background:rgba(0,0,0,.72);color:#fff;font-size:17px;font-weight:900}
+    .profile-color-note{margin:7px 0 0;color:#8a8379;font-size:8.5px;line-height:1.35}
+    @media(max-width:620px){.color-profile-badge{left:9px;top:9px;width:166px;min-height:48px;padding:5px 8px 5px 6px;gap:6px}.color-fan{flex-basis:38px;width:38px;height:34px}.color-fan i{left:15px;width:8px;height:29px}.color-copy strong{font-size:12px}.color-copy span{font-size:11px}.profile-color-picker{padding:9px 10px 8px}.profile-color-picker-head{margin-bottom:7px}.profile-color-picker-head strong{font-size:10px}.profile-color-status{font-size:8.5px}.profile-color-swatches{gap:3px}.profile-color-dot{width:29px;height:29px}.profile-color-option{font-size:7.5px}.profile-color-note{font-size:8px}}
+    @media(max-width:390px){.color-profile-badge{width:150px;min-height:44px}.color-fan{flex-basis:33px;width:33px;height:31px}.color-fan i{left:13px;width:7px;height:26px}.color-copy strong{font-size:11px}.color-copy span{font-size:10px}.profile-color-dot{width:27px;height:27px}.profile-color-option{font-size:7px}}
   `;
   document.head.append(colorBadgeStyle);
 
@@ -37,6 +59,60 @@
       badge.setAttribute('aria-hidden','true');
       badge.innerHTML = '<span class="color-fan"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span class="color-copy"><strong>Любой цвет</strong><span>профнастила</span></span>';
       visual.append(badge);
+    });
+  };
+
+  const applyProfileColor = (card, colorId, shouldTrack = true) => {
+    if (!card) return;
+    const visual = card.querySelector('.product-visual');
+    const status = card.querySelector('.profile-color-status');
+    const product = window.GATE_PAGE_API?.productById?.(card.dataset.cardProduct);
+    card.querySelectorAll('.profile-color-option').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.profileColor === colorId)));
+    if (colorId === 'other') {
+      colorPreviewState.set(card.dataset.cardProduct,'other');
+      visual?.classList.remove('is-color-preview');
+      visual?.style.removeProperty('--profile-preview-color');
+      if (status) status.textContent = 'Другой цвет — при оформлении';
+      if (shouldTrack) trackGoal('catalog_color_preview',{article:product?.art||card.dataset.cardProduct,color:'other'});
+      return;
+    }
+    const color = PROFILE_COLORS.find(item => item.id === colorId);
+    if (!color) {
+      colorPreviewState.delete(card.dataset.cardProduct);
+      visual?.classList.remove('is-color-preview');
+      visual?.style.removeProperty('--profile-preview-color');
+      if (status) status.textContent = 'Нажмите на оттенок';
+      return;
+    }
+    colorPreviewState.set(card.dataset.cardProduct,color.id);
+    visual?.style.setProperty('--profile-preview-color',color.hex);
+    visual?.classList.add('is-color-preview');
+    if (status) status.textContent = `${color.label} · ${color.ral}`;
+    if (shouldTrack) trackGoal('catalog_color_preview',{article:product?.art||card.dataset.cardProduct,color:color.id});
+  };
+
+  const installColorPickers = () => {
+    document.querySelectorAll('.product-card').forEach(card => {
+      if (card.querySelector('.profile-color-picker')) return;
+      const visual = card.querySelector('.product-visual');
+      if (!visual) return;
+      if (!visual.querySelector('.profile-color-wash')) {
+        const wash = document.createElement('span');
+        wash.className = 'profile-color-wash';
+        wash.setAttribute('aria-hidden','true');
+        visual.append(wash);
+      }
+      const picker = document.createElement('div');
+      picker.className = 'profile-color-picker';
+      picker.innerHTML = `<div class="profile-color-picker-head"><strong>Примерьте цвет профнастила</strong><span class="profile-color-status" aria-live="polite">Нажмите на оттенок</span></div><div class="profile-color-swatches">${PROFILE_COLORS.map(color => `<button class="profile-color-option" type="button" data-profile-color="${color.id}" aria-pressed="false" aria-label="Показать цвет ${color.label}, ${color.ral}" title="${color.label} · ${color.ral}"><span class="profile-color-dot" style="--swatch:${color.hex}"></span><span>${color.short}</span></button>`).join('')}<button class="profile-color-option is-more" type="button" data-profile-color="other" aria-pressed="false" aria-label="Другой цвет профнастила"><span class="profile-color-dot"></span><span>Другой</span></button></div><p class="profile-color-note">Есть и другие цвета. Предпросмотр приблизительный; на предварительную цену цвет не влияет.</p>`;
+      picker.querySelectorAll('.profile-color-option').forEach(button => button.addEventListener('click', event => {
+        event.stopPropagation();
+        applyProfileColor(card,button.dataset.profileColor,true);
+      }));
+      const anchor = card.querySelector('.card-thumbnails') || visual;
+      anchor.after(picker);
+      const remembered = colorPreviewState.get(card.dataset.cardProduct);
+      if (remembered) applyProfileColor(card,remembered,false);
     });
   };
 
@@ -276,6 +352,7 @@
   const syncCatalogEnhancements = () => {
     installColorBadges();
     installDesktopThumbnails();
+    installColorPickers();
   };
   if (grid) new MutationObserver(() => queueMicrotask(syncCatalogEnhancements)).observe(grid,{childList:true});
   mobile.addEventListener('change', syncCatalogEnhancements);
