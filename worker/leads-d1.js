@@ -76,6 +76,7 @@ async function ensureLeadSchema(env) {
   await env.DB.prepare('CREATE INDEX IF NOT EXISTS site_leads_created_idx ON site_leads(created_at DESC)').run();
   await env.DB.prepare('CREATE INDEX IF NOT EXISTS site_leads_status_idx ON site_leads(status)').run();
   await env.DB.prepare('CREATE INDEX IF NOT EXISTS site_leads_category_idx ON site_leads(category)').run();
+  await env.DB.prepare('CREATE INDEX IF NOT EXISTS site_leads_source_idx ON site_leads(source)').run();
 }
 
 const leadText = (value, max = 200) => String(value ?? '').trim().slice(0, max);
@@ -83,6 +84,7 @@ const leadNumber = value => {
   const number = Number(value);
   return Number.isFinite(number) ? number : null;
 };
+const validLeadDate = value => /^\d{4}-\d{2}-\d{2}$/.test(String(value || '')) ? String(value) : '';
 
 function parseLeadConfiguration(value) {
   try {
@@ -220,37 +222,76 @@ async function createLead(request, env, url) {
   }, 201);
 }
 
+function leadFilterQuery(searchParams = null, includeStatus = true, includeCursor = true) {
+  const requestedBeforeId = Number(searchParams?.get?.('before_id'));
+  const beforeId = Number.isInteger(requestedBeforeId) && requestedBeforeId > 0 ? requestedBeforeId : null;
+  const requestedStatus = String(searchParams?.get?.('status') || '').trim();
+  const status = LEAD_STATUSES.has(requestedStatus) ? requestedStatus : null;
+  const q = leadText(searchParams?.get?.('q'), 120);
+  const qDigits = q.replace(/\D/g, '');
+  const source = leadText(searchParams?.get?.('source'), 100);
+  const from = validLeadDate(searchParams?.get?.('from'));
+  const to = validLeadDate(searchParams?.get?.('to'));
+  const where = [];
+  const bindings = [];
+
+  if (includeCursor && beforeId) {
+    where.push('id < ?');
+    bindings.push(beforeId);
+  }
+  if (includeStatus && status) {
+    where.push('status = ?');
+    bindings.push(status);
+  }
+  if (q) {
+    const textLike = `%${q}%`;
+    const searchParts = ['name LIKE ?', 'city LIKE ?', 'article LIKE ?', 'source LIKE ?', 'product_title LIKE ?'];
+    bindings.push(textLike, textLike, textLike, textLike, textLike);
+    if (qDigits.length >= 3) {
+      searchParts.push("REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(phone, '+', ''), ' ', ''), '-', ''), '(', ''), ')', '') LIKE ?");
+      bindings.push(`%${qDigits}%`);
+    } else {
+      searchParts.push('phone LIKE ?');
+      bindings.push(textLike);
+    }
+    where.push(`(${searchParts.join(' OR ')})`);
+  }
+  if (source) {
+    where.push('source = ?');
+    bindings.push(source);
+  }
+  if (from) {
+    where.push('created_at >= ?');
+    bindings.push(`${from} 00:00:00`);
+  }
+  if (to) {
+    where.push("created_at < datetime(?, '+1 day')");
+    bindings.push(`${to} 00:00:00`);
+  }
+
+  return {where, bindings, beforeId, status, q, source, from, to};
+}
+
 async function listLeads(env, searchParams = null) {
   await ensureLeadSchema(env);
 
   const requestedLimit = Number(searchParams?.get?.('limit'));
   const limit = Math.max(1, Math.min(200, Number.isInteger(requestedLimit) && requestedLimit > 0 ? requestedLimit : 50));
-  const requestedBeforeId = Number(searchParams?.get?.('before_id'));
-  const beforeId = Number.isInteger(requestedBeforeId) && requestedBeforeId > 0 ? requestedBeforeId : null;
-  const requestedStatus = String(searchParams?.get?.('status') || '').trim();
-  const status = LEAD_STATUSES.has(requestedStatus) ? requestedStatus : null;
-
-  const where = [];
-  const bindings = [];
-  if (beforeId) {
-    where.push('id < ?');
-    bindings.push(beforeId);
-  }
-  if (status) {
-    where.push('status = ?');
-    bindings.push(status);
-  }
-  const whereSql = where.length ? ` WHERE ${where.join(' AND ')}` : '';
+  const pageFilter = leadFilterQuery(searchParams, true, true);
+  const totalFilter = leadFilterQuery(searchParams, true, false);
+  const whereSql = pageFilter.where.length ? ` WHERE ${pageFilter.where.join(' AND ')}` : '';
+  const totalWhereSql = totalFilter.where.length ? ` WHERE ${totalFilter.where.join(' AND ')}` : '';
   const pageLimit = limit + 1;
-  bindings.push(pageLimit);
 
-  const [result, countResult] = await Promise.all([
+  const [result, countResult, filteredCountResult, sourceResult] = await Promise.all([
     env.DB.prepare(`SELECT id, created_at, updated_at, status, name, phone, city, category, source, article,
       product_title, configuration_json, width, wicket_width, wicket_height, height, install, posts, color, total,
       client_total, quote_verified, delivery_pending, delivery_out_of_area, delivery_distance_km,
       consent, consent_at, policy_version, comment, message
-      FROM site_leads${whereSql} ORDER BY id DESC LIMIT ?`).bind(...bindings).all(),
-    env.DB.prepare('SELECT status, COUNT(*) AS count FROM site_leads GROUP BY status').all()
+      FROM site_leads${whereSql} ORDER BY id DESC LIMIT ?`).bind(...pageFilter.bindings, pageLimit).all(),
+    env.DB.prepare('SELECT status, COUNT(*) AS count FROM site_leads GROUP BY status').all(),
+    env.DB.prepare(`SELECT COUNT(*) AS count FROM site_leads${totalWhereSql}`).bind(...totalFilter.bindings).first(),
+    env.DB.prepare("SELECT source, COUNT(*) AS count FROM site_leads WHERE TRIM(source) <> '' GROUP BY source ORDER BY count DESC, source ASC LIMIT 100").all()
   ]);
 
   const rows = result.results || [];
@@ -260,21 +301,27 @@ async function listLeads(env, searchParams = null) {
   const counts = {new:0, contacted:0, done:0, archived:0};
   for (const row of countResult.results || []) if (row.status in counts) counts[row.status] = Number(row.count) || 0;
   const totalCount = Object.values(counts).reduce((sum, value) => sum + value, 0);
-  const filteredTotal = status ? counts[status] : totalCount;
+  const filteredTotal = Number(filteredCountResult?.count) || 0;
   const nextBeforeId = hasMore && leads.length ? Number(leads[leads.length - 1].id) : null;
+  const sources = (sourceResult.results || []).map(row => ({value:String(row.source || ''), count:Number(row.count) || 0})).filter(item => item.value);
 
   return {
     leads,
     counts,
     totalCount,
     filteredTotal,
+    sources,
     limited:false,
     page:{
       limit,
-      beforeId,
+      beforeId:pageFilter.beforeId,
       nextBeforeId,
       hasMore,
-      status:status || 'all'
+      status:pageFilter.status || 'all',
+      q:pageFilter.q,
+      source:pageFilter.source,
+      from:pageFilter.from,
+      to:pageFilter.to
     }
   };
 }
