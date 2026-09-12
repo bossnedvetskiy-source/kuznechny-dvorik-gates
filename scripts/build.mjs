@@ -122,12 +122,13 @@ const googleFontsHref = 'https://fonts.googleapis.com/css2?family=Manrope:wght@4
 const googleFontsTag = `<link href="${googleFontsHref}" rel="stylesheet">`;
 if (!htmlSource.includes(googleFontsTag)) throw new Error('Не найдена таблица Google Fonts для оптимизации');
 const asyncGoogleFontsTag = `<link href="${googleFontsHref}" rel="stylesheet" media="print" onload="this.media='all'">\n  <noscript><link href="${googleFontsHref}" rel="stylesheet"></noscript>`;
-const yandexMetrikaPattern = /<script type="text\/javascript">\s*\(function\(m,e,t,r,i,k,a\)\{[\s\S]*?ym\(106543981,'init',\{[\s\S]*?\}\);\s*<\/script>/;
-if (!yandexMetrikaPattern.test(htmlSource)) throw new Error('Не найден блок Яндекс Метрики для отложенной загрузки');
+const yandexMetrikaMatch = htmlSource.match(/<script type="text\/javascript">\s*\(function\(m,e,t,r,i,k,a\)\{[\s\S]*?ym\((\d+),'init',\{[\s\S]*?\}\);\s*<\/script>/);
+if (!yandexMetrikaMatch) throw new Error('Не найден блок Яндекс Метрики для отложенной загрузки');
+const yandexCounterId = yandexMetrikaMatch[1];
 const delayedMetrikaTag = `<script>
     window.ym = window.ym || function(){(window.ym.a = window.ym.a || []).push(arguments)};
     window.ym.l = Date.now();
-    window.ym(106543981,'init',{clickmap:true,trackLinks:true,accurateTrackBounce:true,webvisor:true});
+    window.ym(${yandexCounterId},'init',{clickmap:true,trackLinks:true,accurateTrackBounce:true,webvisor:true});
     (() => {
       let loaded = false;
       const load = () => {
@@ -144,7 +145,7 @@ const delayedMetrikaTag = `<script>
   </script>`;
 const optimizedHtmlSource = htmlSource
   .replace(googleFontsTag, asyncGoogleFontsTag)
-  .replace(yandexMetrikaPattern, delayedMetrikaTag);
+  .replace(yandexMetrikaMatch[0], delayedMetrikaTag);
 
 const homeHtml = homeHtmlSource
   .replace('<link rel="stylesheet" href="home.css">', `<style>${homeCss}</style>`)
