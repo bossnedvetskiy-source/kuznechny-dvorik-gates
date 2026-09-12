@@ -1,4 +1,13 @@
 let siteSettingsReady = false;
+let siteSettingsReadyPromise = null;
+const PUBLIC_RENDER_CACHE_MS = 60 * 1000;
+let publicRenderCache = {value: '', expiresAt: 0};
+let productHubRenderCache = {value: '', expiresAt: 0};
+
+function invalidatePublicRenderCache() {
+  publicRenderCache = {value: '', expiresAt: 0};
+  productHubRenderCache = {value: '', expiresAt: 0};
+}
 
 const DEFAULT_SITE_PROFILE = Object.freeze({
   phoneDisplay: '8 937 329-67-50',
@@ -20,16 +29,22 @@ const DEFAULT_SITE_PROFILE = Object.freeze({
 
 async function ensureSiteSettings(env) {
   if (!env.DB) return false;
-  if (!siteSettingsReady) {
-    await env.DB.prepare(`CREATE TABLE IF NOT EXISTS site_settings (
+  if (siteSettingsReady) return true;
+  if (!siteSettingsReadyPromise) {
+    siteSettingsReadyPromise = env.DB.prepare(`CREATE TABLE IF NOT EXISTS site_settings (
       key TEXT PRIMARY KEY NOT NULL,
       value_json TEXT NOT NULL,
       updated_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
       updated_by TEXT DEFAULT '' NOT NULL
-    )`).run();
-    siteSettingsReady = true;
+    )`).run().then(() => {
+      siteSettingsReady = true;
+      return true;
+    }).catch(error => {
+      siteSettingsReadyPromise = null;
+      throw error;
+    });
   }
-  return true;
+  return siteSettingsReadyPromise;
 }
 
 function positiveMoney(value, fallback) {
@@ -138,6 +153,7 @@ async function savePrices(request,env) {
   if(Number(request.headers.get('content-length')||0)>131072)return json({error:'Слишком большой запрос'},413);
   const body=await request.json(),prices=normalizePrices(body?.prices);
   await env.DB.prepare(`INSERT INTO site_settings (key,value_json,updated_at,updated_by) VALUES ('prices',?,CURRENT_TIMESTAMP,'admin') ON CONFLICT(key) DO UPDATE SET value_json=excluded.value_json,updated_at=CURRENT_TIMESTAMP,updated_by=excluded.updated_by`).bind(JSON.stringify(prices)).run();
+  invalidatePublicRenderCache();
   return json({ok:true,prices});
 }
 async function saveSiteProfile(request,env) {
@@ -145,6 +161,7 @@ async function saveSiteProfile(request,env) {
   if(Number(request.headers.get('content-length')||0)>65536)return json({error:'Слишком большой запрос'},413);
   const body=await request.json(),site=normalizeSiteProfile(body?.site);
   await env.DB.prepare(`INSERT INTO site_settings (key,value_json,updated_at,updated_by) VALUES ('site_profile',?,CURRENT_TIMESTAMP,'admin') ON CONFLICT(key) DO UPDATE SET value_json=excluded.value_json,updated_at=CURRENT_TIMESTAMP,updated_by=excluded.updated_by`).bind(JSON.stringify(site)).run();
+  invalidatePublicRenderCache();
   return json({ok:true,site});
 }
 async function saveDeliverySettings(request,env) {
@@ -153,18 +170,27 @@ async function saveDeliverySettings(request,env) {
   const body=await request.json(),delivery=normalizeDeliverySettings(body?.delivery);
   await env.DB.prepare(`INSERT INTO site_settings (key,value_json,updated_at,updated_by) VALUES ('delivery_prices',?,CURRENT_TIMESTAMP,'admin') ON CONFLICT(key) DO UPDATE SET value_json=excluded.value_json,updated_at=CURRENT_TIMESTAMP,updated_by=excluded.updated_by`).bind(JSON.stringify(delivery)).run();
   deliveryCache.clear();
+  invalidatePublicRenderCache();
   return json({ok:true,delivery});
 }
 
 async function renderPublicPage(env) {
+  const now=Date.now();
+  if(publicRenderCache.value&&publicRenderCache.expiresAt>now)return publicRenderCache.value;
   const [prices,site,delivery,gateCalcPrices]=await Promise.all([loadPrices(env),loadSiteProfile(env),loadDeliverySettings(env),loadGateCalcInputs(env)]);
   const serializedPrices=JSON.stringify(prices).replace(/</g,'\\u003c');
   const serializedSite=JSON.stringify(site).replace(/</g,'\\u003c');
   const serializedDelivery=JSON.stringify(delivery).replace(/</g,'\\u003c');
   const serializedGateCalcPrices=JSON.stringify(gateCalcPrices).replace(/</g,'\\u003c');
-  return PAGE.replace('__RUNTIME_PRICE_DATA__',serializedPrices).replace('__RUNTIME_SITE_DATA__',serializedSite).replace('__RUNTIME_DELIVERY_DATA__',serializedDelivery).replace('__RUNTIME_GATE_CALC_PRICES__',serializedGateCalcPrices);
+  const value=PAGE.replace('__RUNTIME_PRICE_DATA__',serializedPrices).replace('__RUNTIME_SITE_DATA__',serializedSite).replace('__RUNTIME_DELIVERY_DATA__',serializedDelivery).replace('__RUNTIME_GATE_CALC_PRICES__',serializedGateCalcPrices);
+  publicRenderCache={value,expiresAt:now+PUBLIC_RENDER_CACHE_MS};
+  return value;
 }
 async function renderProductHub(env) {
+  const now=Date.now();
+  if(productHubRenderCache.value&&productHubRenderCache.expiresAt>now)return productHubRenderCache.value;
   const site=await loadSiteProfile(env),serializedSite=JSON.stringify(site).replace(/</g,'\u003c');
-  return HOME_PAGE.replace('__RUNTIME_SITE_DATA__',serializedSite);
+  const value=HOME_PAGE.replace('__RUNTIME_SITE_DATA__',serializedSite);
+  productHubRenderCache={value,expiresAt:now+PUBLIC_RENDER_CACHE_MS};
+  return value;
 }
