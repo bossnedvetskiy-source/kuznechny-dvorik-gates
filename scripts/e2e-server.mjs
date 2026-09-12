@@ -32,6 +32,7 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname === '/' || url.pathname === '/index.html' || url.pathname === '/vorota' || url.pathname === '/vorota/') {
       let html = await readFile(join(root, 'index.html'), 'utf8');
       html = html.replace('<script id="deliveryData" type="application/json">{}</script>', `<script id="deliveryData" type="application/json">${delivery.replace(/</g,'\\u003c')}</script>`);
+      html = html.replace('<script src="gate-page-ui.js"></script>', '<script src="gate-page-ui.js"></script>\n  <script src="color-photo-site.js"></script>');
       return send(res, 200, html, mime['.html']);
     }
     const relative = normalize(decodeURIComponent(url.pathname)).replace(/^[/\\]+/, '');
