@@ -24,8 +24,6 @@
     }
   }
 
-  // Existing admin sections were historically added by independent scripts. Reconcile their final state
-  // after every tab click so transitions such as “Заявки → Фото” can never leave an empty editor.
   nav.addEventListener('click', event => {
     const button = event.target.closest('.admin-tab');
     if (!button) return;
@@ -38,7 +36,7 @@
     const note = document.createElement('p');
     note.dataset.priceBaselineNote = 'true';
     note.className = 'admin-baseline-note';
-    note.innerHTML = '<b>Важно:</b> цена изделия — это базовая цена стандартного размера 3,4 × 1,8 м + калитка 1 × 1,8 м. После сохранения калькулятор и серверный расчёт автоматически используют её как базу для этой модели.';
+    note.innerHTML = '<b>Источник цен ворот — Excel.</b> Цены артикулов и перерасчёт по размерам формируются только из расчётного Excel-файла и его формул. Вручную менять цену модели в админке нельзя; здесь можно менять только отдельные настройки вроде монтажа и столбов.';
     priceCard.querySelector('.panel-heading')?.after(note);
   }
 
