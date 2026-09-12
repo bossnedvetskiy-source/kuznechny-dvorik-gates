@@ -15,8 +15,9 @@
 
   const style = document.createElement('style');
   style.textContent = `
-    .profile-color-option.is-photo-missing{opacity:.72;cursor:pointer}
-    .profile-color-option.is-photo-missing .profile-color-dot{filter:saturate(.72)}
+    .profile-color-option.is-photo-missing{opacity:1;cursor:pointer}
+    .profile-color-option:not(.is-more) .profile-color-dot{filter:saturate(1.22) brightness(1.12);box-shadow:inset 0 0 0 1px rgba(255,255,255,.2),0 0 0 1px rgba(17,18,20,.22),0 3px 8px rgba(0,0,0,.16)}
+    .profile-color-option.is-photo-missing .profile-color-dot{filter:saturate(1.22) brightness(1.12)}
     .profile-color-option.is-photo-missing .profile-color-dot::after{content:"…";position:absolute;right:-2px;bottom:-2px;display:grid;place-items:center;width:13px;height:13px;border:2px solid #fff;border-radius:50%;background:#aaa39a;color:#fff;font:900 9px/1 Arial,sans-serif;box-shadow:0 1px 3px rgba(0,0,0,.18)}
     .profile-color-option.is-photo-ready .profile-color-dot::after{content:"";position:absolute;right:-2px;bottom:-2px;width:9px;height:9px;border:2px solid #fff;border-radius:50%;background:#64814a;box-shadow:0 1px 3px rgba(0,0,0,.2)}
     .profile-color-option.is-more{opacity:1!important}
@@ -26,7 +27,7 @@
     .profile-color-picker.is-color-empty .profile-color-status{color:#777067;font-size:8.5px}
     .profile-color-reset{display:inline-flex;align-items:center;justify-content:center;margin:7px 0 0;padding:0;border:0;background:transparent;color:#7b6130;font:800 8.5px/1.2 Manrope,Arial,sans-serif;text-decoration:underline;text-underline-offset:2px;cursor:pointer}
     .profile-color-reset[hidden]{display:none!important}
-    @media(max-width:620px){.profile-color-reset{font-size:8px}}
+    @media(max-width:620px){.profile-color-dot{width:31px;height:31px}.profile-color-reset{font-size:8px}}
   `;
   document.head.append(style);
 
