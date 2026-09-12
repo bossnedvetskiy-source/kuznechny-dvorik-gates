@@ -21,8 +21,14 @@
     </div>
     <div class="lead-toolbar">
       <div class="lead-stats" id="leadStats"></div>
-      <div class="lead-toolbar-actions"><button class="reset-button" id="enableLeadNotifications" type="button">🔔 Уведомления</button><button class="reset-button" id="reloadLeadsButton" type="button">Обновить</button></div>
+      <div class="lead-toolbar-actions">
+        <button class="reset-button" id="exportLeadsCsv" type="button">Экспорт CSV</button>
+        <button class="reset-button" id="backupLeadsJson" type="button">Резерв JSON</button>
+        <button class="reset-button" id="enableLeadNotifications" type="button">🔔 Уведомления</button>
+        <button class="reset-button" id="reloadLeadsButton" type="button">Обновить</button>
+      </div>
     </div>
+    <p class="lead-export-note" id="leadExportNote" hidden></p>
     <div class="lead-filters" id="leadFilters">
       <button class="active" data-lead-filter="all" type="button">Все</button>
       <button data-lead-filter="new" type="button">Новые</button>
@@ -36,7 +42,8 @@
 
   const style = document.createElement('style');
   style.textContent = `
-    .lead-toolbar{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:13px}.lead-toolbar-actions{display:flex;gap:8px}.lead-stats{display:flex;gap:8px;flex-wrap:wrap}.lead-stat{padding:8px 11px;border:1px solid var(--line);border-radius:999px;background:#fff;color:var(--muted);font-size:10px;font-weight:800}.lead-stat b{color:var(--ink)}
+    .lead-toolbar{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:13px}.lead-toolbar-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}.lead-stats{display:flex;gap:8px;flex-wrap:wrap}.lead-stat{padding:8px 11px;border:1px solid var(--line);border-radius:999px;background:#fff;color:var(--muted);font-size:10px;font-weight:800}.lead-stat b{color:var(--ink)}
+    .lead-export-note{margin:-4px 0 13px;padding:9px 11px;border:1px solid #e6c990;border-radius:10px;background:#fff8e9;color:#6c5427;font-size:10px;line-height:1.45}
     .lead-filters{display:flex;gap:7px;overflow:auto;margin-bottom:16px;padding-bottom:2px}.lead-filters button{min-height:38px;padding:0 13px;border:1px solid var(--line);border-radius:999px;background:#fff;color:var(--muted);font-size:11px;font-weight:800;white-space:nowrap}.lead-filters button.active{background:var(--ink);border-color:var(--ink);color:#fff}
     .lead-list{display:grid;gap:10px}.lead-card{padding:16px;border:1px solid #e2ddd4;border-radius:16px;background:#fff;box-shadow:0 10px 30px rgba(18,16,13,.045)}.lead-card.is-new{border-color:rgba(198,147,63,.52);box-shadow:0 0 0 1px rgba(198,147,63,.12),0 10px 30px rgba(18,16,13,.045)}
     .lead-card-head{display:flex;align-items:start;justify-content:space-between;gap:18px;margin-bottom:13px}.lead-main{display:grid;gap:4px}.lead-main b{font-size:15px}.lead-main span{color:var(--muted);font-size:10px}.lead-total{font:20px Prata,serif;color:#8a6326;white-space:nowrap}
@@ -53,10 +60,14 @@
   const stats = panel.querySelector('#leadStats');
   const reloadButton = panel.querySelector('#reloadLeadsButton');
   const notificationButton = panel.querySelector('#enableLeadNotifications');
+  const exportCsvButton = panel.querySelector('#exportLeadsCsv');
+  const backupJsonButton = panel.querySelector('#backupLeadsJson');
+  const exportNote = panel.querySelector('#leadExportNote');
   const filters = [...panel.querySelectorAll('[data-lead-filter]')];
   let leads = [];
   let activeFilter = 'all';
   let loaded = false;
+  let limited = false;
   let latestLeadId = 0;
   let pollingTimer = 0;
 
@@ -94,6 +105,34 @@
     if (!('Notification' in window)) { notificationButton.hidden=true; return; }
     notificationButton.textContent = Notification.permission==='granted' ? '🔔 Включены' : Notification.permission==='denied' ? '🔕 Запрещены' : '🔔 Уведомления';
     notificationButton.disabled = Notification.permission==='denied';
+  }
+
+  function downloadText(filename, text, type) {
+    const blob = new Blob([text], {type});
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  function exportLeadsCsv() {
+    if (!leads.length) return showToast('Нет заявок для экспорта', true);
+    const columns = ['id','created_at','status','name','phone','city','category','article','product_title','width','height','wicket_width','wicket_height','install','posts','total','client_total','quote_verified','delivery_pending','delivery_out_of_area','delivery_distance_km','source','comment','message'];
+    const quote = value => `"${String(value ?? '').replace(/"/g, '""')}"`;
+    const rows = [columns.join(';'), ...leads.map(lead => columns.map(key => quote(lead[key])).join(';'))];
+    downloadText(`kuznechny-dvorik-leads-${new Date().toISOString().slice(0,10)}.csv`, '\ufeff' + rows.join('\n'), 'text/csv;charset=utf-8');
+    showToast(limited ? 'Экспортированы последние 200 заявок' : 'Заявки экспортированы в CSV');
+  }
+
+  function backupLeadsJson() {
+    if (!leads.length) return showToast('Нет заявок для резервной копии', true);
+    const payload = {exportedAt:new Date().toISOString(), limited, count:leads.length, leads};
+    downloadText(`kuznechny-dvorik-leads-backup-${new Date().toISOString().slice(0,10)}.json`, JSON.stringify(payload, null, 2), 'application/json;charset=utf-8');
+    showToast(limited ? 'Сохранены последние 200 заявок. Для полного архива нужен серверный экспорт.' : 'Резервная копия заявок сохранена');
   }
 
   function render() {
@@ -157,6 +196,9 @@
       const newestId = nextLeads.reduce((max,lead)=>Math.max(max,Number(lead.id)||0),0);
       const arrivals = latestLeadId ? nextLeads.filter(lead => Number(lead.id)>latestLeadId) : [];
       leads = nextLeads;
+      limited = Boolean(data.limited);
+      exportNote.hidden = !limited;
+      exportNote.textContent = limited ? 'В админке показаны последние 200 заявок. CSV и JSON ниже сохранят именно их; полный серверный архив нужно выгружать отдельно.' : '';
       renderStats(data.counts || {});
       if (newestId > latestLeadId) latestLeadId = newestId;
       loaded = true;
@@ -175,6 +217,8 @@
     render();
   }));
   reloadButton.addEventListener('click', () => load(true));
+  exportCsvButton?.addEventListener('click', exportLeadsCsv);
+  backupJsonButton?.addEventListener('click', backupLeadsJson);
   notificationButton?.addEventListener('click', async () => {
     if (!('Notification' in window)) return;
     try { await Notification.requestPermission(); } catch {}
