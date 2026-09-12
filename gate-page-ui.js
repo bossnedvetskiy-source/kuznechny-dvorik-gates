@@ -38,21 +38,19 @@
     });
   };
 
-  const mobilePriceBreakdown = document.querySelector('.mobile-price-breakdown');
+  let mobilePriceBreakdown = document.querySelector('.mobile-price-breakdown');
+  if (mobilePriceBreakdown?.tagName === 'DETAILS') {
+    const staticBreakdown = document.createElement('div');
+    staticBreakdown.className = mobilePriceBreakdown.className;
+    while (mobilePriceBreakdown.firstChild) staticBreakdown.append(mobilePriceBreakdown.firstChild);
+    mobilePriceBreakdown.replaceWith(staticBreakdown);
+    mobilePriceBreakdown = staticBreakdown;
+  }
   const mobilePriceSummary = mobilePriceBreakdown?.querySelector('summary');
   const mobilePriceHint = mobilePriceSummary?.querySelector('small');
-  if (mobilePriceBreakdown) {
-    mobilePriceBreakdown.open = true;
-    mobilePriceBreakdown.addEventListener('toggle', () => {
-      if (!mobilePriceBreakdown.open) mobilePriceBreakdown.open = true;
-    });
-  }
   if (mobilePriceSummary) {
-    mobilePriceSummary.addEventListener('click', event => event.preventDefault());
-    mobilePriceSummary.addEventListener('keydown', event => {
-      if (event.key === 'Enter' || event.key === ' ') event.preventDefault();
-    });
     mobilePriceSummary.setAttribute('aria-disabled','true');
+    mobilePriceSummary.removeAttribute('tabindex');
   }
   if (mobilePriceHint) mobilePriceHint.textContent = 'Состав предварительной стоимости';
 
