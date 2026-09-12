@@ -6,7 +6,7 @@ await mkdir('dist/server', { recursive: true });
 await mkdir('dist/client', { recursive: true });
 await mkdir('dist/.openai', { recursive: true });
 
-const [htmlSource, homeHtmlSource, homeCss, productCategoriesSource, css, storefrontCss, gatePageCss, catalogImages, pricesSource, deliveryPricesSource, customerContextSource, deliverySharedSource, leadsSharedSource, js, publicSiteJsSource, gatePageUiSource, colorPhotoSiteSource, adminHtmlSource, adminCss, adminJsSource, adminColorsJsSource, adminPricesJsSource, adminSiteJsSource, adminLeadsJsSource, adminEnhancementsJsSource, workerSource, adminAuthSource, siteSettingsSource, catalogMediaSource, catalogColorsSource, gateQuoteSource, leadAntispamSource, leadsSource] = await Promise.all([
+const [htmlSource, homeHtmlSource, homeCss, productCategoriesSource, css, storefrontCss, gatePageCss, catalogImages, pricesSource, deliveryPricesSource, customerContextSource, deliverySharedSource, leadsSharedSource, js, publicSiteJsSource, gatePageUiSource, colorPhotoSiteSource, gateFormulaPricesSiteSource, adminHtmlSource, adminCss, adminJsSource, adminColorsJsSource, adminPricesJsSource, adminSiteJsSource, adminLeadsJsSource, adminEnhancementsJsSource, adminExcelImportSource, workerSource, adminAuthSource, siteSettingsSource, excelPricingSource, catalogMediaSource, catalogColorsSource, gateQuoteSource, leadAntispamSource, leadsSource, xlsxBrowserSource] = await Promise.all([
   readFile('index.html', 'utf8'),
   readFile('home.html', 'utf8'),
   readFile('home.css', 'utf8'),
@@ -24,6 +24,7 @@ const [htmlSource, homeHtmlSource, homeCss, productCategoriesSource, css, storef
   readFile('public-site-settings.js', 'utf8'),
   readFile('gate-page-ui.js', 'utf8'),
   readFile('color-photo-site.js', 'utf8'),
+  readFile('gate-formula-prices-site.js', 'utf8'),
   readFile('admin.html', 'utf8'),
   readFile('admin.css', 'utf8'),
   readFile('admin.js', 'utf8'),
@@ -32,14 +33,17 @@ const [htmlSource, homeHtmlSource, homeCss, productCategoriesSource, css, storef
   readFile('admin-site.js', 'utf8'),
   readFile('admin-leads.js', 'utf8'),
   readFile('admin-enhancements.js', 'utf8'),
+  readFile('admin-excel-import.js', 'utf8'),
   readFile('worker/runtime.js', 'utf8'),
   readFile('worker/auth-d1.js', 'utf8'),
   readFile('worker/site-settings-d1.js', 'utf8'),
+  readFile('worker/excel-pricing-d1.js', 'utf8'),
   readFile('worker/catalog-media-d1.js', 'utf8'),
   readFile('worker/catalog-colors-d1.js', 'utf8'),
   readFile('worker/gate-quote-d1.js', 'utf8'),
   readFile('worker/lead-antispam.js', 'utf8'),
-  readFile('worker/leads-d1.js', 'utf8')
+  readFile('worker/leads-d1.js', 'utf8'),
+  readFile('node_modules/xlsx/dist/xlsx.full.min.js', 'utf8')
 ]);
 
 const gateCalcSources = await Promise.all([
@@ -51,7 +55,12 @@ const gateCalcSources = await Promise.all([
   readFile('gate-calc-models.js', 'utf8'),
   readFile('gate-calc-engine.js', 'utf8')
 ]);
-const gateCalcBundle = gateCalcSources.join('\n');
+const gateCalcRuntimeBundle = [
+  gateCalcSources[0],
+  'window.GATE_CALC_PRICES=__RUNTIME_GATE_CALC_PRICES__;',
+  ...gateCalcSources.slice(1)
+].join('\n');
+const gateCalcModelLoaderBundle = gateCalcSources.slice(1, 6).join('\n');
 
 const gatePricesMatch = gateCalcSources[0].match(/window\.GATE_CALC_PRICES\s*=\s*({[\s\S]*});?\s*$/);
 if (!gatePricesMatch) throw new Error('Не удалось подготовить серверные цены формул ворот');
@@ -66,7 +75,7 @@ const rawGateModels = Function('window', '"use strict";\n' + gateModelsScript + 
 if (!rawGateModels?.models) throw new Error('Не удалось распаковать серверные модели ворот');
 const serverGateModelSource = `{models:{${Object.entries(rawGateModels.models || {}).map(([key,model]) => {
   const formulas = Object.entries(model.formulas || {}).map(([ref,expr]) => `${JSON.stringify(ref)}:(ctx,p,v,sum,roundExcel,roundUp)=>(${expr})`).join(',');
-  return `${JSON.stringify(key)}:{gateRef:${JSON.stringify(model.gateRef)},wicketRef:${JSON.stringify(model.wicketRef)},literals:${JSON.stringify(model.literals || {})},formulas:{${formulas}}}`;
+  return `${JSON.stringify(key)}:{gateRef:${JSON.stringify(model.gateRef)},wicketRef:${JSON.stringify(model.wicketRef)},standard:${JSON.stringify(model.standard || {})},literals:${JSON.stringify(model.literals || {})},formulas:{${formulas}}}`;
 }).join(',')}}}`;
 
 const deliveryPrices = JSON.parse(deliveryPricesSource);
@@ -80,6 +89,7 @@ const defaultGalleries = JSON.parse(galleryMatch[1]);
 const pricesMatch = pricesSource.match(/window\.PRICE_DATA\s*=\s*({[\s\S]*?});\s*$/);
 if (!pricesMatch) throw new Error('Некорректный файл prices.js');
 const defaultPrices = Function(`"use strict"; return (${pricesMatch[1]});`)();
+const xlsxBrowserSafe = xlsxBrowserSource.replace(/<\/script/gi, '<\\/script');
 
 const publicJs = js;
 
@@ -94,7 +104,7 @@ const html = htmlSource
   .replace('<script id="deliveryData" type="application/json">{}</script>', `<script id="deliveryData" type="application/json">${embeddedDeliveryPrices}</script>`)
   .replace('<script src="catalog-images.js"></script>', `<script>${catalogImages}</script>`)
   .replace('<script src="prices.js"></script>', '<script>window.PRICE_DATA=__RUNTIME_PRICE_DATA__;window.SITE_SETTINGS=__RUNTIME_SITE_DATA__;</script>')
-  .replace('<script src="gate-calc-prices.js"></script>', `<script>${gateCalcBundle}</script>`)
+  .replace('<script src="gate-calc-prices.js"></script>', `<script>${gateCalcRuntimeBundle}</script>`)
   .replace('<script src="gate-calc-models-chunk1.js"></script>', '')
   .replace('<script src="gate-calc-models-chunk2.js"></script>', '')
   .replace('<script src="gate-calc-models-chunk3.js"></script>', '')
@@ -106,18 +116,19 @@ const html = htmlSource
   .replace('<script src="shared/leads.js"></script>', `<script>${leadsSharedSource}</script>`)
   .replace('<script src="app.js"></script>', `<script>${publicJs}</script>`)
   .replace('<script src="public-site-settings.js"></script>', `<script>${publicSiteJsSource}</script>`)
-  .replace('<script src="gate-page-ui.js"></script>', `<script>${gatePageUiSource}\n${colorPhotoSiteSource}</script>`);
+  .replace('<script src="gate-page-ui.js"></script>', `<script>${gatePageUiSource}\n${colorPhotoSiteSource}\n${gateFormulaPricesSiteSource}</script>`);
 
 const adminJs = adminJsSource;
 
 const adminHtml = adminHtmlSource
   .replace('<link rel="stylesheet" href="admin.css">', `<style>${adminCss}</style>`)
   .replace('<script src="admin.js"></script>', `<script>${adminJs}\n${adminColorsJsSource}</script>`)
-  .replace('<script src="admin-prices.js"></script>', `<script>${adminPricesJsSource}</script><script>${adminSiteJsSource}</script><script>${adminLeadsJsSource}</script><script>${adminEnhancementsJsSource}</script>`);
+  .replace('<script src="admin-prices.js"></script>', `<script>${adminPricesJsSource}</script><script>${adminSiteJsSource}</script><script>${adminLeadsJsSource}</script><script>${adminEnhancementsJsSource}</script><script>${xlsxBrowserSafe}</script><script>${gateCalcModelLoaderBundle}</script><script>${adminExcelImportSource}</script>`);
 
 const workerModules = [
   adminAuthSource,
   siteSettingsSource,
+  excelPricingSource,
   leadAntispamSource,
   gateQuoteSource,
   catalogMediaSource,
@@ -127,7 +138,7 @@ const workerModules = [
 if (!workerSource.includes('/*__WORKER_MODULES__*/')) throw new Error('Не найден маркер модулей Worker');
 const patchedWorkerSource = workerSource.replace('/*__WORKER_MODULES__*/', workerModules);
 
-for (const requiredWorkerFeature of ['calculateAuthoritativeGateQuote','consumeLeadAttempt','DEFAULT_GATE_CALC_MODELS','DEFAULT_DELIVERY_PRICES']) {
+for (const requiredWorkerFeature of ['calculateAuthoritativeGateQuote','consumeLeadAttempt','DEFAULT_GATE_CALC_MODELS','DEFAULT_DELIVERY_PRICES','loadGateCalcInputs']) {
   if (!patchedWorkerSource.includes(requiredWorkerFeature)) throw new Error(`Worker assembly missing ${requiredWorkerFeature}`);
 }
 
