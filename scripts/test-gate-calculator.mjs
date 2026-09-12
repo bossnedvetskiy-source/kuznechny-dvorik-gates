@@ -57,7 +57,6 @@ for (const [article, scenario, gateWidth, gateHeight, wicketWidth, wicketHeight,
   rows.push({ article, scenario, excelTotal, siteTotal: actual.total, diffRub: totalDiff, ok });
 }
 
-// Standard-size regression for all imported article models: calculated total must equal source-map standard total.
 for (const [article, model] of Object.entries(context.GATE_CALC_MODELS.models)) {
   if (!model.standard) continue;
   const s = model.standard;
@@ -83,6 +82,16 @@ for (const [article, scenario, gateWidth, gateHeight, wicketWidth, wicketHeight,
   const ok = actual.total === expectedTotal;
   if (!ok) failures += 1;
   rows.push({article, scenario, excelTotal: expectedTotal, siteTotal: actual.total, diffRub: actual.total - expectedTotal, ok});
+}
+
+// Runtime admin price is the authoritative standard-size baseline. Custom-size formulas keep their shape
+// and move by the same rounded adjustment, so card, calculator and server never disagree after an admin edit.
+context.PRICE_DATA = {catalog:[{art:'Арт.6',price:61600}]};
+const adjustedStandard = context.GATE_CALC.calculateGate({article:'Арт.6',gateWidth:3.4,gateHeight:1.8,wicketWidth:1,wicketHeight:1.8});
+const adjustedCustom = context.GATE_CALC.calculateGate({article:'Арт.6',gateWidth:3.8,gateHeight:1.8,wicketWidth:1,wicketHeight:1.8});
+if (adjustedStandard.total !== 61600 || adjustedCustom.total !== 66300) {
+  failures += 1;
+  console.error(`RUNTIME BASELINE FAIL: expected 61600 / 66300, got ${adjustedStandard.total} / ${adjustedCustom.total}`);
 }
 
 console.table(rows);
