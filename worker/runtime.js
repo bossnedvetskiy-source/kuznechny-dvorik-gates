@@ -339,7 +339,7 @@ async function handleAdminApi(request, env, url) {
   }
   if (url.pathname === '/api/admin/leads' && request.method === 'GET') {
     try {
-      return json(await listLeads(env));
+      return json(await listLeads(env, url.searchParams));
     } catch (error) {
       return json({error: 'Не удалось загрузить заявки: ' + errorMessage(error)}, 500);
     }
