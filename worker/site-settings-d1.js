@@ -36,22 +36,18 @@ function positiveMoney(value, fallback) {
   const number = Math.round(Number(value));
   return Number.isFinite(number) && number >= 0 && number <= 10000000 ? number : fallback;
 }
-
 function positiveOrder(value, fallback) {
   const number = Math.round(Number(value));
   return Number.isFinite(number) && number >= 1 && number <= 10000 ? number : fallback;
 }
-
 function integerSetting(value, fallback, min, max) {
   const number = Math.round(Number(value));
   return Number.isFinite(number) && number >= min && number <= max ? number : fallback;
 }
-
 function cleanText(value, fallback, maxLength = 300) {
   const text = String(value ?? '').replace(/\s+/g, ' ').trim();
   return text ? text.slice(0, maxLength) : fallback;
 }
-
 function cleanDigits(value, fallback) {
   const digits = String(value ?? '').replace(/\D/g, '').slice(0, 20);
   return digits.length >= 10 ? digits : fallback;
@@ -90,97 +86,84 @@ function normalizePrices(input) {
   const inputCatalog = new Map((Array.isArray(source.catalog) ? source.catalog : []).map(item => [String(item?.art || ''), item]));
   const defaultExtras = Array.isArray(DEFAULT_PRICES.extraProducts) ? DEFAULT_PRICES.extraProducts : [];
   const inputExtras = new Map((Array.isArray(source.extraProducts) ? source.extraProducts : []).map(item => [String(item?.id || ''), item]));
-
   const catalog = defaultCatalog.map((defaultItem, index) => {
     const item = inputCatalog.get(defaultItem.art) || {};
-    return {
-      art: defaultItem.art,
-      price: positiveMoney(item.price, defaultItem.price),
-      visible: item.visible !== false,
-      order: positiveOrder(item.order, index + 1)
-    };
-  }).sort((left, right) => left.order - right.order || left.art.localeCompare(right.art, 'ru'));
-
-  catalog.forEach((item, index) => { item.order = index + 1; });
-  if (catalog.length && !catalog.some(item => item.visible)) catalog[0].visible = true;
-
+    return {art:defaultItem.art,price:positiveMoney(item.price,defaultItem.price),visible:item.visible!==false,order:positiveOrder(item.order,index+1)};
+  }).sort((left,right)=>left.order-right.order||left.art.localeCompare(right.art,'ru'));
+  catalog.forEach((item,index)=>{item.order=index+1;});
+  if (catalog.length && !catalog.some(item=>item.visible)) catalog[0].visible=true;
   return {
-    updatedAt: new Date().toISOString().slice(0, 10),
-    catalogInstallation: positiveMoney(source.catalogInstallation, DEFAULT_PRICES.catalogInstallation),
-    catalogPosts: positiveMoney(source.catalogPosts, DEFAULT_PRICES.catalogPosts),
+    updatedAt:new Date().toISOString().slice(0,10),
+    catalogInstallation:positiveMoney(source.catalogInstallation,DEFAULT_PRICES.catalogInstallation),
+    catalogPosts:positiveMoney(source.catalogPosts,DEFAULT_PRICES.catalogPosts),
     catalog,
-    extraProducts: defaultExtras.map(defaultItem => {
-      const item = inputExtras.get(defaultItem.id) || {};
-      return {
-        ...defaultItem,
-        price: positiveMoney(item.price, defaultItem.price),
-        install: positiveMoney(item.install, defaultItem.install || 0),
-        posts: positiveMoney(item.posts, defaultItem.posts || 0)
-      };
+    extraProducts:defaultExtras.map(defaultItem=>{
+      const item=inputExtras.get(defaultItem.id)||{};
+      return {...defaultItem,price:positiveMoney(item.price,defaultItem.price),install:positiveMoney(item.install,defaultItem.install||0),posts:positiveMoney(item.posts,defaultItem.posts||0)};
     })
   };
 }
 
+function normalizeDeliverySettings(input) {
+  const defaults=Array.isArray(DEFAULT_DELIVERY_PRICES?.destinations)?DEFAULT_DELIVERY_PRICES.destinations:[];
+  const source=input&&typeof input==='object'&&Array.isArray(input.destinations)?input.destinations:defaults;
+  const seen=new Set(),destinations=[];
+  for(const item of source){
+    const name=cleanText(item?.name,'',120);if(!name)continue;
+    const key=name.toLocaleLowerCase('ru-RU').replace(/ё/g,'е').replace(/[^а-яa-z0-9]/gi,'');
+    if(!key||seen.has(key))continue;seen.add(key);
+    destinations.push({name,price:key==='мелеуз'?0:positiveMoney(item?.price,0)});
+    if(destinations.length>=250)break;
+  }
+  if(!seen.has('мелеуз'))destinations.unshift({name:'Мелеуз',price:0});
+  destinations.sort((a,b)=>a.name==='Мелеуз'?-1:b.name==='Мелеуз'?1:a.name.localeCompare(b.name,'ru'));
+  return {origin:DEFAULT_DELIVERY_PRICES?.origin||{name:'Мелеуз'},fallbackRatePerKm:Number(DEFAULT_DELIVERY_PRICES?.fallbackRatePerKm)||90,destinations};
+}
+
 async function loadPrices(env) {
-  if (!await ensureSiteSettings(env)) return normalizePrices(DEFAULT_PRICES);
-  try {
-    const row = await env.DB.prepare("SELECT value_json FROM site_settings WHERE key = 'prices'").first();
-    if (!row?.value_json) return normalizePrices(DEFAULT_PRICES);
-    return normalizePrices(JSON.parse(row.value_json));
-  } catch {
-    return normalizePrices(DEFAULT_PRICES);
-  }
+  if(!await ensureSiteSettings(env))return normalizePrices(DEFAULT_PRICES);
+  try{const row=await env.DB.prepare("SELECT value_json FROM site_settings WHERE key = 'prices'").first();return row?.value_json?normalizePrices(JSON.parse(row.value_json)):normalizePrices(DEFAULT_PRICES);}catch{return normalizePrices(DEFAULT_PRICES);}
 }
-
 async function loadSiteProfile(env) {
-  if (!await ensureSiteSettings(env)) return normalizeSiteProfile(DEFAULT_SITE_PROFILE);
-  try {
-    const row = await env.DB.prepare("SELECT value_json FROM site_settings WHERE key = 'site_profile'").first();
-    if (!row?.value_json) return normalizeSiteProfile(DEFAULT_SITE_PROFILE);
-    return normalizeSiteProfile(JSON.parse(row.value_json));
-  } catch {
-    return normalizeSiteProfile(DEFAULT_SITE_PROFILE);
-  }
+  if(!await ensureSiteSettings(env))return normalizeSiteProfile(DEFAULT_SITE_PROFILE);
+  try{const row=await env.DB.prepare("SELECT value_json FROM site_settings WHERE key = 'site_profile'").first();return row?.value_json?normalizeSiteProfile(JSON.parse(row.value_json)):normalizeSiteProfile(DEFAULT_SITE_PROFILE);}catch{return normalizeSiteProfile(DEFAULT_SITE_PROFILE);}
+}
+async function loadDeliverySettings(env) {
+  if(!await ensureSiteSettings(env))return normalizeDeliverySettings(DEFAULT_DELIVERY_PRICES);
+  try{const row=await env.DB.prepare("SELECT value_json FROM site_settings WHERE key = 'delivery_prices'").first();return row?.value_json?normalizeDeliverySettings(JSON.parse(row.value_json)):normalizeDeliverySettings(DEFAULT_DELIVERY_PRICES);}catch{return normalizeDeliverySettings(DEFAULT_DELIVERY_PRICES);}
 }
 
-async function savePrices(request, env) {
-  if (!await ensureSiteSettings(env)) return json({error: 'База данных временно недоступна'}, 503);
-  const length = Number(request.headers.get('content-length') || 0);
-  if (length > 131072) return json({error: 'Слишком большой запрос'}, 413);
-  const body = await request.json();
-  const prices = normalizePrices(body?.prices);
-  await env.DB.prepare(`INSERT INTO site_settings (key, value_json, updated_at, updated_by)
-    VALUES ('prices', ?, CURRENT_TIMESTAMP, 'admin')
-    ON CONFLICT(key) DO UPDATE SET value_json = excluded.value_json, updated_at = CURRENT_TIMESTAMP, updated_by = excluded.updated_by`)
-    .bind(JSON.stringify(prices)).run();
-  return json({ok: true, prices});
+async function savePrices(request,env) {
+  if(!await ensureSiteSettings(env))return json({error:'База данных временно недоступна'},503);
+  if(Number(request.headers.get('content-length')||0)>131072)return json({error:'Слишком большой запрос'},413);
+  const body=await request.json(),prices=normalizePrices(body?.prices);
+  await env.DB.prepare(`INSERT INTO site_settings (key,value_json,updated_at,updated_by) VALUES ('prices',?,CURRENT_TIMESTAMP,'admin') ON CONFLICT(key) DO UPDATE SET value_json=excluded.value_json,updated_at=CURRENT_TIMESTAMP,updated_by=excluded.updated_by`).bind(JSON.stringify(prices)).run();
+  return json({ok:true,prices});
 }
-
-async function saveSiteProfile(request, env) {
-  if (!await ensureSiteSettings(env)) return json({error: 'База данных временно недоступна'}, 503);
-  const length = Number(request.headers.get('content-length') || 0);
-  if (length > 65536) return json({error: 'Слишком большой запрос'}, 413);
-  const body = await request.json();
-  const site = normalizeSiteProfile(body?.site);
-  await env.DB.prepare(`INSERT INTO site_settings (key, value_json, updated_at, updated_by)
-    VALUES ('site_profile', ?, CURRENT_TIMESTAMP, 'admin')
-    ON CONFLICT(key) DO UPDATE SET value_json = excluded.value_json, updated_at = CURRENT_TIMESTAMP, updated_by = excluded.updated_by`)
-    .bind(JSON.stringify(site)).run();
-  return json({ok: true, site});
+async function saveSiteProfile(request,env) {
+  if(!await ensureSiteSettings(env))return json({error:'База данных временно недоступна'},503);
+  if(Number(request.headers.get('content-length')||0)>65536)return json({error:'Слишком большой запрос'},413);
+  const body=await request.json(),site=normalizeSiteProfile(body?.site);
+  await env.DB.prepare(`INSERT INTO site_settings (key,value_json,updated_at,updated_by) VALUES ('site_profile',?,CURRENT_TIMESTAMP,'admin') ON CONFLICT(key) DO UPDATE SET value_json=excluded.value_json,updated_at=CURRENT_TIMESTAMP,updated_by=excluded.updated_by`).bind(JSON.stringify(site)).run();
+  return json({ok:true,site});
+}
+async function saveDeliverySettings(request,env) {
+  if(!await ensureSiteSettings(env))return json({error:'База данных временно недоступна'},503);
+  if(Number(request.headers.get('content-length')||0)>131072)return json({error:'Слишком большой запрос'},413);
+  const body=await request.json(),delivery=normalizeDeliverySettings(body?.delivery);
+  await env.DB.prepare(`INSERT INTO site_settings (key,value_json,updated_at,updated_by) VALUES ('delivery_prices',?,CURRENT_TIMESTAMP,'admin') ON CONFLICT(key) DO UPDATE SET value_json=excluded.value_json,updated_at=CURRENT_TIMESTAMP,updated_by=excluded.updated_by`).bind(JSON.stringify(delivery)).run();
+  deliveryCache.clear();
+  return json({ok:true,delivery});
 }
 
 async function renderPublicPage(env) {
-  const [prices, site] = await Promise.all([loadPrices(env), loadSiteProfile(env)]);
-  const serializedPrices = JSON.stringify(prices).replace(/</g, '\\u003c');
-  const serializedSite = JSON.stringify(site).replace(/</g, '\\u003c');
-  return PAGE
-    .replace('__RUNTIME_PRICE_DATA__', serializedPrices)
-    .replace('__RUNTIME_SITE_DATA__', serializedSite);
+  const [prices,site,delivery]=await Promise.all([loadPrices(env),loadSiteProfile(env),loadDeliverySettings(env)]);
+  const serializedPrices=JSON.stringify(prices).replace(/</g,'\\u003c');
+  const serializedSite=JSON.stringify(site).replace(/</g,'\\u003c');
+  const serializedDelivery=JSON.stringify(delivery).replace(/</g,'\\u003c');
+  return PAGE.replace('__RUNTIME_PRICE_DATA__',serializedPrices).replace('__RUNTIME_SITE_DATA__',serializedSite).replace('__RUNTIME_DELIVERY_DATA__',serializedDelivery);
 }
-
-
 async function renderProductHub(env) {
-  const site = await loadSiteProfile(env);
-  const serializedSite = JSON.stringify(site).replace(/</g, '\u003c');
-  return HOME_PAGE.replace('__RUNTIME_SITE_DATA__', serializedSite);
+  const site=await loadSiteProfile(env),serializedSite=JSON.stringify(site).replace(/</g,'\u003c');
+  return HOME_PAGE.replace('__RUNTIME_SITE_DATA__',serializedSite);
 }
