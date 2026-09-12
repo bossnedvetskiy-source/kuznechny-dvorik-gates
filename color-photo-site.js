@@ -15,22 +15,18 @@
 
   const style = document.createElement('style');
   style.textContent = `
-    .profile-color-option.is-photo-missing{opacity:.62;cursor:pointer}
-    .profile-color-option.is-photo-missing .profile-color-dot{filter:saturate(.62)}
+    .profile-color-option.is-photo-missing{opacity:.72;cursor:pointer}
+    .profile-color-option.is-photo-missing .profile-color-dot{filter:saturate(.72)}
     .profile-color-option.is-photo-missing .profile-color-dot::after{content:"…";position:absolute;right:-2px;bottom:-2px;display:grid;place-items:center;width:13px;height:13px;border:2px solid #fff;border-radius:50%;background:#aaa39a;color:#fff;font:900 9px/1 Arial,sans-serif;box-shadow:0 1px 3px rgba(0,0,0,.18)}
     .profile-color-option.is-photo-ready .profile-color-dot::after{content:"";position:absolute;right:-2px;bottom:-2px;width:9px;height:9px;border:2px solid #fff;border-radius:50%;background:#64814a;box-shadow:0 1px 3px rgba(0,0,0,.2)}
     .profile-color-option.is-more{opacity:1!important}
     .profile-color-option.is-more .profile-color-dot::after{content:"+"!important;position:absolute!important;inset:5px!important;width:auto!important;height:auto!important;display:grid!important;place-items:center!important;border:0!important;border-radius:50%!important;background:rgba(0,0,0,.72)!important;color:#fff!important;font-size:17px!important;font-weight:900!important;box-shadow:none!important}
     .profile-color-note b{color:#6e665d;font-weight:900}
-    .profile-color-picker.is-color-empty{padding:9px 12px}
-    .profile-color-picker.is-color-empty .profile-color-picker-head{margin:0;align-items:center}
     .profile-color-picker.is-color-empty .profile-color-picker-head strong{font-size:10.5px}
     .profile-color-picker.is-color-empty .profile-color-status{color:#777067;font-size:8.5px}
-    .profile-color-picker.is-color-empty .profile-color-swatches,
-    .profile-color-picker.is-color-empty .profile-color-note{display:none!important}
     .profile-color-reset{display:inline-flex;align-items:center;justify-content:center;margin:7px 0 0;padding:0;border:0;background:transparent;color:#7b6130;font:800 8.5px/1.2 Manrope,Arial,sans-serif;text-decoration:underline;text-underline-offset:2px;cursor:pointer}
     .profile-color-reset[hidden]{display:none!important}
-    @media(max-width:620px){.profile-color-picker.is-color-empty{padding:8px 10px}.profile-color-picker.is-color-empty .profile-color-picker-head{gap:8px}.profile-color-reset{font-size:8px}}
+    @media(max-width:620px){.profile-color-reset{font-size:8px}}
   `;
   document.head.append(style);
 
@@ -121,7 +117,7 @@
       restoreGalleryPhoto(card, true);
       selectedByProduct.set(card.dataset.cardProduct, 'other');
       setPressed(card, 'other');
-      setStatus(card, 'Другие цвета — при оформлении');
+      setStatus(card, 'Можно выбрать любой другой цвет');
       syncCalculatorPreview(card.dataset.cardProduct);
       if (shouldTrack) {
         try { window.ym?.(107269914, 'reachGoal', 'catalog_color_preview', {article:product.art, color:'other'}); } catch {}
@@ -224,18 +220,7 @@
     const hasPhotos = Object.keys(colorPhotos).length > 0;
     picker.classList.toggle('is-color-empty', !hasPhotos);
 
-    if (!hasPhotos) {
-      selectedByProduct.delete(card.dataset.cardProduct);
-      setPressed(card, '');
-      syncGalleryControls(card, false);
-      reset.hidden = true;
-      if (heading) heading.textContent = 'Любой цвет профнастила';
-      if (status) status.textContent = 'Цвет выберете при оформлении';
-      syncCalculatorPreview(card.dataset.cardProduct);
-      return;
-    }
-
-    if (heading) heading.textContent = 'Посмотрите цвет на реальном фото';
+    if (heading) heading.textContent = hasPhotos ? 'Посмотрите цвет на реальном фото' : 'Выберите цвет профнастила';
     if (note) note.innerHTML = '<b>Показаны популярные цвета.</b> Доступны и другие варианты; цвет не влияет на предварительную стоимость.';
 
     for (const button of picker.querySelectorAll('.profile-color-option')) {
@@ -245,6 +230,7 @@
         button.classList.remove('is-photo-missing', 'is-photo-ready');
         button.disabled = false;
         button.title = 'Доступны и другие цвета профнастила';
+        button.setAttribute('aria-label', 'Выбрать другой цвет профнастила');
         continue;
       }
       const color = COLORS_BY_ID.get(id);
@@ -266,7 +252,8 @@
       selectedByProduct.delete(card.dataset.cardProduct);
       setPressed(card, '');
       syncGalleryControls(card, false);
-      if (status) status.textContent = 'Выберите цвет';
+      reset.hidden = true;
+      if (status) status.textContent = hasPhotos ? 'Выберите цвет' : 'Нажмите на нужный цвет';
       syncCalculatorPreview(card.dataset.cardProduct);
     }
 
