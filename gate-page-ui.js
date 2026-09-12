@@ -3,6 +3,40 @@
   const desktopHero = window.matchMedia('(min-width: 621px)');
   const heroImage = document.getElementById('heroDesktopImage');
   const trackGoal = (name, params = {}) => { try { if (typeof window.ym === 'function') window.ym(107269914, 'reachGoal', name, params); } catch {} };
+
+  const colorBadgeStyle = document.createElement('style');
+  colorBadgeStyle.textContent = `
+    .color-profile-badge{position:absolute;left:12px;top:12px;z-index:7;display:flex;align-items:center;gap:8px;width:180px;min-height:52px;padding:6px 10px 6px 8px;box-sizing:border-box;pointer-events:none;background:linear-gradient(180deg,#161616 0%,#050505 100%);border:2px solid #d2a143;box-shadow:inset 0 0 0 1px #6f4a13,0 5px 16px rgba(0,0,0,.24);clip-path:polygon(8px 0,calc(100% - 8px) 0,100% 8px,100% calc(100% - 8px),calc(100% - 8px) 100%,8px 100%,0 calc(100% - 8px),0 8px);opacity:0;visibility:hidden;transform:translateY(-3px);transition:opacity .18s ease,transform .18s ease,visibility .18s ease}
+    .product-visual[data-image-index="0"] .color-profile-badge{opacity:1;visibility:visible;transform:none}
+    .color-fan{position:relative;flex:0 0 42px;width:42px;height:38px}
+    .color-fan i{position:absolute;left:17px;bottom:3px;width:9px;height:32px;border-radius:4px 4px 2px 2px;transform-origin:50% 100%;box-shadow:inset 0 0 0 1px rgba(255,255,255,.28),0 1px 2px rgba(0,0,0,.25)}
+    .color-fan i:nth-child(1){background:#d92d1f;transform:rotate(-34deg)}
+    .color-fan i:nth-child(2){background:#f39a22;transform:rotate(-22deg)}
+    .color-fan i:nth-child(3){background:#f0d329;transform:rotate(-10deg)}
+    .color-fan i:nth-child(4){background:#2fa64a;transform:rotate(2deg)}
+    .color-fan i:nth-child(5){background:#1794b8;transform:rotate(14deg)}
+    .color-fan i:nth-child(6){background:#2866c2;transform:rotate(26deg)}
+    .color-fan i:nth-child(7){background:#8c3bc2;transform:rotate(38deg)}
+    .color-copy{display:grid;gap:0;min-width:0;line-height:1.03;text-align:left}
+    .color-copy strong{color:#e1ae4c;font-size:13px;font-weight:900;letter-spacing:-.15px;white-space:nowrap}
+    .color-copy span{margin-top:2px;color:#fff;font-size:12px;font-weight:700;white-space:nowrap}
+    .product-meta{display:none!important}
+    @media(max-width:620px){.color-profile-badge{left:9px;top:9px;width:166px;min-height:48px;padding:5px 8px 5px 6px;gap:6px}.color-fan{flex-basis:38px;width:38px;height:34px}.color-fan i{left:15px;width:8px;height:29px}.color-copy strong{font-size:12px}.color-copy span{font-size:11px}}
+    @media(max-width:390px){.color-profile-badge{width:150px;min-height:44px}.color-fan{flex-basis:33px;width:33px;height:31px}.color-fan i{left:13px;width:7px;height:26px}.color-copy strong{font-size:11px}.color-copy span{font-size:10px}}
+  `;
+  document.head.append(colorBadgeStyle);
+
+  const installColorBadges = () => {
+    document.querySelectorAll('.product-visual').forEach(visual => {
+      if (visual.querySelector('.color-profile-badge')) return;
+      const badge = document.createElement('div');
+      badge.className = 'color-profile-badge';
+      badge.setAttribute('aria-hidden','true');
+      badge.innerHTML = '<span class="color-fan"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span class="color-copy"><strong>Любой цвет</strong><span>профнастила</span></span>';
+      visual.append(badge);
+    });
+  };
+
   const syncHeroImage = () => {
     if (!heroImage) return;
     if (desktopHero.matches && !heroImage.hasAttribute('src')) {
@@ -213,8 +247,12 @@
   };
 
   const grid = document.getElementById('catalogGrid');
-  if (grid) new MutationObserver(() => queueMicrotask(installDesktopThumbnails)).observe(grid,{childList:true});
-  mobile.addEventListener('change', installDesktopThumbnails);
+  const syncCatalogEnhancements = () => {
+    installColorBadges();
+    installDesktopThumbnails();
+  };
+  if (grid) new MutationObserver(() => queueMicrotask(syncCatalogEnhancements)).observe(grid,{childList:true});
+  mobile.addEventListener('change', syncCatalogEnhancements);
   document.addEventListener('gate:calculated', event => {
     deliveryKind = event.detail?.deliveryKind || 'empty';
     deliveryCanProceed = event.detail?.deliveryPending === false || ['out-of-area','error'].includes(deliveryKind);
@@ -226,5 +264,5 @@
 
   updateSizeSummary();
   syncMobileCta();
-  queueMicrotask(installDesktopThumbnails);
+  queueMicrotask(syncCatalogEnhancements);
 })();
