@@ -1,4 +1,4 @@
-/* Standalone gate calculator. Excel is not required at runtime. */
+/* Standalone gate calculator. Excel-derived formulas are the only source of gate prices. */
 (() => {
   const prices = window.GATE_CALC_PRICES;
   if (!prices) throw new Error('Не загружены общие цены расчёта ворот');
@@ -87,32 +87,20 @@
     };
   }
 
-  function runtimeCatalogPrice(article) {
-    const key = normalizeArticle(article);
-    const item = (window.PRICE_DATA?.catalog || []).find(entry => normalizeArticle(entry?.art) === key);
-    const value = Number(item?.price);
-    return Number.isFinite(value) && value >= 0 ? value : null;
+  function calculateGate(input) {
+    return rawGateCalculation(input);
   }
 
-  function calculateGate(input) {
-    const result = rawGateCalculation(input);
-    const model = pack()?.models?.[result.article];
-    const targetStandardPrice = runtimeCatalogPrice(input.article);
-    if (!model || targetStandardPrice === null) return result;
-
-    const standard = rawGateCalculation({article:input.article, ...standardDimensions(model)});
-    const adjustment = roundExcel(targetStandardPrice - standard.total, -2);
-    if (!adjustment) return {...result, adjustment:0};
-
-    return {
-      ...result,
-      totalRaw: result.totalRaw + adjustment,
-      total: roundExcel(result.total + adjustment, -2),
-      adjustment
-    };
+  function standardForArticle(article) {
+    const key = normalizeArticle(article);
+    const model = pack()?.models?.[key];
+    if (!model) return null;
+    const dimensions = standardDimensions(model);
+    const calculation = rawGateCalculation({article, ...dimensions});
+    return {...dimensions, price:calculation.total};
   }
 
   function hasArticle(article) { return Boolean(pack()?.models?.[normalizeArticle(article)]); }
   const ready = Promise.resolve(window.GATE_CALC_MODELS_READY).then(() => true);
-  window.GATE_CALC = { calculateGate, hasArticle, normalizeArticle, roundExcel, roundUp, ready };
+  window.GATE_CALC = { calculateGate, standardForArticle, hasArticle, normalizeArticle, roundExcel, roundUp, ready };
 })();
