@@ -70,20 +70,6 @@ function calculateGateProductServer({article, gateWidth, gateHeight, wicketWidth
   return gateRoundExcelServer(gatePrice + wicketPrice, -2);
 }
 
-function gateProductPriceWithRuntimeBaseline(article, dimensions, catalogItem) {
-  const calculated = calculateGateProductServer({article, ...dimensions});
-  const standardCalculated = calculateGateProductServer({
-    article,
-    gateWidth: 3.4,
-    gateHeight: 1.8,
-    wicketWidth: 1,
-    wicketHeight: 1.8
-  });
-  const targetStandard = Math.max(0, Math.round(Number(catalogItem?.price) || 0));
-  const adjustment = gateRoundExcelServer(targetStandard - standardCalculated, -2);
-  return gateRoundExcelServer(calculated + adjustment, -2);
-}
-
 const normalizeDeliveryServer = value => String(value || '').toLocaleLowerCase('ru-RU').replace(/ё/g, 'е').replace(/[^а-яa-z0-9]/gi, '');
 
 function fixedDeliveryForCity(city, site) {
@@ -166,7 +152,7 @@ async function calculateAuthoritativeGateQuote(body, env) {
   const catalogItem = (runtimePrices.catalog || []).find(item => normalizeGateArticleServer(item.art) === articleKey && item.visible !== false);
   if (!catalogItem) throw Object.assign(new Error('Выбранная модель ворот недоступна'), {status: 400});
 
-  const productPrice = gateProductPriceWithRuntimeBaseline(body.article, dimensions, catalogItem);
+  const productPrice = calculateGateProductServer({article: body.article, ...dimensions});
   const installationPrice = Math.max(0, Math.round(Number(runtimePrices.catalogInstallation) || 0));
   const postsPrice = body.posts ? Math.max(0, Math.round(Number(runtimePrices.catalogPosts) || 0)) : 0;
   const color = String(body.color || '').trim().slice(0, 100);
