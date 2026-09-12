@@ -6,7 +6,7 @@ await mkdir('dist/server', { recursive: true });
 await mkdir('dist/client', { recursive: true });
 await mkdir('dist/.openai', { recursive: true });
 
-const [htmlSource, homeHtmlSource, homeCss, productCategoriesSource, css, storefrontCss, gatePageCss, catalogImages, pricesSource, deliveryPricesSource, customerContextSource, deliverySharedSource, leadsSharedSource, js, publicSiteJsSource, gatePageUiSource, colorPhotoSiteSource, gateFormulaPricesSiteSource, adminHtmlSource, adminCss, adminJsSource, adminColorsJsSource, adminPricesJsSource, adminSiteJsSource, adminLeadsJsSource, adminEnhancementsJsSource, adminExcelImportSource, workerSource, adminAuthSource, siteSettingsSource, excelPricingSource, catalogMediaSource, catalogColorsSource, gateQuoteSource, leadAntispamSource, leadsSource, xlsxBrowserSource] = await Promise.all([
+const [htmlSource, homeHtmlSource, homeCss, productCategoriesSource, css, storefrontCss, gatePageCss, catalogImages, pricesSource, deliveryPricesSource, customerContextSource, deliverySharedSource, leadsSharedSource, lazyRuntimeSource, js, publicSiteJsSource, gatePageUiSource, colorPhotoSiteSource, gateFormulaPricesSiteSource, adminHtmlSource, adminCss, adminJsSource, adminColorsJsSource, adminPricesJsSource, adminSiteJsSource, adminLeadsJsSource, adminEnhancementsJsSource, adminExcelImportSource, workerSource, adminAuthSource, siteSettingsSource, excelPricingSource, catalogMediaSource, catalogColorsSource, gateQuoteSource, publicPricesRuntimeSource, leadAntispamSource, leadsSource, xlsxBrowserSource] = await Promise.all([
   readFile('index.html', 'utf8'),
   readFile('home.html', 'utf8'),
   readFile('home.css', 'utf8'),
@@ -20,6 +20,7 @@ const [htmlSource, homeHtmlSource, homeCss, productCategoriesSource, css, storef
   readFile('shared/customer-context.js', 'utf8'),
   readFile('shared/delivery.js', 'utf8'),
   readFile('shared/leads.js', 'utf8'),
+  readFile('public-lazy-runtime.js', 'utf8'),
   readFile('app.js', 'utf8'),
   readFile('public-site-settings.js', 'utf8'),
   readFile('gate-page-ui.js', 'utf8'),
@@ -41,6 +42,7 @@ const [htmlSource, homeHtmlSource, homeCss, productCategoriesSource, css, storef
   readFile('worker/catalog-media-d1.js', 'utf8'),
   readFile('worker/catalog-colors-d1.js', 'utf8'),
   readFile('worker/gate-quote-d1.js', 'utf8'),
+  readFile('worker/public-prices-runtime.js', 'utf8'),
   readFile('worker/lead-antispam.js', 'utf8'),
   readFile('worker/leads-d1.js', 'utf8'),
   readFile('node_modules/xlsx/dist/xlsx.full.min.js', 'utf8')
@@ -104,19 +106,38 @@ const adminExcelCompatibilitySource = `(() => {
   });
 })();`;
 
+const optimizedAppSource = js.replace(
+  '\nloadPublishedGalleries();\n',
+  '\nwindow.KUZDVOR_SCHEDULE_CATALOG_DATA?.(loadPublishedGalleries);\n'
+);
+if (optimizedAppSource === js) throw new Error('Не найден вызов загрузки опубликованных галерей для отложенного запуска');
+
 const publicCssBundle = [css, storefrontCss, gatePageCss].join('\n');
 const publicSiteBundle = [
   catalogImages,
-  ...gateCalcSources.slice(1),
   customerContextSource,
   deliverySharedSource,
   leadsSharedSource,
-  js,
+  lazyRuntimeSource,
+  optimizedAppSource,
   publicSiteJsSource,
-  gatePageUiSource,
-  colorPhotoSiteSource,
+  gatePageUiSource
+].join('\n');
+const calculatorBundle = [
+  ...gateCalcSources.slice(1),
   gateFormulaPricesSiteSource
 ].join('\n');
+const catalogEnhancementsBundle = colorPhotoSiteSource;
+
+if (publicSiteBundle.includes('GATE_CALC_MODELS_READY') || publicSiteBundle.includes('KUZDVOR_FORMULA_PRICE_SYNC_READY')) {
+  throw new Error('Тяжёлый калькулятор всё ещё попал в начальный public bundle');
+}
+if (!calculatorBundle.includes('GATE_CALC_MODELS_READY') || !calculatorBundle.includes('KUZDVOR_FORMULA_PRICE_SYNC_READY')) {
+  throw new Error('Lazy calculator bundle собран неполностью');
+}
+if (!publicSiteBundle.includes('/calculator.bundle.js') || !publicSiteBundle.includes('/catalog-enhancements.bundle.js')) {
+  throw new Error('Начальный bundle не содержит lazy-loader для тяжёлых модулей');
+}
 
 const googleFontsHref = 'https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Prata&display=swap';
 const googleFontsTag = `<link href="${googleFontsHref}" rel="stylesheet">`;
@@ -185,6 +206,7 @@ const workerModules = [
   excelPricingSource,
   leadAntispamSource,
   gateQuoteSource,
+  publicPricesRuntimeSource,
   catalogMediaSource,
   catalogColorsSource,
   leadsSource
@@ -192,7 +214,7 @@ const workerModules = [
 if (!workerSource.includes('/*__WORKER_MODULES__*/')) throw new Error('Не найден маркер модулей Worker');
 const patchedWorkerSource = workerSource.replace('/*__WORKER_MODULES__*/', workerModules);
 
-for (const requiredWorkerFeature of ['calculateAuthoritativeGateQuote','consumeLeadAttempt','DEFAULT_GATE_CALC_MODELS','DEFAULT_DELIVERY_PRICES','loadGateCalcInputs']) {
+for (const requiredWorkerFeature of ['calculateAuthoritativeGateQuote','consumeLeadAttempt','DEFAULT_GATE_CALC_MODELS','DEFAULT_DELIVERY_PRICES','loadGateCalcInputs','renderPublicPageWithStandardPrices']) {
   if (!patchedWorkerSource.includes(requiredWorkerFeature)) throw new Error(`Worker assembly missing ${requiredWorkerFeature}`);
 }
 
@@ -211,6 +233,8 @@ const worker = patchedWorkerSource
 await writeFile('dist/server/index.js', worker, 'utf8');
 await writeFile('dist/client/site.css', publicCssBundle, 'utf8');
 await writeFile('dist/client/site.bundle.js', publicSiteBundle, 'utf8');
+await writeFile('dist/client/calculator.bundle.js', calculatorBundle, 'utf8');
+await writeFile('dist/client/catalog-enhancements.bundle.js', catalogEnhancementsBundle, 'utf8');
 await writeFile('dist/client/.keep', '', 'utf8');
 await copyFile('assets/hero-gates.jpg', 'dist/client/hero-gates.jpg');
 await copyFile('storefront.css', 'dist/client/storefront.css');
