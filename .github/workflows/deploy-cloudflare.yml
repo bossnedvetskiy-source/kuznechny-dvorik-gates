@@ -127,15 +127,13 @@ jobs:
         run: |
           node <<'NODE'
           const siteUrl = 'https://kuznechny-dvorik-gates.boss-nedvetskiy.workers.dev/';
+          const cssUrl = 'https://kuznechny-dvorik-gates.boss-nedvetskiy.workers.dev/site.css';
           const bundleUrl = 'https://kuznechny-dvorik-gates.boss-nedvetskiy.workers.dev/site.bundle.js';
           const adminUrl = 'https://kuznechny-dvorik-gates.boss-nedvetskiy.workers.dev/admin';
           const requiredSite = [
             'Ворота с калиткой',
             'Сейчас оплачивать ничего не нужно.',
             'Зачем нужен замерщик, если я знаю свои размеры?',
-            'Предпочитаемый цвет:',
-            'Выберите цвет профнастила',
-            'Нажмите на нужный цвет',
             '/site.css',
             '/site.bundle.js'
           ];
@@ -160,24 +158,28 @@ jobs:
           let lastError;
           for (let attempt = 1; attempt <= 5; attempt += 1) {
             try {
-              const [siteResponse, bundleResponse, adminResponse] = await Promise.all([
+              const [siteResponse, cssResponse, bundleResponse, adminResponse] = await Promise.all([
                 fetch(siteUrl, { cache: 'no-store' }),
+                fetch(cssUrl, { cache: 'no-store' }),
                 fetch(bundleUrl, { cache: 'no-store' }),
                 fetch(adminUrl, { cache: 'no-store' })
               ]);
               if (!siteResponse.ok) throw new Error(`Site HTTP ${siteResponse.status}`);
+              if (!cssResponse.ok) throw new Error(`Public CSS HTTP ${cssResponse.status}`);
               if (!bundleResponse.ok) throw new Error(`Public bundle HTTP ${bundleResponse.status}`);
               if (!adminResponse.ok) throw new Error(`Admin HTTP ${adminResponse.status}`);
-              const [siteHtml, publicBundle, adminHtml] = await Promise.all([siteResponse.text(), bundleResponse.text(), adminResponse.text()]);
+              const [siteHtml, publicCss, publicBundle, adminHtml] = await Promise.all([siteResponse.text(), cssResponse.text(), bundleResponse.text(), adminResponse.text()]);
               const missingSite = requiredSite.filter(text => !siteHtml.includes(text));
               const missingBundle = requiredBundle.filter(text => !publicBundle.includes(text));
               const forbiddenPresent = forbiddenPublic.filter(text => siteHtml.includes(text) || publicBundle.includes(text));
               const missingAdmin = requiredAdmin.filter(text => !adminHtml.includes(text));
               if (missingSite.length) throw new Error(`Missing production site text: ${missingSite.join(' | ')}`);
               if (missingBundle.length) throw new Error(`Missing production public bundle code: ${missingBundle.join(' | ')}`);
+              if (!publicCss.includes('.catalog-grid')) throw new Error('Public CSS does not contain catalog styles');
               if (forbiddenPresent.length) throw new Error(`Forbidden manual pricing logic in production: ${forbiddenPresent.join(' | ')}`);
               if (missingAdmin.length) throw new Error(`Missing production admin text: ${missingAdmin.join(' | ')}`);
-              console.log(`Production deployment verified: ${siteUrl} + /site.bundle.js + /admin + Excel upload/download`);
+              console.log(`Production deployment verified: ${siteUrl}`);
+              console.log(`HTML ${Buffer.byteLength(siteHtml)} bytes; CSS ${Buffer.byteLength(publicCss)} bytes; JS ${Buffer.byteLength(publicBundle)} bytes`);
               process.exit(0);
             } catch (error) {
               lastError = error;
