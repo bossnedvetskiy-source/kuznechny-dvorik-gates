@@ -1,0 +1,28 @@
+Options -Indexes
+DirectoryIndex index.html index.htm
+
+RewriteEngine On
+
+# Transitional backend: keep the current Cloudflare/D1 API working while the
+# public files are served by Timeweb.
+RewriteRule ^api/(.*)$ api-proxy.php?__proxy_path=api/$1 [QSA,L]
+RewriteRule ^catalog-media/(.*)$ api-proxy.php?__proxy_path=catalog-media/$1 [QSA,L]
+
+# Friendly routes used by the current Worker site.
+RewriteRule ^admin/?$ admin.html [L]
+RewriteRule ^vorota/?$ index.html [L]
+RewriteRule ^napravleniya/?$ napravleniya/index.html [L]
+
+<IfModule mod_headers.c>
+  # The tw1.ru address is a migration/test copy and must not compete with the
+  # production domain in search engines.
+  Header set X-Robots-Tag "noindex, nofollow, noarchive"
+  Header set X-Content-Type-Options "nosniff"
+  Header set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+<FilesMatch "^(?:\.ftp-deploy-sync-state\.json|api-proxy\.php)$">
+  <IfModule mod_headers.c>
+    Header set X-Robots-Tag "noindex, nofollow, noarchive"
+  </IfModule>
+</FilesMatch>
