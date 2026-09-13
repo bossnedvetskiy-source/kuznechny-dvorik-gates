@@ -57,6 +57,57 @@
     }).observe(catalogGridForBadges,{childList:true,subtree:true});
   }
 
+  const lightboxForHistory = document.getElementById('lightbox');
+  if (lightboxForHistory) {
+    const LIGHTBOX_HISTORY_KEY = '__kuzdvorLightbox';
+    let historyEntryActive = false;
+    let closingFromPopstate = false;
+    const lightboxIsOpen = () => !lightboxForHistory.hidden;
+
+    const pushLightboxHistory = () => {
+      if (history.state?.[LIGHTBOX_HISTORY_KEY]) {
+        historyEntryActive = true;
+        return;
+      }
+      history.pushState({...(history.state || {}), [LIGHTBOX_HISTORY_KEY]: true}, '', window.location.href);
+      historyEntryActive = true;
+    };
+
+    const closeLightboxFromHistory = () => {
+      if (!lightboxIsOpen()) return;
+      closingFromPopstate = true;
+      lightboxForHistory.hidden = true;
+      document.body.style.overflow = '';
+      requestAnimationFrame(() => { closingFromPopstate = false; });
+    };
+
+    new MutationObserver(records => {
+      if (!records.some(record => record.attributeName === 'hidden')) return;
+      if (lightboxIsOpen()) {
+        pushLightboxHistory();
+        return;
+      }
+      if (closingFromPopstate) return;
+      if (historyEntryActive && history.state?.[LIGHTBOX_HISTORY_KEY]) {
+        historyEntryActive = false;
+        history.back();
+      } else if (!history.state?.[LIGHTBOX_HISTORY_KEY]) {
+        historyEntryActive = false;
+      }
+    }).observe(lightboxForHistory,{attributes:true,attributeFilter:['hidden']});
+
+    window.addEventListener('popstate', event => {
+      if (lightboxIsOpen()) {
+        historyEntryActive = false;
+        closeLightboxFromHistory();
+        return;
+      }
+      if (!event.state?.[LIGHTBOX_HISTORY_KEY]) historyEntryActive = false;
+    });
+
+    if (lightboxIsOpen()) pushLightboxHistory();
+  }
+
   const robots = document.querySelector('meta[name="robots"]');
   if (robots) {
     const technicalHost = /(?:workers\.dev|github\.io)$/i.test(window.location.hostname);
