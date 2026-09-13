@@ -23,21 +23,27 @@ cat > "$AUTO_SCRIPT" <<EOF
 #!/bin/sh
 set -eu
 export KUZDVOR_SITE_DIR='$SITE_DIR'
-exec /bin/sh '$SITE_DIR/deploy-timeweb.sh'
+exec /bin/sh '$SITE_DIR/deploy-timeweb.sh' >> '$LOG_FILE' 2>&1
 EOF
 chmod 700 "$AUTO_SCRIPT"
 
-CRON_LINE="*/5 * * * * /bin/sh '$AUTO_SCRIPT' >> '$LOG_FILE' 2>&1"
-TMP_CRON="${TMPDIR:-/tmp}/kuzdvor-cron-$$"
-(
-  crontab -l 2>/dev/null | grep -v 'kuzdvor-autodeploy.sh' || true
-  printf '%s\n' "$CRON_LINE"
-) > "$TMP_CRON"
-crontab "$TMP_CRON"
-rm -f "$TMP_CRON"
-
+# Run once now so we know the wrapper itself works.
 /bin/sh "$AUTO_SCRIPT"
 
-echo "Автообновление включено: проверка GitHub каждые 5 минут"
-echo "Лог: $LOG_FILE"
-echo "Команда проверки: crontab -l | grep kuzdvor-autodeploy"
+# Timeweb blocks editing crontab from SSH on virtual hosting. If a cron task
+# already exists, confirm it; otherwise print the exact panel settings needed.
+if crontab -l 2>/dev/null | grep -Fq 'kuzdvor-autodeploy.sh'; then
+  echo "Автообновление уже включено в Crontab"
+  echo "Лог: $LOG_FILE"
+  exit 0
+fi
+
+cat <<EOF
+Подготовка завершена, но Timeweb не разрешает создавать cron-задачи из SSH.
+Добавь задачу вручную в Панели управления → Crontab:
+  Название: kuzdvor-autodeploy
+  Интерпретатор: Сценарий SH
+  Путь до файла: /.local/bin/kuzdvor-autodeploy.sh
+  Расписание: каждые 5 минут (экспертно: минуты */5, остальные поля *)
+Лог обновлений: $LOG_FILE
+EOF
