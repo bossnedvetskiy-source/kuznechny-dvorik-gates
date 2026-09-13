@@ -3,15 +3,21 @@ DirectoryIndex index.html index.htm
 
 RewriteEngine On
 
-# Never expose the repository metadata used for pull-based deployments.
+# Never expose repository metadata or PHP backend internals.
 RewriteRule (^|/)\.git(?:/|$) - [F,L]
+RewriteRule ^backend(?:/|$) - [F,L]
 
-# Transitional backend: keep the current Cloudflare/D1 API working while the
-# public files are served by Timeweb.
+# Shadow PHP/MySQL backend. It is tested independently before the public API is
+# switched away from Cloudflare.
+RewriteRule ^api-local/(.*)$ local-api.php?__route=$1 [QSA,L]
+RewriteRule ^catalog-media-local/(.*)$ local-api.php?__route=catalog-media/$1 [QSA,L]
+
+# Transitional production backend: keep Cloudflare/D1 live until the MySQL
+# import and shadow checks are complete.
 RewriteRule ^api/(.*)$ api-proxy.php?__proxy_path=api/$1 [QSA,L]
 RewriteRule ^catalog-media/(.*)$ api-proxy.php?__proxy_path=catalog-media/$1 [QSA,L]
 
-# Friendly routes used by the current Worker site.
+# Friendly routes used by the current site.
 RewriteRule ^admin/?$ admin.html [L]
 RewriteRule ^vorota/?$ index.html [L]
 RewriteRule ^napravleniya/?$ napravleniya/index.html [L]
@@ -24,10 +30,8 @@ RewriteRule ^napravleniya/?$ napravleniya/index.html [L]
   Header set Referrer-Policy "strict-origin-when-cross-origin"
 </IfModule>
 
-# Deployment helpers and private health markers must never be public.
-# api-proxy.php is intentionally NOT denied here: /api/* rewrites execute it.
-# A direct request to api-proxy.php safely returns 404 because __proxy_path is absent.
-<FilesMatch "^(?:deploy-timeweb\.sh|install-autodeploy\.sh|health-check\.sh|timeweb-build\.txt|\.timeweb-health)$">
+# Deployment/setup helpers and private health markers must never be public.
+<FilesMatch "^(?:deploy-timeweb\.sh|install-autodeploy\.sh|health-check\.sh|setup-timeweb\.php|migrate-from-cloudflare\.php|timeweb-build\.txt|\.timeweb-health)$">
   <IfModule mod_authz_core.c>
     Require all denied
   </IfModule>
