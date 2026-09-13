@@ -374,6 +374,152 @@
   const money = value => new Intl.NumberFormat('ru-RU').format(Math.round(Number(value)) || 0) + ' ₽';
   const productIdForArticle = article => `catalog-${String(article || '').replace(/^Арт\.\s*/,'').toLowerCase().replace('с','s')}`;
 
+  const installConversionEnhancements = () => {
+    const mobileConversionMedia = window.matchMedia('(max-width: 620px)');
+    const catalog = document.getElementById('catalog');
+    const catalogGrid = document.getElementById('catalogGrid');
+
+    const setIfDifferent = (element, value) => {
+      if (element && element.textContent !== value) element.textContent = value;
+    };
+
+    const syncPriceCopy = root => {
+      const scope = root?.querySelectorAll ? root : document;
+      scope.querySelectorAll?.('.product-card .price-stack').forEach(stack => {
+        const rows = stack.querySelectorAll('.price-row');
+        setIfDifferent(rows[0]?.querySelector('small'), 'На ваши подходящие столбы — ворота + калитка + установка');
+        setIfDifferent(rows[1]?.querySelector('small'), 'С новыми усиленными столбами — всё под ключ');
+      });
+      const heroRows = document.querySelectorAll('.hero-prices > div');
+      setIfDifferent(heroRows[0]?.querySelector('small'), 'На ваши подходящие столбы');
+      setIfDifferent(heroRows[0]?.querySelector('span'), 'ворота + калитка + установка · без доставки');
+      setIfDifferent(heroRows[1]?.querySelector('small'), 'С новыми усиленными столбами');
+      setIfDifferent(heroRows[1]?.querySelector('span'), 'ворота + калитка + установка + столбы · без доставки');
+    };
+
+    syncPriceCopy(document);
+    if (catalogGrid) {
+      new MutationObserver(records => {
+        records.forEach(record => record.addedNodes.forEach(node => {
+          if (node.nodeType === 1) syncPriceCopy(node);
+        }));
+      }).observe(catalogGrid,{childList:true,subtree:true});
+    }
+
+    const heroText = document.querySelector('.hero > p');
+    if (heroText && !heroText.querySelector('[data-conversion-hero-note]')) {
+      const note = document.createElement('span');
+      note.dataset.conversionHeroNote = 'true';
+      note.textContent = '38 дизайнов · расчёт без регистрации и телефона · любой цвет профнастила.';
+      note.style.cssText = 'display:block;margin-top:8px;color:rgba(255,255,255,.86);font-weight:800;font-size:12px;line-height:1.45';
+      heroText.append(note);
+    }
+
+    const catalogSummary = document.querySelector('.catalog-summary');
+    if (catalogSummary && !document.querySelector('[data-catalog-start-hint]')) {
+      const hint = document.createElement('div');
+      hint.dataset.catalogStartHint = 'true';
+      hint.textContent = 'Не знаете, с чего начать? Арт.6 отмечен как «Хит продаж».';
+      hint.style.cssText = 'margin-top:8px;padding:9px 11px;border:1px solid rgba(200,152,60,.22);border-radius:10px;background:#faf6ee;color:#6a5a3f;font-size:11px;line-height:1.4;font-weight:700';
+      catalogSummary.after(hint);
+    }
+
+    const packageGrid = document.querySelector('.package-grid');
+    if (packageGrid && !document.querySelector('[data-package-toggle]')) {
+      const toggle = document.createElement('button');
+      toggle.type = 'button';
+      toggle.dataset.packageToggle = 'true';
+      toggle.textContent = 'Показать всё, что входит';
+      toggle.setAttribute('aria-expanded','false');
+      toggle.style.cssText = 'display:none;width:100%;min-height:44px;margin:10px 0 0;padding:10px 14px;border:1px solid rgba(17,18,20,.14);border-radius:11px;background:#fff;color:#4c463f;font:800 11px/1.2 Manrope,Arial,sans-serif;cursor:pointer';
+      packageGrid.after(toggle);
+      let expanded = false;
+      const primaryIndexes = new Set([0,1,4,6]);
+      const syncPackage = () => {
+        const mobile = mobileConversionMedia.matches;
+        const articles = [...packageGrid.querySelectorAll('article')];
+        if (!mobile) {
+          articles.forEach(article => article.style.removeProperty('display'));
+          toggle.style.display = 'none';
+          return;
+        }
+        toggle.style.display = 'block';
+        articles.forEach((article,index) => {
+          const show = expanded || primaryIndexes.has(index);
+          article.style.setProperty('display', show ? 'grid' : 'none', 'important');
+        });
+        toggle.textContent = expanded ? 'Скрыть подробности' : 'Показать всё, что входит';
+        toggle.setAttribute('aria-expanded', String(expanded));
+      };
+      toggle.addEventListener('click', () => {
+        expanded = !expanded;
+        syncPackage();
+        try { window.ym?.(107269914,'reachGoal','package_details_toggle',{open:expanded?1:0}); } catch {}
+      });
+      mobileConversionMedia.addEventListener('change',syncPackage);
+      syncPackage();
+    }
+
+    const workGallery = document.querySelector('.work-gallery');
+    if (workGallery && !workGallery.querySelector('[data-real-work-proof]')) {
+      const proof = document.createElement('div');
+      proof.dataset.realWorkProof = 'true';
+      proof.textContent = 'На фото — реальные выполненные работы: Арт.6, Арт.28 и Арт.35.';
+      proof.style.cssText = 'grid-column:1/-1;margin-top:2px;padding:10px 12px;border-radius:11px;background:#f4f0e8;color:#625a50;font-size:11px;line-height:1.45;font-weight:700;text-align:center';
+      workGallery.append(proof);
+    }
+
+    const trust = document.querySelector('.trust');
+    const faq = document.querySelector('.faq');
+    if (trust && faq && !document.querySelector('[data-order-process]')) {
+      const days = Number(site.productionDays) || 30;
+      const process = document.createElement('section');
+      process.className = 'section-shell';
+      process.dataset.orderProcess = 'true';
+      process.style.cssText = 'padding-top:56px;padding-bottom:56px';
+      process.innerHTML = `
+        <div class="section-head">
+          <div><span class="section-number">04</span><h2>Как проходит заказ</h2></div>
+          <p>Вы заранее понимаете порядок работ и оплаты. На сайте ничего оплачивать не нужно.</p>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px">
+          <article style="padding:17px;border:1px solid rgba(17,18,20,.09);border-radius:15px;background:#fff"><span style="display:block;margin-bottom:8px;color:#a8792e;font-size:10px;font-weight:900">01</span><b style="display:block;margin-bottom:6px;font:18px/1.25 Prata,serif">Выбираете дизайн</b><p style="margin:0;color:#716a61;font-size:11px;line-height:1.5">Смотрите реальные цены и получаете предварительный расчёт по своим размерам.</p></article>
+          <article style="padding:17px;border:1px solid rgba(17,18,20,.09);border-radius:15px;background:#fff"><span style="display:block;margin-bottom:8px;color:#a8792e;font-size:10px;font-weight:900">02</span><b style="display:block;margin-bottom:6px;font:18px/1.25 Prata,serif">Бесплатный замер</b><p style="margin:0;color:#716a61;font-size:11px;line-height:1.5">Мастер проверяет проём, размеры и состояние столбов перед изготовлением.</p></article>
+          <article style="padding:17px;border:1px solid rgba(200,152,60,.28);border-radius:15px;background:#fbf6eb"><span style="display:block;margin-bottom:8px;color:#a8792e;font-size:10px;font-weight:900">03</span><b style="display:block;margin-bottom:6px;font:18px/1.25 Prata,serif">Договор и 50%</b><p style="margin:0;color:#716a61;font-size:11px;line-height:1.5">Согласованную стоимость фиксируем в договоре. При заключении договора — 50% оплаты.</p></article>
+          <article style="padding:17px;border:1px solid rgba(17,18,20,.09);border-radius:15px;background:#fff"><span style="display:block;margin-bottom:8px;color:#a8792e;font-size:10px;font-weight:900">04</span><b style="display:block;margin-bottom:6px;font:18px/1.25 Prata,serif">Изготавливаем</b><p style="margin:0;color:#716a61;font-size:11px;line-height:1.5">Изготавливаем ворота по согласованным размерам. Срок — до ${days} рабочих дней.</p></article>
+          <article style="padding:17px;border:1px solid rgba(17,18,20,.09);border-radius:15px;background:#fff"><span style="display:block;margin-bottom:8px;color:#a8792e;font-size:10px;font-weight:900">05</span><b style="display:block;margin-bottom:6px;font:18px/1.25 Prata,serif">Монтаж и оставшиеся 50%</b><p style="margin:0;color:#716a61;font-size:11px;line-height:1.5">Устанавливаем ворота. Оставшиеся 50% оплачиваются после установки.</p></article>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-top:18px"><a class="button button-primary" href="#catalog" data-order-process-cta>Выбрать ворота и рассчитать</a><span style="color:#746d63;font-size:11px;line-height:1.45;font-weight:700">Без регистрации · без оплаты на сайте · бесплатный замер</span></div>`;
+      faq.before(process);
+      process.querySelector('[data-order-process-cta]')?.addEventListener('click', () => {
+        try { window.ym?.(107269914,'reachGoal','order_process_cta'); } catch {}
+      });
+    }
+
+    const estimateCard = document.querySelector('.estimate-card');
+    const consent = estimateCard?.querySelector('.consent-row');
+    if (estimateCard && consent && !estimateCard.querySelector('[data-payment-assurance]')) {
+      const assurance = document.createElement('div');
+      assurance.dataset.paymentAssurance = 'true';
+      assurance.innerHTML = '<b>Сейчас оплачивать ничего не нужно.</b><span>50% — при заключении договора, оставшиеся 50% — после установки.</span>';
+      assurance.style.cssText = 'display:grid;gap:3px;margin:2px 0 11px;padding:10px 11px;border:1px solid rgba(230,189,105,.26);border-radius:10px;background:rgba(200,152,60,.07);font-size:10px;line-height:1.45';
+      assurance.querySelector('b').style.cssText = 'color:inherit;font-size:11px';
+      assurance.querySelector('span').style.cssText = 'color:inherit;opacity:.74';
+      consent.before(assurance);
+    }
+
+    const finalCtaCopy = document.querySelector('.final-cta > div:first-child');
+    if (finalCtaCopy && !finalCtaCopy.querySelector('[data-final-assurance]')) {
+      const assurance = document.createElement('div');
+      assurance.dataset.finalAssurance = 'true';
+      assurance.textContent = 'Сейчас ничего оплачивать не нужно. 50% — после замера при заключении договора, оставшиеся 50% — после установки.';
+      assurance.style.cssText = 'margin-top:12px;padding:10px 12px;border:1px solid rgba(230,189,105,.24);border-radius:10px;color:rgba(255,255,255,.78);font-size:11px;line-height:1.5;font-weight:700';
+      finalCtaCopy.append(assurance);
+    }
+  };
+
+  installConversionEnhancements();
+
   async function syncExcelDerivedGatePrices() {
     if (!window.GATE_CALC?.ready || !window.GATE_PAGE_API?.productById) return;
     try {
