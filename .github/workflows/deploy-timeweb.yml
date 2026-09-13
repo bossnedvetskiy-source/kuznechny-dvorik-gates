@@ -69,8 +69,7 @@ jobs:
           username: ${{ secrets.TIMEWEB_FTP_USER }}
           password: ${{ secrets.TIMEWEB_FTP_PASSWORD }}
           port: 21
-          protocol: ftps
-          security: strict
+          protocol: ftp
           local-dir: ./timeweb-dist/
           server-dir: ./
           state-name: .ftp-deploy-sync-state.json
