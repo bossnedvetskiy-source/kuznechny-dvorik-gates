@@ -42,6 +42,7 @@ await writeFile(path.join(output, 'napravleniya/index.html'), hubHtml, 'utf8');
 
 await cp(path.join(root, 'timeweb/.htaccess'), path.join(output, '.htaccess'));
 await cp(path.join(root, 'timeweb/api-proxy.php'), path.join(output, 'api-proxy.php'));
+await cp(path.join(root, 'timeweb/deploy-timeweb.sh'), path.join(output, 'deploy-timeweb.sh'));
 
 // A tiny build marker helps verify from the server that a deploy really changed.
 await writeFile(path.join(output, 'timeweb-build.txt'), `${new Date().toISOString()}\n`, 'utf8');
