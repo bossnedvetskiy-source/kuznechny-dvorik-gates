@@ -27,7 +27,7 @@ RewriteRule ^napravleniya/?$ napravleniya/index.html [L]
 # Deployment helpers and private health markers must never be public.
 # api-proxy.php is intentionally NOT denied here: /api/* rewrites execute it.
 # A direct request to api-proxy.php safely returns 404 because __proxy_path is absent.
-<FilesMatch "^(?:deploy-timeweb\.sh|health-check\.sh|timeweb-build\.txt|\.timeweb-health)$">
+<FilesMatch "^(?:deploy-timeweb\.sh|install-autodeploy\.sh|health-check\.sh|timeweb-build\.txt|\.timeweb-health)$">
   <IfModule mod_authz_core.c>
     Require all denied
   </IfModule>
