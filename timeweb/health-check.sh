@@ -29,7 +29,12 @@ grep -q 'Админ-панель' "$TMP_DIR/admin.html" || fail 'admin page mark
 fetch "$BASE_URL/vorota" "$TMP_DIR/vorota.html"
 fetch "$BASE_URL/napravleniya" "$TMP_DIR/napravleniya.html"
 
-# Transitional API proxy.
+# Shadow PHP/MySQL backend must always expose a safe health endpoint, even
+# before the database credentials are configured.
+fetch "$BASE_URL/api-local/health" "$TMP_DIR/local-health.json"
+grep -q '"backend":"timeweb-php"' "$TMP_DIR/local-health.json" || fail 'local PHP backend health marker missing'
+
+# Transitional API proxy remains live until the MySQL import is verified.
 fetch "$BASE_URL/api/catalog-images" "$TMP_DIR/catalog.json"
 grep -q '"galleries"' "$TMP_DIR/catalog.json" || fail 'catalog API response invalid'
 
@@ -49,11 +54,11 @@ status=$(curl --silent --show-error --max-time 25 \
   "$BASE_URL/api-proxy.php")
 [ "$status" = '404' ] || fail "direct api-proxy.php expected 404, got HTTP $status"
 
-# Repository metadata must not be public.
-status=$(curl --silent --show-error --max-time 25 \
-  --output /dev/null --write-out '%{http_code}' \
-  "$BASE_URL/.git/config")
+# Repository/backend internals must not be public.
+status=$(curl --silent --show-error --max-time 25 --output /dev/null --write-out '%{http_code}' "$BASE_URL/.git/config")
 [ "$status" != '200' ] || fail '.git/config is publicly accessible'
+status=$(curl --silent --show-error --max-time 25 --output /dev/null --write-out '%{http_code}' "$BASE_URL/backend/schema.mysql.sql")
+[ "$status" != '200' ] || fail 'backend internals are publicly accessible'
 
 commit=$(git rev-parse --short HEAD 2>/dev/null || printf 'unknown')
 printf 'ok\nchecked_at=%s\ncommit=%s\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" "$commit" > .timeweb-health
