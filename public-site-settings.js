@@ -8,17 +8,20 @@
   };
 
   const enhanceColorPicker = picker => {
-    if (!picker || picker.dataset.optionalColorUi === 'true') return;
-    picker.dataset.optionalColorUi = 'true';
-
+    if (!picker) return;
+    const alreadyEnhanced = picker.dataset.optionalColorUi === 'true';
     const head = picker.querySelector('.profile-color-picker-head');
     const title = head?.querySelector('strong');
     const status = picker.querySelector('.profile-color-status');
     const swatches = picker.querySelector('.profile-color-swatches');
     const note = picker.querySelector('.profile-color-note');
-    if (title) title.textContent = 'Любой цвет профнастила';
-    if (note) note.textContent = 'Цвет можно выбрать позже — на предварительную стоимость он не влияет.';
+    const desiredTitle = 'Любой цвет профнастила';
+    const desiredNote = 'Цвет можно выбрать позже — на предварительную стоимость он не влияет.';
+    if (title && title.textContent !== desiredTitle) title.textContent = desiredTitle;
+    if (note && note.textContent !== desiredNote) note.textContent = desiredNote;
+    if (alreadyEnhanced) return;
 
+    picker.dataset.optionalColorUi = 'true';
     if (status) status.style.display = 'none';
     if (swatches) swatches.style.display = 'none';
     if (note) note.style.display = 'none';
@@ -53,7 +56,12 @@
   if (catalogGridForBadges) {
     syncCatalogDecor(catalogGridForBadges);
     new MutationObserver(records => {
-      records.forEach(record => record.addedNodes.forEach(node => syncCatalogDecor(node)));
+      records.forEach(record => {
+        const target = record.target?.nodeType === 1 ? record.target : record.target?.parentElement;
+        const picker = target?.matches?.('.profile-color-picker') ? target : target?.closest?.('.profile-color-picker');
+        if (picker) enhanceColorPicker(picker);
+        record.addedNodes.forEach(node => syncCatalogDecor(node));
+      });
     }).observe(catalogGridForBadges,{childList:true,subtree:true});
   }
 
