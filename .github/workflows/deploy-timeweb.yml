@@ -1,0 +1,78 @@
+name: Deploy test site to Timeweb
+
+on:
+  push:
+    branches: [timeweb-migration]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: timeweb-test-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: timeweb-test
+      url: http://kuzdvor.tw1.ru/
+
+    steps:
+      - name: Checkout migration branch
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Check Timeweb credentials
+        shell: bash
+        env:
+          FTP_HOST: ${{ secrets.TIMEWEB_FTP_HOST }}
+          FTP_USER: ${{ secrets.TIMEWEB_FTP_USER }}
+          FTP_PASSWORD: ${{ secrets.TIMEWEB_FTP_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "${FTP_HOST:-}" || { echo '::error::TIMEWEB_FTP_HOST is missing'; exit 1; }
+          test -n "${FTP_USER:-}" || { echo '::error::TIMEWEB_FTP_USER is missing'; exit 1; }
+          test -n "${FTP_PASSWORD:-}" || { echo '::error::TIMEWEB_FTP_PASSWORD is missing'; exit 1; }
+
+      - name: Install build dependencies
+        run: npm ci --include=dev --no-audit --no-fund
+
+      - name: Build current site
+        run: npm run build
+
+      - name: Prepare Timeweb package
+        run: node scripts/build-timeweb.mjs
+
+      - name: Verify package
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s timeweb-dist/index.html
+          test -s timeweb-dist/admin.html
+          test -s timeweb-dist/site.css
+          test -s timeweb-dist/site.bundle.js
+          test -s timeweb-dist/api-proxy.php
+          test -s timeweb-dist/.htaccess
+          echo "Prepared $(find timeweb-dist -type f | wc -l) files for Timeweb"
+
+      - name: Deploy to isolated Timeweb FTP root
+        uses: SamKirkland/FTP-Deploy-Action@v4.4.0
+        with:
+          server: ${{ secrets.TIMEWEB_FTP_HOST }}
+          username: ${{ secrets.TIMEWEB_FTP_USER }}
+          password: ${{ secrets.TIMEWEB_FTP_PASSWORD }}
+          port: 21
+          protocol: ftps
+          security: strict
+          local-dir: ./timeweb-dist/
+          server-dir: ./
+          state-name: .ftp-deploy-sync-state.json
+          log-level: standard
+          timeout: 120000
