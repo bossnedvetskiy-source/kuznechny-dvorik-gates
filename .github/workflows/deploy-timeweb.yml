@@ -1,4 +1,4 @@
-name: Deploy test site to Timeweb
+name: Build Timeweb test site
 
 on:
   push:
@@ -6,18 +6,15 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
-  group: timeweb-test-deploy
+  group: timeweb-test-build
   cancel-in-progress: true
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
-    environment:
-      name: timeweb-test
-      url: http://kuzdvor.tw1.ru/
 
     steps:
       - name: Checkout migration branch
@@ -28,18 +25,6 @@ jobs:
         with:
           node-version: '22'
           cache: npm
-
-      - name: Check Timeweb credentials
-        shell: bash
-        env:
-          FTP_HOST: ${{ secrets.TIMEWEB_FTP_HOST }}
-          FTP_USER: ${{ secrets.TIMEWEB_FTP_USER }}
-          FTP_PASSWORD: ${{ secrets.TIMEWEB_FTP_PASSWORD }}
-        run: |
-          set -euo pipefail
-          test -n "${FTP_HOST:-}" || { echo '::error::TIMEWEB_FTP_HOST is missing'; exit 1; }
-          test -n "${FTP_USER:-}" || { echo '::error::TIMEWEB_FTP_USER is missing'; exit 1; }
-          test -n "${FTP_PASSWORD:-}" || { echo '::error::TIMEWEB_FTP_PASSWORD is missing'; exit 1; }
 
       - name: Install build dependencies
         run: npm ci --include=dev --no-audit --no-fund
@@ -62,16 +47,18 @@ jobs:
           test -s timeweb-dist/.htaccess
           echo "Prepared $(find timeweb-dist -type f | wc -l) files for Timeweb"
 
-      - name: Deploy to isolated Timeweb FTP root
-        uses: SamKirkland/FTP-Deploy-Action@v4.4.0
-        with:
-          server: ${{ secrets.TIMEWEB_FTP_HOST }}
-          username: ${{ secrets.TIMEWEB_FTP_USER }}
-          password: ${{ secrets.TIMEWEB_FTP_PASSWORD }}
-          port: 21
-          protocol: ftp
-          local-dir: ./timeweb-dist/
-          server-dir: ./
-          state-name: .ftp-deploy-sync-state.json
-          log-level: standard
-          timeout: 120000
+      - name: Publish generated files to timeweb-public branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/timeweb-dist
+          cp -a timeweb-dist /tmp/timeweb-dist
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout --orphan timeweb-public
+          git rm -rf . || true
+          git clean -fdx
+          cp -a /tmp/timeweb-dist/. .
+          git add -A
+          git commit -m "Build Timeweb site from ${GITHUB_SHA}"
+          git push --force origin HEAD:timeweb-public
