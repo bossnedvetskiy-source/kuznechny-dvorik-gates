@@ -1,0 +1,82 @@
+name: Check live Timeweb test site
+
+on:
+  push:
+    branches: [timeweb-migration]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: timeweb-live-smoke
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: DNS and HTTPS
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo 'IPv4:'
+          getent ahostsv4 kuzdvor.tw1.ru | head
+          echo 'IPv6:'
+          getent ahostsv6 kuzdvor.tw1.ru | head || true
+          curl --fail --show-error --silent --location --max-time 20 \
+            --dump-header /tmp/root.headers \
+            --output /tmp/root.html \
+            https://kuzdvor.tw1.ru/
+          grep -qi '^HTTP/.* 200' /tmp/root.headers
+          grep -qi '^x-robots-tag:.*noindex' /tmp/root.headers
+          grep -q 'Кузнечный Дворик' /tmp/root.html
+          grep -q 'site.bundle.js' /tmp/root.html
+          grep -q 'site.css' /tmp/root.html
+
+      - name: Static assets and routes
+        shell: bash
+        run: |
+          set -euo pipefail
+          for url in \
+            'https://kuzdvor.tw1.ru/site.css' \
+            'https://kuzdvor.tw1.ru/site.bundle.js' \
+            'https://kuzdvor.tw1.ru/admin' \
+            'https://kuzdvor.tw1.ru/vorota' \
+            'https://kuzdvor.tw1.ru/napravleniya'; do
+            echo "Checking $url"
+            curl --fail --show-error --silent --location --max-time 20 --output /dev/null "$url"
+          done
+          curl --fail --show-error --silent --location --max-time 20 https://kuzdvor.tw1.ru/admin | grep -q 'Админ-панель'
+
+      - name: Transitional API proxy
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --show-error --silent --location --max-time 30 \
+            https://kuzdvor.tw1.ru/api/catalog-images > /tmp/catalog.json
+          jq -e '.galleries | type == "object"' /tmp/catalog.json >/dev/null
+
+          curl --fail --show-error --silent --location --max-time 30 \
+            --get --data-urlencode 'place=Стерлитамак' \
+            https://kuzdvor.tw1.ru/api/delivery > /tmp/delivery.json
+          jq -e '.distanceKm | type == "number"' /tmp/delivery.json >/dev/null
+          jq -e '.shortName | type == "string"' /tmp/delivery.json >/dev/null
+
+          status=$(curl --show-error --silent --location --max-time 30 \
+            --output /tmp/admin-unauthorized.json --write-out '%{http_code}' \
+            https://kuzdvor.tw1.ru/api/admin/site-settings)
+          test "$status" = '401'
+          jq -e '.error | type == "string"' /tmp/admin-unauthorized.json >/dev/null
+
+      - name: Sensitive files are blocked
+        shell: bash
+        run: |
+          set -euo pipefail
+          for path in '.git/config' 'timeweb-build.txt' 'deploy-timeweb.sh' 'api-proxy.php'; do
+            status=$(curl --show-error --silent --max-time 20 \
+              --output /dev/null --write-out '%{http_code}' \
+              "https://kuzdvor.tw1.ru/$path")
+            echo "$path -> $status"
+            test "$status" != '200'
+          done
