@@ -44,7 +44,17 @@ jobs:
           test -s timeweb-dist/site.css
           test -s timeweb-dist/site.bundle.js
           test -s timeweb-dist/api-proxy.php
+          test -s timeweb-dist/local-api.php
+          test -s timeweb-dist/backend/bootstrap.php
+          test -s timeweb-dist/backend/schema.mysql.sql
+          test -s timeweb-dist/backend/defaults.json
+          test -s timeweb-dist/setup-timeweb.php
+          test -s timeweb-dist/migrate-from-cloudflare.php
           test -s timeweb-dist/.htaccess
+          php -l timeweb-dist/local-api.php
+          php -l timeweb-dist/backend/bootstrap.php
+          php -l timeweb-dist/setup-timeweb.php
+          php -l timeweb-dist/migrate-from-cloudflare.php
           echo "Prepared $(find timeweb-dist -type f | wc -l) files for Timeweb"
 
       - name: Publish generated files to timeweb-public branch
