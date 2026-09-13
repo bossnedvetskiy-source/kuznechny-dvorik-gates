@@ -68,9 +68,155 @@
   const lightboxForHistory = document.getElementById('lightbox');
   if (lightboxForHistory) {
     const LIGHTBOX_HISTORY_KEY = '__kuzdvorLightbox';
+    const mobileLightboxMedia = window.matchMedia('(max-width: 620px)');
+    const lightboxStage = lightboxForHistory.querySelector('.lightbox-stage');
+    const lightboxImage = document.getElementById('lightboxImage');
+    const lightboxClose = document.getElementById('lightboxClose');
+    const lightboxPrevious = document.getElementById('lightboxPrevious');
+    const lightboxNext = document.getElementById('lightboxNext');
+    const lightboxCaption = lightboxForHistory.querySelector('.lightbox-caption');
+    const lightboxTitle = document.getElementById('lightboxTitle');
+    const lightboxPrice = document.getElementById('lightboxPrice');
+    const lightboxCounter = document.getElementById('lightboxCounter');
+    const lightboxThumbnails = lightboxForHistory.querySelector('.lightbox-thumbnails');
+    const mobileCta = document.querySelector('.mobile-cta');
     let historyEntryActive = false;
     let closingFromPopstate = false;
+    let pointerStartX = 0;
+    let pointerStartY = 0;
+    let pointerActive = false;
     const lightboxIsOpen = () => !lightboxForHistory.hidden;
+    const important = (element, property, value) => element?.style.setProperty(property, value, 'important');
+    const clearStyle = (element, property) => element?.style.removeProperty(property);
+
+    let lightboxMobileMeta = lightboxCaption?.querySelector('[data-mobile-lightbox-meta]') || null;
+    if (lightboxCaption && !lightboxMobileMeta) {
+      lightboxMobileMeta = document.createElement('div');
+      lightboxMobileMeta.dataset.mobileLightboxMeta = 'true';
+      lightboxCaption.append(lightboxMobileMeta);
+    }
+
+    const updateLightboxMeta = () => {
+      if (!lightboxMobileMeta) return;
+      const title = String(lightboxTitle?.textContent || '').trim();
+      const count = String(lightboxCounter?.textContent || '').trim().replace(/^фото\s+/i,'');
+      lightboxMobileMeta.textContent = [title, count ? `фото ${count}` : ''].filter(Boolean).join(' · ');
+    };
+
+    const restoreDesktopLightboxStyles = () => {
+      const elements = [lightboxForHistory, lightboxStage, lightboxImage, lightboxClose, lightboxPrevious, lightboxNext, lightboxCaption, lightboxTitle, lightboxPrice, lightboxCounter, lightboxThumbnails, lightboxMobileMeta];
+      const properties = ['background','padding','gap','grid-template-rows','align-items','width','height','max-width','max-height','display','grid-template-columns','place-items','box-sizing','position','inset','top','right','left','bottom','z-index','border','border-radius','box-shadow','color','font-size','font-weight','line-height','text-align','justify-content','min-height','object-fit','object-position','transform','margin','touch-action','user-select','-webkit-user-select','backdrop-filter','-webkit-backdrop-filter','opacity'];
+      elements.forEach(element => properties.forEach(property => clearStyle(element, property)));
+      clearStyle(mobileCta, 'display');
+    };
+
+    const syncMobileLightboxPresentation = () => {
+      const mobile = mobileLightboxMedia.matches;
+      const open = lightboxIsOpen();
+      if (!mobile) {
+        restoreDesktopLightboxStyles();
+        return;
+      }
+
+      important(lightboxForHistory, 'background', 'rgba(7,8,10,.985)');
+      important(lightboxForHistory, 'padding', '0');
+      important(lightboxForHistory, 'gap', '0');
+      important(lightboxForHistory, 'grid-template-rows', 'minmax(0,1fr) auto');
+      important(lightboxForHistory, 'align-items', 'stretch');
+
+      important(lightboxStage, 'position', 'relative');
+      important(lightboxStage, 'width', '100vw');
+      important(lightboxStage, 'height', 'calc(100dvh - 58px)');
+      important(lightboxStage, 'max-width', 'none');
+      important(lightboxStage, 'max-height', 'none');
+      important(lightboxStage, 'display', 'grid');
+      important(lightboxStage, 'grid-template-columns', '1fr');
+      important(lightboxStage, 'gap', '0');
+      important(lightboxStage, 'place-items', 'center');
+      important(lightboxStage, 'padding', '58px 0 10px');
+      important(lightboxStage, 'box-sizing', 'border-box');
+
+      important(lightboxImage, 'width', '100vw');
+      important(lightboxImage, 'height', '100%');
+      important(lightboxImage, 'max-width', '100vw');
+      important(lightboxImage, 'max-height', 'calc(100dvh - 126px)');
+      important(lightboxImage, 'padding', '0');
+      important(lightboxImage, 'margin', '0');
+      important(lightboxImage, 'object-fit', 'contain');
+      important(lightboxImage, 'object-position', 'center');
+      important(lightboxImage, 'background', 'transparent');
+      important(lightboxImage, 'border', '0');
+      important(lightboxImage, 'border-radius', '0');
+      important(lightboxImage, 'box-shadow', 'none');
+      important(lightboxImage, 'transform', 'none');
+      important(lightboxImage, 'touch-action', 'manipulation');
+      important(lightboxImage, 'user-select', 'none');
+      important(lightboxImage, '-webkit-user-select', 'none');
+      if (lightboxImage) lightboxImage.draggable = false;
+
+      important(lightboxClose, 'position', 'fixed');
+      important(lightboxClose, 'top', 'max(12px, env(safe-area-inset-top))');
+      important(lightboxClose, 'right', 'max(12px, env(safe-area-inset-right))');
+      important(lightboxClose, 'left', 'auto');
+      important(lightboxClose, 'bottom', 'auto');
+      important(lightboxClose, 'z-index', '10002');
+      important(lightboxClose, 'width', '46px');
+      important(lightboxClose, 'height', '46px');
+      important(lightboxClose, 'background', 'rgba(16,17,20,.78)');
+      important(lightboxClose, 'border', '1px solid rgba(255,255,255,.28)');
+      important(lightboxClose, 'border-radius', '50%');
+      important(lightboxClose, 'box-shadow', '0 8px 24px rgba(0,0,0,.34)');
+      important(lightboxClose, 'color', '#fff');
+      important(lightboxClose, 'backdrop-filter', 'blur(8px)');
+      important(lightboxClose, '-webkit-backdrop-filter', 'blur(8px)');
+
+      [lightboxPrevious, lightboxNext].forEach(button => {
+        important(button, 'position', 'absolute');
+        important(button, 'top', '50%');
+        important(button, 'bottom', 'auto');
+        important(button, 'z-index', '10001');
+        important(button, 'width', '42px');
+        important(button, 'height', '42px');
+        important(button, 'transform', 'translateY(-50%)');
+        important(button, 'background', 'rgba(12,13,15,.74)');
+        important(button, 'border', '1px solid rgba(255,255,255,.24)');
+        important(button, 'border-radius', '50%');
+        important(button, 'box-shadow', '0 6px 20px rgba(0,0,0,.3)');
+        important(button, 'color', '#fff');
+        important(button, 'backdrop-filter', 'blur(8px)');
+        important(button, '-webkit-backdrop-filter', 'blur(8px)');
+      });
+      important(lightboxPrevious, 'left', '8px');
+      important(lightboxPrevious, 'right', 'auto');
+      important(lightboxNext, 'right', '8px');
+      important(lightboxNext, 'left', 'auto');
+
+      important(lightboxCaption, 'display', 'flex');
+      important(lightboxCaption, 'align-items', 'center');
+      important(lightboxCaption, 'justify-content', 'center');
+      important(lightboxCaption, 'min-height', '58px');
+      important(lightboxCaption, 'padding', '8px 16px max(12px, env(safe-area-inset-bottom))');
+      important(lightboxCaption, 'box-sizing', 'border-box');
+      important(lightboxCaption, 'background', 'rgba(7,8,10,.985)');
+      important(lightboxCaption, 'color', '#fff');
+      important(lightboxCaption, 'text-align', 'center');
+
+      important(lightboxTitle, 'display', 'none');
+      important(lightboxPrice, 'display', 'none');
+      important(lightboxCounter, 'display', 'none');
+      important(lightboxThumbnails, 'display', 'none');
+      important(lightboxMobileMeta, 'display', 'block');
+      important(lightboxMobileMeta, 'max-width', 'calc(100vw - 32px)');
+      important(lightboxMobileMeta, 'color', 'rgba(255,255,255,.9)');
+      important(lightboxMobileMeta, 'font-size', '13px');
+      important(lightboxMobileMeta, 'font-weight', '800');
+      important(lightboxMobileMeta, 'line-height', '1.35');
+      important(lightboxMobileMeta, 'text-align', 'center');
+
+      if (open) important(mobileCta, 'display', 'none');
+      else clearStyle(mobileCta, 'display');
+      updateLightboxMeta();
+    };
 
     const pushLightboxHistory = () => {
       if (history.state?.[LIGHTBOX_HISTORY_KEY]) {
@@ -86,11 +232,13 @@
       closingFromPopstate = true;
       lightboxForHistory.hidden = true;
       document.body.style.overflow = '';
+      syncMobileLightboxPresentation();
       requestAnimationFrame(() => { closingFromPopstate = false; });
     };
 
     new MutationObserver(records => {
       if (!records.some(record => record.attributeName === 'hidden')) return;
+      syncMobileLightboxPresentation();
       if (lightboxIsOpen()) {
         pushLightboxHistory();
         return;
@@ -104,6 +252,34 @@
       }
     }).observe(lightboxForHistory,{attributes:true,attributeFilter:['hidden']});
 
+    const metaObserver = new MutationObserver(() => updateLightboxMeta());
+    if (lightboxTitle) metaObserver.observe(lightboxTitle,{childList:true,characterData:true,subtree:true});
+    if (lightboxCounter) metaObserver.observe(lightboxCounter,{childList:true,characterData:true,subtree:true});
+
+    lightboxStage?.addEventListener('pointerdown', event => {
+      if (!mobileLightboxMedia.matches || !lightboxIsOpen()) return;
+      pointerStartX = event.clientX;
+      pointerStartY = event.clientY;
+      pointerActive = true;
+    });
+    lightboxStage?.addEventListener('pointercancel', () => { pointerActive = false; });
+    lightboxStage?.addEventListener('pointerup', event => {
+      if (!pointerActive || !mobileLightboxMedia.matches || !lightboxIsOpen()) return;
+      pointerActive = false;
+      const deltaX = event.clientX - pointerStartX;
+      const deltaY = event.clientY - pointerStartY;
+      if (Math.abs(deltaX) < 48 || Math.abs(deltaX) < Math.abs(deltaY) * 1.15) return;
+      const target = deltaX < 0 ? lightboxNext : lightboxPrevious;
+      if (!target || target.hidden) return;
+      target.click();
+      try { window.ym?.(107269914, 'reachGoal', 'catalog_photo_swipe', {direction:deltaX < 0 ? 'next' : 'previous'}); } catch {}
+    });
+    lightboxImage?.addEventListener('dragstart', event => event.preventDefault());
+    lightboxStage?.addEventListener('click', event => {
+      if (!mobileLightboxMedia.matches || !lightboxIsOpen()) return;
+      if (event.target === lightboxStage) lightboxClose?.click();
+    });
+
     window.addEventListener('popstate', event => {
       if (lightboxIsOpen()) {
         historyEntryActive = false;
@@ -113,6 +289,8 @@
       if (!event.state?.[LIGHTBOX_HISTORY_KEY]) historyEntryActive = false;
     });
 
+    mobileLightboxMedia.addEventListener('change', syncMobileLightboxPresentation);
+    syncMobileLightboxPresentation();
     if (lightboxIsOpen()) pushLightboxHistory();
   }
 
