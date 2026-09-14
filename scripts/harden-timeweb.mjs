@@ -74,9 +74,9 @@ api = replaceExactlyOnce(
 );
 await writeFile(apiPath, api, 'utf8');
 
-const sourceSha = String(process.env.GITHUB_SHA || '').trim();
+const sourceSha = String(process.env.KUZDVOR_SOURCE_SHA || process.env.GITHUB_SHA || '').trim();
 if (!/^[0-9a-f]{40}$/i.test(sourceSha)) {
-  throw new Error('Timeweb hardening: GITHUB_SHA is unavailable or invalid');
+  throw new Error('Timeweb hardening: source SHA is unavailable or invalid');
 }
 await writeFile(
   path.join(output, 'deployment-version.json'),
