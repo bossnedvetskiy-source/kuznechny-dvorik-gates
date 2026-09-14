@@ -52,6 +52,12 @@ jobs:
           test -s timeweb-dist/admin.html
           test -s timeweb-dist/site.css
           test -s timeweb-dist/site.bundle.js
+          test -s timeweb-dist/xlsx.bundle.js
+          grep -Fq '<script src="/xlsx.bundle.js"></script>' timeweb-dist/admin.html
+          if grep -Fq 'unsupported format' timeweb-dist/admin.html; then
+            echo 'XLSX library was inlined into admin HTML again' >&2
+            exit 1
+          fi
           test -s timeweb-dist/api-proxy.php
           test -s timeweb-dist/local-api.php
           test -s timeweb-dist/migrate-public-catalog.php
