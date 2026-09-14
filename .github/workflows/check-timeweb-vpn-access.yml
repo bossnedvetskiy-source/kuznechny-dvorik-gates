@@ -1,0 +1,106 @@
+name: Check Timeweb VPN access
+
+on:
+  push:
+    branches: [diagnostics-vpn]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Direct external probe
+        shell: bash
+        run: |
+          set -uo pipefail
+          echo '=== GitHub runner direct HTTPS ==='
+          curl -sSIL --connect-timeout 10 --max-time 25 https://kuzdvor.tw1.ru/ || true
+          echo
+          echo '=== DNS ==='
+          getent ahosts kuzdvor.tw1.ru || true
+
+      - name: Multi-country HTTP probe via Check-Host
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, time, urllib.parse, urllib.request
+
+          target='https://kuzdvor.tw1.ru/'
+          def get_json(url):
+              req=urllib.request.Request(url, headers={'Accept':'application/json','User-Agent':'Mozilla/5.0'})
+              with urllib.request.urlopen(req, timeout=30) as r:
+                  return json.loads(r.read().decode('utf-8'))
+
+          q=urllib.parse.urlencode({'host': target, 'max_nodes': 25})
+          start=get_json('https://check-host.net/check-http?'+q)
+          print('REQUEST', start.get('request_id'))
+          print('REPORT', start.get('permanent_link'))
+          nodes=start.get('nodes') or {}
+          rid=start['request_id']
+          result={}
+          for _ in range(8):
+              time.sleep(3)
+              result=get_json(f'https://check-host.net/check-result/{rid}')
+              if result and all(v is not None for v in result.values()):
+                  break
+
+          print('\n=== MULTI-COUNTRY RESULTS ===')
+          ok_count=0; fail_count=0
+          rows=[]
+          for node, meta in nodes.items():
+              country=meta[1] if len(meta)>1 else '?'
+              city=meta[2] if len(meta)>2 else '?'
+              value=result.get(node)
+              status='PENDING'; detail=''
+              if value is None:
+                  status='PENDING'
+              else:
+                  try:
+                      item=value[0][0] if isinstance(value, list) and value and isinstance(value[0], list) and value[0] and isinstance(value[0][0], list) else value[0]
+                      if isinstance(item, list):
+                          success=item[0]
+                          detail=' | '.join(str(x) for x in item[1:])
+                          status='OK' if success==1 else 'FAIL'
+                      else:
+                          detail=str(value)
+                          status='UNKNOWN'
+                  except Exception:
+                      detail=str(value)
+                      status='UNKNOWN'
+              if status=='OK': ok_count+=1
+              elif status=='FAIL': fail_count+=1
+              rows.append((country, city, node, status, detail))
+          for row in sorted(rows):
+              print(f'{row[0]:18} {row[1]:18} {row[3]:7} {row[2]:32} {row[4]}')
+          print(f'\nSUMMARY ok={ok_count} fail={fail_count} total={len(rows)}')
+          with open('/tmp/check-host-start.json','w') as f: json.dump(start,f,ensure_ascii=False,indent=2)
+          with open('/tmp/check-host-result.json','w') as f: json.dump(result,f,ensure_ascii=False,indent=2)
+          PY
+
+      - name: Multi-country TCP 443 probe via Check-Host
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, time, urllib.parse, urllib.request
+          target='kuzdvor.tw1.ru:443'
+          def get_json(url):
+              req=urllib.request.Request(url, headers={'Accept':'application/json','User-Agent':'Mozilla/5.0'})
+              with urllib.request.urlopen(req, timeout=30) as r:
+                  return json.loads(r.read().decode('utf-8'))
+          q=urllib.parse.urlencode({'host': target, 'max_nodes': 25})
+          start=get_json('https://check-host.net/check-tcp?'+q)
+          rid=start['request_id']; nodes=start.get('nodes') or {}
+          result={}
+          for _ in range(8):
+              time.sleep(3)
+              result=get_json(f'https://check-host.net/check-result/{rid}')
+              if result and all(v is not None for v in result.values()): break
+          print('=== TCP 443 RESULTS ===')
+          for node, meta in sorted(nodes.items(), key=lambda kv:(kv[1][1],kv[1][2])):
+              print(meta[1], meta[2], node, json.dumps(result.get(node), ensure_ascii=False))
+          PY
