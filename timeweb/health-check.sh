@@ -26,7 +26,7 @@ fetch_local_api() {
 }
 
 # Main page and critical static assets.
-fetch "$BASE_URL/" "$TMP_DIR/index.html"
+curl --fail --silent --show-error --location --max-time 25 -D "$TMP_DIR/index.headers" "$BASE_URL/" -o "$TMP_DIR/index.html"
 grep -q 'Кузнечный Дворик' "$TMP_DIR/index.html" || fail 'main page marker missing'
 grep -q 'site.bundle.js' "$TMP_DIR/index.html" || fail 'site.bundle.js reference missing'
 grep -q 'site.css' "$TMP_DIR/index.html" || fail 'site.css reference missing'
@@ -38,12 +38,23 @@ grep -q '"@type":"LocalBusiness"' "$TMP_DIR/index.html" || fail 'LocalBusiness s
 grep -q '"@id":"https://kuzdvor.tw1.ru/#business"' "$TMP_DIR/index.html" || fail 'LocalBusiness schema id missing'
 grep -q '"telephone":"+79373296750"' "$TMP_DIR/index.html" || fail 'LocalBusiness telephone missing'
 grep -q '"addressLocality":"Мелеуз"' "$TMP_DIR/index.html" || fail 'LocalBusiness locality missing'
+if grep -Eiq '^X-Robots-Tag:.*(noindex|nofollow|noarchive)' "$TMP_DIR/index.headers"; then
+  fail 'main page is blocked by X-Robots-Tag'
+fi
 if grep -qi 'noindex' "$TMP_DIR/index.html"; then
   fail 'main page is accidentally noindexed'
 fi
 if grep -qi 'workers\.dev' "$TMP_DIR/index.html"; then
   fail 'main page still references Cloudflare Workers'
 fi
+
+# /vorota is a historical alias; it must redirect to the single canonical root URL.
+curl --silent --show-error --max-time 25 -D "$TMP_DIR/vorota-redirect.headers" -o /dev/null "$BASE_URL/vorota"
+vorota_status=$(awk 'NR==1{print $2}' "$TMP_DIR/vorota-redirect.headers")
+vorota_location=$(awk 'BEGIN{IGNORECASE=1} /^location:/{sub(/\r$/,"",$2); print $2; exit}' "$TMP_DIR/vorota-redirect.headers")
+case "$vorota_status" in 301|308) ;; *) fail "/vorota must permanently redirect, got HTTP ${vorota_status:-missing}" ;; esac
+case "$vorota_location" in https://kuzdvor.tw1.ru/|/) ;; *) fail "unexpected /vorota redirect target: ${vorota_location:-missing}" ;; esac
+
 fetch "$BASE_URL/robots.txt" "$TMP_DIR/robots.txt"
 grep -q '^User-agent: \*$' "$TMP_DIR/robots.txt" || fail 'robots.txt is invalid'
 grep -q '^Allow: /$' "$TMP_DIR/robots.txt" || fail 'robots.txt does not allow the public site'
@@ -63,7 +74,6 @@ if grep -q 'unsupported format' "$TMP_DIR/admin.html"; then
 fi
 fetch "$BASE_URL/xlsx.bundle.js" "$TMP_DIR/xlsx.bundle.js"
 grep -q 'xlsx.js' "$TMP_DIR/xlsx.bundle.js" || fail 'XLSX bundle invalid'
-fetch "$BASE_URL/vorota" "$TMP_DIR/vorota.html"
 fetch "$BASE_URL/napravleniya" "$TMP_DIR/napravleniya.html"
 if grep -qi 'noindex' "$TMP_DIR/napravleniya.html"; then
   fail 'directions page is accidentally noindexed'
