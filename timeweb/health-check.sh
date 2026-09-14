@@ -89,6 +89,23 @@ grep -q '"configured":true' "$TMP_DIR/health.json" || fail 'local backend is not
 grep -q '"db":true' "$TMP_DIR/health.json" || fail 'local MySQL connection failed'
 grep -q '"ok":true' "$TMP_DIR/health.json" || fail 'local backend health is not OK'
 
+# Verify the same PHP pricing engine that protects submitted leads actually runs
+# on Timeweb. The default Art.6 control is immutable; the runtime calculation may
+# change after a valid Excel import but must remain a sane positive number.
+quote_check=$(php -r '
+require __DIR__ . "/backend/bootstrap.php";
+require __DIR__ . "/backend/excel-quote-validation.php";
+$defaults = kd_defaults();
+$base = kd_gate_calculate_product("6", 3.4, 1.8, 1.0, 1.8, $defaults["gateCalcPrices"] ?? []);
+if ($base !== 56600) { fwrite(STDERR, "default Art.6=".$base); exit(11); }
+$runtime = kd_gate_calculate_product("6", 3.4, 1.8, 1.0, 1.8, kd_gate_runtime_price_inputs());
+if ($runtime < 10000 || $runtime > 1000000) { fwrite(STDERR, "runtime Art.6=".$runtime); exit(12); }
+$standards = kd_gate_standard_prices(kd_gate_runtime_price_inputs());
+if (count($standards) !== 38 || !isset($standards["6"])) { fwrite(STDERR, "standard model set incomplete"); exit(13); }
+echo "default=".$base." runtime=".$runtime." models=".count($standards);
+' 2>&1) || fail "PHP gate quote engine failed: $quote_check"
+printf 'Pricing engine OK (%s)\n' "$quote_check"
+
 fetch_local_api "$BASE_URL/api/catalog-images" "$TMP_DIR/catalog.json" "$TMP_DIR/catalog.headers"
 grep -q '"galleries"' "$TMP_DIR/catalog.json" || fail 'catalog API response invalid'
 
