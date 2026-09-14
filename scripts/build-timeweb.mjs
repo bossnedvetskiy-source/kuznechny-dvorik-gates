@@ -32,6 +32,13 @@ function noindex(html) {
   return html.replace(/<head>/i, '<head>\n  <meta name="robots" content="noindex,nofollow,noarchive">');
 }
 
+function addJsonLd(html, data) {
+  const json = JSON.stringify(data).replace(/</g, '\\u003c');
+  const script = `  <script type="application/ld+json">${json}</script>\n`;
+  if (!/<\/head>/i.test(html)) throw new Error('Не найден </head> для JSON-LD');
+  return html.replace(/<\/head>/i, `${script}</head>`);
+}
+
 async function windowValue(file, key) {
   const code = await readFile(path.join(root, file), 'utf8');
   const sandbox = { window: {} };
@@ -42,8 +49,35 @@ async function windowValue(file, key) {
   return JSON.parse(JSON.stringify(value));
 }
 
+const localBusinessSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'LocalBusiness',
+  '@id': `${publicOrigin}/#business`,
+  name: 'Кузнечный ДворикЪ',
+  url: `${publicOrigin}/`,
+  telephone: '+79373296750',
+  image: `${publicOrigin}/hero-gates.jpg`,
+  description: 'Изготовление ворот с калиткой и других металлоконструкций по индивидуальным размерам в Мелеузе и ближайших районах.',
+  address: {
+    '@type': 'PostalAddress',
+    addressLocality: 'Мелеуз',
+    addressRegion: 'Республика Башкортостан',
+    addressCountry: 'RU'
+  },
+  openingHoursSpecification: [{
+    '@type': 'OpeningHoursSpecification',
+    dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+    opens: '09:00',
+    closes: '18:00'
+  }],
+  areaServed: {
+    '@type': 'City',
+    name: 'Мелеуз'
+  }
+};
+
 // Public pages must stay indexable. Only the private admin page is noindexed.
-const indexHtml = await render('/');
+const indexHtml = addJsonLd(await render('/'), localBusinessSchema);
 await writeFile(path.join(output, 'index.html'), indexHtml, 'utf8');
 
 const adminHtml = noindex(await render('/admin'));
@@ -128,6 +162,9 @@ if (!publicIndex.includes('content="index,follow,max-image-preview:large"')) {
 }
 if (!publicIndex.includes(`<link rel="canonical" href="${publicOrigin}/">`)) {
   throw new Error('Главная Timeweb содержит неверный canonical');
+}
+if (!publicIndex.includes('type="application/ld+json"') || !publicIndex.includes('"@type":"LocalBusiness"') || !publicIndex.includes('"@id":"https://kuzdvor.tw1.ru/#business"')) {
+  throw new Error('Главная Timeweb потеряла LocalBusiness JSON-LD');
 }
 if (publicIndex.includes('workers.dev')) {
   throw new Error('В публичной Timeweb-странице осталась ссылка на Cloudflare Workers');
