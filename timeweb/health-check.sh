@@ -17,6 +17,14 @@ fetch() {
   curl --fail --silent --show-error --location --max-time 25 "$url" -o "$out"
 }
 
+fetch_local_api() {
+  url="$1"
+  out="$2"
+  headers="$3"
+  curl --fail --silent --show-error --location --max-time 35 -D "$headers" "$url" -o "$out"
+  grep -qi '^X-Kuzdvor-Backend: timeweb-php' "$headers" || fail "local backend marker missing for $url"
+}
+
 # Main page and critical static assets.
 fetch "$BASE_URL/" "$TMP_DIR/index.html"
 grep -q 'Кузнечный Дворик' "$TMP_DIR/index.html" || fail 'main page marker missing'
@@ -29,36 +37,40 @@ grep -q 'Админ-панель' "$TMP_DIR/admin.html" || fail 'admin page mark
 fetch "$BASE_URL/vorota" "$TMP_DIR/vorota.html"
 fetch "$BASE_URL/napravleniya" "$TMP_DIR/napravleniya.html"
 
-# Shadow PHP/MySQL backend must always expose a safe health endpoint, even
-# before the database credentials are configured.
-fetch "$BASE_URL/api-local/health" "$TMP_DIR/local-health.json"
-grep -q '"backend":"timeweb-php"' "$TMP_DIR/local-health.json" || fail 'local PHP backend health marker missing'
+# Production API must now be served by the local Timeweb PHP/MySQL backend.
+fetch_local_api "$BASE_URL/api/health" "$TMP_DIR/health.json" "$TMP_DIR/health.headers"
+grep -q '"backend":"timeweb-php"' "$TMP_DIR/health.json" || fail 'local PHP backend health marker missing'
+grep -q '"configured":true' "$TMP_DIR/health.json" || fail 'local backend is not configured'
+grep -q '"db":true' "$TMP_DIR/health.json" || fail 'local MySQL connection failed'
 
-# Transitional API proxy remains live until the MySQL import is verified.
-fetch "$BASE_URL/api/catalog-images" "$TMP_DIR/catalog.json"
+fetch_local_api "$BASE_URL/api/catalog-images" "$TMP_DIR/catalog.json" "$TMP_DIR/catalog.headers"
 grep -q '"galleries"' "$TMP_DIR/catalog.json" || fail 'catalog API response invalid'
 
-curl --fail --silent --show-error --location --max-time 35 \
+curl --fail --silent --show-error --location --max-time 35 -D "$TMP_DIR/delivery.headers" \
   --get --data-urlencode 'place=Стерлитамак' \
   "$BASE_URL/api/delivery" -o "$TMP_DIR/delivery.json"
+grep -qi '^X-Kuzdvor-Backend: timeweb-php' "$TMP_DIR/delivery.headers" || fail 'delivery is not served by Timeweb PHP'
 grep -q '"distanceKm"' "$TMP_DIR/delivery.json" || fail 'delivery API response invalid'
 
-status=$(curl --silent --show-error --location --max-time 25 \
+status=$(curl --silent --show-error --location --max-time 25 -D "$TMP_DIR/admin-api.headers" \
   --output "$TMP_DIR/admin-api.json" --write-out '%{http_code}' \
   "$BASE_URL/api/admin/site-settings")
 [ "$status" = '401' ] || fail "admin API should require auth, got HTTP $status"
+grep -qi '^X-Kuzdvor-Backend: timeweb-php' "$TMP_DIR/admin-api.headers" || fail 'admin API is not served by Timeweb PHP'
 
-# Direct proxy call must not expose backend functionality without a routed path.
+# Direct legacy proxy call must remain inert; no production route uses it anymore.
 status=$(curl --silent --show-error --max-time 25 \
   --output "$TMP_DIR/proxy-direct.txt" --write-out '%{http_code}' \
   "$BASE_URL/api-proxy.php")
 [ "$status" = '404' ] || fail "direct api-proxy.php expected 404, got HTTP $status"
 
-# Repository/backend internals must not be public.
+# Repository/backend/migration internals must not be public.
 status=$(curl --silent --show-error --max-time 25 --output /dev/null --write-out '%{http_code}' "$BASE_URL/.git/config")
 [ "$status" != '200' ] || fail '.git/config is publicly accessible'
 status=$(curl --silent --show-error --max-time 25 --output /dev/null --write-out '%{http_code}' "$BASE_URL/backend/schema.mysql.sql")
 [ "$status" != '200' ] || fail 'backend internals are publicly accessible'
+status=$(curl --silent --show-error --max-time 25 --output /dev/null --write-out '%{http_code}' "$BASE_URL/migrate-public-catalog.php")
+[ "$status" != '200' ] || fail 'catalog migration helper is publicly accessible'
 
 commit=$(git rev-parse --short HEAD 2>/dev/null || printf 'unknown')
 printf 'ok\nchecked_at=%s\ncommit=%s\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" "$commit" > .timeweb-health
