@@ -7,6 +7,7 @@ const output = path.join(root, 'timeweb-dist');
 const htaccessPath = path.join(output, '.htaccess');
 const apiPath = path.join(output, 'local-api.php');
 const gateQuotePath = path.join(output, 'backend/gate-quote.php');
+const excelValidationPath = path.join(output, 'backend/excel-quote-validation.php');
 
 function replaceExactlyOnce(source, from, to, label) {
   const first = source.indexOf(from);
@@ -91,6 +92,10 @@ const newLeadCall = `        kd_require_same_origin();
         require_once __DIR__ . '/backend/gate-quote.php';
         kd_create_authoritative_lead();`;
 if (api.includes(oldLeadCall)) api = replaceExactlyOnce(api, oldLeadCall, newLeadCall, 'authoritative lead endpoint');
+
+const oldExcelInputTrust = `$body=kd_json_body(262144);$prices=is_array($body['prices']??null)?$body['prices']:[];$standards=is_array($body['standardPrices']??null)?$body['standardPrices']:[];`;
+const newExcelInputValidation = `$body=kd_json_body(262144);require_once __DIR__ . '/backend/excel-quote-validation.php';try{$validated=kd_gate_validate_excel_payload($body);}catch(Throwable $e){kd_json(['error'=>$e->getMessage()],400);}$prices=$validated['prices'];$standards=$validated['standardPrices'];`;
+if (api.includes(oldExcelInputTrust)) api = replaceExactlyOnce(api, oldExcelInputTrust, newExcelInputValidation, 'Excel pricing validation');
 await writeFile(apiPath, api, 'utf8');
 
 const sourceSha = String(process.env.KUZDVOR_SOURCE_SHA || process.env.GITHUB_SHA || '').trim();
@@ -117,6 +122,7 @@ const directionsIndex = await readFile(path.join(output, 'napravleniya/index.htm
 const robots = await readFile(path.join(output, 'robots.txt'), 'utf8');
 const sitemap = await readFile(path.join(output, 'sitemap.xml'), 'utf8');
 const defaults = JSON.parse(await readFile(path.join(output, 'backend/defaults.json'), 'utf8'));
+const excelValidation = await readFile(excelValidationPath, 'utf8');
 
 const globalRobotsHeaderBlocksIndexing = /Header\s+(?:always\s+)?set\s+X-Robots-Tag\s+["'][^"']*(?:noindex|nofollow|noarchive)/i.test(htaccess);
 const canonicalVorotaRedirect = /RewriteRule\s+\^vorota\/\?\$\s+\/\s+\[R=(?:301|308),L\]/i.test(htaccess);
@@ -132,6 +138,8 @@ const checks = [
   [api.includes('$healthy ? 200 : 503'), 'health endpoint does not fail closed'],
   [!api.includes("'detail' => $e->getMessage()"), 'public API still exposes exception details'],
   [api.includes("require_once __DIR__ . '/backend/gate-quote.php';") && api.includes('kd_create_authoritative_lead();'), 'lead endpoint does not use authoritative PHP pricing'],
+  [api.includes("require_once __DIR__ . '/backend/excel-quote-validation.php';") && api.includes('kd_gate_validate_excel_payload($body)'), 'admin Excel import does not use authoritative PHP validation'],
+  [excelValidation.includes('kd_gate_standard_prices') && excelValidation.includes('kd_gate_validate_excel_payload'), 'Excel pricing validation helper is incomplete'],
   [gateModelCount === 38, `authoritative PHP pricing has ${gateModelCount} gate models instead of 38`],
   [!gateQuote.includes("'Math.trunc' => trunc("), 'gate formula engine still calls unavailable PHP trunc()'],
   [admin.includes('<script src="/xlsx.bundle.js"></script>'), 'admin does not use the external XLSX bundle'],
@@ -151,6 +159,7 @@ for (const [ok, message] of checks) {
 
 execFileSync('php', ['-l', apiPath], { stdio: 'inherit' });
 execFileSync('php', ['-l', gateQuotePath], { stdio: 'inherit' });
+execFileSync('php', ['-l', excelValidationPath], { stdio: 'inherit' });
 execFileSync('php', [path.join(root, 'scripts/test-timeweb-gate-quote.php'), output], { stdio: 'inherit' });
 
 console.log(`Timeweb package hardening checks passed for ${sourceSha}`);
