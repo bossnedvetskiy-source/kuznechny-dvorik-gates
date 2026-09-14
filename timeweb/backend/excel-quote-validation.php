@@ -53,9 +53,17 @@ function kd_gate_validate_excel_payload(array $body): array
     $prices = kd_gate_normalize_price_inputs($body['prices'] ?? [], true);
     $standards = kd_gate_standard_prices($prices);
     $clientStandards = is_array($body['standardPrices'] ?? null) ? $body['standardPrices'] : [];
-    foreach ($clientStandards as $article => $clientValue) {
-        if (!array_key_exists((string)$article, $standards)) continue;
-        if (!is_numeric($clientValue) || (int)round((float)$clientValue) !== (int)$standards[(string)$article]) {
+
+    if (count($clientStandards) !== count($standards)) {
+        throw new RuntimeException('Excel должен пройти контроль всех 38 моделей. Обновление отменено.');
+    }
+
+    foreach ($standards as $article => $serverValue) {
+        if (!array_key_exists((string)$article, $clientStandards)) {
+            throw new RuntimeException("В контрольной проверке Excel отсутствует Арт.{$article}. Обновление отменено.");
+        }
+        $clientValue = $clientStandards[(string)$article];
+        if (!is_numeric($clientValue) || (int)round((float)$clientValue) !== (int)$serverValue) {
             throw new RuntimeException("Проверка Excel не пройдена для Арт.{$article}. Обновление отменено.");
         }
     }
