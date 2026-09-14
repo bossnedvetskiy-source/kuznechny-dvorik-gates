@@ -22,7 +22,17 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Install build dependencies
-        run: npm install --no-audit --no-fund
+        run: npm ci --include=dev --no-audit --no-fund
+
+      - name: Normalize XLSX browser bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ ! -s node_modules/xlsx/dist/xlsx.full.min.js ]; then
+            test -s node_modules/xlsx/xlsx.js
+            mkdir -p node_modules/xlsx/dist
+            cp node_modules/xlsx/xlsx.js node_modules/xlsx/dist/xlsx.full.min.js
+          fi
 
       - name: Check JavaScript syntax
         run: |
@@ -86,8 +96,10 @@ jobs:
       - name: Run browser E2E tests
         run: npm run test:e2e
 
-      - name: Smoke check production endpoint
+      - name: Smoke check Timeweb production endpoint
         continue-on-error: true
+        env:
+          PRODUCTION_URL: https://kuzdvor.tw1.ru
         run: node scripts/check-production.mjs
 
       - name: Configure Pages
@@ -109,7 +121,7 @@ jobs:
 
           cp home.html home.css product-categories.js _site/napravleniya/
           cp admin.html admin.css admin.js admin-colors.js admin-prices.js admin-site.js admin-leads.js admin-enhancements.js admin-excel-import.js _site/
-          cp node_modules/xlsx/dist/xlsx.full.min.js _site/xlsx.full.min.js
+          cp dist/client/xlsx.bundle.js _site/xlsx.full.min.js
           touch _site/.nojekyll
 
           node <<'NODE'

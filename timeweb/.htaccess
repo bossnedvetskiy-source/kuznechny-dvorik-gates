@@ -1,0 +1,52 @@
+Options -Indexes
+DirectoryIndex index.html index.htm
+
+# Timeweb web PHP is restricted to the site directory. Point HOME at the
+# site root so the backend can keep secrets outside public_html while staying
+# readable by the hosting PHP runtime.
+<IfModule mod_env.c>
+  SetEnv HOME /home/c/cp59598/kuznechny-dvorik-gates
+</IfModule>
+
+RewriteEngine On
+
+# Always keep customer and admin traffic on HTTPS. X-Forwarded-Proto is
+# checked as Timeweb may terminate TLS before Apache/PHP.
+RewriteCond %{HTTPS} !=on
+RewriteCond %{HTTP:X-Forwarded-Proto} !https [NC]
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L,NE]
+
+# Never expose repository metadata or PHP backend internals.
+RewriteRule (^|/)\.git(?:/|$) - [F,L]
+RewriteRule ^backend(?:/|$) - [F,L]
+
+# Local PHP/MySQL backend. Production traffic must never proxy to Cloudflare.
+RewriteRule ^api-local/(.*)$ local-api.php?__route=$1 [QSA,L]
+RewriteRule ^catalog-media-local/(.*)$ local-api.php?__route=catalog-media/$1 [QSA,L]
+RewriteRule ^api/(.*)$ local-api.php?__route=$1 [QSA,L]
+RewriteRule ^catalog-media/(.*)$ local-api.php?__route=catalog-media/$1 [QSA,L]
+
+# Friendly routes used by the current site.
+RewriteRule ^admin/?$ admin.html [L]
+RewriteRule ^vorota/?$ index.html [L]
+RewriteRule ^napravleniya/?$ napravleniya/index.html [L]
+
+<IfModule mod_headers.c>
+  Header always set Strict-Transport-Security "max-age=31536000"
+  # The tw1.ru address is a migration/test copy and must not compete with the
+  # production domain in search engines.
+  Header set X-Robots-Tag "noindex, nofollow, noarchive"
+  Header set X-Content-Type-Options "nosniff"
+  Header set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# Deployment/setup/migration helpers and any legacy proxy must never be public.
+<FilesMatch "^(?:api-proxy\.php|deploy-timeweb\.sh|install-autodeploy\.sh|health-check\.sh|setup-timeweb\.php|migrate-from-cloudflare\.php|migrate-public-catalog\.php|timeweb-build\.txt|\.timeweb-health)$">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+  </IfModule>
+</FilesMatch>

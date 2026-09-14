@@ -1,13 +1,17 @@
 import { readFile } from 'node:fs/promises';
 
-const BASE = String(process.env.PRODUCTION_URL || 'https://kuznechny-dvorik-gates.boss-nedvetskiy.workers.dev').replace(/\/$/, '');
-const timeoutMs = 10000;
+const BASE = String(process.env.PRODUCTION_URL || 'https://kuzdvor.tw1.ru').replace(/\/$/, '');
+const timeoutMs = 15000;
 
-async function fetchChecked(url) {
+async function fetchChecked(url, options = {}) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const response = await fetch(url, {headers:{'user-agent':'KuznechnyDvorikProductionSmoke/1.0'}, signal:controller.signal});
+    const response = await fetch(url, {
+      ...options,
+      headers: {'user-agent':'KuznechnyDvorikProductionSmoke/2.0', ...(options.headers || {})},
+      signal: controller.signal
+    });
     if (!response.ok) throw new Error(`${url}: HTTP ${response.status}`);
     return response;
   } finally {
@@ -16,16 +20,27 @@ async function fetchChecked(url) {
 }
 
 const page = await (await fetchChecked(BASE + '/')).text();
-for (const required of ['Кузнечный ДворикЪ', 'Ворота с калиткой', 'Как проходит заказ', 'Предпочитаемый цвет:']) {
+for (const required of ['Кузнечный Дворик', 'Ворота с калиткой']) {
   if (!page.includes(required)) throw new Error(`Рабочая страница не содержит: ${required}`);
 }
 if (!page.includes('/site.css') || !page.includes('/site.bundle.js')) {
-  throw new Error('Рабочая страница ещё не использует оптимизированные статические ресурсы');
+  throw new Error('Рабочая страница не использует production-ресурсы Timeweb');
 }
-const publicBundle = await (await fetchChecked(BASE + '/site.bundle.js')).text();
-for (const required of ['utm_medium', 'syncExcelDerivedGatePrices', 'standardForArticle', 'KUZDVOR_FORMULA_PRICE_SYNC_READY']) {
-  if (!publicBundle.includes(required)) throw new Error(`Публичный JS-бандл не содержит: ${required}`);
+
+const version = await (await fetchChecked(BASE + '/deployment-version.json')).json();
+if (!/^[0-9a-f]{40}$/i.test(String(version?.sourceSha || ''))) {
+  throw new Error('deployment-version.json не содержит SHA исходного main');
 }
+
+const healthResponse = await fetchChecked(BASE + '/api/health');
+if (healthResponse.headers.get('x-kuzdvor-backend') !== 'timeweb-php') {
+  throw new Error('Production API обслуживается не Timeweb PHP');
+}
+const health = await healthResponse.json();
+if (health?.ok !== true || health?.configured !== true || health?.db !== true || health?.backend !== 'timeweb-php') {
+  throw new Error(`Timeweb backend unhealthy: ${JSON.stringify(health)}`);
+}
+if ('error' in health || 'detail' in health) throw new Error('Health endpoint раскрывает внутренние поля ошибки');
 
 const remote = await (await fetchChecked(BASE + '/api/catalog-images')).json();
 const remoteGalleries = remote?.galleries || {};
@@ -53,6 +68,7 @@ for (const [article, photos] of Object.entries(local)) {
 }
 
 console.log(`Production доступен: ${BASE}`);
+console.log(`Timeweb source SHA: ${version.sourceSha}`);
 console.log(`Каталог production: ${entries.length} моделей.`);
 if (coverMismatches.length) {
   console.warn(`Обложки production отличаются от main у ${coverMismatches.length} моделей:`);

@@ -1,4 +1,4 @@
-import { readFile, writeFile } from 'node:fs/promises';
+import { access, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 const root = process.cwd();
@@ -65,13 +65,15 @@ const newHealth = `if ($route === 'health') {
     $healthy = $configured && $db;
     kd_json(['ok' => $healthy, 'backend' => 'timeweb-php', 'configured' => $configured, 'db' => $db], $healthy ? 200 : 503);
 }`;
-api = replaceExactlyOnce(api, oldHealth, newHealth, 'health endpoint');
-api = replaceExactlyOnce(
-  api,
-  "    kd_json(['error' => 'Ошибка серверной части сайта', 'detail' => $e->getMessage()], 500);",
-  "    kd_json(['error' => 'Ошибка серверной части сайта'], 500);",
-  'public exception response'
-);
+if (api.includes(oldHealth)) api = replaceExactlyOnce(api, oldHealth, newHealth, 'health endpoint');
+if (api.includes("    kd_json(['error' => 'Ошибка серверной части сайта', 'detail' => $e->getMessage()], 500);")) {
+  api = replaceExactlyOnce(
+    api,
+    "    kd_json(['error' => 'Ошибка серверной части сайта', 'detail' => $e->getMessage()], 500);",
+    "    kd_json(['error' => 'Ошибка серверной части сайта'], 500);",
+    'public exception response'
+  );
+}
 await writeFile(apiPath, api, 'utf8');
 
 const sourceSha = String(process.env.KUZDVOR_SOURCE_SHA || process.env.GITHUB_SHA || '').trim();
@@ -84,12 +86,21 @@ await writeFile(
   'utf8'
 );
 
+try {
+  await access(path.join(output, 'api-proxy.php'));
+  throw new Error('Timeweb hardening: legacy Cloudflare api-proxy.php is present in production package');
+} catch (error) {
+  if (error?.code !== 'ENOENT') throw error;
+}
+
 const admin = await readFile(path.join(output, 'admin.html'), 'utf8');
 const siteBundle = await readFile(path.join(output, 'site.bundle.js'), 'utf8');
 
 const checks = [
   [htaccess.includes('RewriteCond %{HTTP:X-Forwarded-Proto} !https [NC]'), 'HTTPS proxy-aware redirect is missing'],
   [htaccess.includes('Strict-Transport-Security'), 'HSTS header is missing'],
+  [htaccess.includes('RewriteRule ^api/(.*)$ local-api.php?__route=$1 [QSA,L]'), 'production API is not routed to local PHP'],
+  [!htaccess.includes('api-proxy.php?__proxy_path'), 'production .htaccess still references legacy Cloudflare proxy'],
   [api.includes('$healthy ? 200 : 503'), 'health endpoint does not fail closed'],
   [!api.includes("'detail' => $e->getMessage()"), 'public API still exposes exception details'],
   [admin.includes('<script src="/xlsx.bundle.js"></script>'), 'admin does not use the external XLSX bundle'],

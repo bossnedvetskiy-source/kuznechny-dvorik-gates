@@ -30,22 +30,30 @@ jobs:
           node-version: '22'
           cache: npm
 
-      - name: Bring pinned Timeweb adapter
+      - name: Verify Timeweb source is in main
         shell: bash
         run: |
           set -euo pipefail
-          ADAPTER_SHA="a5c63db7ff96f6826f9d50f9321a08c839e84958"
-          git fetch --depth=1 origin timeweb-migration
-          actual_sha="$(git rev-parse FETCH_HEAD)"
-          if [ "$actual_sha" != "$ADAPTER_SHA" ]; then
-            echo "Timeweb adapter changed: expected $ADAPTER_SHA, got $actual_sha" >&2
-            echo "Review the adapter changes and update ADAPTER_SHA deliberately." >&2
-            exit 1
-          fi
-          git checkout FETCH_HEAD -- scripts/build-timeweb.mjs timeweb
+          test -s scripts/build-timeweb.mjs
+          test -s timeweb/.htaccess
+          test -s timeweb/local-api.php
+          test -s timeweb/backend/bootstrap.php
+          test -s timeweb/backend/schema.mysql.sql
+          test -s timeweb/deploy-timeweb.sh
+          test -s timeweb/health-check.sh
 
       - name: Install build dependencies
         run: npm ci --include=dev --no-audit --no-fund
+
+      - name: Normalize XLSX browser bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ ! -s node_modules/xlsx/dist/xlsx.full.min.js ]; then
+            test -s node_modules/xlsx/xlsx.js
+            mkdir -p node_modules/xlsx/dist
+            cp node_modules/xlsx/xlsx.js node_modules/xlsx/dist/xlsx.full.min.js
+          fi
 
       - name: Build current main site
         run: npm run build
@@ -73,13 +81,15 @@ jobs:
             exit 1
           fi
           grep -Fq 'С учётом доставки' timeweb-dist/site.bundle.js
-          test -s timeweb-dist/api-proxy.php
           test -s timeweb-dist/local-api.php
-          test -s timeweb-dist/migrate-public-catalog.php
           test -s timeweb-dist/backend/bootstrap.php
           test -s timeweb-dist/backend/schema.mysql.sql
           test -s timeweb-dist/backend/defaults.json
           test -s timeweb-dist/.htaccess
+          test ! -e timeweb-dist/api-proxy.php
+          test ! -e timeweb-dist/setup-timeweb.php
+          test ! -e timeweb-dist/migrate-from-cloudflare.php
+          test ! -e timeweb-dist/migrate-public-catalog.php
           grep -Fq 'SetEnv HOME /home/c/cp59598/kuznechny-dvorik-gates' timeweb-dist/.htaccess
           grep -Fq 'RewriteCond %{HTTP:X-Forwarded-Proto} !https [NC]' timeweb-dist/.htaccess
           grep -Fq 'Strict-Transport-Security' timeweb-dist/.htaccess
@@ -95,7 +105,6 @@ jobs:
           fi
           grep -Fq '$healthy ? 200 : 503' timeweb-dist/local-api.php
           php -l timeweb-dist/local-api.php
-          php -l timeweb-dist/migrate-public-catalog.php
           php -l timeweb-dist/backend/bootstrap.php
           echo "Prepared $(find timeweb-dist -type f | wc -l) files for Timeweb"
 
@@ -116,7 +125,7 @@ jobs:
           git commit -m "Build Timeweb site from main ${source_sha}"
           git push --force origin HEAD:timeweb-public
 
-      - name: Verify live Timeweb deployment when reachable
+      - name: Verify live Timeweb deployment
         shell: bash
         run: |
           set -euo pipefail
@@ -126,8 +135,6 @@ jobs:
           reachable=0
           matched=0
 
-          # Timeweb cron may run just after a GitHub publication, so wait longer
-          # than one full minute before declaring the deployment stale.
           echo "Checking Timeweb auto-deploy of ${expected_sha}..."
           for attempt in $(seq 1 18); do
             : > /tmp/timeweb-version.json
@@ -135,10 +142,7 @@ jobs:
             code="$(curl -sS --connect-timeout 4 --max-time 8 -o /tmp/timeweb-version.json -w '%{http_code}' "${base}/deployment-version.json?check=${attempt}" 2>/tmp/timeweb-curl-error.txt || true)"
             live_sha="$(node -e "const fs=require('fs');try{process.stdout.write(JSON.parse(fs.readFileSync('/tmp/timeweb-version.json','utf8')).sourceSha||'')}catch{}" 2>/dev/null || true)"
             echo "Attempt ${attempt}/18: HTTP ${code:-000}; live=${live_sha:-unavailable}; expected=${expected_sha}"
-
-            if [ -n "$code" ] && [ "$code" != '000' ]; then
-              reachable=1
-            fi
+            if [ -n "$code" ] && [ "$code" != '000' ]; then reachable=1; fi
             if [ "$code" = '200' ] && [ "$live_sha" = "$expected_sha" ]; then
               matched=1
               echo 'Timeweb is serving the current main commit.'
@@ -150,27 +154,22 @@ jobs:
           if [ "$matched" != '1' ]; then
             if [ "$reachable" = '0' ]; then
               echo '::warning::Timeweb is unreachable from this GitHub-hosted runner. The Timeweb-side cron deployer remains authoritative and performs its own health check with automatic rollback.'
-              echo 'GitHub package build and publication succeeded; skipping external live checks to avoid a false deployment failure caused by network filtering.'
-              if [ -s /tmp/timeweb-curl-error.txt ]; then
-                echo 'Last curl diagnostic:'
-                sed -n '1,3p' /tmp/timeweb-curl-error.txt
-              fi
+              if [ -s /tmp/timeweb-curl-error.txt ]; then sed -n '1,3p' /tmp/timeweb-curl-error.txt; fi
               exit 0
             fi
-            echo "::error::Timeweb is reachable, but current main ${expected_sha} is not live after the full cron window. Check the Timeweb Crontab task kuzdvor-autodeploy and its log."
+            echo "::error::Timeweb is reachable, but current main ${expected_sha} is not live after the full cron window."
             exit 1
           fi
 
-          curl -fsS --connect-timeout 4 --max-time 15 --retry 1 --retry-delay 2 -o /tmp/timeweb-health.json "${base}/api/health"
+          curl -fsS --connect-timeout 4 --max-time 15 --retry 1 --retry-delay 2 -D /tmp/timeweb-health.headers -o /tmp/timeweb-health.json "${base}/api/health"
+          grep -Eiq '^X-Kuzdvor-Backend:[[:space:]]*timeweb-php' /tmp/timeweb-health.headers
           node - <<'NODE'
           const fs = require('fs');
           const health = JSON.parse(fs.readFileSync('/tmp/timeweb-health.json','utf8'));
-          if (health.ok !== true || health.configured !== true || health.db !== true) {
+          if (health.ok !== true || health.configured !== true || health.db !== true || health.backend !== 'timeweb-php') {
             throw new Error(`Unhealthy Timeweb backend: ${JSON.stringify(health)}`);
           }
-          if ('error' in health || 'detail' in health) {
-            throw new Error(`Health endpoint exposes internal error fields: ${JSON.stringify(health)}`);
-          }
+          if ('error' in health || 'detail' in health) throw new Error(`Health endpoint exposes internal error fields: ${JSON.stringify(health)}`);
           NODE
 
           curl -fsS --connect-timeout 4 --max-time 15 --retry 1 --retry-delay 2 -o /tmp/timeweb-admin.html "${base}/admin"
@@ -184,6 +183,9 @@ jobs:
           grep -Fq 'С учётом доставки' /tmp/timeweb-site.js
           curl -fsS --connect-timeout 4 --max-time 15 --retry 1 --retry-delay 2 -o /dev/null "${base}/xlsx.bundle.js"
 
+          legacy_code="$(curl -sS --connect-timeout 4 --max-time 15 -o /dev/null -w '%{http_code}' "${base}/api-proxy.php?__proxy_path=api/health" || true)"
+          case "$legacy_code" in 403|404) ;; *) echo "::error::Legacy Cloudflare proxy is still reachable (HTTP ${legacy_code:-000})."; exit 1;; esac
+
           curl -sSI --connect-timeout 4 --max-time 15 "${base}/" > /tmp/timeweb-https-headers.txt
           grep -Eiq '^strict-transport-security:[[:space:]]*max-age=31536000' /tmp/timeweb-https-headers.txt
 
@@ -193,4 +195,4 @@ jobs:
           case "$status" in 301|302|307|308) ;; *) echo "::error::HTTP is not redirected to HTTPS (status $status)."; exit 1;; esac
           case "$location" in https://kuzdvor.tw1.ru/*) ;; *) echo "::error::Unexpected HTTP redirect target: ${location:-missing}"; exit 1;; esac
 
-          echo 'Live Timeweb verification passed: current source, database, admin XLSX, delivery prices and HTTPS are all healthy.'
+          echo 'Live Timeweb verification passed: current main, local PHP/MySQL, admin XLSX, delivery prices, legacy proxy removal and HTTPS are healthy.'
