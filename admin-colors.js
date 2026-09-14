@@ -178,5 +178,5 @@
   }
 
   articleSelect?.addEventListener('change', () => setTimeout(render, 0));
-  document.addEventListener('admin:ready', render);
+  window.addEventListener('admin:ready', render);
 })();
