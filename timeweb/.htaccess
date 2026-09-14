@@ -12,8 +12,12 @@ RewriteRule ^backend(?:/|$) - [F,L]
 RewriteRule ^api-local/(.*)$ local-api.php?__route=$1 [QSA,L]
 RewriteRule ^catalog-media-local/(.*)$ local-api.php?__route=catalog-media/$1 [QSA,L]
 
-# Transitional production backend: keep Cloudflare/D1 live until the MySQL
-# import and shadow checks are complete.
+# Delivery must work directly on Timeweb and must not depend on the temporary
+# Cloudflare proxy. This route returns JSON from the local PHP backend.
+RewriteRule ^api/delivery/?$ local-api.php?__route=delivery [QSA,L]
+
+# Transitional production backend: keep the remaining Cloudflare/D1 routes live
+# until the rest of the MySQL migration is complete.
 RewriteRule ^api/(.*)$ api-proxy.php?__proxy_path=api/$1 [QSA,L]
 RewriteRule ^catalog-media/(.*)$ api-proxy.php?__proxy_path=catalog-media/$1 [QSA,L]
 
