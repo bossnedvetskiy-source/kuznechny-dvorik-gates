@@ -76,8 +76,8 @@
         });
         const cta = document.getElementById('mobilePrimaryCta');
         const calculator = document.getElementById('calculator');
-        const lead = document.getElementById('leadRequest');
-        if (cta && calculator && !calculator.hidden && (!lead || lead.hidden)) {
+        const leadOpen = document.body.classList.contains('mobile-lead-open');
+        if (cta && calculator && !calculator.hidden && !leadOpen) {
           cta.textContent = state.kind === 'out-of-area'
             ? 'Заказать бесплатный замер · доставка индивидуально'
             : 'Заказать бесплатный замер · доставка уточняется';
