@@ -53,6 +53,9 @@
     @media(max-width:900px){.lead-marketing{grid-template-columns:1fr 1fr}}
     @media(max-width:760px){.lead-quick-work{grid-template-columns:1fr}.lead-quick-save{width:100%}}
     @media(max-width:620px){
+      .admin-tabs{display:flex!important;width:100%!important;gap:3px!important;padding:4px!important;overflow:hidden!important}
+      .admin-tabs .admin-tab{flex:1 1 0!important;min-width:0!important;padding:0 6px!important;font-size:10px!important}
+      #leadsTab .page-title h1{font-size:36px!important;line-height:1.08!important}
       #leadStats .lead-stat:nth-child(-n+4){display:none}
       .lead-toolbar-actions.lead-toolbar-compact{display:grid!important;grid-template-columns:1fr 1fr;width:100%;gap:8px}
       .lead-toolbar-actions.lead-toolbar-compact>#reloadLeadsButton,.lead-toolbar-actions.lead-toolbar-compact>.lead-more-actions{width:100%}
@@ -239,7 +242,7 @@
     }
   }
 
-  function formatCardBasics(card) {
+  function formatCardBasics(card, lead) {
     const fields = [...card.querySelectorAll('.lead-field')];
     const phoneField = fields.find(field => field.querySelector('span')?.textContent.trim() === 'Телефон');
     const phone = phoneField?.querySelector('b');
@@ -248,11 +251,13 @@
       if (formatted && phone.textContent !== formatted) phone.textContent = formatted;
     }
     const meta = card.querySelector('.lead-main span');
-    if (meta) {
+    if (meta && lead) {
       const parts = meta.textContent.split(' · ');
       const last = parts.at(-1) || '';
-      if (/^(ref:|google$|yandex$|vk$|avito$)/i.test(last) || /googlequicksearchbox|yandex|vk\.com|ok\.ru|avito/i.test(last)) {
-        parts[parts.length - 1] = sourceLabel(last);
+      const tracking = trackingOf(lead);
+      const knownSources = [lead.source, tracking.utmSource].filter(Boolean).map(sourceLabel);
+      if (knownSources.includes(sourceLabel(last))) {
+        parts.pop();
         meta.textContent = parts.join(' · ');
       }
     }
@@ -342,8 +347,8 @@
       ]);
       const byId = new Map((leadData.leads || []).map(lead => [String(lead.id), lead]));
       for (const card of cards) {
-        formatCardBasics(card);
         const lead = byId.get(card.dataset.leadId);
+        formatCardBasics(card, lead);
         if (lead) {
           card.querySelector('.lead-marketing')?.remove();
           const grid = card.querySelector('.lead-grid');
