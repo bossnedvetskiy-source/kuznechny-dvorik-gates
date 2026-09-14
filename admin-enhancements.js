@@ -27,8 +27,7 @@
   nav.addEventListener('click', event => {
     const button = event.target.closest('.admin-tab');
     if (!button) return;
-    const name = button.dataset.adminTab;
-    queueMicrotask(() => reconcileTab(name));
+    queueMicrotask(() => reconcileTab(button.dataset.adminTab));
   });
 
   const priceCard = document.querySelector('#pricesTab .settings-card:nth-of-type(2)');
@@ -40,18 +39,60 @@
     priceCard.querySelector('.panel-heading')?.after(note);
   }
 
+  const leadsPanel = document.getElementById('leadsTab');
+  const leadsList = document.getElementById('leadList');
+  if (!leadsPanel || !leadsList) return;
+
   const style = document.createElement('style');
   style.textContent = `
     .admin-baseline-note{margin:-5px 0 15px;padding:11px 12px;border:1px solid #dfc791;border-radius:11px;background:#fff8e8;color:#67532c;font-size:10.5px;line-height:1.5}.admin-baseline-note b{color:#7b5720}
-    .lead-marketing{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin:0 0 12px}.lead-marketing>div{display:grid;gap:2px;padding:8px 9px;border:1px dashed #ddd1bb;border-radius:9px;background:#fffaf0}.lead-marketing span{color:var(--muted);font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:.35px}.lead-marketing b{font-size:9.5px;word-break:break-word}.lead-marketing-empty{grid-column:1/-1;color:var(--muted);font-size:9.5px}
-    @media(max-width:900px){.lead-marketing{grid-template-columns:1fr 1fr}}@media(max-width:620px){.lead-marketing{grid-template-columns:1fr}}
+    .lead-marketing{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:0 0 12px}.lead-marketing>div{display:grid;gap:2px;padding:8px 9px;border:1px dashed #ddd1bb;border-radius:9px;background:#fffaf0}.lead-marketing span{color:var(--muted);font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:.35px}.lead-marketing b{font-size:9.5px;word-break:break-word}.lead-marketing-empty{grid-column:1/-1;color:var(--muted);font-size:9.5px}
+    .lead-quick-work{display:grid;grid-template-columns:minmax(190px,.7fr) minmax(260px,1.8fr) auto;gap:8px;align-items:end;margin:0 0 12px;padding:10px;border:1px solid #e4ddd2;border-radius:11px;background:#fcfaf6}.lead-quick-work label{display:grid;gap:5px;color:var(--muted);font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.35px}.lead-quick-work input,.lead-quick-work textarea{width:100%;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--ink);font:inherit;font-size:11px;text-transform:none;letter-spacing:0}.lead-quick-work input{height:39px;padding:0 9px}.lead-quick-work textarea{min-height:54px;padding:8px 9px;resize:vertical}.lead-quick-save{min-height:39px;padding:0 13px;border:0;border-radius:9px;background:var(--ink);color:#fff;font-size:10px;font-weight:900;white-space:nowrap}
+    .lead-toolbar-actions.lead-toolbar-compact{display:flex;align-items:center;gap:8px}.lead-more-actions{position:relative}.lead-more-actions>summary{display:flex;align-items:center;justify-content:center;min-height:40px;padding:0 14px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);font-size:10px;font-weight:800;cursor:pointer;list-style:none}.lead-more-actions>summary::-webkit-details-marker{display:none}.lead-more-menu{position:absolute;z-index:30;right:0;top:calc(100% + 6px);display:grid;gap:6px;min-width:205px;padding:8px;border:1px solid var(--line);border-radius:12px;background:#fff;box-shadow:0 12px 32px rgba(18,16,13,.14)}.lead-more-menu .reset-button{width:100%;text-align:left}
+    .lead-filter-toggle{display:none}.lead-export-note{display:none!important}
+    @media(max-width:900px){.lead-marketing{grid-template-columns:1fr 1fr}}
+    @media(max-width:760px){.lead-quick-work{grid-template-columns:1fr}.lead-quick-save{width:100%}}
+    @media(max-width:620px){
+      #leadStats .lead-stat:nth-child(-n+4){display:none}
+      .lead-toolbar-actions.lead-toolbar-compact{display:grid!important;grid-template-columns:1fr 1fr;width:100%;gap:8px}
+      .lead-toolbar-actions.lead-toolbar-compact>#reloadLeadsButton,.lead-toolbar-actions.lead-toolbar-compact>.lead-more-actions{width:100%}
+      .lead-toolbar-actions.lead-toolbar-compact>#reloadLeadsButton,.lead-more-actions>summary{width:100%;min-height:42px!important;padding:0 12px!important;border:1px solid var(--line)!important;border-radius:10px!important;background:#fff!important;color:var(--ink)!important;font-size:10px!important;font-weight:800!important;text-align:center!important}
+      .lead-more-menu{position:fixed;left:12px;right:12px;top:auto;bottom:14px;min-width:0}
+      #leadsTab .lead-search-panel{grid-template-columns:minmax(0,1fr) auto!important;align-items:end}
+      #leadsTab .lead-search-main{grid-column:1/2!important;grid-row:1}
+      #leadsTab .lead-filter-toggle{display:block;grid-column:2/3;grid-row:1;height:40px;padding:0 12px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);font-size:10px;font-weight:800;white-space:nowrap}
+      #leadsTab .lead-search-panel:not(.is-expanded) .lead-advanced-filter{display:none!important}
+      #leadsTab .lead-search-panel.is-expanded label.lead-advanced-filter{display:grid!important;grid-column:1/-1}
+      #leadsTab .lead-search-panel.is-expanded button.lead-advanced-filter{display:block!important;grid-column:1/-1;width:100%}
+      .lead-marketing{grid-template-columns:1fr 1fr}
+    }
   `;
   document.head.append(style);
 
-  const leadsPanel = document.getElementById('leadsTab');
-  const leadsList = document.getElementById('leadList');
-  const toolbar = leadsPanel?.querySelector('.lead-toolbar-actions');
   const escape = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+
+  function phoneDisplay(value) {
+    let digits = String(value || '').replace(/\D/g, '');
+    if (digits.length === 11 && (digits[0] === '7' || digits[0] === '8')) digits = digits.slice(1);
+    if (digits.length !== 10) return String(value || '');
+    return `8 ${digits.slice(0,3)} ${digits.slice(3,6)}-${digits.slice(6,8)}-${digits.slice(8,10)}`;
+  }
+
+  function sourceLabel(value) {
+    const raw = String(value || '').trim();
+    const lower = raw.toLowerCase();
+    if (!raw || lower === 'direct' || lower === 'прямой') return 'Прямой заход';
+    if (lower.includes('googlequicksearchbox') || lower === 'google' || lower.includes('google.')) return 'Google';
+    if (lower.includes('yandex') || lower.includes('ya.ru')) return 'Яндекс';
+    if (lower.includes('vk.com') || lower === 'vk' || lower.includes('vkontakte')) return 'ВКонтакте';
+    if (lower.includes('ok.ru') || lower.includes('odnoklassniki')) return 'Одноклассники';
+    if (lower.includes('avito')) return 'Авито';
+    if (lower.startsWith('ref:')) return 'Переход из приложения';
+    return raw;
+  }
+
+  const trackingOf = lead => lead?.configuration?.tracking && typeof lead.configuration.tracking === 'object'
+    ? lead.configuration.tracking : {};
 
   function currentLeadQuery(limit = 200, beforeId = null) {
     const params = new URLSearchParams({limit:String(limit)});
@@ -77,63 +118,16 @@
     return data;
   }
 
-  const trackingOf = lead => lead?.configuration?.tracking && typeof lead.configuration.tracking === 'object'
-    ? lead.configuration.tracking : {};
-
-  function trackingCell(label, value) {
-    return `<div><span>${escape(label)}</span><b>${escape(value || '—')}</b></div>`;
-  }
-
-  let enhanceTimer = 0;
-  async function enhanceVisibleLeadCards() {
-    if (!leadsList || leadsPanel?.hidden) return;
-    const cards = [...leadsList.querySelectorAll('[data-lead-id]')];
-    if (!cards.length) return;
-    try {
-      const data = await fetchLeadPage(currentLeadQuery(200));
-      const byId = new Map((data.leads || []).map(lead => [String(lead.id), lead]));
-      for (const card of cards) {
-        const lead = byId.get(card.dataset.leadId);
-        if (!lead) continue;
-        card.querySelector('.lead-marketing')?.remove();
-        const tracking = trackingOf(lead);
-        const block = document.createElement('div');
-        block.className = 'lead-marketing';
-        const hasTracking = tracking.utmSource || tracking.utmCampaign || tracking.utmContent || tracking.utmTerm || tracking.yclid || tracking.gclid || tracking.referrer;
-        block.innerHTML = hasTracking
-          ? [
-              trackingCell('Источник', tracking.utmSource || lead.source),
-              trackingCell('Кампания', tracking.utmCampaign),
-              trackingCell('Объявление', tracking.utmContent),
-              trackingCell('Ключ / запрос', tracking.utmTerm),
-              tracking.yclid ? trackingCell('yclid', tracking.yclid) : '',
-              tracking.gclid ? trackingCell('gclid', tracking.gclid) : '',
-              tracking.referrer ? trackingCell('Реферер', tracking.referrer) : '',
-              tracking.landingPage ? trackingCell('Страница входа', tracking.landingPage) : ''
-            ].join('')
-          : '<span class="lead-marketing-empty">Рекламные метки для этой заявки не переданы.</span>';
-        const grid = card.querySelector('.lead-grid');
-        if (grid) grid.after(block);
-      }
-    } catch {}
-  }
-
-  function scheduleEnhance() {
-    clearTimeout(enhanceTimer);
-    enhanceTimer = setTimeout(enhanceVisibleLeadCards, 120);
-  }
-
-  if (leadsList) new MutationObserver(scheduleEnhance).observe(leadsList, {childList:true});
-  nav.addEventListener('click', event => {
-    if (event.target.closest('[data-admin-tab="leads"]')) setTimeout(enhanceVisibleLeadCards, 180);
-  });
-
   function csvQuote(value) { return `"${String(value ?? '').replace(/"/g, '""')}"`; }
   function download(filename, text) {
     const blob = new Blob([text], {type:'text/csv;charset=utf-8'});
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.href = url; link.download = filename; document.body.append(link); link.click(); link.remove();
+    link.href = url;
+    link.download = filename;
+    document.body.append(link);
+    link.click();
+    link.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
@@ -149,7 +143,9 @@
     return rows;
   }
 
-  if (toolbar && !document.getElementById('exportLeadsMarketingCsv')) {
+  function setupMarketingExport() {
+    const toolbar = leadsPanel.querySelector('.lead-toolbar-actions');
+    if (!toolbar || document.getElementById('exportLeadsMarketingCsv')) return;
     const button = document.createElement('button');
     button.className = 'reset-button';
     button.id = 'exportLeadsMarketingCsv';
@@ -179,63 +175,115 @@
       }
     });
   }
-})();
 
-(() => {
-  const panel = document.getElementById('leadsTab');
-  const list = document.getElementById('leadList');
-  if (!panel || !list) return;
+  function compactToolbar() {
+    const toolbar = leadsPanel.querySelector('.lead-toolbar-actions');
+    if (!toolbar) return;
+    const reload = document.getElementById('reloadLeadsButton');
+    if (reload) reload.textContent = '↻ Обновить';
+    let details = toolbar.querySelector('.lead-more-actions');
+    if (!details) {
+      details = document.createElement('details');
+      details.className = 'lead-more-actions';
+      details.innerHTML = '<summary>⋯ Ещё</summary><div class="lead-more-menu"></div>';
+      const menu = details.querySelector('.lead-more-menu');
+      for (const id of ['exportLeadsMarketingCsv','exportLeadsCsv','backupLeadsJson','enableLeadNotifications']) {
+        const button = document.getElementById(id);
+        if (button) menu.append(button);
+      }
+      toolbar.append(details);
+      details.addEventListener('click', event => {
+        if (event.target.closest('button')) details.open = false;
+      });
+    }
+    details.querySelector('summary').textContent = '⋯ Ещё';
+    toolbar.classList.add('lead-toolbar-compact');
+  }
 
-  const style = document.createElement('style');
-  style.textContent = `
-    .lead-quick-work{display:grid;grid-template-columns:minmax(190px,.7fr) minmax(260px,1.8fr) auto;gap:8px;align-items:end;margin:0 0 12px;padding:10px;border:1px solid #e4ddd2;border-radius:11px;background:#fcfaf6}
-    .lead-quick-work label{display:grid;gap:5px;color:var(--muted);font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.35px}
-    .lead-quick-work input,.lead-quick-work textarea{width:100%;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--ink);font:inherit;font-size:11px;text-transform:none;letter-spacing:0}
-    .lead-quick-work input{height:39px;padding:0 9px}.lead-quick-work textarea{min-height:54px;padding:8px 9px;resize:vertical}
-    .lead-quick-save{min-height:39px;padding:0 13px;border:0;border-radius:9px;background:var(--ink);color:#fff;font-size:10px;font-weight:900;white-space:nowrap}
-    @media(max-width:760px){.lead-quick-work{grid-template-columns:1fr}.lead-quick-save{width:100%}}
-  `;
-  document.head.append(style);
+  function setupFilterCollapse() {
+    const searchPanel = leadsPanel.querySelector('.lead-search-panel');
+    if (!searchPanel || searchPanel.querySelector('.lead-filter-toggle')) return;
+    const source = document.getElementById('leadSourceFilter');
+    const from = document.getElementById('leadDateFrom');
+    const to = document.getElementById('leadDateTo');
+    const clear = document.getElementById('clearLeadFilters');
+    [source?.closest('label'), from?.closest('label'), to?.closest('label'), clear].filter(Boolean)
+      .forEach(item => item.classList.add('lead-advanced-filter'));
 
-  let loading = false;
-  let timer = 0;
+    const toggle = document.createElement('button');
+    toggle.className = 'lead-filter-toggle';
+    toggle.type = 'button';
+    toggle.setAttribute('aria-expanded', 'false');
+    searchPanel.append(toggle);
+
+    const sync = () => {
+      const active = [source?.value, from?.value, to?.value].filter(Boolean).length;
+      toggle.textContent = active ? `Фильтры · ${active}` : 'Фильтры';
+    };
+    toggle.addEventListener('click', () => {
+      const expanded = searchPanel.classList.toggle('is-expanded');
+      toggle.setAttribute('aria-expanded', String(expanded));
+    });
+    [source, from, to].filter(Boolean).forEach(control => control.addEventListener('change', sync));
+    clear?.addEventListener('click', () => setTimeout(sync, 0));
+    sync();
+  }
+
+  function simplifySourceFilter() {
+    const select = document.getElementById('leadSourceFilter');
+    if (!select) return;
+    for (const option of [...select.options].slice(1)) {
+      const count = option.textContent.match(/\s·\s\d+$/)?.[0] || '';
+      const next = `${sourceLabel(option.value)}${count}`;
+      if (option.textContent !== next) option.textContent = next;
+    }
+  }
+
+  function formatCardBasics(card) {
+    const fields = [...card.querySelectorAll('.lead-field')];
+    const phoneField = fields.find(field => field.querySelector('span')?.textContent.trim() === 'Телефон');
+    const phone = phoneField?.querySelector('b');
+    if (phone) {
+      const formatted = phoneDisplay(phone.textContent);
+      if (formatted && phone.textContent !== formatted) phone.textContent = formatted;
+    }
+    const meta = card.querySelector('.lead-main span');
+    if (meta) {
+      const parts = meta.textContent.split(' · ');
+      const last = parts.at(-1) || '';
+      if (/^(ref:|google$|yandex$|vk$|avito$)/i.test(last) || /googlequicksearchbox|yandex|vk\.com|ok\.ru|avito/i.test(last)) {
+        parts[parts.length - 1] = sourceLabel(last);
+        meta.textContent = parts.join(' · ');
+      }
+    }
+  }
+
+  function marketingBlock(lead) {
+    const tracking = trackingOf(lead);
+    const items = [
+      ['Источник', sourceLabel(tracking.utmSource || lead.source)],
+      ['Кампания', tracking.utmCampaign],
+      ['Объявление', tracking.utmContent],
+      ['Ключ / запрос', tracking.utmTerm],
+      ['yclid', tracking.yclid],
+      ['gclid', tracking.gclid]
+    ].filter(([,value]) => String(value || '').trim());
+    const block = document.createElement('div');
+    block.className = 'lead-marketing';
+    block.innerHTML = items.length
+      ? items.map(([label,value]) => `<div><span>${escape(label)}</span><b>${escape(value)}</b></div>`).join('')
+      : '<span class="lead-marketing-empty">Рекламных меток нет.</span>';
+    return block;
+  }
 
   async function getWorkflows(ids) {
+    if (!ids.length) return {workflows:{}};
     const response = await fetch(`/api/admin/lead-workflows?ids=${encodeURIComponent(ids.join(','))}`, {cache:'no-store'});
     if (!response.ok) throw new Error('Не удалось загрузить заметки');
     return response.json();
   }
 
-  async function enhance() {
-    if (loading || panel.hidden) return;
-    const cards = [...list.querySelectorAll('[data-lead-id]')].filter(card => !card.querySelector('.lead-quick-work'));
-    const ids = cards.map(card => Number(card.dataset.leadId)).filter(Boolean);
-    if (!ids.length) return;
-    loading = true;
-    try {
-      const data = await getWorkflows(ids);
-      for (const card of cards) {
-        const id = Number(card.dataset.leadId);
-        const item = data.workflows?.[id] || {stage:'new',note:'',nextActionAt:'',lossReason:''};
-        const box = document.createElement('div');
-        box.className = 'lead-quick-work';
-        box.dataset.workflowStage = item.stage || 'new';
-        box.dataset.lossReason = item.lossReason || '';
-        box.innerHTML = `<label>Дата и время замера<input type="datetime-local" data-measurement-date></label><label>Заметка<textarea data-manager-note maxlength="1200" placeholder="Например: созвониться после 18:00"></textarea></label><button class="lead-quick-save" type="button">Сохранить</button>`;
-        box.querySelector('[data-measurement-date]').value = String(item.nextActionAt || '');
-        box.querySelector('[data-manager-note]').value = String(item.note || '');
-        box.querySelector('.lead-quick-save').addEventListener('click', () => save(card, box));
-        const details = card.querySelector('.lead-details');
-        if (details) details.before(box); else card.append(box);
-      }
-    } catch (error) {
-      console.warn('Lead note enhancement failed', error);
-    } finally {
-      loading = false;
-    }
-  }
-
-  async function save(card, box) {
+  async function saveWorkflow(card, box) {
     const id = Number(card.dataset.leadId);
     const date = box.querySelector('[data-measurement-date]').value || '';
     const note = box.querySelector('[data-manager-note]').value || '';
@@ -267,136 +315,81 @@
     }
   }
 
-  const schedule = () => { clearTimeout(timer); timer = setTimeout(enhance, 60); };
-  new MutationObserver(schedule).observe(list, {childList:true});
-  document.querySelector('.admin-tabs')?.addEventListener('click', event => {
-    if (event.target.closest('[data-admin-tab="leads"]')) setTimeout(enhance, 120);
-  });
-  window.addEventListener('admin:ready', () => setTimeout(enhance, 100));
-  setTimeout(enhance, 100);
-})();
-
-(() => {
-  const panel = document.getElementById('leadsTab');
-  const list = document.getElementById('leadList');
-  if (!panel || !list) return;
-
-  const style = document.createElement('style');
-  style.textContent = `
-    .lead-toolbar-actions.lead-toolbar-compact{display:flex;align-items:center;gap:8px}.lead-more-actions{position:relative}.lead-more-actions>summary{display:flex;align-items:center;justify-content:center;min-height:38px;padding:0 13px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);font-size:10px;font-weight:800;cursor:pointer;list-style:none}.lead-more-actions>summary::-webkit-details-marker{display:none}.lead-more-menu{position:absolute;z-index:30;right:0;top:calc(100% + 6px);display:grid;gap:6px;min-width:205px;padding:8px;border:1px solid var(--line);border-radius:12px;background:#fff;box-shadow:0 12px 32px rgba(18,16,13,.14)}.lead-more-menu .reset-button{width:100%;text-align:left}.lead-marketing.is-compact{grid-template-columns:repeat(3,minmax(0,1fr))}.lead-marketing.is-compact:empty{display:none}
-    @media(max-width:620px){.lead-toolbar-actions.lead-toolbar-compact{display:grid;grid-template-columns:1fr 1fr}.lead-toolbar-actions.lead-toolbar-compact>#reloadLeadsButton,.lead-toolbar-actions.lead-toolbar-compact>.lead-more-actions{width:100%}.lead-more-actions>summary{width:100%}.lead-more-menu{position:fixed;left:12px;right:12px;top:auto;bottom:14px;min-width:0}.lead-marketing.is-compact{grid-template-columns:1fr 1fr}}
-  `;
-  document.head.append(style);
-
-  function phoneDisplay(value) {
-    let digits = String(value || '').replace(/\D/g, '');
-    if (digits.length === 11 && (digits[0] === '7' || digits[0] === '8')) digits = digits.slice(1);
-    if (digits.length !== 10) return String(value || '');
-    return `8 ${digits.slice(0,3)} ${digits.slice(3,6)}-${digits.slice(6,8)}-${digits.slice(8,10)}`;
+  function workflowBox(item, card) {
+    const box = document.createElement('div');
+    box.className = 'lead-quick-work';
+    box.dataset.workflowStage = item.stage || 'new';
+    box.dataset.lossReason = item.lossReason || '';
+    box.innerHTML = `<label>Дата и время замера<input type="datetime-local" data-measurement-date></label><label>Заметка<textarea data-manager-note maxlength="1200" placeholder="Например: созвониться после 18:00"></textarea></label><button class="lead-quick-save" type="button">Сохранить</button>`;
+    box.querySelector('[data-measurement-date]').value = String(item.nextActionAt || '');
+    box.querySelector('[data-manager-note]').value = String(item.note || '');
+    box.querySelector('.lead-quick-save').addEventListener('click', () => saveWorkflow(card, box));
+    return box;
   }
 
-  function sourceLabel(value) {
-    const raw = String(value || '').trim();
-    const lower = raw.toLowerCase();
-    if (!raw || lower === 'direct' || lower === 'прямой') return 'Прямой заход';
-    if (lower.includes('googlequicksearchbox') || lower === 'google' || lower.includes('google.')) return 'Google';
-    if (lower.includes('yandex') || lower.includes('ya.ru') || lower === 'yandex') return 'Яндекс';
-    if (lower.includes('vk.com') || lower === 'vk' || lower.includes('vkontakte')) return 'ВКонтакте';
-    if (lower.includes('ok.ru') || lower.includes('odnoklassniki')) return 'Одноклассники';
-    if (lower.includes('avito')) return 'Авито';
-    if (lower.startsWith('ref:')) return 'Переход из приложения';
-    return raw;
-  }
-
-  function compactToolbar() {
-    const toolbar = panel.querySelector('.lead-toolbar-actions');
-    if (!toolbar || toolbar.querySelector('.lead-more-actions')) return;
-    const details = document.createElement('details');
-    details.className = 'lead-more-actions';
-    details.innerHTML = '<summary>Ещё</summary><div class="lead-more-menu"></div>';
-    const menu = details.querySelector('.lead-more-menu');
-    for (const id of ['exportLeadsMarketingCsv','exportLeadsCsv','backupLeadsJson','enableLeadNotifications']) {
-      const button = document.getElementById(id);
-      if (button) menu.append(button);
-    }
-    toolbar.append(details);
-    toolbar.classList.add('lead-toolbar-compact');
-    details.addEventListener('click', event => {
-      if (event.target.closest('button')) details.open = false;
-    });
-  }
-
-  function simplifySourceFilter() {
-    const select = document.getElementById('leadSourceFilter');
-    if (!select) return;
-    for (const option of [...select.options].slice(1)) {
-      const count = option.textContent.match(/\s·\s\d+$/)?.[0] || '';
-      const label = sourceLabel(option.value);
-      const next = `${label}${count}`;
-      if (option.textContent !== next) option.textContent = next;
-    }
-  }
-
-  function simplifyCard(card) {
-    const fields = [...card.querySelectorAll('.lead-field')];
-    const phoneField = fields.find(field => field.querySelector('span')?.textContent.trim() === 'Телефон');
-    const phone = phoneField?.querySelector('b');
-    if (phone) {
-      const formatted = phoneDisplay(phone.textContent);
-      if (formatted && phone.textContent !== formatted) phone.textContent = formatted;
-    }
-
-    const meta = card.querySelector('.lead-main span');
-    if (meta) {
-      const parts = meta.textContent.split(' · ');
-      const last = parts.at(-1) || '';
-      if (/^(ref:|google$|yandex$|vk$|avito$)/i.test(last) || /googlequicksearchbox|yandex|vk\.com|ok\.ru|avito/i.test(last)) {
-        const next = sourceLabel(last);
-        if (next !== last) {
-          parts[parts.length - 1] = next;
-          meta.textContent = parts.join(' · ');
+  let enhancing = false;
+  let enhanceTimer = 0;
+  async function enhanceCards() {
+    if (enhancing || leadsPanel.hidden) return;
+    const cards = [...leadsList.querySelectorAll('[data-lead-id]')];
+    if (!cards.length) return;
+    enhancing = true;
+    try {
+      const ids = cards.map(card => Number(card.dataset.leadId)).filter(Boolean);
+      const [leadData, workflowData] = await Promise.all([
+        fetchLeadPage(currentLeadQuery(200)),
+        getWorkflows(ids)
+      ]);
+      const byId = new Map((leadData.leads || []).map(lead => [String(lead.id), lead]));
+      for (const card of cards) {
+        formatCardBasics(card);
+        const lead = byId.get(card.dataset.leadId);
+        if (lead) {
+          card.querySelector('.lead-marketing')?.remove();
+          const grid = card.querySelector('.lead-grid');
+          if (grid) grid.after(marketingBlock(lead));
+        }
+        if (!card.querySelector('.lead-quick-work')) {
+          const item = workflowData.workflows?.[Number(card.dataset.leadId)] || {stage:'new',note:'',nextActionAt:'',lossReason:''};
+          const box = workflowBox(item, card);
+          const details = card.querySelector('.lead-details');
+          if (details) details.before(box); else card.append(box);
         }
       }
+    } catch (error) {
+      console.warn('Lead enhancement failed', error);
+    } finally {
+      enhancing = false;
     }
-
-    const block = card.querySelector('.lead-marketing');
-    if (!block) return;
-    block.classList.add('is-compact');
-    for (const cell of [...block.querySelectorAll(':scope > div')]) {
-      const label = cell.querySelector('span')?.textContent.trim() || '';
-      const valueNode = cell.querySelector('b');
-      const value = valueNode?.textContent.trim() || '';
-      if (!value || value === '—') {
-        cell.remove();
-        continue;
-      }
-      if (label === 'Источник' && valueNode) {
-        const friendly = sourceLabel(value);
-        if (valueNode.textContent !== friendly) valueNode.textContent = friendly;
-        continue;
-      }
-      if (label === 'Реферер' || label === 'Страница входа') cell.remove();
-    }
-    const emptyMessage = block.querySelector('.lead-marketing-empty');
-    if (emptyMessage) emptyMessage.textContent = 'Рекламных меток нет.';
   }
 
-  let timer = 0;
-  function simplify() {
-    clearTimeout(timer);
-    timer = setTimeout(() => {
-      compactToolbar();
-      simplifySourceFilter();
-      list.querySelectorAll('[data-lead-id]').forEach(simplifyCard);
-    }, 80);
+  function scheduleEnhance() {
+    clearTimeout(enhanceTimer);
+    enhanceTimer = setTimeout(enhanceCards, 100);
   }
 
-  new MutationObserver(simplify).observe(list, {childList:true,subtree:true});
+  setupMarketingExport();
+  compactToolbar();
+  setupFilterCollapse();
+  simplifySourceFilter();
+  document.getElementById('leadExportNote')?.setAttribute('hidden', '');
+
+  new MutationObserver(scheduleEnhance).observe(leadsList, {childList:true});
   const sourceFilter = document.getElementById('leadSourceFilter');
   if (sourceFilter) new MutationObserver(simplifySourceFilter).observe(sourceFilter, {childList:true});
-  document.querySelector('.admin-tabs')?.addEventListener('click', event => {
-    if (event.target.closest('[data-admin-tab="leads"]')) setTimeout(simplify, 150);
+  const toolbar = leadsPanel.querySelector('.lead-toolbar-actions');
+  if (toolbar) new MutationObserver(compactToolbar).observe(toolbar, {childList:true});
+
+  nav.addEventListener('click', event => {
+    if (event.target.closest('[data-admin-tab="leads"]')) {
+      setTimeout(() => {
+        compactToolbar();
+        setupFilterCollapse();
+        simplifySourceFilter();
+        enhanceCards();
+      }, 150);
+    }
   });
-  window.addEventListener('admin:ready', () => setTimeout(simplify, 120));
-  setTimeout(simplify, 250);
+  window.addEventListener('admin:ready', () => setTimeout(scheduleEnhance, 100));
+  setTimeout(scheduleEnhance, 200);
 })();
