@@ -180,3 +180,117 @@
   articleSelect?.addEventListener('change', () => setTimeout(render, 0));
   document.addEventListener('admin:ready', render);
 })();
+
+(() => {
+  if (window.KUZDVOR_COMPACT_PRICES_READY) return;
+  window.KUZDVOR_COMPACT_PRICES_READY = true;
+
+  window.addEventListener('load', () => {
+    const pricesTab = document.getElementById('pricesTab');
+    const extraPriceList = document.getElementById('extraPriceList');
+    const catalogPriceList = document.getElementById('catalogPriceList');
+    const saveButton = document.getElementById('savePricesButton');
+    if (!pricesTab || !extraPriceList || !saveButton) return;
+
+    const compactStyle = document.createElement('style');
+    compactStyle.id = 'compactPriceAdminStyle';
+    compactStyle.textContent = `
+      #pricesTab .excel-import{gap:8px}
+      #pricesTab .excel-import-intro{margin:0;padding:10px 12px;font-size:10px;line-height:1.45}
+      #pricesTab .excel-import-source{padding:10px 11px;gap:8px}
+      #pricesTab .excel-import-source small{display:none}
+      #pricesTab .excel-source-actions{gap:6px}
+      #pricesTab .excel-file-button,#pricesTab .excel-download-button{min-height:38px;padding:0 11px;font-size:10px}
+      #pricesTab .extra-price-list{gap:7px}
+      #pricesTab .extra-price-card[data-price-compact="1"]{padding:10px 11px;background:#fff}
+      #pricesTab .extra-price-card[data-price-compact="1"] .extra-price-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0}
+      #pricesTab .extra-price-card[data-price-compact="1"] .extra-price-heading>div{min-width:0}
+      #pricesTab .extra-price-card[data-price-compact="1"] .extra-price-heading b{font-size:12px}
+      #pricesTab .extra-price-card[data-price-compact="1"] .extra-price-heading small{font-size:8px}
+      .extra-price-compact-actions{display:flex;align-items:center;gap:8px;flex:0 0 auto}
+      .extra-price-current{font-size:11px;font-weight:900;white-space:nowrap;color:#6c5732}
+      .extra-price-edit{min-height:34px;padding:0 10px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--ink);font-size:9px;font-weight:800}
+      #pricesTab .extra-price-card[data-price-compact="1"]:not(.is-open) .extra-price-fields{display:none!important}
+      #pricesTab .extra-price-card[data-price-compact="1"].is-open .extra-price-fields{display:grid;margin-top:10px}
+      #pricesTab .price-action-bar[data-price-save-bar="1"]{bottom:8px;padding:8px 10px;border-radius:12px}
+      #pricesTab .price-action-bar[data-price-save-bar="1"] .save-state{display:none}
+      #pricesTab .price-action-bar[data-price-save-bar="1"] .save-button{width:100%;min-height:44px}
+      @media(max-width:620px){
+        #pricesTab .settings-card{padding:13px}
+        #pricesTab .excel-import-source{grid-template-columns:1fr!important}
+        #pricesTab .excel-source-actions{display:grid!important;grid-template-columns:1fr 1fr!important}
+        #pricesTab .excel-file-button,#pricesTab .excel-download-button{width:100%!important;min-height:40px!important;padding:0 7px!important}
+        #pricesTab .extra-price-list{grid-template-columns:1fr!important}
+        #pricesTab .extra-price-card[data-price-compact="1"]{padding:9px 10px!important;border-radius:11px}
+        #pricesTab .extra-price-fields{grid-template-columns:1fr!important;gap:7px!important}
+        #pricesTab .extra-price-fields input{height:41px!important}
+        .extra-price-current{font-size:10px}.extra-price-edit{min-height:32px;padding:0 8px}
+      }
+    `;
+    document.head.append(compactStyle);
+
+    const money = value => `${new Intl.NumberFormat('ru-RU').format(Math.round(Number(value) || 0))} ₽`;
+
+    function compactExcel() {
+      const intro = pricesTab.querySelector('.excel-import-intro');
+      if (intro) intro.innerHTML = '<b>Цены ворот рассчитываются из Excel.</b> Для изменения скачайте файл, измените цены и загрузите его обратно.';
+      const meta = document.getElementById('excelCurrentMeta');
+      if (meta) meta.hidden = true;
+      const download = document.getElementById('excelDownload');
+      if (download) download.textContent = 'Скачать Excel';
+      const upload = pricesTab.querySelector('.excel-file-button');
+      if (upload) upload.textContent = 'Загрузить Excel';
+    }
+
+    function enhanceExtraCard(card) {
+      if (!(card instanceof HTMLElement) || card.dataset.priceCompact === '1') return;
+      const heading = card.querySelector('.extra-price-heading');
+      const fields = card.querySelector('.extra-price-fields');
+      const priceInput = fields?.querySelector('[data-extra-field="price"]');
+      if (!heading || !fields || !priceInput) return;
+
+      card.dataset.priceCompact = '1';
+      const actions = document.createElement('div');
+      actions.className = 'extra-price-compact-actions';
+      const current = document.createElement('span');
+      current.className = 'extra-price-current';
+      const edit = document.createElement('button');
+      edit.type = 'button';
+      edit.className = 'extra-price-edit';
+      edit.textContent = 'Изменить';
+      actions.append(current, edit);
+      heading.append(actions);
+
+      const syncPrice = () => { current.textContent = money(priceInput.value); };
+      syncPrice();
+      priceInput.addEventListener('input', syncPrice);
+      edit.addEventListener('click', () => {
+        const open = card.classList.toggle('is-open');
+        edit.textContent = open ? 'Свернуть' : 'Изменить';
+        if (open) priceInput.focus({preventScroll:true});
+      });
+    }
+
+    function enhanceExtraPrices() {
+      extraPriceList.querySelectorAll('.extra-price-card').forEach(enhanceExtraCard);
+    }
+
+    const extraObserver = new MutationObserver(enhanceExtraPrices);
+    extraObserver.observe(extraPriceList, {childList:true});
+    enhanceExtraPrices();
+
+    if (catalogPriceList) {
+      const excelObserver = new MutationObserver(compactExcel);
+      excelObserver.observe(catalogPriceList, {childList:true,subtree:true});
+    }
+    compactExcel();
+
+    const saveBar = saveButton.closest('.action-bar');
+    if (saveBar) {
+      saveBar.dataset.priceSaveBar = '1';
+      const syncSaveBar = () => { saveBar.hidden = saveButton.disabled; };
+      new MutationObserver(syncSaveBar).observe(saveButton, {attributes:true,attributeFilter:['disabled']});
+      syncSaveBar();
+    }
+  }, {once:true});
+})();
