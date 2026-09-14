@@ -7,19 +7,12 @@ RewriteEngine On
 RewriteRule (^|/)\.git(?:/|$) - [F,L]
 RewriteRule ^backend(?:/|$) - [F,L]
 
-# Shadow PHP/MySQL backend. It is tested independently before the public API is
-# switched away from Cloudflare.
+# Local PHP/MySQL backend. The public site, admin panel, leads, delivery and
+# catalog media now run directly on Timeweb and no longer depend on Cloudflare.
 RewriteRule ^api-local/(.*)$ local-api.php?__route=$1 [QSA,L]
 RewriteRule ^catalog-media-local/(.*)$ local-api.php?__route=catalog-media/$1 [QSA,L]
-
-# Delivery must work directly on Timeweb and must not depend on the temporary
-# Cloudflare proxy. This route returns JSON from the local PHP backend.
-RewriteRule ^api/delivery/?$ local-api.php?__route=delivery [QSA,L]
-
-# Transitional production backend: keep the remaining Cloudflare/D1 routes live
-# until the rest of the MySQL migration is complete.
-RewriteRule ^api/(.*)$ api-proxy.php?__proxy_path=api/$1 [QSA,L]
-RewriteRule ^catalog-media/(.*)$ api-proxy.php?__proxy_path=catalog-media/$1 [QSA,L]
+RewriteRule ^api/(.*)$ local-api.php?__route=$1 [QSA,L]
+RewriteRule ^catalog-media/(.*)$ local-api.php?__route=catalog-media/$1 [QSA,L]
 
 # Friendly routes used by the current site.
 RewriteRule ^admin/?$ admin.html [L]
@@ -34,8 +27,8 @@ RewriteRule ^napravleniya/?$ napravleniya/index.html [L]
   Header set Referrer-Policy "strict-origin-when-cross-origin"
 </IfModule>
 
-# Deployment/setup helpers and private health markers must never be public.
-<FilesMatch "^(?:deploy-timeweb\.sh|install-autodeploy\.sh|health-check\.sh|setup-timeweb\.php|migrate-from-cloudflare\.php|timeweb-build\.txt|\.timeweb-health)$">
+# Deployment/setup/migration helpers and private health markers must never be public.
+<FilesMatch "^(?:deploy-timeweb\.sh|install-autodeploy\.sh|health-check\.sh|setup-timeweb\.php|migrate-from-cloudflare\.php|migrate-public-catalog\.php|timeweb-build\.txt|\.timeweb-health)$">
   <IfModule mod_authz_core.c>
     Require all denied
   </IfModule>
