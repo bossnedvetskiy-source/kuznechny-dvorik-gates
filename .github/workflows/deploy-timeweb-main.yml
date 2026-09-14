@@ -126,13 +126,15 @@ jobs:
           reachable=0
           matched=0
 
+          # Timeweb cron may run just after a GitHub publication, so wait longer
+          # than one full minute before declaring the deployment stale.
           echo "Checking Timeweb auto-deploy of ${expected_sha}..."
-          for attempt in $(seq 1 6); do
+          for attempt in $(seq 1 18); do
             : > /tmp/timeweb-version.json
             : > /tmp/timeweb-curl-error.txt
             code="$(curl -sS --connect-timeout 4 --max-time 8 -o /tmp/timeweb-version.json -w '%{http_code}' "${base}/deployment-version.json?check=${attempt}" 2>/tmp/timeweb-curl-error.txt || true)"
             live_sha="$(node -e "const fs=require('fs');try{process.stdout.write(JSON.parse(fs.readFileSync('/tmp/timeweb-version.json','utf8')).sourceSha||'')}catch{}" 2>/dev/null || true)"
-            echo "Attempt ${attempt}/6: HTTP ${code:-000}; live=${live_sha:-unavailable}; expected=${expected_sha}"
+            echo "Attempt ${attempt}/18: HTTP ${code:-000}; live=${live_sha:-unavailable}; expected=${expected_sha}"
 
             if [ -n "$code" ] && [ "$code" != '000' ]; then
               reachable=1
@@ -155,7 +157,7 @@ jobs:
               fi
               exit 0
             fi
-            echo "::error::Timeweb is reachable, but current main ${expected_sha} is not live. Check the Timeweb Crontab task kuzdvor-autodeploy and its log."
+            echo "::error::Timeweb is reachable, but current main ${expected_sha} is not live after the full cron window. Check the Timeweb Crontab task kuzdvor-autodeploy and its log."
             exit 1
           fi
 
