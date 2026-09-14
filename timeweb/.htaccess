@@ -1,6 +1,13 @@
 Options -Indexes
 DirectoryIndex index.html index.htm
 
+# Timeweb web PHP is restricted to the site directory. Point HOME at the
+# site root so the backend can keep secrets outside public_html while staying
+# readable by the hosting PHP runtime.
+<IfModule mod_env.c>
+  SetEnv HOME /home/c/cp59598/kuznechny-dvorik-gates
+</IfModule>
+
 RewriteEngine On
 
 # Never expose repository metadata or PHP backend internals.
