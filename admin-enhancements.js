@@ -27,7 +27,51 @@
   nav.addEventListener('click', event => {
     const button = event.target.closest('.admin-tab');
     if (!button) return;
-    queueMicrotask(() => reconcileTab(button.dataset.adminTab));
+    queueMicrotask(() => {
+      reconcileTab(button.dataset.adminTab);
+      if (window.matchMedia?.('(max-width:620px)').matches && button.classList.contains('active')) {
+        button.scrollIntoView({behavior:'smooth', block:'nearest', inline:'center'});
+      }
+    });
+  });
+
+  const safeSessionGet = key => {
+    try { return window.sessionStorage.getItem(key) || ''; } catch { return ''; }
+  };
+  const safeSessionSet = (key, value) => {
+    try { window.sessionStorage.setItem(key, String(value || '')); } catch {}
+  };
+
+  const catalogTabButton = nav.querySelector('[data-admin-tab="catalog"]');
+  if (catalogTabButton) catalogTabButton.textContent = '🗂 Каталог';
+
+  const photoArticleStorageKey = 'kuzdvor-admin-photo-article-v1';
+  const articleSelect = document.getElementById('articleSelect');
+  const mainPhotoGrid = document.getElementById('photoGrid');
+
+  function restorePhotoArticle() {
+    if (!articleSelect || hasUnsavedChanges()) return;
+    const article = safeSessionGet(photoArticleStorageKey);
+    if (!article || articleSelect.value === article) return;
+    if (![...articleSelect.options].some(option => option.value === article)) return;
+    articleSelect.value = article;
+    articleSelect.dispatchEvent(new Event('change', {bubbles:true}));
+  }
+
+  articleSelect?.addEventListener('change', () => {
+    window.setTimeout(() => {
+      safeSessionSet(photoArticleStorageKey, articleSelect.value);
+      mainPhotoGrid?.classList.remove('photo-actions-armed');
+    }, 0);
+  });
+
+  mainPhotoGrid?.addEventListener('click', event => {
+    if (!event.target.closest('.photo-thumb')) return;
+    mainPhotoGrid.classList.add('photo-actions-armed');
+  });
+
+  window.addEventListener('admin:ready', () => {
+    window.requestAnimationFrame(() => window.setTimeout(restorePhotoArticle, 0));
   });
 
   const priceCard = document.querySelector('#pricesTab .settings-card:nth-of-type(2)');
@@ -43,6 +87,73 @@
   const leadsList = document.getElementById('leadList');
   if (!leadsPanel || !leadsList) return;
 
+  const leadViewStorageKey = 'kuzdvor-admin-lead-view-v1';
+  let restoringLeadView = false;
+
+  function leadViewState() {
+    return {
+      status: document.querySelector('[data-lead-filter].active')?.dataset.leadFilter || 'all',
+      q: document.getElementById('leadSearchInput')?.value || '',
+      source: document.getElementById('leadSourceFilter')?.value || '',
+      from: document.getElementById('leadDateFrom')?.value || '',
+      to: document.getElementById('leadDateTo')?.value || ''
+    };
+  }
+
+  function rememberLeadView() {
+    if (restoringLeadView) return;
+    try { window.sessionStorage.setItem(leadViewStorageKey, JSON.stringify(leadViewState())); } catch {}
+  }
+
+  function savedLeadView() {
+    try {
+      const value = JSON.parse(window.sessionStorage.getItem(leadViewStorageKey) || 'null');
+      return value && typeof value === 'object' ? value : null;
+    } catch {
+      return null;
+    }
+  }
+
+  function restoreLeadView(attempt = 0) {
+    const saved = savedLeadView();
+    if (!saved) return;
+    const search = document.getElementById('leadSearchInput');
+    const source = document.getElementById('leadSourceFilter');
+    const from = document.getElementById('leadDateFrom');
+    const to = document.getElementById('leadDateTo');
+    if (!search || !source || !from || !to) return;
+
+    const sourceReady = !saved.source || [...source.options].some(option => option.value === saved.source);
+    if (!sourceReady && attempt < 12) {
+      window.setTimeout(() => restoreLeadView(attempt + 1), 100);
+      return;
+    }
+
+    restoringLeadView = true;
+    search.value = String(saved.q || '');
+    source.value = sourceReady ? String(saved.source || '') : '';
+    from.value = String(saved.from || '');
+    to.value = String(saved.to || '');
+    const status = ['all','new','contacted','done','archived'].includes(saved.status) ? saved.status : 'all';
+    const statusButton = leadsPanel.querySelector(`[data-lead-filter="${status}"]`);
+    statusButton?.click();
+    if (saved.source || saved.from || saved.to) leadsPanel.querySelector('.lead-search-panel')?.classList.add('is-expanded');
+    window.setTimeout(() => {
+      restoringLeadView = false;
+      rememberLeadView();
+    }, 0);
+  }
+
+  leadsPanel.addEventListener('input', event => {
+    if (event.target.matches('#leadSearchInput')) rememberLeadView();
+  });
+  leadsPanel.addEventListener('change', event => {
+    if (event.target.matches('#leadSourceFilter,#leadDateFrom,#leadDateTo')) rememberLeadView();
+  });
+  leadsPanel.addEventListener('click', event => {
+    if (event.target.closest('[data-lead-filter],#clearLeadFilters')) window.setTimeout(rememberLeadView, 0);
+  });
+
   const style = document.createElement('style');
   style.textContent = `
     .admin-baseline-note{margin:-5px 0 15px;padding:11px 12px;border:1px solid #dfc791;border-radius:11px;background:#fff8e8;color:#67532c;font-size:10.5px;line-height:1.5}.admin-baseline-note b{color:#7b5720}
@@ -53,8 +164,9 @@
     @media(max-width:900px){.lead-marketing{grid-template-columns:1fr 1fr}}
     @media(max-width:760px){.lead-quick-work{grid-template-columns:1fr}.lead-quick-save{width:100%}}
     @media(max-width:620px){
-      .admin-tabs{display:flex!important;width:100%!important;gap:3px!important;padding:4px!important;overflow:hidden!important}
-      .admin-tabs .admin-tab{flex:1 1 0!important;min-width:0!important;padding:0 6px!important;font-size:10px!important}
+      .admin-tabs{display:flex!important;width:100%!important;gap:3px!important;padding:4px!important;overflow-x:auto!important;overflow-y:hidden!important;scrollbar-width:none;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch}
+      .admin-tabs::-webkit-scrollbar{display:none}
+      .admin-tabs .admin-tab{flex:0 0 auto!important;min-width:82px!important;padding:0 10px!important;font-size:11px!important;scroll-snap-align:start}
       #leadsTab .page-title h1{font-size:36px!important;line-height:1.08!important}
       #leadStats .lead-stat:nth-child(-n+4){display:none}
       .lead-toolbar-actions.lead-toolbar-compact{display:grid!important;grid-template-columns:1fr 1fr;width:100%;gap:8px}
@@ -395,6 +507,9 @@
       }, 150);
     }
   });
-  window.addEventListener('admin:ready', () => setTimeout(scheduleEnhance, 100));
+  window.addEventListener('admin:ready', () => {
+    setTimeout(scheduleEnhance, 100);
+    setTimeout(() => restoreLeadView(), 180);
+  });
   setTimeout(scheduleEnhance, 200);
 })();
