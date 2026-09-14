@@ -26,16 +26,14 @@ RewriteRule ^catalog-media-local/(.*)$ local-api.php?__route=catalog-media/$1 [Q
 RewriteRule ^api/(.*)$ local-api.php?__route=$1 [QSA,L]
 RewriteRule ^catalog-media/(.*)$ local-api.php?__route=catalog-media/$1 [QSA,L]
 
-# Friendly routes used by the current site.
+# Friendly routes used by the current site. /vorota used to render the same
+# page as /; redirect it so search engines and shared links have one canonical URL.
+RewriteRule ^vorota/?$ / [R=301,L]
 RewriteRule ^admin/?$ admin.html [L]
-RewriteRule ^vorota/?$ index.html [L]
 RewriteRule ^napravleniya/?$ napravleniya/index.html [L]
 
 <IfModule mod_headers.c>
   Header always set Strict-Transport-Security "max-age=31536000"
-  # The tw1.ru address is a migration/test copy and must not compete with the
-  # production domain in search engines.
-  Header set X-Robots-Tag "noindex, nofollow, noarchive"
   Header set X-Content-Type-Options "nosniff"
   Header set Referrer-Policy "strict-origin-when-cross-origin"
 </IfModule>
