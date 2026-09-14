@@ -1,10 +1,12 @@
 import { access, readFile, writeFile } from 'node:fs/promises';
+import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 
 const root = process.cwd();
 const output = path.join(root, 'timeweb-dist');
 const htaccessPath = path.join(output, '.htaccess');
 const apiPath = path.join(output, 'local-api.php');
+const gateQuotePath = path.join(output, 'backend/gate-quote.php');
 
 function replaceExactlyOnce(source, from, to, label) {
   const first = source.indexOf(from);
@@ -35,6 +37,15 @@ if (!htaccess.includes('Strict-Transport-Security')) {
   );
 }
 await writeFile(htaccessPath, htaccess, 'utf8');
+
+let gateQuote = await readFile(gateQuotePath, 'utf8');
+// PHP has no built-in trunc() function. Keep JS Math.trunc semantics without
+// enabling eval or any dynamic PHP execution in the formula engine.
+gateQuote = gateQuote.replace(
+  "'Math.trunc' => trunc(kd_gate_number($args[0] ?? 0)),",
+  "'Math.trunc' => (float)(int)kd_gate_number($args[0] ?? 0),"
+);
+await writeFile(gateQuotePath, gateQuote, 'utf8');
 
 let api = await readFile(apiPath, 'utf8');
 const oldHealth = `if ($route === 'health') {
@@ -74,6 +85,12 @@ if (api.includes("    kd_json(['error' => 'Ошибка серверной ча�
     'public exception response'
   );
 }
+const oldLeadCall = `        kd_require_same_origin();
+        kd_create_lead();`;
+const newLeadCall = `        kd_require_same_origin();
+        require_once __DIR__ . '/backend/gate-quote.php';
+        kd_create_authoritative_lead();`;
+if (api.includes(oldLeadCall)) api = replaceExactlyOnce(api, oldLeadCall, newLeadCall, 'authoritative lead endpoint');
 await writeFile(apiPath, api, 'utf8');
 
 const sourceSha = String(process.env.KUZDVOR_SOURCE_SHA || process.env.GITHUB_SHA || '').trim();
@@ -99,9 +116,11 @@ const publicIndex = await readFile(path.join(output, 'index.html'), 'utf8');
 const directionsIndex = await readFile(path.join(output, 'napravleniya/index.html'), 'utf8');
 const robots = await readFile(path.join(output, 'robots.txt'), 'utf8');
 const sitemap = await readFile(path.join(output, 'sitemap.xml'), 'utf8');
+const defaults = JSON.parse(await readFile(path.join(output, 'backend/defaults.json'), 'utf8'));
 
 const globalRobotsHeaderBlocksIndexing = /Header\s+(?:always\s+)?set\s+X-Robots-Tag\s+["'][^"']*(?:noindex|nofollow|noarchive)/i.test(htaccess);
 const canonicalVorotaRedirect = /RewriteRule\s+\^vorota\/\?\$\s+\/\s+\[R=(?:301|308),L\]/i.test(htaccess);
+const gateModelCount = Object.keys(defaults?.gateCalcModels?.models || {}).length;
 
 const checks = [
   [htaccess.includes('RewriteCond %{HTTP:X-Forwarded-Proto} !https [NC]'), 'HTTPS proxy-aware redirect is missing'],
@@ -112,6 +131,9 @@ const checks = [
   [canonicalVorotaRedirect, '/vorota is not permanently redirected to the canonical root URL'],
   [api.includes('$healthy ? 200 : 503'), 'health endpoint does not fail closed'],
   [!api.includes("'detail' => $e->getMessage()"), 'public API still exposes exception details'],
+  [api.includes("require_once __DIR__ . '/backend/gate-quote.php';") && api.includes('kd_create_authoritative_lead();'), 'lead endpoint does not use authoritative PHP pricing'],
+  [gateModelCount === 38, `authoritative PHP pricing has ${gateModelCount} gate models instead of 38`],
+  [!gateQuote.includes("'Math.trunc' => trunc("), 'gate formula engine still calls unavailable PHP trunc()'],
   [admin.includes('<script src="/xlsx.bundle.js"></script>'), 'admin does not use the external XLSX bundle'],
   [!admin.includes('unsupported format |'), 'XLSX implementation is still inlined into admin HTML'],
   [siteBundle.includes('С учётом доставки'), 'delivery-inclusive catalog pricing is missing from the public bundle'],
@@ -126,5 +148,9 @@ const checks = [
 for (const [ok, message] of checks) {
   if (!ok) throw new Error(`Timeweb hardening: ${message}`);
 }
+
+execFileSync('php', ['-l', apiPath], { stdio: 'inherit' });
+execFileSync('php', ['-l', gateQuotePath], { stdio: 'inherit' });
+execFileSync('php', [path.join(root, 'scripts/test-timeweb-gate-quote.php'), output], { stdio: 'inherit' });
 
 console.log(`Timeweb package hardening checks passed for ${sourceSha}`);
