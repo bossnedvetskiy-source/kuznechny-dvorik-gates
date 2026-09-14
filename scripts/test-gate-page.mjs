@@ -71,7 +71,7 @@ assert(!build.includes('optimizeStart = adminJs.indexOf') && !build.includes("ga
 assert(leads.includes('обработку персональных данных'), 'Shared lead validation must use consistent consent wording');
 assert(app.includes('price-delivery-note'), 'Catalog cards must explain that delivery is calculated after selecting the installation place');
 assert(!delivery.includes('fixedDistanceEstimate'), 'Explicit delivery tariffs must not infer distance from price');
-assert(delivery.includes('A listed destination is an explicit business tariff'), 'Client delivery module must preserve explicit tariff exceptions');
+assert(delivery.includes("state = {kind:'fixed'") && delivery.includes('distanceKm:null'), 'Client delivery module must preserve explicit tariff exceptions without inventing distance');
 assert(html.includes('id="calculatorParking"') && app.includes('calculatorParking.append(calculatorPanel)'), 'Closed calculator must remain parked in the DOM for reliable model switching');
 assert(workerLeads.includes('calculateAuthoritativeGateQuote') && workerLeads.includes('client_total') && workerLeads.includes('quote_verified'), 'Gate leads must be recalculated and audited server-side');
 assert(gateQuote.includes('calculateGateProductServer') && !gateQuote.includes('new Function') && !gateQuote.includes('eval('), 'Server gate quote must not use runtime code evaluation');
