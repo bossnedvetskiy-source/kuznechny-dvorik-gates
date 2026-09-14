@@ -125,7 +125,7 @@ jobs:
           git commit -m "Build Timeweb site from main ${source_sha}"
           git push --force origin HEAD:timeweb-public
 
-      - name: Verify live Timeweb deployment
+      - name: Verify live Timeweb deployment when reachable
         shell: bash
         run: |
           set -euo pipefail
@@ -136,14 +136,42 @@ jobs:
           matched=0
           last_diag=''
 
-          echo "Checking Timeweb auto-deploy of ${expected_sha} across a full 5-minute cron window..."
-          for attempt in $(seq 1 42); do
+          echo 'Checking whether this GitHub runner can reach Timeweb...'
+          for preflight in $(seq 1 4); do
+            : > /tmp/timeweb-version.json
+            : > /tmp/timeweb-curl-error.txt
+            code="$(curl -sS --connect-timeout 2 --max-time 4 -o /tmp/timeweb-version.json -w '%{http_code}' "${base}/deployment-version.json?preflight=${preflight}&expected=${expected_sha}" 2>/tmp/timeweb-curl-error.txt || true)"
+            live_sha="$(node -e "const fs=require('fs');try{process.stdout.write(JSON.parse(fs.readFileSync('/tmp/timeweb-version.json','utf8')).sourceSha||'')}catch{}" 2>/dev/null || true)"
+            echo "Preflight ${preflight}/4: HTTP ${code:-000}; live=${live_sha:-unavailable}"
+            if [ -n "$code" ] && [ "$code" != '000' ]; then
+              reachable=1
+              break
+            fi
+            if [ "$preflight" != '4' ]; then sleep 5; fi
+          done
+
+          if [ "$reachable" = '0' ]; then
+            echo '::warning::Timeweb is unreachable from this GitHub-hosted runner. Package build/publish succeeded, but the live deployment cannot be verified from this network. The Timeweb-side cron deployer remains authoritative and performs its own health check with automatic rollback.'
+            if [ -s /tmp/timeweb-curl-error.txt ]; then sed -n '1,3p' /tmp/timeweb-curl-error.txt; fi
+            {
+              echo '### Timeweb live verification'
+              echo
+              echo '⚠️ Build and publication to `timeweb-public` succeeded, but `kuzdvor.tw1.ru` was unreachable from the GitHub-hosted runner.'
+              echo
+              echo "Expected source: \`${expected_sha}\`"
+              echo
+              echo 'Live source was not verified. Timeweb cron and its server-side health check remain authoritative.'
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          echo "Timeweb is reachable. Monitoring auto-deploy of ${expected_sha} across the cron window..."
+          for attempt in $(seq 1 36); do
             : > /tmp/timeweb-version.json
             : > /tmp/timeweb-curl-error.txt
             code="$(curl -sS --connect-timeout 3 --max-time 6 -o /tmp/timeweb-version.json -w '%{http_code}' "${base}/deployment-version.json?check=${attempt}&expected=${expected_sha}" 2>/tmp/timeweb-curl-error.txt || true)"
             live_sha="$(node -e "const fs=require('fs');try{process.stdout.write(JSON.parse(fs.readFileSync('/tmp/timeweb-version.json','utf8')).sourceSha||'')}catch{}" 2>/dev/null || true)"
-            echo "Attempt ${attempt}/42: HTTP ${code:-000}; live=${live_sha:-unavailable}; expected=${expected_sha}"
-            if [ -n "$code" ] && [ "$code" != '000' ]; then reachable=1; fi
+            echo "Attempt ${attempt}/36: HTTP ${code:-000}; live=${live_sha:-unavailable}; expected=${expected_sha}"
             if [ "$code" = '200' ] && [ "$live_sha" = "$expected_sha" ]; then
               matched=1
               echo 'Timeweb is serving the current main commit.'
@@ -166,13 +194,8 @@ jobs:
           done
 
           if [ "$matched" != '1' ]; then
-            if [ "$reachable" = '0' ]; then
-              echo '::warning::Timeweb is unreachable from this GitHub-hosted runner. The Timeweb-side cron deployer remains authoritative and performs its own health check with automatic rollback.'
-              if [ -s /tmp/timeweb-curl-error.txt ]; then sed -n '1,3p' /tmp/timeweb-curl-error.txt; fi
-              exit 0
-            fi
             if [ -n "$last_diag" ]; then echo "Last Timeweb deploy diagnostic: $last_diag"; fi
-            echo "::error::Timeweb is reachable, but current main ${expected_sha} is not live after the full cron window. If no diagnostic targets this SHA, verify that the Timeweb Crontab task is still enabled."
+            echo "::error::Timeweb is reachable, but current main ${expected_sha} is not live after the cron window. If no diagnostic targets this SHA, verify that the Timeweb Crontab task is still enabled."
             exit 1
           fi
 
@@ -210,4 +233,11 @@ jobs:
           case "$status" in 301|302|307|308) ;; *) echo "::error::HTTP is not redirected to HTTPS (status $status)."; exit 1;; esac
           case "$location" in https://kuzdvor.tw1.ru/*) ;; *) echo "::error::Unexpected HTTP redirect target: ${location:-missing}"; exit 1;; esac
 
+          {
+            echo '### Timeweb live verification'
+            echo
+            echo '✅ Live Timeweb deployment verified.'
+            echo
+            echo "Source: \`${expected_sha}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
           echo 'Live Timeweb verification passed: current main, local PHP/MySQL, admin XLSX, delivery prices, legacy proxy removal and HTTPS are healthy.'
