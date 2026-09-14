@@ -97,12 +97,40 @@ if (api.includes(oldLeadCall)) api = replaceExactlyOnce(api, oldLeadCall, newLea
 const oldExcelInputTrust = `$body=kd_json_body(262144);$prices=is_array($body['prices']??null)?$body['prices']:[];$standards=is_array($body['standardPrices']??null)?$body['standardPrices']:[];`;
 const newExcelInputValidation = `$body=kd_json_body(262144);require_once __DIR__ . '/backend/excel-quote-validation.php';try{$validated=kd_gate_validate_excel_payload($body);}catch(Throwable $e){kd_json(['error'=>$e->getMessage()],400);}$prices=$validated['prices'];$standards=$validated['standardPrices'];`;
 if (api.includes(oldExcelInputTrust)) api = replaceExactlyOnce(api, oldExcelInputTrust, newExcelInputValidation, 'Excel pricing validation');
+
+// Add global trust counters to the admin leads response. They intentionally use
+// the complete site_leads table (like the existing status counters), not only
+// the currently paginated 50 leads shown in the browser.
+const leadResponseMarker = `    kd_json(['leads'=>$leads,'counts'=>$counts,'sources'=>$sources,'limited'=>false,`;
+const leadResponseWithTrust = `    $trustRow=kd_db()->query('SELECT COALESCE(SUM(quote_verified=1),0) verified,COALESCE(SUM(quote_verified=0),0) review,COALESCE(SUM(delivery_pending=1),0) delivery_pending FROM site_leads')->fetch()?:[];$trustCounts=['verified'=>(int)($trustRow['verified']??0),'review'=>(int)($trustRow['review']??0),'deliveryPending'=>(int)($trustRow['delivery_pending']??0)];
+    kd_json(['leads'=>$leads,'counts'=>$counts,'trustCounts'=>$trustCounts,'sources'=>$sources,'limited'=>false,`;
+api = replaceExactlyOnce(api, leadResponseMarker, leadResponseWithTrust, 'lead trust counters API');
 await writeFile(apiPath, api, 'utf8');
 
 // Make the lead price source explicit for managers. The authoritative amount
 // stays in lead.total; client_total is shown only when it differs. Older leads
 // and product categories without server formulas remain visibly unverified.
 let admin = await readFile(adminPath, 'utf8');
+const leadStatCss = '.lead-stat b{color:var(--ink)}';
+const leadStatTrustCss = `${leadStatCss}.lead-stat.is-good{border-color:#cfe2cc;background:#edf6ec;color:#42623d}.lead-stat.is-warning{border-color:#ead3a1;background:#fff5df;color:#76591f}`;
+admin = replaceExactlyOnce(admin, leadStatCss, leadStatTrustCss, 'lead trust counter styles');
+
+const oldRenderStats = `  function renderStats(counts = {}) {
+    const newCount=Number(counts.new)||0;
+    stats.innerHTML = \`<span class="lead-stat">Новые <b>\${newCount}</b></span><span class="lead-stat">Связались <b>\${Number(counts.contacted)||0}</b></span><span class="lead-stat">Закрытые <b>\${Number(counts.done)||0}</b></span><span class="lead-stat">Архив <b>\${Number(counts.archived)||0}</b></span>\`;
+    tab.textContent = newCount ? \`📥 Заявки · \${newCount}\` : '📥 Заявки';
+  }`;
+const newRenderStats = `  function renderStats(counts = {}, trustCounts = {}) {
+    const newCount=Number(counts.new)||0;
+    const verified=Number(trustCounts.verified)||0;
+    const review=Number(trustCounts.review)||0;
+    const deliveryPending=Number(trustCounts.deliveryPending)||0;
+    stats.innerHTML = \`<span class="lead-stat">Новые <b>\${newCount}</b></span><span class="lead-stat">Связались <b>\${Number(counts.contacted)||0}</b></span><span class="lead-stat">Закрытые <b>\${Number(counts.done)||0}</b></span><span class="lead-stat">Архив <b>\${Number(counts.archived)||0}</b></span><span class="lead-stat is-good">✓ Проверено <b>\${verified}</b></span><span class="lead-stat is-warning">⚠ Проверить цену <b>\${review}</b></span><span class="lead-stat is-warning">Доставка уточнить <b>\${deliveryPending}</b></span>\`;
+    tab.textContent = newCount ? \`📥 Заявки · \${newCount}\` : '📥 Заявки';
+  }`;
+admin = replaceExactlyOnce(admin, oldRenderStats, newRenderStats, 'lead trust counters display');
+admin = replaceExactlyOnce(admin, '      renderStats(data.counts || {});', '      renderStats(data.counts || {}, data.trustCounts || {});', 'lead trust counters data binding');
+
 const leadTotalCss = '.lead-total{font:20px Prata,serif;color:#8a6326;white-space:nowrap}';
 const leadTrustCss = `${leadTotalCss}.lead-price-box{display:grid;justify-items:end;gap:4px;min-width:190px;text-align:right}.lead-quote-badge{display:inline-flex;align-items:center;min-height:22px;padding:0 8px;border-radius:999px;font-size:9px;font-weight:800;white-space:nowrap}.lead-quote-badge.is-verified{background:#edf6ec;color:#42623d;border:1px solid #cfe2cc}.lead-quote-badge.is-review{background:#fff5df;color:#76591f;border:1px solid #ead3a1}.lead-price-warning,.lead-delivery-warning{max-width:250px;font-size:9px;line-height:1.35}.lead-price-warning{color:#8a542f}.lead-delivery-warning{color:#6f5d36}`;
 admin = replaceExactlyOnce(admin, leadTotalCss, leadTrustCss, 'lead price trust styles');
@@ -167,12 +195,14 @@ const checks = [
   [!api.includes("'detail' => $e->getMessage()"), 'public API still exposes exception details'],
   [api.includes("require_once __DIR__ . '/backend/gate-quote.php';") && api.includes('kd_create_authoritative_lead();'), 'lead endpoint does not use authoritative PHP pricing'],
   [api.includes("require_once __DIR__ . '/backend/excel-quote-validation.php';") && api.includes('kd_gate_validate_excel_payload($body)'), 'admin Excel import does not use authoritative PHP validation'],
+  [api.includes("'trustCounts'=>$trustCounts") && api.includes('SUM(quote_verified=1)') && api.includes('SUM(delivery_pending=1)'), 'admin leads API trust counters are missing'],
   [excelValidation.includes('kd_gate_standard_prices') && excelValidation.includes('kd_gate_validate_excel_payload'), 'Excel pricing validation helper is incomplete'],
   [gateModelCount === 38, `authoritative PHP pricing has ${gateModelCount} gate models instead of 38`],
   [!gateQuote.includes("'Math.trunc' => trunc("), 'gate formula engine still calls unavailable PHP trunc()'],
   [admin.includes('<script src="/xlsx.bundle.js"></script>'), 'admin does not use the external XLSX bundle'],
   [!admin.includes('unsupported format |'), 'XLSX implementation is still inlined into admin HTML'],
   [admin.includes('✓ Проверено сервером') && admin.includes('⚠ Цена требует проверки') && admin.includes('Доставка требует уточнения'), 'admin lead price verification indicators are missing'],
+  [admin.includes('✓ Проверено <b>') && admin.includes('⚠ Проверить цену <b>') && admin.includes('renderStats(data.counts || {}, data.trustCounts || {})'), 'admin lead trust counters are missing'],
   [siteBundle.includes('С учётом доставки'), 'delivery-inclusive catalog pricing is missing from the public bundle'],
   [publicIndex.includes('content="index,follow,max-image-preview:large"'), 'public home page is not indexable'],
   [!publicIndex.toLowerCase().includes('noindex'), 'public home page contains noindex'],
