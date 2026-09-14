@@ -59,6 +59,7 @@ jobs:
           test -s timeweb-dist/backend/schema.mysql.sql
           test -s timeweb-dist/backend/defaults.json
           test -s timeweb-dist/.htaccess
+          grep -Fq 'SetEnv HOME /home/c/cp59598/kuznechny-dvorik-gates' timeweb-dist/.htaccess
           grep -Fq 'RewriteRule ^api/(.*)$ local-api.php?__route=$1 [QSA,L]' timeweb-dist/.htaccess
           grep -Fq 'RewriteRule ^catalog-media/(.*)$ local-api.php?__route=catalog-media/$1 [QSA,L]' timeweb-dist/.htaccess
           if grep -Fq 'api-proxy.php?__proxy_path' timeweb-dist/.htaccess; then
