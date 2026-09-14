@@ -6,6 +6,7 @@ import vm from 'node:vm';
 const root = process.cwd();
 const output = path.join(root, 'timeweb-dist');
 const workerFile = path.join(root, 'dist/server/index.js');
+const publicOrigin = 'https://kuzdvor.tw1.ru';
 
 await rm(output, { recursive: true, force: true });
 await mkdir(output, { recursive: true });
@@ -16,7 +17,7 @@ const worker = workerModule.default;
 if (!worker?.fetch) throw new Error('Собранный Worker не экспортирует fetch()');
 
 async function render(route) {
-  const request = new Request(`https://kuzdvor.tw1.ru${route}`, {
+  const request = new Request(`${publicOrigin}${route}`, {
     headers: { accept: 'text/html' }
   });
   const response = await worker.fetch(request, {});
@@ -41,15 +42,45 @@ async function windowValue(file, key) {
   return JSON.parse(JSON.stringify(value));
 }
 
-const indexHtml = noindex(await render('/'));
+// Public pages must stay indexable. Only the private admin page is noindexed.
+const indexHtml = await render('/');
 await writeFile(path.join(output, 'index.html'), indexHtml, 'utf8');
 
 const adminHtml = noindex(await render('/admin'));
 await writeFile(path.join(output, 'admin.html'), adminHtml, 'utf8');
 
-const hubHtml = noindex(await render('/napravleniya'));
+const hubHtml = await render('/napravleniya');
 await mkdir(path.join(output, 'napravleniya'), { recursive: true });
 await writeFile(path.join(output, 'napravleniya/index.html'), hubHtml, 'utf8');
+
+const robotsTxt = [
+  'User-agent: *',
+  'Allow: /',
+  'Disallow: /admin',
+  'Disallow: /api/',
+  `Sitemap: ${publicOrigin}/sitemap.xml`,
+  ''
+].join('\n');
+await writeFile(path.join(output, 'robots.txt'), robotsTxt, 'utf8');
+
+const lastmod = new Date().toISOString().slice(0, 10);
+const sitemapXml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>${publicOrigin}/</loc>
+    <lastmod>${lastmod}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>${publicOrigin}/napravleniya</loc>
+    <lastmod>${lastmod}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+</urlset>
+`;
+await writeFile(path.join(output, 'sitemap.xml'), sitemapXml, 'utf8');
 
 // Only runtime files are published. Legacy Cloudflare proxy and one-time
 // migration/setup helpers deliberately stay out of the production package.
@@ -88,9 +119,24 @@ await writeFile(path.join(output, 'backend/defaults.json'), JSON.stringify({ pri
 // A tiny build marker helps verify from the server that a deploy really changed.
 await writeFile(path.join(output, 'timeweb-build.txt'), `${new Date().toISOString()}\n`, 'utf8');
 
-const files = await readFile(path.join(output, 'index.html'), 'utf8');
-if (!files.includes('/site.bundle.js') || !files.includes('/site.css')) {
+const publicIndex = await readFile(path.join(output, 'index.html'), 'utf8');
+if (!publicIndex.includes('/site.bundle.js') || !publicIndex.includes('/site.css')) {
   throw new Error('Timeweb index.html собран неполностью');
+}
+if (!publicIndex.includes('content="index,follow,max-image-preview:large"')) {
+  throw new Error('Главная Timeweb случайно закрыта от индексации');
+}
+if (!publicIndex.includes(`<link rel="canonical" href="${publicOrigin}/">`)) {
+  throw new Error('Главная Timeweb содержит неверный canonical');
+}
+if (publicIndex.includes('workers.dev')) {
+  throw new Error('В публичной Timeweb-странице осталась ссылка на Cloudflare Workers');
+}
+if (!adminHtml.includes('noindex,nofollow,noarchive')) {
+  throw new Error('Админка Timeweb должна быть закрыта от индексации');
+}
+if (!robotsTxt.includes(`Sitemap: ${publicOrigin}/sitemap.xml`) || !sitemapXml.includes(`${publicOrigin}/`)) {
+  throw new Error('SEO-файлы Timeweb собраны неполностью');
 }
 
 console.log(`Timeweb bundle ready: ${output}`);
