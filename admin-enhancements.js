@@ -275,3 +275,128 @@
   window.addEventListener('admin:ready', () => setTimeout(enhance, 100));
   setTimeout(enhance, 100);
 })();
+
+(() => {
+  const panel = document.getElementById('leadsTab');
+  const list = document.getElementById('leadList');
+  if (!panel || !list) return;
+
+  const style = document.createElement('style');
+  style.textContent = `
+    .lead-toolbar-actions.lead-toolbar-compact{display:flex;align-items:center;gap:8px}.lead-more-actions{position:relative}.lead-more-actions>summary{display:flex;align-items:center;justify-content:center;min-height:38px;padding:0 13px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);font-size:10px;font-weight:800;cursor:pointer;list-style:none}.lead-more-actions>summary::-webkit-details-marker{display:none}.lead-more-menu{position:absolute;z-index:30;right:0;top:calc(100% + 6px);display:grid;gap:6px;min-width:205px;padding:8px;border:1px solid var(--line);border-radius:12px;background:#fff;box-shadow:0 12px 32px rgba(18,16,13,.14)}.lead-more-menu .reset-button{width:100%;text-align:left}.lead-marketing.is-compact{grid-template-columns:repeat(3,minmax(0,1fr))}.lead-marketing.is-compact:empty{display:none}
+    @media(max-width:620px){.lead-toolbar-actions.lead-toolbar-compact{display:grid;grid-template-columns:1fr 1fr}.lead-toolbar-actions.lead-toolbar-compact>#reloadLeadsButton,.lead-toolbar-actions.lead-toolbar-compact>.lead-more-actions{width:100%}.lead-more-actions>summary{width:100%}.lead-more-menu{position:fixed;left:12px;right:12px;top:auto;bottom:14px;min-width:0}.lead-marketing.is-compact{grid-template-columns:1fr 1fr}}
+  `;
+  document.head.append(style);
+
+  function phoneDisplay(value) {
+    let digits = String(value || '').replace(/\D/g, '');
+    if (digits.length === 11 && (digits[0] === '7' || digits[0] === '8')) digits = digits.slice(1);
+    if (digits.length !== 10) return String(value || '');
+    return `8 ${digits.slice(0,3)} ${digits.slice(3,6)}-${digits.slice(6,8)}-${digits.slice(8,10)}`;
+  }
+
+  function sourceLabel(value) {
+    const raw = String(value || '').trim();
+    const lower = raw.toLowerCase();
+    if (!raw || lower === 'direct' || lower === 'прямой') return 'Прямой заход';
+    if (lower.includes('googlequicksearchbox') || lower === 'google' || lower.includes('google.')) return 'Google';
+    if (lower.includes('yandex') || lower.includes('ya.ru') || lower === 'yandex') return 'Яндекс';
+    if (lower.includes('vk.com') || lower === 'vk' || lower.includes('vkontakte')) return 'ВКонтакте';
+    if (lower.includes('ok.ru') || lower.includes('odnoklassniki')) return 'Одноклассники';
+    if (lower.includes('avito')) return 'Авито';
+    if (lower.startsWith('ref:')) return 'Переход из приложения';
+    return raw;
+  }
+
+  function compactToolbar() {
+    const toolbar = panel.querySelector('.lead-toolbar-actions');
+    if (!toolbar || toolbar.querySelector('.lead-more-actions')) return;
+    const details = document.createElement('details');
+    details.className = 'lead-more-actions';
+    details.innerHTML = '<summary>Ещё</summary><div class="lead-more-menu"></div>';
+    const menu = details.querySelector('.lead-more-menu');
+    for (const id of ['exportLeadsMarketingCsv','exportLeadsCsv','backupLeadsJson','enableLeadNotifications']) {
+      const button = document.getElementById(id);
+      if (button) menu.append(button);
+    }
+    toolbar.append(details);
+    toolbar.classList.add('lead-toolbar-compact');
+    details.addEventListener('click', event => {
+      if (event.target.closest('button')) details.open = false;
+    });
+  }
+
+  function simplifySourceFilter() {
+    const select = document.getElementById('leadSourceFilter');
+    if (!select) return;
+    for (const option of [...select.options].slice(1)) {
+      const count = option.textContent.match(/\s·\s\d+$/)?.[0] || '';
+      const label = sourceLabel(option.value);
+      const next = `${label}${count}`;
+      if (option.textContent !== next) option.textContent = next;
+    }
+  }
+
+  function simplifyCard(card) {
+    const fields = [...card.querySelectorAll('.lead-field')];
+    const phoneField = fields.find(field => field.querySelector('span')?.textContent.trim() === 'Телефон');
+    const phone = phoneField?.querySelector('b');
+    if (phone) {
+      const formatted = phoneDisplay(phone.textContent);
+      if (formatted && phone.textContent !== formatted) phone.textContent = formatted;
+    }
+
+    const meta = card.querySelector('.lead-main span');
+    if (meta) {
+      const parts = meta.textContent.split(' · ');
+      const last = parts.at(-1) || '';
+      if (/^(ref:|google$|yandex$|vk$|avito$)/i.test(last) || /googlequicksearchbox|yandex|vk\.com|ok\.ru|avito/i.test(last)) {
+        const next = sourceLabel(last);
+        if (next !== last) {
+          parts[parts.length - 1] = next;
+          meta.textContent = parts.join(' · ');
+        }
+      }
+    }
+
+    const block = card.querySelector('.lead-marketing');
+    if (!block) return;
+    block.classList.add('is-compact');
+    for (const cell of [...block.querySelectorAll(':scope > div')]) {
+      const label = cell.querySelector('span')?.textContent.trim() || '';
+      const valueNode = cell.querySelector('b');
+      const value = valueNode?.textContent.trim() || '';
+      if (!value || value === '—') {
+        cell.remove();
+        continue;
+      }
+      if (label === 'Источник' && valueNode) {
+        const friendly = sourceLabel(value);
+        if (valueNode.textContent !== friendly) valueNode.textContent = friendly;
+        continue;
+      }
+      if (label === 'Реферер' || label === 'Страница входа') cell.remove();
+    }
+    const emptyMessage = block.querySelector('.lead-marketing-empty');
+    if (emptyMessage) emptyMessage.textContent = 'Рекламных меток нет.';
+  }
+
+  let timer = 0;
+  function simplify() {
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      compactToolbar();
+      simplifySourceFilter();
+      list.querySelectorAll('[data-lead-id]').forEach(simplifyCard);
+    }, 80);
+  }
+
+  new MutationObserver(simplify).observe(list, {childList:true,subtree:true});
+  const sourceFilter = document.getElementById('leadSourceFilter');
+  if (sourceFilter) new MutationObserver(simplifySourceFilter).observe(sourceFilter, {childList:true});
+  document.querySelector('.admin-tabs')?.addEventListener('click', event => {
+    if (event.target.closest('[data-admin-tab="leads"]')) setTimeout(simplify, 150);
+  });
+  window.addEventListener('admin:ready', () => setTimeout(simplify, 120));
+  setTimeout(simplify, 250);
+})();
