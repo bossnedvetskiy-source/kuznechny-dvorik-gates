@@ -54,12 +54,19 @@ jobs:
           test -s timeweb-dist/site.bundle.js
           test -s timeweb-dist/api-proxy.php
           test -s timeweb-dist/local-api.php
+          test -s timeweb-dist/migrate-public-catalog.php
           test -s timeweb-dist/backend/bootstrap.php
           test -s timeweb-dist/backend/schema.mysql.sql
           test -s timeweb-dist/backend/defaults.json
           test -s timeweb-dist/.htaccess
-          grep -Fq 'RewriteRule ^api/delivery/?$ local-api.php?__route=delivery [QSA,L]' timeweb-dist/.htaccess
+          grep -Fq 'RewriteRule ^api/(.*)$ local-api.php?__route=$1 [QSA,L]' timeweb-dist/.htaccess
+          grep -Fq 'RewriteRule ^catalog-media/(.*)$ local-api.php?__route=catalog-media/$1 [QSA,L]' timeweb-dist/.htaccess
+          if grep -Fq 'api-proxy.php?__proxy_path' timeweb-dist/.htaccess; then
+            echo 'Timeweb .htaccess still routes production traffic through Cloudflare proxy' >&2
+            exit 1
+          fi
           php -l timeweb-dist/local-api.php
+          php -l timeweb-dist/migrate-public-catalog.php
           php -l timeweb-dist/backend/bootstrap.php
           echo "Prepared $(find timeweb-dist -type f | wc -l) files for Timeweb"
 
