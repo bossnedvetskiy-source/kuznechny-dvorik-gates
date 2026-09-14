@@ -6,6 +6,7 @@ const root = process.cwd();
 const output = path.join(root, 'timeweb-dist');
 const htaccessPath = path.join(output, '.htaccess');
 const apiPath = path.join(output, 'local-api.php');
+const adminPath = path.join(output, 'admin.html');
 const gateQuotePath = path.join(output, 'backend/gate-quote.php');
 const excelValidationPath = path.join(output, 'backend/excel-quote-validation.php');
 
@@ -98,6 +99,34 @@ const newExcelInputValidation = `$body=kd_json_body(262144);require_once __DIR__
 if (api.includes(oldExcelInputTrust)) api = replaceExactlyOnce(api, oldExcelInputTrust, newExcelInputValidation, 'Excel pricing validation');
 await writeFile(apiPath, api, 'utf8');
 
+// Make the lead price source explicit for managers. The authoritative amount
+// stays in lead.total; client_total is shown only when it differs. Older leads
+// and product categories without server formulas remain visibly unverified.
+let admin = await readFile(adminPath, 'utf8');
+const leadTotalCss = '.lead-total{font:20px Prata,serif;color:#8a6326;white-space:nowrap}';
+const leadTrustCss = `${leadTotalCss}.lead-price-box{display:grid;justify-items:end;gap:4px;min-width:190px;text-align:right}.lead-quote-badge{display:inline-flex;align-items:center;min-height:22px;padding:0 8px;border-radius:999px;font-size:9px;font-weight:800;white-space:nowrap}.lead-quote-badge.is-verified{background:#edf6ec;color:#42623d;border:1px solid #cfe2cc}.lead-quote-badge.is-review{background:#fff5df;color:#76591f;border:1px solid #ead3a1}.lead-price-warning,.lead-delivery-warning{max-width:250px;font-size:9px;line-height:1.35}.lead-price-warning{color:#8a542f}.lead-delivery-warning{color:#6f5d36}`;
+admin = replaceExactlyOnce(admin, leadTotalCss, leadTrustCss, 'lead price trust styles');
+
+const leadStateMarker = "      const fieldThreeValue=category==='gates'?wicket:(lead.product_title||categoryName);";
+const leadTrustState = `${leadStateMarker}
+      const quoteVerified=lead.quote_verified===true||Number(lead.quote_verified)===1;
+      const authoritativeTotal=Number(lead.total)||0;
+      const clientTotal=Number(lead.client_total);
+      const hasClientTotal=Number.isFinite(clientTotal)&&clientTotal>0;
+      const quoteDiffers=hasClientTotal&&Math.round(clientTotal)!==Math.round(authoritativeTotal);
+      const deliveryPending=lead.delivery_pending===true||Number(lead.delivery_pending)===1;
+      const deliveryOutOfArea=lead.delivery_out_of_area===true||Number(lead.delivery_out_of_area)===1;
+      const quoteBadgeText=quoteVerified?'✓ Проверено сервером':'⚠ Цена требует проверки';
+      const quoteBadgeClass=quoteVerified?'is-verified':'is-review';
+      const quoteWarning=quoteDiffers?\`Клиент видел \${money(clientTotal)} · сервер \${money(authoritativeTotal)}\`:'';
+      const deliveryWarning=deliveryOutOfArea?'Доставка за пределами стандартной зоны':(deliveryPending?'Доставка требует уточнения':'');`;
+admin = replaceExactlyOnce(admin, leadStateMarker, leadTrustState, 'lead price trust state');
+
+const leadTotalMarker = '<strong class="lead-total">${money(lead.total)}</strong>';
+const leadTotalReplacement = '<div class="lead-price-box"><strong class="lead-total">${money(lead.total)}</strong><span class="lead-quote-badge ${quoteBadgeClass}">${quoteBadgeText}</span>${quoteWarning?`<span class="lead-price-warning">${quoteWarning}</span>`:\'\'}${deliveryWarning?`<span class="lead-delivery-warning">${deliveryWarning}</span>`:\'\'}</div>';
+admin = replaceExactlyOnce(admin, leadTotalMarker, leadTotalReplacement, 'lead price trust display');
+await writeFile(adminPath, admin, 'utf8');
+
 const sourceSha = String(process.env.KUZDVOR_SOURCE_SHA || process.env.GITHUB_SHA || '').trim();
 if (!/^[0-9a-f]{40}$/i.test(sourceSha)) {
   throw new Error('Timeweb hardening: source SHA is unavailable or invalid');
@@ -115,7 +144,6 @@ try {
   if (error?.code !== 'ENOENT') throw error;
 }
 
-const admin = await readFile(path.join(output, 'admin.html'), 'utf8');
 const siteBundle = await readFile(path.join(output, 'site.bundle.js'), 'utf8');
 const publicIndex = await readFile(path.join(output, 'index.html'), 'utf8');
 const directionsIndex = await readFile(path.join(output, 'napravleniya/index.html'), 'utf8');
@@ -144,6 +172,7 @@ const checks = [
   [!gateQuote.includes("'Math.trunc' => trunc("), 'gate formula engine still calls unavailable PHP trunc()'],
   [admin.includes('<script src="/xlsx.bundle.js"></script>'), 'admin does not use the external XLSX bundle'],
   [!admin.includes('unsupported format |'), 'XLSX implementation is still inlined into admin HTML'],
+  [admin.includes('✓ Проверено сервером') && admin.includes('⚠ Цена требует проверки') && admin.includes('Доставка требует уточнения'), 'admin lead price verification indicators are missing'],
   [siteBundle.includes('С учётом доставки'), 'delivery-inclusive catalog pricing is missing from the public bundle'],
   [publicIndex.includes('content="index,follow,max-image-preview:large"'), 'public home page is not indexable'],
   [!publicIndex.toLowerCase().includes('noindex'), 'public home page contains noindex'],
