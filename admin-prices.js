@@ -9,6 +9,7 @@ const catalogPriceList = document.getElementById('catalogPriceList');
 const extraPriceList = document.getElementById('extraPriceList');
 const priceSaveState = document.getElementById('priceSaveState');
 const savePricesButton = document.getElementById('savePricesButton');
+const priceActionBar = savePricesButton?.closest('.action-bar');
 const catalogManageList = document.getElementById('catalogManageList');
 const catalogSaveState = document.getElementById('catalogSaveState');
 const saveCatalogButton = document.getElementById('saveCatalogButton');
@@ -23,6 +24,8 @@ let catalogDraft = [];
 let catalogSearchQuery = '';
 let catalogDragState = null;
 
+const moneyDisplay = value => `${new Intl.NumberFormat('ru-RU').format(Math.round(Number(value) || 0))} ₽`;
+
 function moneyInputValue(value) {
   const number = Math.round(Number(value));
   return Number.isFinite(number) && number >= 0 ? String(number) : '0';
@@ -33,6 +36,7 @@ function setPriceDirty(value = true) {
   savePricesButton.disabled = !value;
   priceSaveState.textContent = value ? 'Есть несохранённые изменения' : 'Настройки сохранены';
   priceSaveState.classList.toggle('dirty', value);
+  if (priceActionBar) priceActionBar.hidden = !value;
 }
 
 function setCatalogDirty(value = true) {
@@ -87,27 +91,52 @@ function renderExtraPrices() {
   extraPriceList.replaceChildren();
   for (const item of priceSettings.extraProducts || []) {
     const card = document.createElement('section');
-    card.className = 'extra-price-card';
+    card.className = 'extra-price-card compact-extra-price';
 
     const heading = document.createElement('div');
-    heading.className = 'extra-price-heading';
+    heading.className = 'extra-price-heading compact-extra-heading';
     const headingTitle = document.createElement('div');
     headingTitle.innerHTML = `<b>${item.title || item.art || item.id}</b><small>${item.art || ''}</small>`;
-    heading.append(headingTitle);
 
     const fields = document.createElement('div');
     fields.className = 'extra-price-fields';
+    fields.hidden = true;
     const definitions = [
       ['price', 'Изделие, ₽'],
       ['install', 'Монтаж, ₽'],
       ['posts', 'Столбы, ₽']
     ];
+    let priceInput = null;
     for (const [field, labelText] of definitions) {
       const label = document.createElement('label');
       label.textContent = labelText;
-      label.append(createMoneyInput(item[field] || 0, {extraId: item.id, extraField: field}));
+      const input = createMoneyInput(item[field] || 0, {extraId: item.id, extraField: field});
+      if (field === 'price') priceInput = input;
+      label.append(input);
       fields.append(label);
     }
+
+    const actions = document.createElement('div');
+    actions.className = 'extra-price-compact-actions';
+    const current = document.createElement('strong');
+    current.className = 'extra-price-current';
+    current.textContent = moneyDisplay(priceInput?.value || item.price || 0);
+    const edit = document.createElement('button');
+    edit.type = 'button';
+    edit.className = 'extra-price-edit';
+    edit.textContent = 'Изменить';
+    edit.setAttribute('aria-expanded', 'false');
+    edit.addEventListener('click', () => {
+      const opening = fields.hidden;
+      fields.hidden = !opening;
+      card.classList.toggle('is-open', opening);
+      edit.textContent = opening ? 'Свернуть' : 'Изменить';
+      edit.setAttribute('aria-expanded', String(opening));
+      if (opening) priceInput?.focus({preventScroll:true});
+    });
+    priceInput?.addEventListener('input', () => { current.textContent = moneyDisplay(priceInput.value); });
+    actions.append(current, edit);
+    heading.append(headingTitle, actions);
 
     card.append(heading, fields);
     extraPriceList.append(card);
@@ -296,6 +325,37 @@ function setupCatalogManagementUi() {
   }
 }
 
+function setupPriceCompactUi() {
+  if (!pricesTab || document.getElementById('priceCompactStyle')) return;
+  const style = document.createElement('style');
+  style.id = 'priceCompactStyle';
+  style.textContent = `
+    #pricesTab .extra-price-list{gap:7px}
+    #pricesTab .compact-extra-price{padding:11px 12px;background:#fff}
+    #pricesTab .compact-extra-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0}
+    #pricesTab .compact-extra-heading>div:first-child{min-width:0}
+    #pricesTab .compact-extra-heading b{font-size:12px}
+    #pricesTab .compact-extra-heading small{font-size:8px}
+    #pricesTab .extra-price-compact-actions{display:flex;align-items:center;gap:8px;flex:0 0 auto}
+    #pricesTab .extra-price-current{font-size:11px;font-weight:900;white-space:nowrap;color:#6c5732}
+    #pricesTab .extra-price-edit{min-height:34px;padding:0 10px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--ink);font-size:9px;font-weight:800}
+    #pricesTab .compact-extra-price.is-open .extra-price-fields{margin-top:10px}
+    @media(max-width:620px){
+      #pricesTab .settings-card{padding:13px}
+      #pricesTab .extra-price-list{grid-template-columns:1fr!important}
+      #pricesTab .compact-extra-price{padding:9px 10px;border-radius:11px}
+      #pricesTab .extra-price-fields{grid-template-columns:1fr!important;gap:7px!important}
+      #pricesTab .extra-price-fields input{height:41px!important}
+      #pricesTab .extra-price-current{font-size:10px}
+      #pricesTab .extra-price-edit{min-height:32px;padding:0 8px}
+      #pricesTab .price-action-bar{bottom:8px;align-items:center!important;flex-direction:row!important;padding:8px!important;border-radius:12px}
+      #pricesTab .price-action-bar .save-state{display:none}
+      #pricesTab .price-action-bar .save-button{width:100%;min-height:44px}
+    }
+  `;
+  document.head.append(style);
+}
+
 function moveCatalogItem(index, direction) {
   const next = index + direction;
   if (next < 0 || next >= catalogDraft.length) return;
@@ -399,7 +459,9 @@ adminTabs.forEach(button => button.addEventListener('click', () => {
 catalogInstallationInput?.addEventListener('input', () => setPriceDirty());
 catalogPostsInput?.addEventListener('input', () => setPriceDirty());
 setupCatalogManagementUi();
+setupPriceCompactUi();
 if (catalogActionBar) catalogActionBar.hidden = true;
+if (priceActionBar) priceActionBar.hidden = true;
 
 priceForm?.addEventListener('submit', async event => {
   event.preventDefault();
