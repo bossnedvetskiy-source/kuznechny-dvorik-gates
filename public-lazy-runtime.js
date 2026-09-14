@@ -86,11 +86,8 @@
       });
   }, true);
 
-  // The catalog renderer rebuilds the grid when "Показать ещё" is pressed.
-  // A focused button moves down together with the enlarged grid, so mobile
-  // browsers may keep that button anchored and jump the viewport to the bottom.
-  // Preserve the exact viewport instead: newly revealed cards then appear from
-  // the place where the customer was already browsing.
+  // Preserve the exact viewport when more catalog cards are appended. Mobile
+  // browsers may otherwise anchor the focused button and move the viewport.
   document.addEventListener('click', event => {
     const button = event.target?.closest?.('#showMoreButton');
     if (!button || button.hidden) return;
@@ -105,6 +102,102 @@
       setTimeout(() => { root.style.overflowAnchor = previousOverflowAnchor; }, 90);
     }));
   }, true);
+
+  // Once delivery is confirmed, show its cost directly in every visible catalog
+  // card. This lets customers compare real standard-size totals without opening
+  // the calculator for each model. Unconfirmed or unavailable delivery never
+  // changes the card price.
+  const catalogGrid = document.getElementById('catalogGrid');
+  const cityInput = document.getElementById('cityInput');
+  const deliverySummary = document.getElementById('deliverySummary');
+  const deliverySummaryValue = document.getElementById('deliverySummaryValue');
+  const deliveryResult = document.getElementById('deliveryResult');
+  const routeButton = document.getElementById('routeButton');
+  const deliveryChooser = document.getElementById('deliveryChooser');
+  const deliveryChange = document.getElementById('deliveryChange');
+  const catalogMoney = value => new Intl.NumberFormat('ru-RU').format(Math.round(Number(value)) || 0) + ' ₽';
+  const setText = (node, value) => { if (node && node.textContent !== value) node.textContent = value; };
+  let catalogDeliverySyncQueued = false;
+
+  const currentDeliveryContext = () => {
+    const state = window.GATE_PAGE_API?.deliveryState?.() || {kind:'empty'};
+    const kind = String(state.kind || 'empty');
+    const city = String(state.shortName || state.resolvedName || state.name || cityInput?.value || '').trim();
+    const resolved = kind === 'fixed' || kind === 'calculated';
+    return {kind, city, resolved, price:resolved ? (Number(state.price) || 0) : 0};
+  };
+
+  const syncCatalogDeliveryPrices = () => {
+    if (!catalogGrid || !window.GATE_PAGE_API?.productById) return false;
+    const delivery = currentDeliveryContext();
+    const cards = catalogGrid.querySelectorAll('.product-card[data-card-product]');
+    cards.forEach(card => {
+      const product = window.GATE_PAGE_API.productById(card.dataset.cardProduct);
+      if (!product) return;
+      const deliveryPrice = delivery.resolved ? delivery.price : 0;
+      const prices = card.querySelectorAll('.price-row strong');
+      setText(prices[0], catalogMoney(Number(product.price) + Number(product.install) + deliveryPrice));
+      setText(prices[1], catalogMoney(Number(product.price) + Number(product.install) + Number(product.posts) + deliveryPrice));
+
+      const note = card.querySelector('.price-delivery-note');
+      if (delivery.resolved) {
+        const meleuz = /^мелеуз$/i.test(delivery.city.replace(/ё/g,'е'));
+        setText(note, meleuz
+          ? '✓ Доставка по Мелеузу бесплатно — уже учтена в цене'
+          : `✓ С учётом доставки в ${delivery.city}`);
+      } else if (delivery.kind === 'out-of-area' || delivery.kind === 'error') {
+        setText(note, delivery.city
+          ? `Доставка в ${delivery.city} уточняется отдельно`
+          : 'Стоимость доставки уточняется отдельно');
+      } else if (delivery.kind === 'confirm') {
+        setText(note, delivery.city
+          ? `Подтвердите ${delivery.city} — пока показана цена без доставки`
+          : 'Подтвердите населённый пункт — пока показана цена без доставки');
+      } else {
+        setText(note, 'Доставка рассчитывается после выбора места установки');
+      }
+    });
+    return true;
+  };
+
+  const scheduleCatalogDeliverySync = () => {
+    if (catalogDeliverySyncQueued) return;
+    catalogDeliverySyncQueued = true;
+    requestAnimationFrame(() => {
+      catalogDeliverySyncQueued = false;
+      syncCatalogDeliveryPrices();
+    });
+  };
+
+  if (catalogGrid) {
+    new MutationObserver(records => {
+      const relevant = records.some(record => {
+        if (record.type === 'characterData') return Boolean(record.target?.parentElement?.closest?.('.price-row strong'));
+        if (record.type !== 'childList') return false;
+        if (record.target?.nodeType === 1 && record.target.closest?.('.price-row strong')) return true;
+        return [...record.addedNodes].some(node => node.nodeType === 1 && (node.matches?.('.product-card') || node.querySelector?.('.product-card')));
+      });
+      if (relevant) scheduleCatalogDeliverySync();
+    }).observe(catalogGrid,{childList:true,subtree:true,characterData:true});
+  }
+
+  const deliveryUiObserver = new MutationObserver(scheduleCatalogDeliverySync);
+  [deliverySummary,deliverySummaryValue,deliveryResult,routeButton,deliveryChooser].filter(Boolean).forEach(node => {
+    deliveryUiObserver.observe(node,{attributes:true,childList:true,subtree:true,characterData:true});
+  });
+  cityInput?.addEventListener('input', scheduleCatalogDeliverySync);
+  cityInput?.addEventListener('change', scheduleCatalogDeliverySync);
+  routeButton?.addEventListener('click', () => { setTimeout(scheduleCatalogDeliverySync, 0); setTimeout(scheduleCatalogDeliverySync, 500); });
+  deliveryChooser?.addEventListener('click', () => setTimeout(scheduleCatalogDeliverySync, 0));
+  deliveryChange?.addEventListener('click', () => setTimeout(scheduleCatalogDeliverySync, 0));
+
+  let catalogDeliveryReadyAttempts = 0;
+  const waitForCatalogDeliveryApi = () => {
+    if (syncCatalogDeliveryPrices()) return;
+    catalogDeliveryReadyAttempts += 1;
+    if (catalogDeliveryReadyAttempts < 40) setTimeout(waitForCatalogDeliveryApi, 100);
+  };
+  waitForCatalogDeliveryApi();
 
   let catalogWorkStarted = false;
   const catalogJobs = [];
