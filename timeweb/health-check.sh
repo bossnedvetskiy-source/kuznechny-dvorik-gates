@@ -34,6 +34,12 @@ fetch "$BASE_URL/site.css" "$TMP_DIR/site.css"
 fetch "$BASE_URL/site.bundle.js" "$TMP_DIR/site.bundle.js"
 fetch "$BASE_URL/admin" "$TMP_DIR/admin.html"
 grep -q 'Админ-панель' "$TMP_DIR/admin.html" || fail 'admin page marker missing'
+grep -q '<script src="/xlsx.bundle.js"></script>' "$TMP_DIR/admin.html" || fail 'external XLSX bundle reference missing from admin page'
+if grep -q 'unsupported format' "$TMP_DIR/admin.html"; then
+  fail 'XLSX source leaked into visible admin HTML'
+fi
+fetch "$BASE_URL/xlsx.bundle.js" "$TMP_DIR/xlsx.bundle.js"
+grep -q 'xlsx.js' "$TMP_DIR/xlsx.bundle.js" || fail 'XLSX bundle invalid'
 fetch "$BASE_URL/vorota" "$TMP_DIR/vorota.html"
 fetch "$BASE_URL/napravleniya" "$TMP_DIR/napravleniya.html"
 
