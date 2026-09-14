@@ -53,7 +53,8 @@ jobs:
         run: node scripts/build-timeweb.mjs
 
       - name: Harden Timeweb package
-        run: node scripts/harden-timeweb.mjs
+        shell: bash
+        run: KUZDVOR_SOURCE_SHA="$(git rev-parse HEAD)" node scripts/harden-timeweb.mjs
 
       - name: Verify Timeweb package
         shell: bash
@@ -64,6 +65,7 @@ jobs:
           test -s timeweb-dist/site.css
           test -s timeweb-dist/site.bundle.js
           test -s timeweb-dist/xlsx.bundle.js
+          test -s timeweb-dist/deployment-version.json
           grep -Fq '<script src="/xlsx.bundle.js"></script>' timeweb-dist/admin.html
           if grep -Fq 'unsupported format |' timeweb-dist/admin.html; then
             echo 'XLSX library was inlined into admin HTML again' >&2
@@ -112,3 +114,62 @@ jobs:
           git add -A
           git commit -m "Build Timeweb site from main ${source_sha}"
           git push --force origin HEAD:timeweb-public
+
+      - name: Verify live Timeweb deployment
+        shell: bash
+        run: |
+          set -euo pipefail
+          base='https://kuzdvor.tw1.ru'
+          expected_sha="$(node -e "const fs=require('fs');process.stdout.write(JSON.parse(fs.readFileSync('deployment-version.json','utf8')).sourceSha)")"
+          live_sha=''
+
+          echo "Waiting for Timeweb auto-deploy of ${expected_sha}..."
+          for attempt in $(seq 1 20); do
+            version_json="$(curl -fsS --max-time 20 --retry 2 --retry-delay 2 --retry-all-errors "${base}/deployment-version.json?check=${attempt}" 2>/dev/null || true)"
+            live_sha="$(printf '%s' "$version_json" | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{try{process.stdout.write(JSON.parse(s).sourceSha||'')}catch{}})" 2>/dev/null || true)"
+            if [ "$live_sha" = "$expected_sha" ]; then
+              echo "Timeweb is serving the current main commit."
+              break
+            fi
+            echo "Attempt ${attempt}/20: live=${live_sha:-unavailable}; expected=${expected_sha}"
+            sleep 15
+          done
+
+          if [ "$live_sha" != "$expected_sha" ]; then
+            echo "::error::Timeweb did not deploy current main within 5 minutes."
+            exit 1
+          fi
+
+          curl -fsS --max-time 25 --retry 4 --retry-delay 2 --retry-all-errors -o /tmp/timeweb-health.json "${base}/api/health"
+          node - <<'NODE'
+          const fs = require('fs');
+          const health = JSON.parse(fs.readFileSync('/tmp/timeweb-health.json','utf8'));
+          if (health.ok !== true || health.configured !== true || health.db !== true) {
+            throw new Error(`Unhealthy Timeweb backend: ${JSON.stringify(health)}`);
+          }
+          if ('error' in health || 'detail' in health) {
+            throw new Error(`Health endpoint exposes internal error fields: ${JSON.stringify(health)}`);
+          }
+          NODE
+
+          curl -fsS --max-time 25 --retry 4 --retry-delay 2 --retry-all-errors -o /tmp/timeweb-admin.html "${base}/admin"
+          grep -Fq '<script src="/xlsx.bundle.js"></script>' /tmp/timeweb-admin.html
+          if grep -Fq 'unsupported format |' /tmp/timeweb-admin.html; then
+            echo '::error::Live admin still contains the inlined XLSX library.'
+            exit 1
+          fi
+
+          curl -fsS --max-time 25 --retry 4 --retry-delay 2 --retry-all-errors -o /tmp/timeweb-site.js "${base}/site.bundle.js"
+          grep -Fq 'С учётом доставки' /tmp/timeweb-site.js
+          curl -fsS --max-time 25 --retry 4 --retry-delay 2 --retry-all-errors -o /dev/null "${base}/xlsx.bundle.js"
+
+          curl -sSI --max-time 25 --retry 4 --retry-delay 2 --retry-all-errors "${base}/" > /tmp/timeweb-https-headers.txt
+          grep -Eiq '^strict-transport-security:[[:space:]]*max-age=31536000' /tmp/timeweb-https-headers.txt
+
+          curl -sSI --max-time 25 --retry 4 --retry-delay 2 --retry-all-errors 'http://kuzdvor.tw1.ru/' > /tmp/timeweb-http-headers.txt
+          status="$(awk 'NR==1{print $2}' /tmp/timeweb-http-headers.txt)"
+          location="$(awk 'BEGIN{IGNORECASE=1} /^location:/{sub(/\r$/,"",$2); print $2; exit}' /tmp/timeweb-http-headers.txt)"
+          case "$status" in 301|302|307|308) ;; *) echo "::error::HTTP is not redirected to HTTPS (status $status)."; exit 1;; esac
+          case "$location" in https://kuzdvor.tw1.ru/*) ;; *) echo "::error::Unexpected HTTP redirect target: ${location:-missing}"; exit 1;; esac
+
+          echo 'Live Timeweb verification passed: current source, database, admin XLSX, delivery prices and HTTPS are all healthy.'
