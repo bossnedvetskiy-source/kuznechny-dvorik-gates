@@ -40,6 +40,11 @@
     .catalog-manage-name{display:grid;gap:3px}.catalog-manage-name b{font-size:13px}.catalog-manage-name small{color:var(--muted);font-size:10px}
     .catalog-visibility{display:flex;align-items:center;gap:8px;color:#5e6d4d;font-size:11px;font-weight:800}.catalog-visibility input{width:18px;height:18px;accent-color:#9f772f}.catalog-manage-row.is-hidden .catalog-visibility{color:#8c6c6c}
     .catalog-order-actions{display:grid;grid-template-columns:1fr 1fr;gap:5px}.catalog-order-actions button{height:36px;border:1px solid var(--line);border-radius:9px;background:#fff;color:#5d554d;font-size:17px;font-weight:800}.catalog-order-actions button:disabled{opacity:.25;cursor:not-allowed}
+    .photo-item.selected{border-color:#c6933f;box-shadow:0 0 0 2px rgba(198,147,63,.10)}
+    .photo-thumb .photo-load-error-message{position:absolute;z-index:1;inset:0;display:grid;place-items:center;padding:26px 10px 10px;background:#f2eee7;color:#8a3b35;font-size:10px;font-weight:800;line-height:1.35;text-align:center}.photo-number{z-index:2}
+    .photo-repair-actions{display:grid;grid-template-columns:1fr 1fr;gap:5px;padding:7px}.photo-repair-actions button{min-height:34px;border:1px solid var(--line);border-radius:8px;background:#fff;color:#4f4a44;font-size:10px;font-weight:800}.photo-repair-actions .delete-photo{color:var(--danger)}
+    .card-preview.photo-preview-error::after{content:"Фото не загрузилось";position:absolute;inset:0;display:grid;place-items:center;padding:40px;background:#f2eee7;color:#8a3b35;font-size:12px;font-weight:800;text-align:center}.card-preview.photo-preview-error .article-badge,.card-preview.photo-preview-error .cover-badge{z-index:3}
+    #photosTab .color-photo-panel{margin-top:28px!important;border-color:#d9c8a4!important;background:#fffdf8!important}
     @media(max-width:900px){.catalog-price-list{grid-template-columns:repeat(2,minmax(0,1fr))}.extra-price-list{grid-template-columns:1fr}.catalog-manage-row{grid-template-columns:38px 1fr 120px 86px}}
     @media(max-width:620px){
       .admin-tabs{position:sticky;z-index:15;top:8px;width:100%;overflow:auto}
@@ -61,6 +66,24 @@
       #pricesTab .price-general-grid{gap:9px}
       #pricesTab .price-general-grid input{height:42px!important}
       #pricesTab .panel-heading{margin-bottom:12px}
+      #photosTab .page-title{gap:10px;margin-bottom:18px}
+      #photosTab .page-title h1{font-size:29px;line-height:1.08}
+      #photosTab .page-title>p{font-size:11px;line-height:1.5}
+      #photosTab .model-picker{margin-bottom:12px;padding:13px 14px}
+      #photosTab .workspace{gap:10px}
+      #photosTab .preview-panel,#photosTab .photos-panel{padding:13px}
+      #photosTab .panel-heading{margin-bottom:11px}
+      #photosTab .upload-note{margin:-2px 0 10px;padding:8px 10px;font-size:9px}
+      #photosTab .photo-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+      #photosTab .photo-item{grid-template-rows:auto;border-radius:11px}
+      #photosTab .photo-thumb{aspect-ratio:13/8;min-height:0}
+      #photosTab .photo-actions{display:none!important;grid-template-columns:1fr repeat(3,32px);gap:3px;padding:5px}
+      #photosTab .photo-grid.photo-actions-armed .photo-item.selected .photo-actions{display:grid!important}
+      #photosTab .photo-actions button{min-height:31px;padding:0 4px;font-size:8.5px}
+      #photosTab .photo-number{left:6px;top:6px;padding:4px 6px;font-size:8px}
+      #photosTab .photo-repair-actions{grid-template-columns:1fr;padding:5px}
+      #photosTab .photo-repair-actions button{min-height:31px;font-size:8.5px}
+      #photosTab .action-bar{margin-top:12px}
       .catalog-manage-row{grid-template-columns:36px 1fr 82px;gap:8px}.catalog-visibility{grid-column:2/3}.catalog-order-actions{grid-column:3/4;grid-row:1/3}.catalog-manage-name small{font-size:9px}
     }
   </style>
@@ -211,5 +234,95 @@
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script src="admin.js"></script>
   <script src="admin-prices.js"></script>
+  <script>
+    (() => {
+      const photosTab = document.getElementById('photosTab');
+      const photoGrid = document.getElementById('photoGrid');
+      const articleSelect = document.getElementById('articleSelect');
+      const uploadNote = document.getElementById('uploadNote');
+      const coverPreview = document.getElementById('coverPreview');
+      const cardPreview = document.getElementById('cardPreview');
+      if (!photosTab || !photoGrid) return;
+
+      const compactUploadNote = () => {
+        if (!uploadNote) return;
+        const text = uploadNote.textContent || '';
+        if (text.startsWith('Можно загрузить до 12 фотографий')) uploadNote.textContent = 'До 12 фото · без обрезки';
+      };
+      compactUploadNote();
+      if (uploadNote) new MutationObserver(compactUploadNote).observe(uploadNote, {childList:true, characterData:true, subtree:true});
+      document.addEventListener('admin:ready', compactUploadNote);
+
+      articleSelect?.addEventListener('change', () => photoGrid.classList.remove('photo-actions-armed'));
+      photoGrid.addEventListener('click', event => {
+        if (event.target.closest('.photo-thumb')) photoGrid.classList.add('photo-actions-armed');
+      });
+
+      const clearBrokenState = (item, image) => {
+        if (!item) return;
+        item.classList.remove('photo-load-error');
+        if (image) image.hidden = false;
+        item.querySelector('.photo-load-error-message')?.remove();
+        item.querySelector('.photo-repair-actions')?.remove();
+      };
+
+      const markBrokenPhoto = image => {
+        const item = image.closest('.photo-item');
+        const thumb = image.closest('.photo-thumb');
+        if (!item || !thumb || item.classList.contains('photo-load-error')) return;
+        item.classList.add('photo-load-error');
+        image.hidden = true;
+        image.dataset.originalSrc ||= image.getAttribute('src') || '';
+
+        const message = document.createElement('span');
+        message.className = 'photo-load-error-message';
+        message.textContent = 'Фото не загрузилось';
+        thumb.append(message);
+
+        const repair = document.createElement('div');
+        repair.className = 'photo-repair-actions';
+        const retry = document.createElement('button');
+        retry.type = 'button';
+        retry.textContent = 'Повторить';
+        retry.addEventListener('click', () => {
+          const original = image.dataset.originalSrc || '';
+          if (!original) return;
+          clearBrokenState(item, image);
+          const separator = original.includes('?') ? '&' : '?';
+          image.src = `${original}${separator}_retry=${Date.now()}`;
+          if (item.classList.contains('selected') && coverPreview) {
+            coverPreview.hidden = false;
+            coverPreview.src = image.src;
+          }
+        });
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.className = 'delete-photo';
+        remove.textContent = 'Удалить';
+        const originalDelete = item.querySelector('.photo-actions .delete-photo');
+        remove.disabled = Boolean(originalDelete?.disabled);
+        remove.addEventListener('click', () => originalDelete?.click());
+        repair.append(retry, remove);
+        item.append(repair);
+      };
+
+      photoGrid.addEventListener('error', event => {
+        if (event.target instanceof HTMLImageElement) markBrokenPhoto(event.target);
+      }, true);
+      photoGrid.addEventListener('load', event => {
+        if (!(event.target instanceof HTMLImageElement)) return;
+        clearBrokenState(event.target.closest('.photo-item'), event.target);
+      }, true);
+
+      coverPreview?.addEventListener('error', () => {
+        coverPreview.hidden = true;
+        cardPreview?.classList.add('photo-preview-error');
+      });
+      coverPreview?.addEventListener('load', () => {
+        coverPreview.hidden = false;
+        cardPreview?.classList.remove('photo-preview-error');
+      });
+    })();
+  </script>
 </body>
 </html>
