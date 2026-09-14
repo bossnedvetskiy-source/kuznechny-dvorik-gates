@@ -12,6 +12,7 @@ const savePricesButton = document.getElementById('savePricesButton');
 const catalogManageList = document.getElementById('catalogManageList');
 const catalogSaveState = document.getElementById('catalogSaveState');
 const saveCatalogButton = document.getElementById('saveCatalogButton');
+const catalogActionBar = saveCatalogButton?.closest('.action-bar');
 
 let priceSettings = null;
 let priceDirty = false;
@@ -19,6 +20,8 @@ let catalogDirty = false;
 let pricesLoaded = false;
 let pricesLoading = false;
 let catalogDraft = [];
+let catalogSearchQuery = '';
+let catalogDragState = null;
 
 function moneyInputValue(value) {
   const number = Math.round(Number(value));
@@ -37,6 +40,7 @@ function setCatalogDirty(value = true) {
   saveCatalogButton.disabled = !value;
   catalogSaveState.textContent = value ? 'Есть несохранённые изменения' : 'Каталог сохранён';
   catalogSaveState.classList.toggle('dirty', value);
+  if (catalogActionBar) catalogActionBar.hidden = !value;
 }
 
 function createMoneyInput(value, dataset = {}) {
@@ -117,15 +121,109 @@ function normalizeCatalogDraft() {
   catalogDraft.forEach((item, index) => { item.order = index + 1; });
 }
 
+function normalizeCatalogSearch(value) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/ё/g, 'е')
+    .replace(/\s+/g, '')
+    .replace(/^арт\.?/i, '');
+}
+
+function catalogItemMatches(item) {
+  const query = normalizeCatalogSearch(catalogSearchQuery);
+  if (!query) return true;
+  return normalizeCatalogSearch(item.art).includes(query);
+}
+
+function syncCatalogDraftFromDom() {
+  const rows = [...catalogManageList.querySelectorAll('.catalog-manage-row[data-art]')];
+  if (rows.length !== catalogDraft.length) return false;
+  const currentOrder = rows.map(row => row.dataset.art);
+  const before = catalogDraft.map(item => item.art);
+  if (currentOrder.every((art, index) => art === before[index])) return false;
+  const byArt = new Map(catalogDraft.map(item => [item.art, item]));
+  catalogDraft = currentOrder.map(art => byArt.get(art)).filter(Boolean);
+  catalogDraft.forEach((item, index) => { item.order = index + 1; });
+  return true;
+}
+
+function endCatalogDrag(event) {
+  const state = catalogDragState;
+  if (!state || (event && event.pointerId !== state.pointerId)) return;
+  try { state.handle.releasePointerCapture?.(state.pointerId); } catch {}
+  state.handle.removeEventListener('pointermove', moveCatalogDrag);
+  state.handle.removeEventListener('pointerup', endCatalogDrag);
+  state.handle.removeEventListener('pointercancel', endCatalogDrag);
+  state.row.classList.remove('is-dragging');
+  document.body.classList.remove('catalog-drag-active');
+  catalogDragState = null;
+  if (syncCatalogDraftFromDom()) setCatalogDirty();
+  renderCatalogManagement();
+}
+
+function moveCatalogDrag(event) {
+  const state = catalogDragState;
+  if (!state || event.pointerId !== state.pointerId) return;
+  event.preventDefault();
+  state.row.style.pointerEvents = 'none';
+  const target = document.elementFromPoint(event.clientX, event.clientY)?.closest('.catalog-manage-row[data-art]');
+  state.row.style.pointerEvents = '';
+  if (!target || target === state.row || target.parentElement !== catalogManageList) return;
+  const rect = target.getBoundingClientRect();
+  const after = event.clientY > rect.top + rect.height / 2;
+  catalogManageList.insertBefore(state.row, after ? target.nextSibling : target);
+}
+
+function beginCatalogDrag(event, row, handle) {
+  if (catalogSearchQuery) {
+    showToast('Очистите поиск, чтобы менять порядок', true);
+    return;
+  }
+  if (event.pointerType === 'mouse' && event.button !== 0) return;
+  event.preventDefault();
+  catalogDragState = {row, handle, pointerId: event.pointerId};
+  row.classList.add('is-dragging');
+  document.body.classList.add('catalog-drag-active');
+  try { handle.setPointerCapture?.(event.pointerId); } catch {}
+  handle.addEventListener('pointermove', moveCatalogDrag);
+  handle.addEventListener('pointerup', endCatalogDrag);
+  handle.addEventListener('pointercancel', endCatalogDrag);
+}
+
 function renderCatalogManagement() {
   catalogManageList.replaceChildren();
-  catalogDraft.forEach((item, index) => {
+  const filtered = catalogDraft
+    .map((item, index) => ({item, index}))
+    .filter(({item}) => catalogItemMatches(item));
+
+  if (!filtered.length) {
+    const empty = document.createElement('p');
+    empty.className = 'catalog-search-empty';
+    empty.textContent = 'Такой артикул не найден.';
+    catalogManageList.append(empty);
+    return;
+  }
+
+  filtered.forEach(({item, index}) => {
     const row = document.createElement('article');
     row.className = `catalog-manage-row${item.visible ? '' : ' is-hidden'}`;
+    row.dataset.art = item.art;
 
+    const dragHandle = document.createElement('button');
+    dragHandle.className = 'catalog-drag-handle';
+    dragHandle.type = 'button';
+    dragHandle.disabled = Boolean(catalogSearchQuery);
+    dragHandle.title = catalogSearchQuery ? 'Очистите поиск, чтобы менять порядок' : 'Зажмите и перетащите модель';
+    dragHandle.setAttribute('aria-label', dragHandle.title);
     const position = document.createElement('span');
     position.className = 'catalog-position';
     position.textContent = String(index + 1);
+    const grip = document.createElement('span');
+    grip.className = 'catalog-drag-grip';
+    grip.textContent = '⠿';
+    grip.setAttribute('aria-hidden', 'true');
+    dragHandle.append(position, grip);
+    dragHandle.addEventListener('pointerdown', event => beginCatalogDrag(event, row, dragHandle));
 
     const name = document.createElement('div');
     name.className = 'catalog-manage-name';
@@ -156,20 +254,46 @@ function renderCatalogManagement() {
     const up = document.createElement('button');
     up.type = 'button';
     up.textContent = '↑';
-    up.title = 'Поднять выше';
-    up.disabled = index === 0;
+    up.title = catalogSearchQuery ? 'Очистите поиск, чтобы менять порядок' : 'Поднять выше';
+    up.disabled = Boolean(catalogSearchQuery) || index === 0;
     up.addEventListener('click', () => moveCatalogItem(index, -1));
     const down = document.createElement('button');
     down.type = 'button';
     down.textContent = '↓';
-    down.title = 'Опустить ниже';
-    down.disabled = index === catalogDraft.length - 1;
+    down.title = catalogSearchQuery ? 'Очистите поиск, чтобы менять порядок' : 'Опустить ниже';
+    down.disabled = Boolean(catalogSearchQuery) || index === catalogDraft.length - 1;
     down.addEventListener('click', () => moveCatalogItem(index, 1));
     actions.append(up, down);
 
-    row.append(position, name, visibility, actions);
+    row.append(dragHandle, name, visibility, actions);
     catalogManageList.append(row);
   });
+}
+
+function setupCatalogManagementUi() {
+  if (!catalogManageList || document.getElementById('catalogSearchInput')) return;
+  const tools = document.createElement('div');
+  tools.className = 'catalog-manage-tools';
+  tools.innerHTML = '<label><span>Найти артикул</span><input id="catalogSearchInput" type="search" inputmode="search" autocomplete="off" placeholder="Например: 18 или 17С"></label>';
+  catalogManageList.before(tools);
+  const search = tools.querySelector('#catalogSearchInput');
+  search.addEventListener('input', () => {
+    catalogSearchQuery = search.value.trim();
+    renderCatalogManagement();
+  });
+
+  if (!document.getElementById('catalogManageCompactStyle')) {
+    const style = document.createElement('style');
+    style.id = 'catalogManageCompactStyle';
+    style.textContent = `
+      .catalog-manage-tools{margin:0 0 10px}.catalog-manage-tools label{display:grid;gap:5px}.catalog-manage-tools label>span{color:var(--muted);font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.45px}.catalog-manage-tools input{width:100%;height:42px;padding:0 12px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);font:inherit;font-size:12px;outline:none}.catalog-manage-tools input:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(198,147,63,.13)}
+      .catalog-drag-handle{display:flex;align-items:center;justify-content:center;gap:5px;min-width:0;height:38px;padding:3px 5px;border:0;border-radius:9px;background:#f1ede6;color:#70685f;touch-action:none;cursor:grab}.catalog-drag-handle:active{cursor:grabbing}.catalog-drag-handle:disabled{cursor:not-allowed;opacity:.55}.catalog-drag-handle .catalog-position{width:26px;height:26px;background:#fff}.catalog-drag-grip{font-size:16px;line-height:1;color:#978b7d}.catalog-manage-row.is-dragging{position:relative;z-index:4;opacity:.8;box-shadow:0 10px 24px rgba(18,16,13,.14);transform:scale(1.01)}.catalog-drag-active{user-select:none}.catalog-search-empty{margin:0;padding:22px;text-align:center;color:var(--muted);font-size:12px}
+      @media(max-width:620px){
+        #catalogTab .settings-card{padding:12px}#catalogTab .panel-heading{margin-bottom:10px}#catalogTab .panel-heading .price-help{display:none}.catalog-manage-tools{margin-bottom:7px}.catalog-manage-tools input{height:40px;font-size:16px}.catalog-manage-list{gap:5px}.catalog-manage-row{grid-template-columns:44px minmax(0,1fr) auto 72px!important;gap:7px!important;min-height:54px;padding:7px 8px!important}.catalog-manage-name{gap:0;min-width:0}.catalog-manage-name b{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.catalog-manage-name small{display:none!important}.catalog-visibility{grid-column:auto!important;grid-row:auto!important;gap:5px;font-size:10px;white-space:nowrap}.catalog-visibility input{width:16px;height:16px}.catalog-order-actions{grid-column:auto!important;grid-row:auto!important;gap:4px}.catalog-order-actions button{width:34px;height:34px;padding:0;font-size:16px}.catalog-drag-handle{height:36px;padding:2px 3px}.catalog-drag-handle .catalog-position{width:23px;height:23px;font-size:9px}.catalog-drag-grip{font-size:14px}#catalogTab .price-action-bar{bottom:8px;align-items:center!important;flex-direction:row!important;padding:8px!important;border-radius:12px}#catalogTab .price-action-bar .save-state{display:none}#catalogTab .price-action-bar .save-button{width:100%;min-height:44px}
+      }
+    `;
+    document.head.append(style);
+  }
 }
 
 function moveCatalogItem(index, direction) {
@@ -188,6 +312,7 @@ function renderPrices() {
   renderCatalogPrices();
   renderExtraPrices();
   normalizeCatalogDraft();
+  setupCatalogManagementUi();
   renderCatalogManagement();
   setPriceDirty(false);
   setCatalogDirty(false);
@@ -273,6 +398,8 @@ adminTabs.forEach(button => button.addEventListener('click', () => {
 
 catalogInstallationInput?.addEventListener('input', () => setPriceDirty());
 catalogPostsInput?.addEventListener('input', () => setPriceDirty());
+setupCatalogManagementUi();
+if (catalogActionBar) catalogActionBar.hidden = true;
 
 priceForm?.addEventListener('submit', async event => {
   event.preventDefault();
