@@ -33,6 +33,11 @@ grep -q 'site.css' "$TMP_DIR/index.html" || fail 'site.css reference missing'
 grep -q 'content="index,follow,max-image-preview:large"' "$TMP_DIR/index.html" || fail 'main page is not indexable'
 grep -q '<link rel="canonical" href="https://kuzdvor.tw1.ru/">' "$TMP_DIR/index.html" || fail 'main page canonical is invalid'
 grep -q '<meta property="og:url" content="https://kuzdvor.tw1.ru/">' "$TMP_DIR/index.html" || fail 'main page og:url is invalid'
+grep -q 'type="application/ld+json"' "$TMP_DIR/index.html" || fail 'LocalBusiness JSON-LD script missing'
+grep -q '"@type":"LocalBusiness"' "$TMP_DIR/index.html" || fail 'LocalBusiness schema type missing'
+grep -q '"@id":"https://kuzdvor.tw1.ru/#business"' "$TMP_DIR/index.html" || fail 'LocalBusiness schema id missing'
+grep -q '"telephone":"+79373296750"' "$TMP_DIR/index.html" || fail 'LocalBusiness telephone missing'
+grep -q '"addressLocality":"Мелеуз"' "$TMP_DIR/index.html" || fail 'LocalBusiness locality missing'
 if grep -qi 'noindex' "$TMP_DIR/index.html"; then
   fail 'main page is accidentally noindexed'
 fi
