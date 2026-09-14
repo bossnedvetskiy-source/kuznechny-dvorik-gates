@@ -2,6 +2,7 @@
   const MEMORY_KEY = 'kuzdvor:delivery-context';
   const normalize = value => String(value || '').toLocaleLowerCase('ru-RU').replace(/ё/g,'е').replace(/[^а-яa-z0-9]/gi,'');
   const escapeHTML = value => String(value).replace(/[&<>'"]/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[character]));
+  const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 
   function readData() {
     const node = document.getElementById('deliveryData');
@@ -65,6 +66,25 @@
       ? String(state.shortName || state.resolvedName || state.name || input?.value || '').trim()
       : String(input?.value || '').trim();
 
+    const syncManualDeliveryMessaging = () => {
+      if (!['error','out-of-area'].includes(state.kind)) return;
+      queueMicrotask(() => {
+        const suffix = state.kind === 'out-of-area' ? 'доставка индивидуально' : 'доставка уточняется';
+        [document.getElementById('estimateTotal'), document.getElementById('mobilePriceTotal')].forEach(node => {
+          const current = String(node?.textContent || '').trim();
+          if (node && current && !current.includes('доставка')) node.textContent = `${current} + ${suffix}`;
+        });
+        const cta = document.getElementById('mobilePrimaryCta');
+        const calculator = document.getElementById('calculator');
+        const lead = document.getElementById('leadRequest');
+        if (cta && calculator && !calculator.hidden && (!lead || lead.hidden)) {
+          cta.textContent = state.kind === 'out-of-area'
+            ? 'Заказать бесплатный замер · доставка индивидуально'
+            : 'Заказать бесплатный замер · доставка уточняется';
+        }
+      });
+    };
+
     const syncUi = () => {
       const resolved = ['fixed','calculated'].includes(state.kind);
       const selected = resolved || state.kind === 'out-of-area';
@@ -86,14 +106,46 @@
     const emit = () => {
       syncUi();
       onChange?.(state);
+      syncManualDeliveryMessaging();
+    };
+
+    const makeRequestError = (message, technical = false) => Object.assign(new Error(message), {technical});
+
+    const requestDelivery = async place => {
+      let lastError = null;
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        try {
+          const response = await fetch(`/api/delivery?place=${encodeURIComponent(place)}`, {headers:{accept:'application/json'}});
+          const raw = await response.text();
+          let payload = null;
+          try { payload = raw ? JSON.parse(raw) : null; } catch {}
+          if (!payload || typeof payload !== 'object') {
+            throw makeRequestError('Сервис расчёта доставки временно недоступен', true);
+          }
+          if (!response.ok) {
+            const technical = response.status >= 500 || response.status === 429;
+            throw makeRequestError(payload.error || 'Не удалось рассчитать доставку', technical);
+          }
+          return payload;
+        } catch (error) {
+          lastError = error?.technical === true ? error : error instanceof TypeError
+            ? makeRequestError('Сервис расчёта доставки временно недоступен', true)
+            : error;
+          if (attempt === 0 && lastError?.technical === true) {
+            await wait(350);
+            if (String(input?.value || '').trim() !== place) throw makeRequestError('Расчёт отменён', false);
+            continue;
+          }
+          throw lastError;
+        }
+      }
+      throw lastError || makeRequestError('Не удалось рассчитать доставку', true);
     };
 
     const resolveFixed = known => {
       const city = String(known.name || '').trim();
       const price = Number(known.price) || 0;
       if (input) input.value = city;
-      // A listed destination is an explicit business tariff and may be a deliberate exception
-      // to the normal service radius. Never try to derive kilometres from its price.
       state = {kind:'fixed', name:city, resolvedName:city, shortName:city, price, distanceKm:null, serviceAreaKm:data.serviceAreaKm, outOfArea:false};
       editingOther = false;
       setResult(normalize(city) === normalize('Мелеуз')
@@ -147,9 +199,7 @@
       setResult('Ищем населённый пункт и автомобильный маршрут…', 'pending');
       emit();
       try {
-        const response = await fetch(`/api/delivery?place=${encodeURIComponent(place)}`, {headers:{accept:'application/json'}});
-        const payload = await response.json();
-        if (!response.ok) throw new Error(payload.error || 'Не удалось рассчитать доставку');
+        const payload = await requestDelivery(place);
         if (String(input?.value || '').trim() !== place) return;
         const shortName = payload.shortName || payload.resolvedName || place;
         if (payload.outOfArea) {
@@ -169,9 +219,13 @@
         if (routeButton) { routeButton.hidden = false; routeButton.disabled = false; routeButton.textContent = 'Да, это нужный пункт'; }
         setResult(`Найдено: ${shortName}. Подтвердите населённый пункт.`, 'pending');
       } catch (error) {
+        if (String(input?.value || '').trim() !== place) return;
         state = {kind:'error', name:place, resolvedName:'', shortName:'', price:null};
         if (routeButton) { routeButton.hidden = false; routeButton.disabled = false; routeButton.textContent = 'Повторить расчёт'; }
-        setResult(`${error?.message || 'Не удалось рассчитать доставку.'} Можно отправить заявку — стоимость уточним вручную.`, 'error');
+        const message = error?.technical === true
+          ? 'Не удалось автоматически рассчитать доставку.'
+          : String(error?.message || 'Не удалось рассчитать доставку.');
+        setResult(`${message} Оставьте заявку — стоимость уточним вручную.`, 'pending');
       }
       emit();
     };
@@ -229,10 +283,15 @@
       const city = selectedCityName();
       const resolved = ['fixed','calculated'].includes(state.kind);
       const outOfArea = state.kind === 'out-of-area';
+      const failed = state.kind === 'error';
       return {
         name:'Место установки',
         value:resolved ? Number(state.price)||0 : null,
-        display:outOfArea ? `${city} · доставка индивидуально` : city || 'Не выбрано',
+        display:outOfArea
+          ? `${city} · доставка индивидуально`
+          : failed
+            ? `${city || 'Место установки'} · доставка уточняется`
+            : city || 'Не выбрано',
         resolved,
         outOfArea
       };
