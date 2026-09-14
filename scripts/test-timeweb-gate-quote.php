@@ -69,8 +69,9 @@ if (!$rejected) {
     fwrite(STDERR, "EXCLUDED PHP FAIL: Арт.39 всё ещё рассчитывается\n");
 }
 
+$serverStandards = kd_gate_standard_prices(kd_gate_normalize_price_inputs($prices, true));
 try {
-    $validated = kd_gate_validate_excel_payload(['prices'=>$prices, 'standardPrices'=>['6'=>56600, '17С'=>90000, '38'=>76500]]);
+    $validated = kd_gate_validate_excel_payload(['prices'=>$prices, 'standardPrices'=>$serverStandards]);
     if (count($validated['standardPrices'] ?? []) !== 38 || (int)($validated['standardPrices']['6'] ?? 0) !== 56600) {
         $failures++;
         fwrite(STDERR, "EXCEL PHP FAIL: сервер не пересчитал все стандартные цены\n");
@@ -84,7 +85,7 @@ $missingRejected = false;
 try {
     $missing = $prices;
     unset($missing[array_key_first($missing)]);
-    kd_gate_validate_excel_payload(['prices'=>$missing]);
+    kd_gate_validate_excel_payload(['prices'=>$missing, 'standardPrices'=>$serverStandards]);
 } catch (Throwable) {
     $missingRejected = true;
 }
@@ -93,9 +94,24 @@ if (!$missingRejected) {
     fwrite(STDERR, "EXCEL PHP FAIL: неполный набор входных цен был принят\n");
 }
 
+$missingStandardsRejected = false;
+try {
+    $incompleteStandards = $serverStandards;
+    unset($incompleteStandards[array_key_first($incompleteStandards)]);
+    kd_gate_validate_excel_payload(['prices'=>$prices, 'standardPrices'=>$incompleteStandards]);
+} catch (Throwable) {
+    $missingStandardsRejected = true;
+}
+if (!$missingStandardsRejected) {
+    $failures++;
+    fwrite(STDERR, "EXCEL PHP FAIL: неполная проверка 38 моделей была принята\n");
+}
+
 $mismatchRejected = false;
 try {
-    kd_gate_validate_excel_payload(['prices'=>$prices, 'standardPrices'=>['6'=>1]]);
+    $wrongStandards = $serverStandards;
+    $wrongStandards['6'] = 1;
+    kd_gate_validate_excel_payload(['prices'=>$prices, 'standardPrices'=>$wrongStandards]);
 } catch (Throwable) {
     $mismatchRejected = true;
 }
@@ -104,5 +120,5 @@ if (!$mismatchRejected) {
     fwrite(STDERR, "EXCEL PHP FAIL: подменённая стандартная цена была принята\n");
 }
 
-fwrite(STDOUT, "PHP gate standards checked: {$checkedStandards}; controls: " . count($cases) . "; Excel validation: 3; failures: {$failures}\n");
+fwrite(STDOUT, "PHP gate standards checked: {$checkedStandards}; controls: " . count($cases) . "; Excel validation: 4; failures: {$failures}\n");
 exit($failures ? 1 : 0);
