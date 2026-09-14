@@ -180,3 +180,98 @@
     });
   }
 })();
+
+(() => {
+  const panel = document.getElementById('leadsTab');
+  const list = document.getElementById('leadList');
+  if (!panel || !list) return;
+
+  const style = document.createElement('style');
+  style.textContent = `
+    .lead-quick-work{display:grid;grid-template-columns:minmax(190px,.7fr) minmax(260px,1.8fr) auto;gap:8px;align-items:end;margin:0 0 12px;padding:10px;border:1px solid #e4ddd2;border-radius:11px;background:#fcfaf6}
+    .lead-quick-work label{display:grid;gap:5px;color:var(--muted);font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.35px}
+    .lead-quick-work input,.lead-quick-work textarea{width:100%;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--ink);font:inherit;font-size:11px;text-transform:none;letter-spacing:0}
+    .lead-quick-work input{height:39px;padding:0 9px}.lead-quick-work textarea{min-height:54px;padding:8px 9px;resize:vertical}
+    .lead-quick-save{min-height:39px;padding:0 13px;border:0;border-radius:9px;background:var(--ink);color:#fff;font-size:10px;font-weight:900;white-space:nowrap}
+    @media(max-width:760px){.lead-quick-work{grid-template-columns:1fr}.lead-quick-save{width:100%}}
+  `;
+  document.head.append(style);
+
+  let loading = false;
+  let timer = 0;
+
+  async function getWorkflows(ids) {
+    const response = await fetch(`/api/admin/lead-workflows?ids=${encodeURIComponent(ids.join(','))}`, {cache:'no-store'});
+    if (!response.ok) throw new Error('Не удалось загрузить заметки');
+    return response.json();
+  }
+
+  async function enhance() {
+    if (loading || panel.hidden) return;
+    const cards = [...list.querySelectorAll('[data-lead-id]')].filter(card => !card.querySelector('.lead-quick-work'));
+    const ids = cards.map(card => Number(card.dataset.leadId)).filter(Boolean);
+    if (!ids.length) return;
+    loading = true;
+    try {
+      const data = await getWorkflows(ids);
+      for (const card of cards) {
+        const id = Number(card.dataset.leadId);
+        const item = data.workflows?.[id] || {stage:'new',note:'',nextActionAt:'',lossReason:''};
+        const box = document.createElement('div');
+        box.className = 'lead-quick-work';
+        box.dataset.workflowStage = item.stage || 'new';
+        box.dataset.lossReason = item.lossReason || '';
+        box.innerHTML = `<label>Дата и время замера<input type="datetime-local" data-measurement-date></label><label>Заметка<textarea data-manager-note maxlength="1200" placeholder="Например: созвониться после 18:00"></textarea></label><button class="lead-quick-save" type="button">Сохранить</button>`;
+        box.querySelector('[data-measurement-date]').value = String(item.nextActionAt || '');
+        box.querySelector('[data-manager-note]').value = String(item.note || '');
+        box.querySelector('.lead-quick-save').addEventListener('click', () => save(card, box));
+        const details = card.querySelector('.lead-details');
+        if (details) details.before(box); else card.append(box);
+      }
+    } catch (error) {
+      console.warn('Lead note enhancement failed', error);
+    } finally {
+      loading = false;
+    }
+  }
+
+  async function save(card, box) {
+    const id = Number(card.dataset.leadId);
+    const date = box.querySelector('[data-measurement-date]').value || '';
+    const note = box.querySelector('[data-manager-note]').value || '';
+    const button = box.querySelector('.lead-quick-save');
+    let stage = String(box.dataset.workflowStage || 'new');
+    if (date) stage = 'measurement_scheduled';
+    else if (stage === 'measurement_scheduled') stage = 'contacted';
+    button.disabled = true;
+    button.textContent = 'Сохраняем…';
+    try {
+      const response = await fetch(`/api/admin/lead-workflows/${id}`, {
+        method:'POST',
+        headers:{'content-type':'application/json'},
+        body:JSON.stringify({stage,nextActionAt:date,note,lossReason:box.dataset.lossReason || ''})
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || 'Не удалось сохранить');
+      box.dataset.workflowStage = data.stage || stage;
+      if (date) {
+        const status = card.querySelector('.lead-status');
+        if (status && status.value === 'new') status.value = 'contacted';
+      }
+      if (typeof window.showToast === 'function') window.showToast('Замер и заметка сохранены');
+    } catch (error) {
+      if (typeof window.showToast === 'function') window.showToast(error.message || 'Не удалось сохранить', true);
+    } finally {
+      button.disabled = false;
+      button.textContent = 'Сохранить';
+    }
+  }
+
+  const schedule = () => { clearTimeout(timer); timer = setTimeout(enhance, 60); };
+  new MutationObserver(schedule).observe(list, {childList:true});
+  document.querySelector('.admin-tabs')?.addEventListener('click', event => {
+    if (event.target.closest('[data-admin-tab="leads"]')) setTimeout(enhance, 120);
+  });
+  window.addEventListener('admin:ready', () => setTimeout(enhance, 100));
+  setTimeout(enhance, 100);
+})();
