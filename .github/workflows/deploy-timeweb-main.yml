@@ -15,6 +15,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
       - name: Checkout production source
@@ -124,23 +125,24 @@ jobs:
           live_sha=''
 
           echo "Waiting for Timeweb auto-deploy of ${expected_sha}..."
-          for attempt in $(seq 1 20); do
-            version_json="$(curl -fsS --max-time 20 --retry 2 --retry-delay 2 --retry-all-errors "${base}/deployment-version.json?check=${attempt}" 2>/dev/null || true)"
-            live_sha="$(printf '%s' "$version_json" | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{try{process.stdout.write(JSON.parse(s).sourceSha||'')}catch{}})" 2>/dev/null || true)"
-            if [ "$live_sha" = "$expected_sha" ]; then
-              echo "Timeweb is serving the current main commit."
+          for attempt in $(seq 1 35); do
+            : > /tmp/timeweb-version.json
+            code="$(curl -sS --connect-timeout 3 --max-time 6 -o /tmp/timeweb-version.json -w '%{http_code}' "${base}/deployment-version.json?check=${attempt}" 2>/dev/null || true)"
+            live_sha="$(node -e "const fs=require('fs');try{process.stdout.write(JSON.parse(fs.readFileSync('/tmp/timeweb-version.json','utf8')).sourceSha||'')}catch{}" 2>/dev/null || true)"
+            echo "Attempt ${attempt}/35: HTTP ${code:-000}; live=${live_sha:-unavailable}; expected=${expected_sha}"
+            if [ "$code" = '200' ] && [ "$live_sha" = "$expected_sha" ]; then
+              echo 'Timeweb is serving the current main commit.'
               break
             fi
-            echo "Attempt ${attempt}/20: live=${live_sha:-unavailable}; expected=${expected_sha}"
-            sleep 15
+            sleep 8
           done
 
           if [ "$live_sha" != "$expected_sha" ]; then
-            echo "::error::Timeweb did not deploy current main within 5 minutes."
+            echo "::error::Timeweb did not deploy current main within the verification window. Check the Timeweb Crontab task kuzdvor-autodeploy."
             exit 1
           fi
 
-          curl -fsS --max-time 25 --retry 4 --retry-delay 2 --retry-all-errors -o /tmp/timeweb-health.json "${base}/api/health"
+          curl -fsS --connect-timeout 4 --max-time 15 --retry 1 --retry-delay 2 -o /tmp/timeweb-health.json "${base}/api/health"
           node - <<'NODE'
           const fs = require('fs');
           const health = JSON.parse(fs.readFileSync('/tmp/timeweb-health.json','utf8'));
@@ -152,21 +154,21 @@ jobs:
           }
           NODE
 
-          curl -fsS --max-time 25 --retry 4 --retry-delay 2 --retry-all-errors -o /tmp/timeweb-admin.html "${base}/admin"
+          curl -fsS --connect-timeout 4 --max-time 15 --retry 1 --retry-delay 2 -o /tmp/timeweb-admin.html "${base}/admin"
           grep -Fq '<script src="/xlsx.bundle.js"></script>' /tmp/timeweb-admin.html
           if grep -Fq 'unsupported format |' /tmp/timeweb-admin.html; then
             echo '::error::Live admin still contains the inlined XLSX library.'
             exit 1
           fi
 
-          curl -fsS --max-time 25 --retry 4 --retry-delay 2 --retry-all-errors -o /tmp/timeweb-site.js "${base}/site.bundle.js"
+          curl -fsS --connect-timeout 4 --max-time 15 --retry 1 --retry-delay 2 -o /tmp/timeweb-site.js "${base}/site.bundle.js"
           grep -Fq 'С учётом доставки' /tmp/timeweb-site.js
-          curl -fsS --max-time 25 --retry 4 --retry-delay 2 --retry-all-errors -o /dev/null "${base}/xlsx.bundle.js"
+          curl -fsS --connect-timeout 4 --max-time 15 --retry 1 --retry-delay 2 -o /dev/null "${base}/xlsx.bundle.js"
 
-          curl -sSI --max-time 25 --retry 4 --retry-delay 2 --retry-all-errors "${base}/" > /tmp/timeweb-https-headers.txt
+          curl -sSI --connect-timeout 4 --max-time 15 "${base}/" > /tmp/timeweb-https-headers.txt
           grep -Eiq '^strict-transport-security:[[:space:]]*max-age=31536000' /tmp/timeweb-https-headers.txt
 
-          curl -sSI --max-time 25 --retry 4 --retry-delay 2 --retry-all-errors 'http://kuzdvor.tw1.ru/' > /tmp/timeweb-http-headers.txt
+          curl -sSI --connect-timeout 4 --max-time 15 'http://kuzdvor.tw1.ru/' > /tmp/timeweb-http-headers.txt
           status="$(awk 'NR==1{print $2}' /tmp/timeweb-http-headers.txt)"
           location="$(awk 'BEGIN{IGNORECASE=1} /^location:/{sub(/\r$/,"",$2); print $2; exit}' /tmp/timeweb-http-headers.txt)"
           case "$status" in 301|302|307|308) ;; *) echo "::error::HTTP is not redirected to HTTPS (status $status)."; exit 1;; esac
