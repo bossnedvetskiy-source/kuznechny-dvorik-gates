@@ -17,9 +17,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout main
+      - name: Checkout production source
         uses: actions/checkout@v6
         with:
+          ref: main
           fetch-depth: 1
 
       - name: Set up Node.js
@@ -28,11 +29,18 @@ jobs:
           node-version: '22'
           cache: npm
 
-      - name: Bring Timeweb adapter from migration branch
+      - name: Bring pinned Timeweb adapter
         shell: bash
         run: |
           set -euo pipefail
+          ADAPTER_SHA="a5c63db7ff96f6826f9d50f9321a08c839e84958"
           git fetch --depth=1 origin timeweb-migration
+          actual_sha="$(git rev-parse FETCH_HEAD)"
+          if [ "$actual_sha" != "$ADAPTER_SHA" ]; then
+            echo "Timeweb adapter changed: expected $ADAPTER_SHA, got $actual_sha" >&2
+            echo "Review the adapter changes and update ADAPTER_SHA deliberately." >&2
+            exit 1
+          fi
           git checkout FETCH_HEAD -- scripts/build-timeweb.mjs timeweb
 
       - name: Install build dependencies
@@ -44,6 +52,9 @@ jobs:
       - name: Prepare Timeweb package
         run: node scripts/build-timeweb.mjs
 
+      - name: Harden Timeweb package
+        run: node scripts/harden-timeweb.mjs
+
       - name: Verify Timeweb package
         shell: bash
         run: |
@@ -54,10 +65,11 @@ jobs:
           test -s timeweb-dist/site.bundle.js
           test -s timeweb-dist/xlsx.bundle.js
           grep -Fq '<script src="/xlsx.bundle.js"></script>' timeweb-dist/admin.html
-          if grep -Fq 'unsupported format' timeweb-dist/admin.html; then
+          if grep -Fq 'unsupported format |' timeweb-dist/admin.html; then
             echo 'XLSX library was inlined into admin HTML again' >&2
             exit 1
           fi
+          grep -Fq 'С учётом доставки' timeweb-dist/site.bundle.js
           test -s timeweb-dist/api-proxy.php
           test -s timeweb-dist/local-api.php
           test -s timeweb-dist/migrate-public-catalog.php
@@ -66,12 +78,19 @@ jobs:
           test -s timeweb-dist/backend/defaults.json
           test -s timeweb-dist/.htaccess
           grep -Fq 'SetEnv HOME /home/c/cp59598/kuznechny-dvorik-gates' timeweb-dist/.htaccess
+          grep -Fq 'RewriteCond %{HTTP:X-Forwarded-Proto} !https [NC]' timeweb-dist/.htaccess
+          grep -Fq 'Strict-Transport-Security' timeweb-dist/.htaccess
           grep -Fq 'RewriteRule ^api/(.*)$ local-api.php?__route=$1 [QSA,L]' timeweb-dist/.htaccess
           grep -Fq 'RewriteRule ^catalog-media/(.*)$ local-api.php?__route=catalog-media/$1 [QSA,L]' timeweb-dist/.htaccess
           if grep -Fq 'api-proxy.php?__proxy_path' timeweb-dist/.htaccess; then
             echo 'Timeweb .htaccess still routes production traffic through Cloudflare proxy' >&2
             exit 1
           fi
+          if grep -Fq "'detail' => \$e->getMessage()" timeweb-dist/local-api.php; then
+            echo 'Timeweb API still exposes internal exception details' >&2
+            exit 1
+          fi
+          grep -Fq '$healthy ? 200 : 503' timeweb-dist/local-api.php
           php -l timeweb-dist/local-api.php
           php -l timeweb-dist/migrate-public-catalog.php
           php -l timeweb-dist/backend/bootstrap.php
@@ -81,6 +100,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          source_sha="$(git rev-parse HEAD)"
           rm -rf /tmp/timeweb-dist
           cp -a timeweb-dist /tmp/timeweb-dist
           git config user.name "github-actions[bot]"
@@ -90,5 +110,5 @@ jobs:
           git clean -fdx
           cp -a /tmp/timeweb-dist/. .
           git add -A
-          git commit -m "Build Timeweb site from ${GITHUB_SHA}"
+          git commit -m "Build Timeweb site from main ${source_sha}"
           git push --force origin HEAD:timeweb-public
