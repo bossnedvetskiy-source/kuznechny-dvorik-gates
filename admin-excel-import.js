@@ -15,13 +15,13 @@
   const style = document.createElement('style');
   style.textContent = `
     #pricesTab .admin-baseline-note{display:none!important}
-    .excel-import{display:grid;gap:9px}.excel-import-intro{padding:10px 12px;border:1px solid #dfc791;border-radius:11px;background:#fff8e8;color:#67532c;font-size:10px;line-height:1.45}.excel-import-intro b{color:#75531b}.excel-import-source{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:9px;align-items:center;padding:11px 12px;border:1px solid #e4ded5;border-radius:12px;background:#faf8f4}.excel-import-source strong{display:block;font-size:12px}.excel-import-source small{display:block;margin-top:3px;color:var(--muted);font-size:9px;line-height:1.4}.excel-source-actions{display:flex;flex-wrap:wrap;gap:7px;justify-content:flex-end}.excel-file-button,.excel-download-button{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:0 12px;border:1px solid #c89a49;border-radius:9px;background:#fff;color:#6d4b15;font-size:10px;font-weight:800;cursor:pointer}.excel-download-button{border-color:#1f1f1f;color:#1f1f1f}.excel-download-button:disabled{opacity:.42;cursor:not-allowed}.excel-preview{display:grid;gap:10px}.excel-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.excel-summary>div{padding:10px;border:1px solid #e6e0d6;border-radius:11px;background:#fff}.excel-summary span{display:block;color:var(--muted);font-size:8px;font-weight:800;text-transform:uppercase}.excel-summary b{display:block;margin-top:3px;font-size:14px}.excel-changes{max-height:320px;overflow:auto;border:1px solid #e6e0d6;border-radius:12px}.excel-change{display:grid;grid-template-columns:minmax(100px,1fr) 100px 24px 100px;gap:8px;align-items:center;padding:9px 11px;border-bottom:1px solid #eee9e1;font-size:10px}.excel-change:last-child{border-bottom:0}.excel-change b{font-size:10.5px}.excel-arrow{text-align:center;color:#9f772f}.excel-model-warning{padding:11px 12px;border-radius:11px;background:#fff0ef;color:#913f39;font-size:10px;line-height:1.5}.excel-model-ok{padding:10px 12px;border-radius:11px;background:#eef7ea;color:#4f6f3b;font-size:10px;line-height:1.5}.excel-actions{display:flex;align-items:center;justify-content:flex-end;gap:10px}.excel-publish{min-height:43px;padding:0 16px;border:0;border-radius:10px;background:var(--ink);color:#fff;font-size:11px;font-weight:800}.excel-publish:disabled{opacity:.4}.excel-error{padding:10px 12px;border-radius:10px;background:#fff0ef;color:#913f39;font-size:10px}.excel-hidden{display:none!important}@media(max-width:620px){.excel-import-source{grid-template-columns:1fr}.excel-source-actions{display:grid;grid-template-columns:1fr 1fr}.excel-file-button,.excel-download-button{width:100%;min-height:40px;padding:0 7px}.excel-summary{grid-template-columns:1fr 1fr}.excel-change{grid-template-columns:1fr 80px 18px 80px}.excel-actions{display:grid}.excel-publish{width:100%}}
+    .excel-import{display:grid;gap:9px}.excel-import-intro{padding:10px 12px;border:1px solid #dfc791;border-radius:11px;background:#fff8e8;color:#67532c;font-size:10px;line-height:1.45}.excel-import-intro b{color:#75531b}.excel-import-source{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:9px;align-items:center;padding:11px 12px;border:1px solid #e4ded5;border-radius:12px;background:#faf8f4}.excel-import-source strong{display:block;font-size:12px}.excel-import-source small{display:block;margin-top:3px;color:var(--muted);font-size:9px;line-height:1.4}.excel-source-actions{display:flex;flex-wrap:wrap;gap:7px;justify-content:flex-end}.excel-file-button,.excel-download-button{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:0 12px;border:1px solid #c89a49;border-radius:9px;background:#fff;color:#6d4b15;font-size:10px;font-weight:800;cursor:pointer}.excel-download-button{border-color:#1f1f1f;color:#1f1f1f}.excel-download-button:disabled{opacity:.42;cursor:not-allowed}.excel-preview{display:grid;gap:10px}.excel-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.excel-summary>div{padding:10px;border:1px solid #e6e0d6;border-radius:11px;background:#fff}.excel-summary span{display:block;color:var(--muted);font-size:8px;font-weight:800;text-transform:uppercase}.excel-summary b{display:block;margin-top:3px;font-size:14px}.excel-changes{max-height:320px;overflow:auto;border:1px solid #e6e0d6;border-radius:12px}.excel-change{display:grid;grid-template-columns:minmax(100px,1fr) 100px 24px 100px;gap:8px;align-items:center;padding:9px 11px;border-bottom:1px solid #eee9e1;font-size:10px}.excel-change:last-child{border-bottom:0}.excel-change b{font-size:10.5px}.excel-arrow{text-align:center;color:#9f772f}.excel-model-warning{padding:11px 12px;border-radius:11px;background:#fff0ef;color:#913f39;font-size:10px;line-height:1.5}.excel-model-caution{padding:11px 12px;border:1px solid #e3c77d;border-radius:11px;background:#fff8e8;color:#75531b;font-size:10px;line-height:1.5}.excel-model-ok{padding:10px 12px;border-radius:11px;background:#eef7ea;color:#4f6f3b;font-size:10px;line-height:1.5}.excel-actions{display:flex;align-items:center;justify-content:flex-end;gap:10px}.excel-publish{min-height:43px;padding:0 16px;border:0;border-radius:10px;background:var(--ink);color:#fff;font-size:11px;font-weight:800}.excel-publish:disabled{opacity:.4}.excel-error{padding:10px 12px;border-radius:10px;background:#fff0ef;color:#913f39;font-size:10px}.excel-hidden{display:none!important}@media(max-width:620px){.excel-import-source{grid-template-columns:1fr}.excel-source-actions{display:grid;grid-template-columns:1fr 1fr}.excel-source-actions .excel-file-button:only-child{grid-column:1/-1}.excel-file-button,.excel-download-button{width:100%;min-height:40px;padding:0 7px}.excel-summary{grid-template-columns:1fr 1fr}.excel-change{grid-template-columns:1fr 80px 18px 80px}.excel-actions{display:grid}.excel-publish{width:100%}}
   `;
   document.head.append(style);
 
   list.className = 'excel-import';
   list.innerHTML = `
-    <div class="excel-import-intro"><b>Цены ворот рассчитываются из Excel.</b> Чтобы изменить их, скачайте файл, внесите правки и загрузите его обратно.</div>
+    <div class="excel-import-intro" id="excelIntro"><b>Проверяем Excel-настройки…</b></div>
     <div class="excel-import-source">
       <div><strong id="excelCurrentTitle">Загружаем текущий расчёт…</strong><small id="excelCurrentMeta">Проверяем данные.</small></div>
       <div class="excel-source-actions">
@@ -40,6 +40,7 @@
 
   const fileInput = document.getElementById('gateExcelInput');
   const downloadButton = document.getElementById('excelDownload');
+  const intro = document.getElementById('excelIntro');
   const currentTitle = document.getElementById('excelCurrentTitle');
   const currentMeta = document.getElementById('excelCurrentMeta');
   const errorBox = document.getElementById('excelError');
@@ -115,10 +116,17 @@
   }
 
   function refreshDownloadState() {
-    downloadButton.disabled = !currentState?.fileAvailable;
-    downloadButton.title = currentState?.fileAvailable
+    const available = Boolean(currentState?.fileAvailable);
+    downloadButton.hidden = !available;
+    downloadButton.disabled = !available;
+    downloadButton.title = available
       ? 'Скачать последнюю опубликованную версию Excel'
       : 'На сайте пока нет сохранённого .xlsx. Один раз опубликуйте исходный Excel.';
+    if (intro) {
+      intro.innerHTML = available
+        ? '<b>Цены ворот рассчитываются из Excel.</b> Скачайте текущий файл, измените цены, пересчитайте и сохраните его в Excel, затем загрузите обратно.'
+        : '<b>Сначала загрузите исходный Excel один раз.</b> После проверки и публикации его можно будет скачивать, изменять и загружать обратно.';
+    }
   }
 
   async function loadCurrent() {
@@ -199,19 +207,29 @@
 
     const materialChanges = Object.entries(prices).filter(([ref,item]) => Number(item.value) !== Number(currentState.prices?.[ref]?.value)).map(([ref,item]) => ({ref,label:item.label,old:Number(currentState.prices[ref].value),next:Number(item.value)}));
     const modelChanges = Object.entries(afterStandards).filter(([article,value]) => Number(value) !== Number(beforeStandards[article])).map(([article,value]) => ({article,old:Number(beforeStandards[article]),next:Number(value)}));
+    const abruptModelChanges = modelChanges
+      .map(change => ({...change, ratio: change.old > 0 ? Math.abs(change.next - change.old) / change.old : (change.next > 0 ? 1 : 0)}))
+      .filter(change => change.ratio >= 0.5)
+      .sort((a,b) => b.ratio - a.ratio);
 
     document.getElementById('excelMaterialCount').textContent=String(materialChanges.length);
     document.getElementById('excelModelCount').textContent=String(modelChanges.length);
     document.getElementById('excelCheckedCount').textContent=String(checked.length);
-    modelCheck.className = mismatches.length ? 'excel-model-warning' : 'excel-model-ok';
-    modelCheck.textContent = mismatches.length
-      ? `Файл отличается от внедрённой формулы у ${mismatches.length} моделей (${mismatches.slice(0,8).map(a=>'Арт.'+a).join(', ')}${mismatches.length>8?'…':''}). Публикация заблокирована: сначала нужно обновить структуру расчётной модели, иначе сайт и Excel будут считать по-разному.`
-      : `Проверка пройдена: сохранённые итоги Excel совпадают с расчётной моделью сайта для ${checked.length} моделей.`;
+    if (mismatches.length) {
+      modelCheck.className = 'excel-model-warning';
+      modelCheck.textContent = `Файл отличается от внедрённой формулы у ${mismatches.length} моделей (${mismatches.slice(0,8).map(a=>'Арт.'+a).join(', ')}${mismatches.length>8?'…':''}). Публикация заблокирована: сайт и Excel будут считать по-разному.`;
+    } else if (abruptModelChanges.length) {
+      modelCheck.className = 'excel-model-caution';
+      modelCheck.textContent = `Проверка 38 моделей пройдена. Внимание: у ${abruptModelChanges.length} моделей цена меняется на 50% или больше (${abruptModelChanges.slice(0,5).map(change => `Арт.${change.article}: ${Math.round(change.ratio*100)}%`).join(', ')}${abruptModelChanges.length>5?'…':''}). Перед публикацией внимательно проверьте изменения ниже.`;
+    } else {
+      modelCheck.className = 'excel-model-ok';
+      modelCheck.textContent = `Проверка пройдена: сохранённые итоги Excel совпадают с расчётной моделью сайта для ${checked.length} моделей.`;
+    }
 
     const rows = [...materialChanges.slice(0,18).map(change => `<div class="excel-change"><b>${escape(change.label)} <small>${escape(change.ref)}</small></b><span>${money(change.old)}</span><span class="excel-arrow">→</span><span>${money(change.next)}</span></div>`), ...modelChanges.slice(0,22).map(change => `<div class="excel-change"><b>Арт.${escape(change.article)}</b><span>${money(change.old)}</span><span class="excel-arrow">→</span><span>${money(change.next)}</span></div>`)];
     changesBox.innerHTML = rows.length ? rows.join('') : '<div class="excel-change"><b>Изменений цен не найдено</b><span></span><span></span><span></span></div>';
     preview.classList.remove('excel-hidden');
-    pending = {prices, standardPrices:afterStandards, meta:{fileName:file.name,fileSize:file.size,sha256:hash}, mismatches, buffer};
+    pending = {prices, standardPrices:afterStandards, meta:{fileName:file.name,fileSize:file.size,sha256:hash}, mismatches, materialChanges, modelChanges, abruptModelChanges, buffer};
     // First publication may only be needed to save the source .xlsx for future downloads.
     publishButton.disabled = Boolean(mismatches.length) || (!materialChanges.length && Boolean(currentState?.fileAvailable));
     if (!materialChanges.length && !currentState?.fileAvailable && !mismatches.length) {
@@ -224,7 +242,16 @@
     if (!file) return;
     currentTitle.textContent = `Проверяем: ${file.name}`;
     currentMeta.textContent = 'Сверяем материалы и все стандартные расчёты…';
-    try { await inspectFile(file); currentTitle.textContent=`Готов к публикации: ${file.name}`; currentMeta.textContent='Изменения попадут на сайт только после нажатия «Опубликовать».'; }
+    try {
+      await inspectFile(file);
+      if (pending?.mismatches?.length) {
+        currentTitle.textContent='Публикация заблокирована';
+        currentMeta.textContent='Excel не совпадает с расчётной моделью сайта.';
+      } else {
+        currentTitle.textContent=`Готов к публикации: ${file.name}`;
+        currentMeta.textContent='Проверьте изменения ниже. На сайт они попадут только после подтверждения.';
+      }
+    }
     catch(error){showError(error.message||'Не удалось прочитать Excel');currentTitle.textContent='Excel не принят';currentMeta.textContent='Исправьте файл и выберите его ещё раз.';}
     finally { fileInput.value=''; }
   });
@@ -233,6 +260,19 @@
 
   publishButton.addEventListener('click', async () => {
     if (!pending || pending.mismatches?.length) return;
+    const firstSaveOnly = !pending.materialChanges?.length && !currentState?.fileAvailable;
+    const confirmation = firstSaveOnly
+      ? `Файл «${pending.meta.fileName}» прошёл проверку всех 38 моделей. Цены не изменятся. Сохранить этот Excel как исходный файл сайта?`
+      : [
+          `Файл: ${pending.meta.fileName}`,
+          `Изменено материалов: ${pending.materialChanges?.length || 0}`,
+          `Изменят цену моделей: ${pending.modelChanges?.length || 0}`,
+          pending.abruptModelChanges?.length ? `ВНИМАНИЕ: резкое изменение ≥50% у ${pending.abruptModelChanges.length} моделей.` : '',
+          '',
+          'Опубликовать эти цены на сайте?'
+        ].filter(Boolean).join('\n');
+    if (!window.confirm(confirmation)) return;
+
     publishButton.disabled=true;publishButton.textContent='Сохраняем Excel…';showError('');
     try {
       const fileResponse = await fetch('/api/admin/gate-excel/file', {
