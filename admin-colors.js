@@ -177,6 +177,77 @@
     setState(count ? `Загружено ${count} из ${COLORS.length}` : 'Загрузите фото популярных цветов');
   }
 
+  const mainPhotoGrid = document.getElementById('photoGrid');
+  const syncBrokenPhotoButtons = () => {
+    mainPhotoGrid?.querySelectorAll('.photo-repair-actions button:not(.delete-photo)').forEach(button => {
+      if (button.textContent.trim() === 'Повторить') button.textContent = 'Заменить фото';
+    });
+  };
+
+  async function replaceBrokenPhoto(button) {
+    if (!photoUploadEnabled) return showToast('Загрузка фотографий временно недоступна', true);
+    const item = button.closest('.photo-item');
+    if (!item || !mainPhotoGrid || !draft?.photos?.length) return;
+    const items = [...mainPhotoGrid.querySelectorAll('.photo-item')];
+    const index = items.indexOf(item);
+    if (index < 0 || index >= draft.photos.length) return;
+
+    const picker = document.createElement('input');
+    picker.type = 'file';
+    picker.accept = 'image/jpeg,image/png,image/webp,image/*';
+    picker.hidden = true;
+    document.body.append(picker);
+    picker.addEventListener('cancel', () => picker.remove(), {once:true});
+    picker.addEventListener('change', async () => {
+      const file = picker.files?.[0];
+      picker.remove();
+      if (!file) return;
+      button.disabled = true;
+      button.textContent = 'Загружаем…';
+      try {
+        const blob = await optimizeImage(file);
+        const uploaded = await api(`/api/admin/upload?article=${encodeURIComponent(activeArticle)}`, {
+          method:'POST',
+          headers:{'content-type':'image/webp'},
+          body:blob
+        });
+        const newUrl = uploaded?.photo?.url;
+        if (!newUrl) throw new Error('Сервер не вернул адрес новой фотографии');
+        const oldUrl = draft.photos[index];
+        draft.photos[index] = newUrl;
+        draft.positions[newUrl] = {x:50,y:50};
+        draft.zooms[newUrl] = 1;
+        if (oldUrl && oldUrl !== newUrl) {
+          delete draft.positions[oldUrl];
+          delete draft.zooms[oldUrl];
+          if (oldUrl.startsWith('/catalog-media/') && !removedUrls.includes(oldUrl)) removedUrls.push(oldUrl);
+        }
+        selectedPhotoIndex = index;
+        draft.mediaType = 'photo';
+        setDirty();
+        render();
+        showToast('Фото заменено. Нажмите «Сохранить изменения».');
+      } catch (error) {
+        showToast(error.message || 'Не удалось заменить фотографию', true);
+        button.disabled = false;
+        button.textContent = 'Заменить фото';
+      }
+    }, {once:true});
+    picker.click();
+  }
+
+  if (mainPhotoGrid) {
+    new MutationObserver(syncBrokenPhotoButtons).observe(mainPhotoGrid, {childList:true,subtree:true});
+    mainPhotoGrid.addEventListener('click', event => {
+      const button = event.target.closest('.photo-repair-actions button:not(.delete-photo)');
+      if (!button) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      replaceBrokenPhoto(button);
+    }, true);
+    syncBrokenPhotoButtons();
+  }
+
   articleSelect?.addEventListener('change', () => setTimeout(render, 0));
   window.addEventListener('admin:ready', render);
 })();
