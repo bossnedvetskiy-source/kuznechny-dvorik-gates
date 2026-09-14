@@ -95,17 +95,33 @@ try {
 
 const admin = await readFile(path.join(output, 'admin.html'), 'utf8');
 const siteBundle = await readFile(path.join(output, 'site.bundle.js'), 'utf8');
+const publicIndex = await readFile(path.join(output, 'index.html'), 'utf8');
+const directionsIndex = await readFile(path.join(output, 'napravleniya/index.html'), 'utf8');
+const robots = await readFile(path.join(output, 'robots.txt'), 'utf8');
+const sitemap = await readFile(path.join(output, 'sitemap.xml'), 'utf8');
+
+const globalRobotsHeaderBlocksIndexing = /Header\s+(?:always\s+)?set\s+X-Robots-Tag\s+["'][^"']*(?:noindex|nofollow|noarchive)/i.test(htaccess);
+const canonicalVorotaRedirect = /RewriteRule\s+\^vorota\/\?\$\s+\/\s+\[R=(?:301|308),L\]/i.test(htaccess);
 
 const checks = [
   [htaccess.includes('RewriteCond %{HTTP:X-Forwarded-Proto} !https [NC]'), 'HTTPS proxy-aware redirect is missing'],
   [htaccess.includes('Strict-Transport-Security'), 'HSTS header is missing'],
   [htaccess.includes('RewriteRule ^api/(.*)$ local-api.php?__route=$1 [QSA,L]'), 'production API is not routed to local PHP'],
   [!htaccess.includes('api-proxy.php?__proxy_path'), 'production .htaccess still references legacy Cloudflare proxy'],
+  [!globalRobotsHeaderBlocksIndexing, 'production .htaccess globally blocks search indexing'],
+  [canonicalVorotaRedirect, '/vorota is not permanently redirected to the canonical root URL'],
   [api.includes('$healthy ? 200 : 503'), 'health endpoint does not fail closed'],
   [!api.includes("'detail' => $e->getMessage()"), 'public API still exposes exception details'],
   [admin.includes('<script src="/xlsx.bundle.js"></script>'), 'admin does not use the external XLSX bundle'],
   [!admin.includes('unsupported format |'), 'XLSX implementation is still inlined into admin HTML'],
-  [siteBundle.includes('С учётом доставки'), 'delivery-inclusive catalog pricing is missing from the public bundle']
+  [siteBundle.includes('С учётом доставки'), 'delivery-inclusive catalog pricing is missing from the public bundle'],
+  [publicIndex.includes('content="index,follow,max-image-preview:large"'), 'public home page is not indexable'],
+  [!publicIndex.toLowerCase().includes('noindex'), 'public home page contains noindex'],
+  [directionsIndex.includes('content="index,follow,max-image-preview:large"'), 'directions page is not indexable'],
+  [!directionsIndex.toLowerCase().includes('noindex'), 'directions page contains noindex'],
+  [robots.includes('Sitemap: https://kuzdvor.tw1.ru/sitemap.xml'), 'robots.txt sitemap directive is missing'],
+  [sitemap.includes('<loc>https://kuzdvor.tw1.ru/</loc>'), 'sitemap is missing the canonical home URL'],
+  [publicIndex.includes('"@type":"LocalBusiness"'), 'LocalBusiness JSON-LD is missing from home page']
 ];
 for (const [ok, message] of checks) {
   if (!ok) throw new Error(`Timeweb hardening: ${message}`);
