@@ -89,7 +89,6 @@ const defaultGalleries = JSON.parse(galleryMatch[1]);
 const pricesMatch = pricesSource.match(/window\.PRICE_DATA\s*=\s*({[\s\S]*?});\s*$/);
 if (!pricesMatch) throw new Error('Некорректный файл prices.js');
 const defaultPrices = Function(`"use strict"; return (${pricesMatch[1]});`)();
-const xlsxBrowserSafe = xlsxBrowserSource.replace(/<\/script/gi, '<\\/script');
 const adminExcelCompatibilitySource = `(() => {
   if (!window.XLSX?.read || window.KUZDVOR_MASTER_EXCEL_COMPAT) return;
   window.KUZDVOR_MASTER_EXCEL_COMPAT = true;
@@ -198,7 +197,7 @@ const adminJs = adminJsSource;
 const adminHtml = adminHtmlSource
   .replace('<link rel="stylesheet" href="admin.css">', `<style>${adminCss}</style>`)
   .replace('<script src="admin.js"></script>', `<script>${adminJs}\n${adminColorsJsSource}</script>`)
-  .replace('<script src="admin-prices.js"></script>', `<script>${adminPricesJsSource}</script><script>${adminSiteJsSource}</script><script>${adminLeadsJsSource}</script><script>${adminEnhancementsJsSource}</script><script>${xlsxBrowserSafe}</script><script>${gateCalcModelLoaderBundle}</script><script>${adminExcelImportSource}\n${adminExcelCompatibilitySource}</script>`);
+  .replace('<script src="admin-prices.js"></script>', `<script>${adminPricesJsSource}</script><script>${adminSiteJsSource}</script><script>${adminLeadsJsSource}</script><script>${adminEnhancementsJsSource}</script><script src="/xlsx.bundle.js"></script><script>${gateCalcModelLoaderBundle}</script><script>${adminExcelImportSource}\n${adminExcelCompatibilitySource}</script>`);
 
 const workerModules = [
   adminAuthSource,
@@ -235,6 +234,7 @@ await writeFile('dist/client/site.css', publicCssBundle, 'utf8');
 await writeFile('dist/client/site.bundle.js', publicSiteBundle, 'utf8');
 await writeFile('dist/client/calculator.bundle.js', calculatorBundle, 'utf8');
 await writeFile('dist/client/catalog-enhancements.bundle.js', catalogEnhancementsBundle, 'utf8');
+await writeFile('dist/client/xlsx.bundle.js', xlsxBrowserSource, 'utf8');
 await writeFile('dist/client/.keep', '', 'utf8');
 await copyFile('assets/hero-gates.jpg', 'dist/client/hero-gates.jpg');
 await copyFile('storefront.css', 'dist/client/storefront.css');
