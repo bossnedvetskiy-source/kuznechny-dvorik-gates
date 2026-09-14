@@ -4,7 +4,7 @@ declare(strict_types=1);
 $dist = $argv[1] ?? (__DIR__ . '/../timeweb-dist');
 $dist = rtrim($dist, '/');
 require $dist . '/backend/bootstrap.php';
-require $dist . '/backend/gate-quote.php';
+require $dist . '/backend/excel-quote-validation.php';
 
 $defaults = kd_defaults();
 $prices = $defaults['gateCalcPrices'] ?? [];
@@ -69,5 +69,40 @@ if (!$rejected) {
     fwrite(STDERR, "EXCLUDED PHP FAIL: Арт.39 всё ещё рассчитывается\n");
 }
 
-fwrite(STDOUT, "PHP gate standards checked: {$checkedStandards}; controls: " . count($cases) . "; failures: {$failures}\n");
+try {
+    $validated = kd_gate_validate_excel_payload(['prices'=>$prices, 'standardPrices'=>['6'=>56600, '17С'=>90000, '38'=>76500]]);
+    if (count($validated['standardPrices'] ?? []) !== 38 || (int)($validated['standardPrices']['6'] ?? 0) !== 56600) {
+        $failures++;
+        fwrite(STDERR, "EXCEL PHP FAIL: сервер не пересчитал все стандартные цены\n");
+    }
+} catch (Throwable $e) {
+    $failures++;
+    fwrite(STDERR, 'EXCEL PHP FAIL: ' . $e->getMessage() . "\n");
+}
+
+$missingRejected = false;
+try {
+    $missing = $prices;
+    unset($missing[array_key_first($missing)]);
+    kd_gate_validate_excel_payload(['prices'=>$missing]);
+} catch (Throwable) {
+    $missingRejected = true;
+}
+if (!$missingRejected) {
+    $failures++;
+    fwrite(STDERR, "EXCEL PHP FAIL: неполный набор входных цен был принят\n");
+}
+
+$mismatchRejected = false;
+try {
+    kd_gate_validate_excel_payload(['prices'=>$prices, 'standardPrices'=>['6'=>1]]);
+} catch (Throwable) {
+    $mismatchRejected = true;
+}
+if (!$mismatchRejected) {
+    $failures++;
+    fwrite(STDERR, "EXCEL PHP FAIL: подменённая стандартная цена была принята\n");
+}
+
+fwrite(STDOUT, "PHP gate standards checked: {$checkedStandards}; controls: " . count($cases) . "; Excel validation: 3; failures: {$failures}\n");
 exit($failures ? 1 : 0);
