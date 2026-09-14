@@ -1,0 +1,79 @@
+name: Build Timeweb from main
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: timeweb-main-build
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Bring Timeweb adapter from migration branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --depth=1 origin timeweb-migration
+          git checkout FETCH_HEAD -- scripts/build-timeweb.mjs timeweb
+
+      - name: Install build dependencies
+        run: npm ci --include=dev --no-audit --no-fund
+
+      - name: Build current main site
+        run: npm run build
+
+      - name: Prepare Timeweb package
+        run: node scripts/build-timeweb.mjs
+
+      - name: Verify Timeweb package
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s timeweb-dist/index.html
+          test -s timeweb-dist/admin.html
+          test -s timeweb-dist/site.css
+          test -s timeweb-dist/site.bundle.js
+          test -s timeweb-dist/api-proxy.php
+          test -s timeweb-dist/local-api.php
+          test -s timeweb-dist/backend/bootstrap.php
+          test -s timeweb-dist/backend/schema.mysql.sql
+          test -s timeweb-dist/backend/defaults.json
+          test -s timeweb-dist/.htaccess
+          php -l timeweb-dist/local-api.php
+          php -l timeweb-dist/backend/bootstrap.php
+          echo "Prepared $(find timeweb-dist -type f | wc -l) files for Timeweb"
+
+      - name: Publish generated files to timeweb-public
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/timeweb-dist
+          cp -a timeweb-dist /tmp/timeweb-dist
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout --orphan timeweb-public
+          git rm -rf . || true
+          git clean -fdx
+          cp -a /tmp/timeweb-dist/. .
+          git add -A
+          git commit -m "Build Timeweb site from ${GITHUB_SHA}"
+          git push --force origin HEAD:timeweb-public
