@@ -1,4 +1,5 @@
 import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { gunzipSync } from 'node:zlib';
 import { pathToFileURL } from 'node:url';
 import path from 'node:path';
 import vm from 'node:vm';
@@ -47,6 +48,34 @@ async function windowValue(file, key) {
   const value = sandbox.window[key];
   if (!value || typeof value !== 'object') throw new Error(`Не удалось получить ${key} из ${file}`);
   return JSON.parse(JSON.stringify(value));
+}
+
+async function gateModelPack() {
+  const sandbox = { window: {} };
+  vm.createContext(sandbox);
+  for (let index = 1; index <= 4; index += 1) {
+    const file = `gate-calc-models-chunk${index}.js`;
+    const code = await readFile(path.join(root, file), 'utf8');
+    vm.runInContext(code, sandbox, { filename: file, timeout: 3000 });
+  }
+  const b64 = String(sandbox.window.__GATE_CALC_B64 || '');
+  if (!b64) throw new Error('Не удалось собрать Excel-модели ворот для Timeweb');
+  const modelSource = gunzipSync(Buffer.from(b64, 'base64')).toString('utf8');
+  vm.runInContext(modelSource, sandbox, { filename: 'gate-calc-models.generated.js', timeout: 5000 });
+  const pack = sandbox.window.GATE_CALC_MODELS;
+  if (!pack?.models || typeof pack.models !== 'object') throw new Error('Excel-модели ворот имеют неверный формат');
+  for (const article of ['39', '40']) delete pack.models[article];
+  const entries = Object.entries(pack.models);
+  if (entries.length !== 38) throw new Error(`Ожидалось 38 активных моделей ворот, получено ${entries.length}`);
+  for (const [article, model] of entries) {
+    if (!model?.gateRef || !model?.wicketRef || !model?.formulas || typeof model.formulas !== 'object') {
+      throw new Error(`Расчётная модель ${article} неполная`);
+    }
+    for (const [ref, expression] of Object.entries(model.formulas)) {
+      if (typeof expression !== 'string' || !expression.trim()) throw new Error(`Формула ${article}:${ref} имеет неверный формат`);
+    }
+  }
+  return JSON.parse(JSON.stringify(pack));
 }
 
 const localBusinessSchema = {
@@ -125,10 +154,11 @@ await cp(path.join(root, 'timeweb/deploy-timeweb.sh'), path.join(output, 'deploy
 await cp(path.join(root, 'timeweb/health-check.sh'), path.join(output, 'health-check.sh'));
 await cp(path.join(root, 'timeweb/install-autodeploy.sh'), path.join(output, 'install-autodeploy.sh'));
 
-const [prices, catalogImages, gateCalcPrices] = await Promise.all([
+const [prices, catalogImages, gateCalcPrices, gateCalcModels] = await Promise.all([
   windowValue('prices.js', 'PRICE_DATA'),
   windowValue('catalog-images.js', 'CATALOG_IMAGES'),
-  windowValue('gate-calc-prices.js', 'GATE_CALC_PRICES')
+  windowValue('gate-calc-prices.js', 'GATE_CALC_PRICES'),
+  gateModelPack()
 ]);
 const delivery = JSON.parse(await readFile(path.join(root, 'delivery-prices.json'), 'utf8'));
 const siteProfile = {
@@ -148,7 +178,7 @@ const siteProfile = {
   finalCtaTitle: 'Выберите модель и получите предварительную стоимость',
   finalCtaText: 'Калькулятор учтёт ваши размеры, новые усиленные столбы при необходимости и доставку. Итоговую сумму зафиксируем в договоре после бесплатного замера.'
 };
-await writeFile(path.join(output, 'backend/defaults.json'), JSON.stringify({ prices, catalogImages, delivery, gateCalcPrices, siteProfile }), 'utf8');
+await writeFile(path.join(output, 'backend/defaults.json'), JSON.stringify({ prices, catalogImages, delivery, gateCalcPrices, gateCalcModels, siteProfile }), 'utf8');
 
 // A tiny build marker helps verify from the server that a deploy really changed.
 await writeFile(path.join(output, 'timeweb-build.txt'), `${new Date().toISOString()}\n`, 'utf8');
