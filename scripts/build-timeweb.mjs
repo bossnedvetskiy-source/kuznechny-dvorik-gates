@@ -57,6 +57,7 @@ await cp(path.join(root, 'timeweb/local-api.php'), path.join(output, 'local-api.
 await cp(path.join(root, 'timeweb/backend'), path.join(output, 'backend'), { recursive: true });
 await cp(path.join(root, 'timeweb/setup-timeweb.php'), path.join(output, 'setup-timeweb.php'));
 await cp(path.join(root, 'timeweb/migrate-from-cloudflare.php'), path.join(output, 'migrate-from-cloudflare.php'));
+await cp(path.join(root, 'timeweb/migrate-public-catalog.php'), path.join(output, 'migrate-public-catalog.php'));
 await cp(path.join(root, 'timeweb/deploy-timeweb.sh'), path.join(output, 'deploy-timeweb.sh'));
 await cp(path.join(root, 'timeweb/health-check.sh'), path.join(output, 'health-check.sh'));
 await cp(path.join(root, 'timeweb/install-autodeploy.sh'), path.join(output, 'install-autodeploy.sh'));
