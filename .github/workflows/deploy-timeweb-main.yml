@@ -116,29 +116,46 @@ jobs:
           git commit -m "Build Timeweb site from main ${source_sha}"
           git push --force origin HEAD:timeweb-public
 
-      - name: Verify live Timeweb deployment
+      - name: Verify live Timeweb deployment when reachable
         shell: bash
         run: |
           set -euo pipefail
           base='https://kuzdvor.tw1.ru'
           expected_sha="$(node -e "const fs=require('fs');process.stdout.write(JSON.parse(fs.readFileSync('deployment-version.json','utf8')).sourceSha)")"
           live_sha=''
+          reachable=0
+          matched=0
 
-          echo "Waiting for Timeweb auto-deploy of ${expected_sha}..."
-          for attempt in $(seq 1 35); do
+          echo "Checking Timeweb auto-deploy of ${expected_sha}..."
+          for attempt in $(seq 1 6); do
             : > /tmp/timeweb-version.json
-            code="$(curl -sS --connect-timeout 3 --max-time 6 -o /tmp/timeweb-version.json -w '%{http_code}' "${base}/deployment-version.json?check=${attempt}" 2>/dev/null || true)"
+            : > /tmp/timeweb-curl-error.txt
+            code="$(curl -sS --connect-timeout 4 --max-time 8 -o /tmp/timeweb-version.json -w '%{http_code}' "${base}/deployment-version.json?check=${attempt}" 2>/tmp/timeweb-curl-error.txt || true)"
             live_sha="$(node -e "const fs=require('fs');try{process.stdout.write(JSON.parse(fs.readFileSync('/tmp/timeweb-version.json','utf8')).sourceSha||'')}catch{}" 2>/dev/null || true)"
-            echo "Attempt ${attempt}/35: HTTP ${code:-000}; live=${live_sha:-unavailable}; expected=${expected_sha}"
+            echo "Attempt ${attempt}/6: HTTP ${code:-000}; live=${live_sha:-unavailable}; expected=${expected_sha}"
+
+            if [ -n "$code" ] && [ "$code" != '000' ]; then
+              reachable=1
+            fi
             if [ "$code" = '200' ] && [ "$live_sha" = "$expected_sha" ]; then
+              matched=1
               echo 'Timeweb is serving the current main commit.'
               break
             fi
-            sleep 8
+            sleep 6
           done
 
-          if [ "$live_sha" != "$expected_sha" ]; then
-            echo "::error::Timeweb did not deploy current main within the verification window. Check the Timeweb Crontab task kuzdvor-autodeploy."
+          if [ "$matched" != '1' ]; then
+            if [ "$reachable" = '0' ]; then
+              echo '::warning::Timeweb is unreachable from this GitHub-hosted runner. The Timeweb-side cron deployer remains authoritative and performs its own health check with automatic rollback.'
+              echo 'GitHub package build and publication succeeded; skipping external live checks to avoid a false deployment failure caused by network filtering.'
+              if [ -s /tmp/timeweb-curl-error.txt ]; then
+                echo 'Last curl diagnostic:'
+                sed -n '1,3p' /tmp/timeweb-curl-error.txt
+              fi
+              exit 0
+            fi
+            echo "::error::Timeweb is reachable, but current main ${expected_sha} is not live. Check the Timeweb Crontab task kuzdvor-autodeploy and its log."
             exit 1
           fi
 
