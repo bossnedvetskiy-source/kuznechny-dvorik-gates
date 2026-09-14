@@ -164,7 +164,8 @@ test('unknown destination outside standard area becomes an individual delivery q
   await page.locator('#routeButton').click();
   await expect(page.locator('#deliverySummaryValue')).toContainText('индивидуально');
   await expect(page.locator('#estimateTotalLabel')).toHaveText('Ориентир без доставки');
-  await expect(page.locator('#mobilePrimaryCta')).toContainText('Заказать бесплатный замер');
+  await expect(page.locator('#mobilePriceTotal')).toContainText('доставка индивидуально');
+  await expect(page.locator('#mobilePrimaryCta')).toContainText('доставка индивидуально');
 });
 
 test('unknown destination can be routed and confirmed inside the standard area', async ({page}) => {
@@ -189,18 +190,48 @@ test('unknown destination can be routed and confirmed inside the standard area',
   await expect(page.locator('#estimateTotalLabel')).toHaveText('Предварительно с доставкой');
 });
 
-test('delivery service error still lets customer request a manual quote', async ({page}) => {
-  await page.route('**/api/delivery?*', route => route.fulfill({
-    status:502,
-    contentType:'application/json',
-    body:JSON.stringify({error:'Сервис маршрутов временно недоступен'})
-  }));
+test('delivery service error is sanitized and still lets customer request a manual quote', async ({page}) => {
+  let requests = 0;
+  await page.route('**/api/delivery?*', async route => {
+    requests += 1;
+    await route.fulfill({status:502,contentType:'text/html',body:'<!DOCTYPE html><html><body>temporary gateway page</body></html>'});
+  });
 
   await openMobile(page);
   await chooseFirstGate(page);
   await page.locator('[data-delivery-choice="other"]').click();
   await page.locator('#cityInput').fill('Тестовый посёлок');
   await page.locator('#routeButton').click();
+  await expect.poll(() => requests).toBe(2);
+  await expect(page.locator('#deliveryResult')).toContainText('Не удалось автоматически рассчитать доставку');
+  await expect(page.locator('#deliveryResult')).not.toContainText('Unexpected token');
+  await expect(page.locator('#deliveryResult')).not.toContainText('DOCTYPE');
   await expect(page.locator('#deliveryResult')).toContainText('стоимость уточним вручную');
-  await expect(page.locator('#mobilePrimaryCta')).toContainText('Заказать бесплатный замер');
+  await expect(page.locator('#mobilePriceTotal')).toContainText('доставка уточняется');
+  await expect(page.locator('#mobilePrimaryCta')).toContainText('доставка уточняется');
+});
+
+test('delivery retry recovers when the first response is temporary HTML', async ({page}) => {
+  let requests = 0;
+  await page.route('**/api/delivery?*', async route => {
+    requests += 1;
+    if (requests === 1) {
+      await route.fulfill({status:503,contentType:'text/html',body:'<!DOCTYPE html><html><body>maintenance</body></html>'});
+      return;
+    }
+    await route.fulfill({
+      status:200,
+      contentType:'application/json',
+      body:JSON.stringify({shortName:'Тестово',resolvedName:'Тестово, Республика Башкортостан',price:9000,distanceKm:100,serviceAreaKm:150,outOfArea:false})
+    });
+  });
+
+  await openMobile(page);
+  await chooseFirstGate(page);
+  await page.locator('[data-delivery-choice="other"]').click();
+  await page.locator('#cityInput').fill('Тестово');
+  await page.locator('#routeButton').click();
+  await expect.poll(() => requests).toBe(2);
+  await expect(page.locator('#deliveryResult')).toContainText('Найдено: Тестово');
+  await expect(page.locator('#routeButton')).toHaveText('Да, это нужный пункт');
 });
