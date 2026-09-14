@@ -74,6 +74,16 @@ api = replaceExactlyOnce(
 );
 await writeFile(apiPath, api, 'utf8');
 
+const sourceSha = String(process.env.GITHUB_SHA || '').trim();
+if (!/^[0-9a-f]{40}$/i.test(sourceSha)) {
+  throw new Error('Timeweb hardening: GITHUB_SHA is unavailable or invalid');
+}
+await writeFile(
+  path.join(output, 'deployment-version.json'),
+  JSON.stringify({ sourceSha, builtAt: new Date().toISOString() }) + '\n',
+  'utf8'
+);
+
 const admin = await readFile(path.join(output, 'admin.html'), 'utf8');
 const siteBundle = await readFile(path.join(output, 'site.bundle.js'), 'utf8');
 
@@ -90,4 +100,4 @@ for (const [ok, message] of checks) {
   if (!ok) throw new Error(`Timeweb hardening: ${message}`);
 }
 
-console.log('Timeweb package hardening checks passed');
+console.log(`Timeweb package hardening checks passed for ${sourceSha}`);
