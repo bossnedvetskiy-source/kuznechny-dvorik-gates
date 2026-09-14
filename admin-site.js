@@ -136,6 +136,41 @@
     (typeof priceDirty !== 'undefined' && priceDirty) ||
     (typeof catalogDirty !== 'undefined' && catalogDirty);
 
+  const activeTabStorageKey = 'kuzdvor-admin-active-tab-v1';
+  const validTabNames = new Set(['leads', 'catalog', 'prices', 'photos', 'settings']);
+
+  function rememberActiveTab(name) {
+    if (!validTabNames.has(name)) return;
+    try { window.sessionStorage.setItem(activeTabStorageKey, name); } catch {}
+  }
+
+  function rememberedActiveTab() {
+    try {
+      const name = window.sessionStorage.getItem(activeTabStorageKey) || '';
+      return validTabNames.has(name) ? name : '';
+    } catch {
+      return '';
+    }
+  }
+
+  nav.addEventListener('click', event => {
+    const button = event.target.closest('.admin-tab');
+    if (!button) return;
+    queueMicrotask(() => {
+      if (button.classList.contains('active')) rememberActiveTab(button.dataset.adminTab || '');
+    });
+  });
+
+  window.addEventListener('admin:ready', () => {
+    const name = rememberedActiveTab();
+    if (!name) return;
+    window.requestAnimationFrame(() => {
+      const button = nav.querySelector(`.admin-tab[data-admin-tab="${name}"]`);
+      if (!button || button.classList.contains('active')) return;
+      button.click();
+    });
+  });
+
   function normalizePhoneDigits(value) {
     let digits = String(value || '').replace(/\D/g, '');
     if (digits.length === 11 && digits.startsWith('8')) digits = `7${digits.slice(1)}`;
