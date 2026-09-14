@@ -14,18 +14,19 @@
 
   const style = document.createElement('style');
   style.textContent = `
-    .excel-import{display:grid;gap:14px}.excel-import-intro{padding:13px 14px;border:1px solid #dfc791;border-radius:13px;background:#fff8e8;color:#67532c;font-size:11px;line-height:1.55}.excel-import-intro b{color:#75531b}.excel-import-source{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:14px;border:1px solid #e4ded5;border-radius:14px;background:#faf8f4}.excel-import-source strong{display:block;font-size:13px}.excel-import-source small{display:block;margin-top:4px;color:var(--muted);font-size:9.5px;line-height:1.45}.excel-source-actions{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}.excel-file-button,.excel-download-button{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:0 15px;border:1px solid #c89a49;border-radius:10px;background:#fff;color:#6d4b15;font-size:11px;font-weight:800;cursor:pointer}.excel-download-button{border-color:#1f1f1f;color:#1f1f1f}.excel-download-button:disabled{opacity:.42;cursor:not-allowed}.excel-preview{display:grid;gap:10px}.excel-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.excel-summary>div{padding:10px;border:1px solid #e6e0d6;border-radius:11px;background:#fff}.excel-summary span{display:block;color:var(--muted);font-size:8px;font-weight:800;text-transform:uppercase}.excel-summary b{display:block;margin-top:3px;font-size:14px}.excel-changes{max-height:320px;overflow:auto;border:1px solid #e6e0d6;border-radius:12px}.excel-change{display:grid;grid-template-columns:minmax(100px,1fr) 100px 24px 100px;gap:8px;align-items:center;padding:9px 11px;border-bottom:1px solid #eee9e1;font-size:10px}.excel-change:last-child{border-bottom:0}.excel-change b{font-size:10.5px}.excel-arrow{text-align:center;color:#9f772f}.excel-model-warning{padding:11px 12px;border-radius:11px;background:#fff0ef;color:#913f39;font-size:10px;line-height:1.5}.excel-model-ok{padding:10px 12px;border-radius:11px;background:#eef7ea;color:#4f6f3b;font-size:10px;line-height:1.5}.excel-actions{display:flex;align-items:center;justify-content:flex-end;gap:10px}.excel-publish{min-height:43px;padding:0 16px;border:0;border-radius:10px;background:var(--ink);color:#fff;font-size:11px;font-weight:800}.excel-publish:disabled{opacity:.4}.excel-error{padding:10px 12px;border-radius:10px;background:#fff0ef;color:#913f39;font-size:10px}.excel-hidden{display:none!important}@media(max-width:620px){.excel-import-source{grid-template-columns:1fr}.excel-source-actions{display:grid;grid-template-columns:1fr}.excel-file-button,.excel-download-button{width:100%}.excel-summary{grid-template-columns:1fr 1fr}.excel-change{grid-template-columns:1fr 80px 18px 80px}.excel-actions{display:grid}.excel-publish{width:100%}}
+    #pricesTab .admin-baseline-note{display:none!important}
+    .excel-import{display:grid;gap:9px}.excel-import-intro{padding:10px 12px;border:1px solid #dfc791;border-radius:11px;background:#fff8e8;color:#67532c;font-size:10px;line-height:1.45}.excel-import-intro b{color:#75531b}.excel-import-source{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:9px;align-items:center;padding:11px 12px;border:1px solid #e4ded5;border-radius:12px;background:#faf8f4}.excel-import-source strong{display:block;font-size:12px}.excel-import-source small{display:block;margin-top:3px;color:var(--muted);font-size:9px;line-height:1.4}.excel-source-actions{display:flex;flex-wrap:wrap;gap:7px;justify-content:flex-end}.excel-file-button,.excel-download-button{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:0 12px;border:1px solid #c89a49;border-radius:9px;background:#fff;color:#6d4b15;font-size:10px;font-weight:800;cursor:pointer}.excel-download-button{border-color:#1f1f1f;color:#1f1f1f}.excel-download-button:disabled{opacity:.42;cursor:not-allowed}.excel-preview{display:grid;gap:10px}.excel-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.excel-summary>div{padding:10px;border:1px solid #e6e0d6;border-radius:11px;background:#fff}.excel-summary span{display:block;color:var(--muted);font-size:8px;font-weight:800;text-transform:uppercase}.excel-summary b{display:block;margin-top:3px;font-size:14px}.excel-changes{max-height:320px;overflow:auto;border:1px solid #e6e0d6;border-radius:12px}.excel-change{display:grid;grid-template-columns:minmax(100px,1fr) 100px 24px 100px;gap:8px;align-items:center;padding:9px 11px;border-bottom:1px solid #eee9e1;font-size:10px}.excel-change:last-child{border-bottom:0}.excel-change b{font-size:10.5px}.excel-arrow{text-align:center;color:#9f772f}.excel-model-warning{padding:11px 12px;border-radius:11px;background:#fff0ef;color:#913f39;font-size:10px;line-height:1.5}.excel-model-ok{padding:10px 12px;border-radius:11px;background:#eef7ea;color:#4f6f3b;font-size:10px;line-height:1.5}.excel-actions{display:flex;align-items:center;justify-content:flex-end;gap:10px}.excel-publish{min-height:43px;padding:0 16px;border:0;border-radius:10px;background:var(--ink);color:#fff;font-size:11px;font-weight:800}.excel-publish:disabled{opacity:.4}.excel-error{padding:10px 12px;border-radius:10px;background:#fff0ef;color:#913f39;font-size:10px}.excel-hidden{display:none!important}@media(max-width:620px){.excel-import-source{grid-template-columns:1fr}.excel-source-actions{display:grid;grid-template-columns:1fr 1fr}.excel-file-button,.excel-download-button{width:100%;min-height:40px;padding:0 7px}.excel-summary{grid-template-columns:1fr 1fr}.excel-change{grid-template-columns:1fr 80px 18px 80px}.excel-actions{display:grid}.excel-publish{width:100%}}
   `;
   document.head.append(style);
 
   list.className = 'excel-import';
   list.innerHTML = `
-    <div class="excel-import-intro"><b>Цена ворот берётся только из Excel.</b> Скачайте текущий расчёт, измените цены материалов и коэффициенты на листе «Лист3», пересчитайте и сохраните файл в Excel, затем загрузите его сюда. После публикации сайт хранит сам .xlsx, поэтому следующая загрузка начинается с последней опубликованной версии.</div>
+    <div class="excel-import-intro"><b>Цены ворот рассчитываются из Excel.</b> Чтобы изменить их, скачайте файл, внесите правки и загрузите его обратно.</div>
     <div class="excel-import-source">
       <div><strong id="excelCurrentTitle">Загружаем текущий расчёт…</strong><small id="excelCurrentMeta">Проверяем данные.</small></div>
       <div class="excel-source-actions">
-        <button class="excel-download-button" id="excelDownload" type="button" disabled>Скачать текущий Excel</button>
-        <label class="excel-file-button" for="gateExcelInput">Загрузить изменённый Excel</label>
+        <button class="excel-download-button" id="excelDownload" type="button" disabled>Скачать Excel</button>
+        <label class="excel-file-button" for="gateExcelInput">Загрузить Excel</label>
       </div>
       <input id="gateExcelInput" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
     </div>
@@ -128,9 +129,9 @@
       currentState = data;
       const meta = data.meta || {};
       currentTitle.textContent = meta.fileName ? `Сейчас: ${meta.fileName}` : 'Сейчас используется исходный Excel-расчёт';
-      if (meta.importedAt) currentMeta.textContent = `Последнее обновление: ${new Date(meta.importedAt).toLocaleString('ru-RU')}. Текущий .xlsx можно скачать для следующего редактирования.`;
-      else if (data.fileAvailable) currentMeta.textContent = 'Текущий .xlsx сохранён на сайте и готов к скачиванию.';
-      else currentMeta.textContent = 'Сам .xlsx ещё не сохранён на сайте. Один раз загрузите и опубликуйте исходный расчёт — дальше его всегда можно будет скачивать отсюда.';
+      if (meta.importedAt) currentMeta.textContent = `Последнее обновление: ${new Date(meta.importedAt).toLocaleString('ru-RU')}.`;
+      else if (data.fileAvailable) currentMeta.textContent = 'Текущий файл сохранён на сайте.';
+      else currentMeta.textContent = 'Сохранённого .xlsx пока нет — загрузите исходный расчёт один раз.';
       refreshDownloadState();
     } catch (error) {
       currentTitle.textContent = 'Не удалось проверить текущий Excel-расчёт';
@@ -223,7 +224,7 @@
     if (!file) return;
     currentTitle.textContent = `Проверяем: ${file.name}`;
     currentMeta.textContent = 'Сверяем материалы и все стандартные расчёты…';
-    try { await inspectFile(file); currentTitle.textContent=`Готов к публикации: ${file.name}`; currentMeta.textContent='Ни одно изменение не попадёт на сайт до нажатия «Опубликовать». Сам .xlsx тоже будет сохранён как текущая версия.'; }
+    try { await inspectFile(file); currentTitle.textContent=`Готов к публикации: ${file.name}`; currentMeta.textContent='Изменения попадут на сайт только после нажатия «Опубликовать».'; }
     catch(error){showError(error.message||'Не удалось прочитать Excel');currentTitle.textContent='Excel не принят';currentMeta.textContent='Исправьте файл и выберите его ещё раз.';}
     finally { fileInput.value=''; }
   });
@@ -252,7 +253,7 @@
       if(!response.ok)throw new Error(data.error||'Не удалось опубликовать Excel-расчёт');
       currentState=data;pending=null;preview.classList.add('excel-hidden');
       currentTitle.textContent=`Сейчас: ${data.meta?.fileName||'Excel-расчёт'}`;
-      currentMeta.textContent=`Опубликовано: ${new Date(data.meta?.importedAt||Date.now()).toLocaleString('ru-RU')}. Эта версия .xlsx теперь доступна по кнопке «Скачать текущий Excel».`;
+      currentMeta.textContent=`Опубликовано: ${new Date(data.meta?.importedAt||Date.now()).toLocaleString('ru-RU')}.`;
       refreshDownloadState();
       if(typeof window.showToast==='function')window.showToast('Excel-расчёт и сам файл опубликованы на сайте');
     } catch(error){showError(error.message||'Ошибка публикации');publishButton.disabled=false;}
