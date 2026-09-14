@@ -15,7 +15,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     steps:
       - name: Checkout production source
@@ -134,21 +134,35 @@ jobs:
           live_sha=''
           reachable=0
           matched=0
+          last_diag=''
 
-          echo "Checking Timeweb auto-deploy of ${expected_sha}..."
-          for attempt in $(seq 1 18); do
+          echo "Checking Timeweb auto-deploy of ${expected_sha} across a full 5-minute cron window..."
+          for attempt in $(seq 1 42); do
             : > /tmp/timeweb-version.json
             : > /tmp/timeweb-curl-error.txt
-            code="$(curl -sS --connect-timeout 4 --max-time 8 -o /tmp/timeweb-version.json -w '%{http_code}' "${base}/deployment-version.json?check=${attempt}" 2>/tmp/timeweb-curl-error.txt || true)"
+            code="$(curl -sS --connect-timeout 3 --max-time 6 -o /tmp/timeweb-version.json -w '%{http_code}' "${base}/deployment-version.json?check=${attempt}&expected=${expected_sha}" 2>/tmp/timeweb-curl-error.txt || true)"
             live_sha="$(node -e "const fs=require('fs');try{process.stdout.write(JSON.parse(fs.readFileSync('/tmp/timeweb-version.json','utf8')).sourceSha||'')}catch{}" 2>/dev/null || true)"
-            echo "Attempt ${attempt}/18: HTTP ${code:-000}; live=${live_sha:-unavailable}; expected=${expected_sha}"
+            echo "Attempt ${attempt}/42: HTTP ${code:-000}; live=${live_sha:-unavailable}; expected=${expected_sha}"
             if [ -n "$code" ] && [ "$code" != '000' ]; then reachable=1; fi
             if [ "$code" = '200' ] && [ "$live_sha" = "$expected_sha" ]; then
               matched=1
               echo 'Timeweb is serving the current main commit.'
               break
             fi
-            sleep 6
+
+            diag_code="$(curl -sS --connect-timeout 3 --max-time 6 -o /tmp/timeweb-deploy-status.txt -w '%{http_code}' "${base}/deployment-health-status.txt?check=${attempt}&expected=${expected_sha}" 2>/dev/null || true)"
+            if [ "$diag_code" = '200' ]; then
+              last_diag="$(sed -n '1,8p' /tmp/timeweb-deploy-status.txt | tr '\n' ' ')"
+              diag_status="$(sed -n 's/^status=//p' /tmp/timeweb-deploy-status.txt | head -n1)"
+              diag_target="$(sed -n 's/^target_source_sha=//p' /tmp/timeweb-deploy-status.txt | head -n1)"
+              diag_stage="$(sed -n 's/^stage=//p' /tmp/timeweb-deploy-status.txt | head -n1)"
+              echo "Timeweb deploy diagnostic: ${last_diag:-empty}"
+              if [ "$diag_status" = 'failed' ] && [ "$diag_target" = "$expected_sha" ]; then
+                echo "::error::Timeweb cron attempted ${expected_sha} but rolled it back during health-check stage '${diag_stage:-unknown}'."
+                exit 1
+              fi
+            fi
+            sleep 10
           done
 
           if [ "$matched" != '1' ]; then
@@ -157,7 +171,8 @@ jobs:
               if [ -s /tmp/timeweb-curl-error.txt ]; then sed -n '1,3p' /tmp/timeweb-curl-error.txt; fi
               exit 0
             fi
-            echo "::error::Timeweb is reachable, but current main ${expected_sha} is not live after the full cron window."
+            if [ -n "$last_diag" ]; then echo "Last Timeweb deploy diagnostic: $last_diag"; fi
+            echo "::error::Timeweb is reachable, but current main ${expected_sha} is not live after the full cron window. If no diagnostic targets this SHA, verify that the Timeweb Crontab task is still enabled."
             exit 1
           fi
 
