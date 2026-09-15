@@ -103,9 +103,9 @@
     }));
   }, true);
 
-  // Once delivery is confirmed, show its cost directly in every visible catalog
-  // card. Keep this tied to the calculator's own delivery state so the card price
-  // and the detailed estimate always use the same resolved amount.
+  // Once delivery is found, preview its cost directly in every visible catalog
+  // card. For routed places the preview starts already on the confirmation step,
+  // while the order flow still requires the customer to confirm the exact place.
   const catalogGrid = document.getElementById('catalogGrid');
   const cityInput = document.getElementById('cityInput');
   const deliverySummary = document.getElementById('deliverySummary');
@@ -124,8 +124,9 @@
     const state = isDeliveryState(stateOverride) ? stateOverride : window.GATE_PAGE_API?.deliveryState?.() || {kind:'empty'};
     const kind = String(state.kind || 'empty');
     const city = String(state.shortName || state.resolvedName || state.name || cityInput?.value || '').trim();
-    const resolved = kind === 'fixed' || kind === 'calculated';
-    return {kind, city, resolved, price:resolved ? (Number(state.price) || 0) : 0};
+    const confirmed = kind === 'fixed' || kind === 'calculated';
+    const priced = confirmed || kind === 'confirm';
+    return {kind, city, confirmed, priced, price:priced ? (Number(state.price) || 0) : 0};
   };
 
   const syncCatalogDeliveryPrices = stateOverride => {
@@ -135,25 +136,25 @@
     cards.forEach(card => {
       const product = window.GATE_PAGE_API.productById(card.dataset.cardProduct);
       if (!product) return;
-      const deliveryPrice = delivery.resolved ? delivery.price : 0;
+      const deliveryPrice = delivery.priced ? delivery.price : 0;
       const prices = card.querySelectorAll('.price-row strong');
       setText(prices[0], catalogMoney(Number(product.price) + Number(product.install) + deliveryPrice));
       setText(prices[1], catalogMoney(Number(product.price) + Number(product.install) + Number(product.posts) + deliveryPrice));
 
       const note = card.querySelector('.price-delivery-note');
-      if (delivery.resolved) {
+      if (delivery.confirmed) {
         const meleuz = /^мелеуз$/i.test(delivery.city.replace(/ё/g,'е'));
         setText(note, meleuz
           ? '✓ Доставка по Мелеузу бесплатно — уже учтена в цене'
           : `✓ С учётом доставки в ${delivery.city}`);
+      } else if (delivery.kind === 'confirm') {
+        setText(note, delivery.city
+          ? `≈ С учётом доставки в ${delivery.city} · подтвердите пункт`
+          : '≈ Доставка уже учтена · подтвердите населённый пункт');
       } else if (delivery.kind === 'out-of-area' || delivery.kind === 'error') {
         setText(note, delivery.city
           ? `Доставка в ${delivery.city} уточняется отдельно`
           : 'Стоимость доставки уточняется отдельно');
-      } else if (delivery.kind === 'confirm') {
-        setText(note, delivery.city
-          ? `Подтвердите ${delivery.city} — пока показана цена без доставки`
-          : 'Подтвердите населённый пункт — пока показана цена без доставки');
       } else if (delivery.kind === 'loading' || delivery.kind === 'pending') {
         setText(note, delivery.city
           ? `Считаем доставку в ${delivery.city} — пока показана цена без доставки`
