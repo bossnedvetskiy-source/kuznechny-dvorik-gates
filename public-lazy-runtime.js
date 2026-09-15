@@ -6,7 +6,11 @@
   const loadScript = src => {
     if (scriptPromises.has(src)) return scriptPromises.get(src);
     const promise = new Promise((resolve, reject) => {
-      const existing = [...document.scripts].find(script => script.src && new URL(script.src, location.href).pathname === src);
+      const target = new URL(src, location.href);
+      const existing = [...document.scripts].find(script => {
+        if (!script.src) return false;
+        try { return new URL(script.src, location.href).href === target.href; } catch { return false; }
+      });
       if (existing?.dataset.loaded === '1') return resolve();
       const script = existing || document.createElement('script');
       const onLoad = () => { script.dataset.loaded = '1'; resolve(); };
@@ -30,7 +34,7 @@
   window.KUZDVOR_ENSURE_CALCULATOR = () => {
     if (window.KUZDVOR_CALCULATOR_LOADED && window.GATE_CALC?.calculateGate) return Promise.resolve(window.GATE_CALC);
     if (calculatorPromise) return calculatorPromise;
-    calculatorPromise = loadScript('/calculator.bundle.js')
+    calculatorPromise = loadScript('/calculator.bundle.js?v=delivery-20260915-3')
       .then(() => {
         if (!window.GATE_CALC?.ready) throw new Error('Калькулятор не инициализирован');
         return Promise.resolve(window.GATE_CALC.ready);
@@ -123,7 +127,7 @@
   const currentDeliveryContext = stateOverride => {
     const state = isDeliveryState(stateOverride) ? stateOverride : window.GATE_PAGE_API?.deliveryState?.() || {kind:'empty'};
     const kind = String(state.kind || 'empty');
-    const city = String(state.shortName || state.resolvedName || state.name || cityInput?.value || '').trim();
+    const city = String(state.city || state.shortName || state.resolvedName || state.name || cityInput?.value || '').trim();
     const confirmed = kind === 'fixed' || kind === 'calculated';
     const priced = confirmed || kind === 'confirm';
     return {kind, city, confirmed, priced, price:priced ? (Number(state.price) || 0) : 0};
