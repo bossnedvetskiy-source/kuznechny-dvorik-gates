@@ -21,6 +21,10 @@ RewriteRule (^|/)\.git(?:/|$) - [F,L]
 RewriteRule ^backend(?:/|$) - [F,L]
 
 # Local PHP/MySQL backend. Production traffic must never proxy to Cloudflare.
+# Delivery has its own resolver so routed villages keep district information
+# (for example: Ишеево, Ишимбайский район). END prevents the internal target
+# from being reprocessed by the public backend protection rule above.
+RewriteRule ^api(?:-local)?/delivery/?$ backend/delivery-resolver.php [END]
 RewriteRule ^api-local/(.*)$ local-api.php?__route=$1 [QSA,L]
 RewriteRule ^catalog-media-local/(.*)$ local-api.php?__route=catalog-media/$1 [QSA,L]
 RewriteRule ^api/(.*)$ local-api.php?__route=$1 [QSA,L]
