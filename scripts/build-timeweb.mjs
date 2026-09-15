@@ -183,6 +183,11 @@ await writeFile(path.join(output, 'backend/defaults.json'), JSON.stringify({ pri
 // A tiny build marker helps verify from the server that a deploy really changed.
 await writeFile(path.join(output, 'timeweb-build.txt'), `${new Date().toISOString()}\n`, 'utf8');
 
+// Give every production release unique customer asset URLs. Some mobile browsers
+// aggressively reuse JavaScript after an in-place deploy; versioned URLs make the
+// newly built delivery/calculator runtime load immediately without manual cache clearing.
+await import(`./cache-bust-timeweb.mjs?build=${Date.now()}`);
+
 const publicIndex = await readFile(path.join(output, 'index.html'), 'utf8');
 if (!publicIndex.includes('/site.bundle.js') || !publicIndex.includes('/site.css')) {
   throw new Error('Timeweb index.html собран неполностью');
