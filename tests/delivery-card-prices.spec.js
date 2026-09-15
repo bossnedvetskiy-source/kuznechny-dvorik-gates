@@ -72,3 +72,35 @@ test('routed village previews delivery in card before confirmation and keeps dis
   await expect(card.locator('.price-row').nth(1).locator('strong')).toHaveText('98 240 ₽');
   await expect(card.locator('.price-delivery-note')).toContainText('С учётом доставки в Ишеево, Ишимбайский район');
 });
+
+test('mobile city input stays keyboard-friendly and Enter starts delivery calculation', async ({page}) => {
+  await page.route('**/api/delivery?*', route => route.fulfill({
+    status:200,
+    contentType:'application/json',
+    body:JSON.stringify({
+      requestedName:'Ишеево',
+      resolvedName:'Ишеево, Ишимбайский район',
+      shortName:'Ишеево, Ишимбайский район',
+      localityName:'Ишеево',
+      price:8640,
+      distanceKm:96,
+      rate:90,
+      serviceAreaKm:150,
+      outOfArea:false
+    })
+  }));
+
+  await openFirstGate(page);
+  await page.locator('[data-delivery-choice="other"]').click();
+  const city = page.locator('#cityInput');
+  await expect(city).toHaveAttribute('enterkeyhint','done');
+  await city.focus();
+  await expect(page.locator('body')).toHaveClass(/city-keyboard-open/);
+  await expect(page.locator('.mobile-cta')).toHaveCSS('display','none');
+
+  await city.fill('Ишеево');
+  await city.press('Enter');
+  await expect(page.locator('body')).not.toHaveClass(/city-keyboard-open/);
+  await expect(page.locator('#deliveryResult')).toContainText('Найдено: Ишеево, Ишимбайский район');
+  await expect(page.locator('#routeButton')).toHaveText('Да, это нужный пункт');
+});
