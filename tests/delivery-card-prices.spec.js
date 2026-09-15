@@ -21,7 +21,7 @@ test('catalog card price immediately includes a known delivery tariff', async ({
   await expect(card.locator('.price-delivery-note')).toContainText('С учётом доставки в Уфа');
 });
 
-test('routed village keeps district in confirmation, summary and catalog price', async ({page}) => {
+test('routed village previews delivery in card before confirmation and keeps district', async ({page}) => {
   await page.route('**/api/delivery?*', route => route.fulfill({
     status:200,
     contentType:'application/json',
@@ -42,10 +42,15 @@ test('routed village keeps district in confirmation, summary and catalog price',
   await page.locator('[data-delivery-choice="other"]').click();
   await page.locator('#cityInput').fill('Ишеево');
   await page.locator('#routeButton').click();
+
   await expect(page.locator('#deliveryResult')).toContainText('Найдено: Ишеево, Ишимбайский район');
   await expect(page.locator('#routeButton')).toHaveText('Да, это нужный пункт');
-  await page.locator('#routeButton').click();
+  await expect(card.locator('.price-row').nth(0).locator('strong')).toHaveText('73 240 ₽');
+  await expect(card.locator('.price-row').nth(1).locator('strong')).toHaveText('98 240 ₽');
+  await expect(card.locator('.price-delivery-note')).toContainText('С учётом доставки в Ишеево, Ишимбайский район');
+  await expect(card.locator('.price-delivery-note')).toContainText('подтвердите пункт');
 
+  await page.locator('#routeButton').click();
   await expect(page.locator('#deliverySummaryValue')).toContainText('Ишеево, Ишимбайский район — доставка учтена в итоговой сумме');
   await expect(card.locator('.price-row').nth(0).locator('strong')).toHaveText('73 240 ₽');
   await expect(card.locator('.price-row').nth(1).locator('strong')).toHaveText('98 240 ₽');
