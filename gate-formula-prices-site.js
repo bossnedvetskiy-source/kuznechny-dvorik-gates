@@ -17,8 +17,9 @@
     const state = window.GATE_PAGE_API?.deliveryState?.() || {kind:'empty'};
     const kind = String(state.kind || 'empty');
     const city = String(state.shortName || state.resolvedName || state.name || document.getElementById('cityInput')?.value || '').trim();
-    const resolved = kind === 'fixed' || kind === 'calculated';
-    return {kind, city, resolved, price:resolved ? (Number(state.price) || 0) : 0};
+    const confirmed = kind === 'fixed' || kind === 'calculated';
+    const priced = confirmed || kind === 'confirm';
+    return {kind, city, confirmed, priced, price:priced ? (Number(state.price) || 0) : 0};
   }
 
   function syncProducts() {
@@ -67,14 +68,14 @@
       const note = card.querySelector('.price-delivery-note');
       if (!note) return;
       let noteText = 'Доставка рассчитывается после выбора места установки';
-      if (delivery.resolved) {
+      if (delivery.confirmed) {
         noteText = normalizeCity(delivery.city) === 'мелеуз'
           ? '✓ Доставка по Мелеузу бесплатно — уже учтена в цене'
           : `✓ С учётом доставки в ${delivery.city}`;
       } else if (delivery.kind === 'confirm') {
         noteText = delivery.city
-          ? `Подтвердите ${delivery.city} — пока показана цена без доставки`
-          : 'Подтвердите населённый пункт — пока показана цена без доставки';
+          ? `≈ С учётом доставки в ${delivery.city} · подтвердите пункт`
+          : '≈ Доставка уже учтена · подтвердите населённый пункт';
       } else if (delivery.kind === 'out-of-area' || delivery.kind === 'error') {
         noteText = delivery.city
           ? `Доставка в ${delivery.city} уточняется отдельно`
