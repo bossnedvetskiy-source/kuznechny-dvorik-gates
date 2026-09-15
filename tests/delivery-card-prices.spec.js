@@ -7,7 +7,7 @@ async function openFirstGate(page) {
   await expect(card).toBeVisible();
   await card.locator('.select-product').click();
   await expect(page.locator('#calculator')).toBeVisible();
-  await expect.poll(() => page.evaluate(() => [...document.scripts].some(script => script.src.includes('/calculator.bundle.js?v=delivery-20260915-3')))).toBe(true);
+  await expect.poll(() => page.evaluate(() => window.KUZDVOR_FORMULA_PRICE_SYNC_READY === true)).toBe(true);
   return card;
 }
 
