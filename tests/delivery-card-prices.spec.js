@@ -50,6 +50,16 @@ test('routed village previews delivery in card before confirmation and keeps dis
   await expect(card.locator('.price-delivery-note')).toContainText('С учётом доставки в Ишеево, Ишимбайский район');
   await expect(card.locator('.price-delivery-note')).toContainText('подтвердите пункт');
 
+  // Simulate a late formula/Excel refresh writing the base prices again.
+  // The delivery synchronizer must restore delivery-inclusive card totals by itself.
+  await card.evaluate(node => {
+    const prices = node.querySelectorAll('.price-row strong');
+    prices[0].textContent = '64 600 ₽';
+    prices[1].textContent = '89 600 ₽';
+  });
+  await expect(card.locator('.price-row').nth(0).locator('strong')).toHaveText('73 240 ₽');
+  await expect(card.locator('.price-row').nth(1).locator('strong')).toHaveText('98 240 ₽');
+
   await page.locator('#routeButton').click();
   await expect(page.locator('#deliverySummaryValue')).toContainText('Ишеево, Ишимбайский район — доставка учтена в итоговой сумме');
   await expect(card.locator('.price-row').nth(0).locator('strong')).toHaveText('73 240 ₽');
