@@ -34,7 +34,7 @@
   window.KUZDVOR_ENSURE_CALCULATOR = () => {
     if (window.KUZDVOR_CALCULATOR_LOADED && window.GATE_CALC?.calculateGate) return Promise.resolve(window.GATE_CALC);
     if (calculatorPromise) return calculatorPromise;
-    calculatorPromise = loadScript('/calculator.bundle.js?v=delivery-20260915-4')
+    calculatorPromise = loadScript('/calculator.bundle.js')
       .then(() => {
         if (!window.GATE_CALC?.ready) throw new Error('Калькулятор не инициализирован');
         return Promise.resolve(window.GATE_CALC.ready);
@@ -107,17 +107,29 @@
     }));
   }, true);
 
-  // Once delivery is found, preview its cost directly in every visible catalog
-  // card. For routed places the preview starts already on the confirmation step,
-  // while the order flow still requires the customer to confirm the exact place.
+  // Delivery is a single piece of state for both the calculator and every catalog
+  // card. Capture that exact state at the source instead of reconstructing it later
+  // from DOM mutations. This avoids races with lazy Excel/formula price refreshes.
+  let directDeliveryState = null;
+  const originalCreateDeliveryController = window.KUZDVOR_DELIVERY?.createController;
+  if (originalCreateDeliveryController && !window.KUZDVOR_DELIVERY.__catalogPriceSyncWrapped) {
+    window.KUZDVOR_DELIVERY.__catalogPriceSyncWrapped = true;
+    window.KUZDVOR_DELIVERY.createController = options => {
+      const originalOnChange = typeof options?.onChange === 'function' ? options.onChange : null;
+      return originalCreateDeliveryController({
+        ...(options || {}),
+        onChange: state => {
+          directDeliveryState = state && typeof state === 'object' ? {...state} : null;
+          window.KUZDVOR_CATALOG_DELIVERY_STATE = directDeliveryState ? {...directDeliveryState} : null;
+          originalOnChange?.(state);
+          queueMicrotask(() => window.KUZDVOR_SYNC_CATALOG_DELIVERY_PRICES?.(directDeliveryState));
+        }
+      });
+    };
+  }
+
   const catalogGrid = document.getElementById('catalogGrid');
   const cityInput = document.getElementById('cityInput');
-  const deliverySummary = document.getElementById('deliverySummary');
-  const deliverySummaryValue = document.getElementById('deliverySummaryValue');
-  const deliveryResult = document.getElementById('deliveryResult');
-  const routeButton = document.getElementById('routeButton');
-  const deliveryChooser = document.getElementById('deliveryChooser');
-  const deliveryChange = document.getElementById('deliveryChange');
   const catalogMoney = value => new Intl.NumberFormat('ru-RU').format(Math.round(Number(value)) || 0) + ' ₽';
   const setText = (node, value) => { if (node && node.textContent !== value) node.textContent = value; };
   const isDeliveryState = value => Boolean(value && !Array.isArray(value) && typeof value === 'object' && typeof value.kind === 'string');
@@ -134,12 +146,22 @@
   };
 
   const currentDeliveryContext = stateOverride => {
-    let state = isDeliveryState(stateOverride) ? stateOverride : window.GATE_PAGE_API?.deliveryState?.() || null;
+    let state = isDeliveryState(stateOverride)
+      ? stateOverride
+      : isDeliveryState(directDeliveryState)
+        ? directDeliveryState
+        : window.GATE_PAGE_API?.deliveryState?.() || null;
+
+    if (!isDeliveryState(state) || ['empty','pending','loading'].includes(String(state.kind || 'empty'))) {
+      const apiState = window.GATE_PAGE_API?.deliveryState?.() || null;
+      if (isDeliveryState(apiState) && !['empty','pending','loading'].includes(String(apiState.kind || 'empty'))) state = apiState;
+    }
     if (!isDeliveryState(state) || ['empty','pending','loading'].includes(String(state.kind || 'empty'))) {
       const saved = readSavedDeliveryState();
       if (saved && ['fixed','calculated','out-of-area'].includes(String(saved.kind || ''))) state = saved;
     }
     if (!isDeliveryState(state)) state = {kind:'empty'};
+
     const kind = String(state.kind || 'empty');
     const city = String(state.city || state.shortName || state.resolvedName || state.name || cityInput?.value || '').trim();
     const confirmed = kind === 'fixed' || kind === 'calculated';
@@ -151,9 +173,11 @@
     if (!catalogGrid || !window.GATE_PAGE_API?.productById) return false;
     const delivery = currentDeliveryContext(stateOverride);
     const cards = catalogGrid.querySelectorAll('.product-card[data-card-product]');
+
     cards.forEach(card => {
       const product = window.GATE_PAGE_API.productById(card.dataset.cardProduct);
       if (!product) return;
+
       const deliveryPrice = delivery.priced ? delivery.price : 0;
       const prices = card.querySelectorAll('.price-row strong');
       setText(prices[0], catalogMoney(Number(product.price) + Number(product.install) + deliveryPrice));
@@ -184,8 +208,6 @@
     return true;
   };
 
-  // Single public synchronizer for any module that updates the base gate prices.
-  // This prevents a later Excel/formula refresh from leaving cards without delivery.
   window.KUZDVOR_SYNC_CATALOG_DELIVERY_PRICES = syncCatalogDeliveryPrices;
 
   const scheduleCatalogDeliverySync = stateOverride => {
@@ -202,14 +224,13 @@
 
   const resyncDeliveryBurst = stateOverride => {
     scheduleCatalogDeliverySync(stateOverride);
-    [40, 120, 300, 700, 1500].forEach(delay => setTimeout(() => scheduleCatalogDeliverySync(), delay));
+    [40, 120, 300, 700, 1500].forEach(delay => setTimeout(() => scheduleCatalogDeliverySync(stateOverride), delay));
   };
 
-  // app.js emits this after every calculation, including every delivery state
-  // transition. Repeat the sync briefly because lazy formula scripts can finish
-  // after the first event and rewrite the same card price with a base-only value.
   document.addEventListener('gate:calculated', () => {
-    const state = window.GATE_PAGE_API?.deliveryState?.() || readSavedDeliveryState();
+    const state = isDeliveryState(directDeliveryState)
+      ? directDeliveryState
+      : window.GATE_PAGE_API?.deliveryState?.() || readSavedDeliveryState();
     resyncDeliveryBurst(state);
   });
 
@@ -221,35 +242,25 @@
         if (record.target?.nodeType === 1 && record.target.closest?.('.price-row strong')) return true;
         return [...record.addedNodes].some(node => node.nodeType === 1 && (node.matches?.('.product-card') || node.querySelector?.('.product-card')));
       });
-      if (relevant) scheduleCatalogDeliverySync();
+      if (relevant) scheduleCatalogDeliverySync(directDeliveryState);
     }).observe(catalogGrid,{childList:true,subtree:true,characterData:true});
   }
 
-  const deliveryUiObserver = new MutationObserver(() => scheduleCatalogDeliverySync());
-  [deliverySummary,deliverySummaryValue,deliveryResult,routeButton,deliveryChooser].filter(Boolean).forEach(node => {
-    deliveryUiObserver.observe(node,{attributes:true,childList:true,subtree:true,characterData:true});
-  });
-  cityInput?.addEventListener('input', () => scheduleCatalogDeliverySync());
-  cityInput?.addEventListener('change', () => scheduleCatalogDeliverySync());
-  routeButton?.addEventListener('click', () => { resyncDeliveryBurst(); });
-  deliveryChooser?.addEventListener('click', () => setTimeout(() => resyncDeliveryBurst(), 0));
-  deliveryChange?.addEventListener('click', () => setTimeout(() => resyncDeliveryBurst(), 0));
-  window.addEventListener('pageshow', () => resyncDeliveryBurst());
+  window.addEventListener('pageshow', () => resyncDeliveryBurst(directDeliveryState));
   document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) resyncDeliveryBurst();
+    if (!document.hidden) resyncDeliveryBurst(directDeliveryState);
   });
 
-  // Keep the visible catalog consistent even when another late-loading module
-  // rewrites a base price after delivery has already been chosen. This also
-  // repairs mobile pages restored from the browser back/forward cache.
+  // Late formula/Excel updates can rewrite the same DOM nodes. Keep card totals
+  // reconciled to the captured delivery state without relying on event ordering.
   setInterval(() => {
     if (document.hidden) return;
-    syncCatalogDeliveryPrices();
-  }, 250);
+    syncCatalogDeliveryPrices(directDeliveryState);
+  }, 350);
 
   let catalogDeliveryReadyAttempts = 0;
   const waitForCatalogDeliveryApi = () => {
-    if (syncCatalogDeliveryPrices()) return;
+    if (syncCatalogDeliveryPrices(directDeliveryState)) return;
     catalogDeliveryReadyAttempts += 1;
     if (catalogDeliveryReadyAttempts < 120) setTimeout(waitForCatalogDeliveryApi, 100);
   };
