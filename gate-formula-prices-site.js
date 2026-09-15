@@ -16,7 +16,7 @@
   function deliveryContext() {
     const state = window.GATE_PAGE_API?.deliveryState?.() || {kind:'empty'};
     const kind = String(state.kind || 'empty');
-    const city = String(state.shortName || state.resolvedName || state.name || document.getElementById('cityInput')?.value || '').trim();
+    const city = String(state.city || state.shortName || state.resolvedName || state.name || document.getElementById('cityInput')?.value || '').trim();
     const confirmed = kind === 'fixed' || kind === 'calculated';
     const priced = confirmed || kind === 'confirm';
     return {kind, city, confirmed, priced, price:priced ? (Number(state.price) || 0) : 0};
@@ -89,20 +89,49 @@
     });
   }
 
+  let syncQueued = false;
+  const scheduleSync = () => {
+    if (syncQueued) return;
+    syncQueued = true;
+    requestAnimationFrame(() => {
+      syncQueued = false;
+      syncVisibleCards();
+    });
+  };
+
+  const syncBurst = () => {
+    scheduleSync();
+    [50, 180, 500, 1200].forEach(delay => setTimeout(scheduleSync, delay));
+  };
+
   const start = async () => {
     try {
       await Promise.resolve(window.GATE_CALC?.ready);
       syncProducts();
       const grid = document.getElementById('catalogGrid');
-      // The catalog renderer replaces direct children of #catalogGrid. Observing the
-      // entire subtree also observes the price text that this synchronizer writes,
-      // which can create a self-triggering MutationObserver loop and freeze the page.
-      if (grid) new MutationObserver(() => queueMicrotask(syncVisibleCards)).observe(grid, {childList:true,subtree:false});
-      // Delivery changes are emitted by the gate calculator. Keeping this listener
-      // in the same module that writes formula-derived card prices prevents one
-      // synchronizer from overwriting the other's total.
-      document.addEventListener('gate:calculated', syncVisibleCards);
-      window.addEventListener('pageshow', syncVisibleCards);
+      if (grid) {
+        new MutationObserver(records => {
+          const priceWasTouched = records.some(record => {
+            const target = record.target?.nodeType === 1 ? record.target : record.target?.parentElement;
+            if (target?.closest?.('.price-row strong')) return true;
+            return [...record.addedNodes].some(node => node.nodeType === 1 && (node.matches?.('[data-card-product]') || node.querySelector?.('[data-card-product]')));
+          });
+          if (priceWasTouched) scheduleSync();
+        }).observe(grid, {childList:true,subtree:true,characterData:true});
+      }
+
+      // Delivery changes are emitted by the calculator. A short retry burst also
+      // wins against late Excel/site-settings refreshes that may rewrite base-only
+      // prices after the delivery calculation has already finished.
+      document.addEventListener('gate:calculated', syncBurst);
+      window.addEventListener('pageshow', syncBurst);
+
+      // Final safety net for mobile browsers / restored tabs: while delivery has a
+      // real price, visible cards are periodically reconciled with that same state.
+      setInterval(() => {
+        if (document.hidden) return;
+        if (deliveryContext().priced) syncVisibleCards();
+      }, 750);
     } catch (error) { console.error('Excel formula price sync failed', error); }
   };
   start();
