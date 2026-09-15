@@ -38,14 +38,14 @@ RewriteRule ^napravleniya/?$ napravleniya/index.html [L]
   AddOutputFilterByType DEFLATE text/html text/plain text/css text/javascript application/javascript application/json application/xml text/xml image/svg+xml
 </IfModule>
 
-# Keep cache lifetimes deliberately short because public JS/CSS filenames are
-# stable and can contain prices or customer-facing copy. Catalog photos may stay
-# cached for a day without risking stale calculations.
+# JS/CSS contain live prices and customer-facing calculation rules. Their names
+# are stable, so browsers must revalidate them on every page load to avoid serving
+# a previous deployment from cache. Images can stay cached for a day.
 <IfModule mod_expires.c>
   ExpiresActive On
-  ExpiresByType text/css "access plus 1 hour"
-  ExpiresByType text/javascript "access plus 1 hour"
-  ExpiresByType application/javascript "access plus 1 hour"
+  ExpiresByType text/css "access plus 0 seconds"
+  ExpiresByType text/javascript "access plus 0 seconds"
+  ExpiresByType application/javascript "access plus 0 seconds"
   ExpiresByType image/webp "access plus 1 day"
   ExpiresByType image/jpeg "access plus 1 day"
   ExpiresByType image/png "access plus 1 day"
@@ -61,7 +61,7 @@ RewriteRule ^napravleniya/?$ napravleniya/index.html [L]
     Header set Cache-Control "no-cache, must-revalidate"
   </FilesMatch>
   <FilesMatch "\.(?:css|js)$">
-    Header set Cache-Control "public, max-age=3600, must-revalidate"
+    Header set Cache-Control "no-cache, must-revalidate"
   </FilesMatch>
   <FilesMatch "\.(?:webp|jpe?g|png|svg)$">
     Header set Cache-Control "public, max-age=86400"
