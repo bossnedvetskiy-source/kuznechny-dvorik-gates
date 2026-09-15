@@ -130,6 +130,73 @@
 
   const catalogGrid = document.getElementById('catalogGrid');
   const cityInput = document.getElementById('cityInput');
+
+  // Mobile keyboard UX for the delivery field. Chromium-based Android browsers
+  // may overlay the page with the virtual keyboard, while the fixed bottom CTA can
+  // cover the city field at the same time. Ask the browser to resize the content,
+  // hide the fixed CTA while typing, and keep the field inside the visual viewport.
+  const mobileKeyboardMedia = window.matchMedia('(max-width: 620px)');
+  const viewportMeta = document.querySelector('meta[name="viewport"]');
+  if (viewportMeta && !/interactive-widget\s*=/.test(viewportMeta.content || '')) {
+    viewportMeta.content = `${viewportMeta.content || 'width=device-width, initial-scale=1.0'}, interactive-widget=resizes-content`;
+  }
+  if (cityInput) {
+    cityInput.setAttribute('enterkeyhint','done');
+    cityInput.setAttribute('autocapitalize','words');
+    cityInput.setAttribute('spellcheck','false');
+  }
+
+  const keyboardStyle = document.createElement('style');
+  keyboardStyle.textContent = '@media(max-width:620px){body.city-keyboard-open .mobile-cta{display:none!important}.city-label.is-visible{scroll-margin-top:14px;scroll-margin-bottom:24px}}';
+  document.head.append(keyboardStyle);
+
+  let cityKeyboardActive = false;
+  let cityKeyboardTimer = 0;
+  const ensureCityInputVisible = () => {
+    if (!cityInput || !cityKeyboardActive || !mobileKeyboardMedia.matches || document.activeElement !== cityInput) return;
+    const viewport = window.visualViewport;
+    const viewportTop = Number(viewport?.offsetTop) || 0;
+    const viewportHeight = Number(viewport?.height) || window.innerHeight;
+    const viewportBottom = viewportTop + viewportHeight;
+    const rect = cityInput.getBoundingClientRect();
+    const topGap = 14;
+    const bottomGap = 22;
+    const minTop = viewportTop + topGap;
+    const maxBottom = viewportBottom - bottomGap;
+    if (rect.top >= minTop && rect.bottom <= maxBottom) return;
+    const preferredTop = viewportTop + Math.max(topGap, Math.min(72, viewportHeight * 0.18));
+    window.scrollBy({top:rect.top - preferredTop, left:0, behavior:'smooth'});
+  };
+  const scheduleCityInputVisibility = () => {
+    clearTimeout(cityKeyboardTimer);
+    requestAnimationFrame(ensureCityInputVisible);
+    cityKeyboardTimer = window.setTimeout(ensureCityInputVisible, 140);
+  };
+  const setCityKeyboardActive = active => {
+    cityKeyboardActive = Boolean(active && mobileKeyboardMedia.matches);
+    document.body.classList.toggle('city-keyboard-open', cityKeyboardActive);
+    if (cityKeyboardActive) {
+      scheduleCityInputVisibility();
+      window.setTimeout(ensureCityInputVisible, 320);
+    }
+  };
+
+  cityInput?.addEventListener('focus', () => setCityKeyboardActive(true));
+  cityInput?.addEventListener('blur', () => window.setTimeout(() => setCityKeyboardActive(false), 80));
+  cityInput?.addEventListener('keydown', event => {
+    if (event.key !== 'Enter') return;
+    event.preventDefault();
+    const routeButton = document.getElementById('routeButton');
+    const shouldCalculate = Boolean(routeButton && !routeButton.hidden && !routeButton.disabled && /Рассчитать|Повторить/.test(routeButton.textContent || ''));
+    cityInput.blur();
+    if (shouldCalculate) window.setTimeout(() => routeButton.click(), 0);
+  });
+  window.visualViewport?.addEventListener('resize', scheduleCityInputVisibility, {passive:true});
+  window.visualViewport?.addEventListener('scroll', scheduleCityInputVisibility, {passive:true});
+  mobileKeyboardMedia.addEventListener('change', () => {
+    if (!mobileKeyboardMedia.matches) setCityKeyboardActive(false);
+  });
+
   const catalogMoney = value => new Intl.NumberFormat('ru-RU').format(Math.round(Number(value)) || 0) + ' ₽';
   const setText = (node, value) => { if (node && node.textContent !== value) node.textContent = value; };
   const isDeliveryState = value => Boolean(value && !Array.isArray(value) && typeof value === 'object' && typeof value.kind === 'string');
