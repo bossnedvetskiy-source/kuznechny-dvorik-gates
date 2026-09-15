@@ -43,6 +43,12 @@ jobs:
         run: npx playwright test
       - name: Build exact Timeweb browser package
         run: |
+          set -euo pipefail
+          if [ ! -s node_modules/xlsx/dist/xlsx.full.min.js ]; then
+            test -s node_modules/xlsx/xlsx.js
+            mkdir -p node_modules/xlsx/dist
+            cp node_modules/xlsx/xlsx.js node_modules/xlsx/dist/xlsx.full.min.js
+          fi
           npm run build
           node scripts/build-timeweb.mjs
           test -s timeweb-dist/index.html
