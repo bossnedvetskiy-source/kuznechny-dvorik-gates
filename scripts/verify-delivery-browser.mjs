@@ -8,10 +8,34 @@ if (!Number.isFinite(expectedDelivery) || expectedDelivery < 0) {
   throw new Error(`Invalid EXPECTED_DELIVERY: ${process.env.EXPECTED_DELIVERY || ''}`);
 }
 
-const readInstalledPrices = page => page.locator('#catalogGrid .product-card').evaluateAll(cards => cards.slice(0, 3).map(card => {
+const readInstalledPrices = (page, limit = 3) => page.locator('#catalogGrid .product-card').evaluateAll((cards, max) => cards.slice(0, max).map(card => {
   const text = String(card.querySelector('.price-row strong')?.textContent || '');
   return Number(text.replace(/[^0-9]/g, '')) || 0;
-}));
+}), limit);
+
+const assertEveryVisibleCardUsesDelivery = async (page, label) => {
+  await page.waitForFunction(delta => {
+    const api = window.GATE_PAGE_API;
+    const cards = [...document.querySelectorAll('#catalogGrid .product-card')];
+    if (!api?.productById || cards.length < 1) return false;
+    return cards.every(card => {
+      const product = api.productById(card.dataset.cardProduct);
+      const text = String(card.querySelector('.price-row strong')?.textContent || '');
+      const shown = Number(text.replace(/[^0-9]/g, '')) || 0;
+      return product && shown === Math.round(Number(product.price) + Number(product.install) + delta);
+    });
+  }, expectedDelivery, { timeout: 10000 });
+
+  const count = await page.locator('#catalogGrid .product-card').count();
+  console.log(`${label}: ${count} visible cards include delivery=${expectedDelivery}`);
+};
+
+const assertDeliveryNote = async (page, label) => {
+  const notes = await page.locator('#catalogGrid .product-card .price-delivery-note').evaluateAll(nodes => nodes.map(node => String(node.textContent || '')));
+  if (!notes.length || notes.some(text => !text.includes(`С учётом доставки в ${city}`))) {
+    throw new Error(`${label} delivery note mismatch: ${JSON.stringify(notes)}`);
+  }
+};
 
 const browser = await chromium.launch();
 try {
@@ -58,17 +82,34 @@ try {
   await page.evaluate(() => window.GATE_PAGE_API?.closeCalculator?.());
   await page.waitForTimeout(1000);
   await assertDeliveryAdded('delivery-stable-after-calculator-close');
+  await assertEveryVisibleCardUsesDelivery(page, 'delivery-all-initial-cards');
+  await assertDeliveryNote(page, 'initial-cards');
 
-  const notes = await page.locator('#catalogGrid .product-card .price-delivery-note').evaluateAll(nodes => nodes.slice(0, 3).map(node => String(node.textContent || '')));
-  if (notes.some(text => !text.includes(`С учётом доставки в ${city}`))) {
-    throw new Error(`Delivery note mismatch: ${JSON.stringify(notes)}`);
+  const showMore = page.locator('#showMoreButton');
+  if (await showMore.isVisible().catch(() => false)) {
+    const beforeCount = await page.locator('#catalogGrid .product-card').count();
+    await showMore.click();
+    await page.waitForFunction(count => document.querySelectorAll('#catalogGrid .product-card').length > count, beforeCount, { timeout: 10000 });
+    await assertEveryVisibleCardUsesDelivery(page, 'delivery-after-show-more');
+    await assertDeliveryNote(page, 'show-more-cards');
   }
+
+  await page.reload({ waitUntil: 'domcontentloaded', timeout: 30000 });
+  await page.waitForSelector('#catalogGrid .product-card', { state: 'visible', timeout: 15000 });
+  await page.waitForFunction(expectedCity => {
+    const state = window.GATE_PAGE_API?.deliveryState?.();
+    const selected = String(state?.shortName || state?.resolvedName || state?.name || '');
+    return ['fixed','calculated'].includes(String(state?.kind || '')) && selected.includes(expectedCity);
+  }, city, { timeout: 15000 });
+  await page.waitForTimeout(1200);
+  await assertEveryVisibleCardUsesDelivery(page, 'delivery-restored-after-reload');
+  await assertDeliveryNote(page, 'reloaded-cards');
 
   if (errors.length) {
     throw new Error(`Browser errors detected: ${errors.join(' | ')}`);
   }
 
-  console.log(`Delivery-price browser smoke passed for ${baseUrl}: ${city}, +${expectedDelivery}.`);
+  console.log(`Delivery-price browser smoke passed for ${baseUrl}: ${city}, +${expectedDelivery}; selection, formula sync, catalog expansion and reload are stable.`);
 } finally {
   await browser.close();
 }
