@@ -91,6 +91,10 @@ test('mobile city input stays keyboard-friendly and Enter starts delivery calcul
   }));
 
   await openFirstGate(page);
+  // The development page loads source scripts separately, while production
+  // includes this runtime inside site.bundle.js. Load the same runtime here so
+  // the test exercises the exact mobile keyboard helper shipped to Timeweb.
+  await page.addScriptTag({url:'/public-lazy-runtime.js'});
   await page.locator('[data-delivery-choice="other"]').click();
   const city = page.locator('#cityInput');
   await expect(city).toHaveAttribute('enterkeyhint','done');
