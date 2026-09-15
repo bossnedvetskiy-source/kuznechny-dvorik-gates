@@ -104,9 +104,8 @@
   }, true);
 
   // Once delivery is confirmed, show its cost directly in every visible catalog
-  // card. This lets customers compare real standard-size totals without opening
-  // the calculator for each model. Unconfirmed or unavailable delivery never
-  // changes the card price.
+  // card. Keep this tied to the calculator's own delivery state so the card price
+  // and the detailed estimate always use the same resolved amount.
   const catalogGrid = document.getElementById('catalogGrid');
   const cityInput = document.getElementById('cityInput');
   const deliverySummary = document.getElementById('deliverySummary');
@@ -118,18 +117,19 @@
   const catalogMoney = value => new Intl.NumberFormat('ru-RU').format(Math.round(Number(value)) || 0) + ' ₽';
   const setText = (node, value) => { if (node && node.textContent !== value) node.textContent = value; };
   let catalogDeliverySyncQueued = false;
+  let pendingDeliveryState = null;
 
-  const currentDeliveryContext = () => {
-    const state = window.GATE_PAGE_API?.deliveryState?.() || {kind:'empty'};
+  const currentDeliveryContext = stateOverride => {
+    const state = stateOverride || window.GATE_PAGE_API?.deliveryState?.() || {kind:'empty'};
     const kind = String(state.kind || 'empty');
     const city = String(state.shortName || state.resolvedName || state.name || cityInput?.value || '').trim();
     const resolved = kind === 'fixed' || kind === 'calculated';
     return {kind, city, resolved, price:resolved ? (Number(state.price) || 0) : 0};
   };
 
-  const syncCatalogDeliveryPrices = () => {
+  const syncCatalogDeliveryPrices = stateOverride => {
     if (!catalogGrid || !window.GATE_PAGE_API?.productById) return false;
-    const delivery = currentDeliveryContext();
+    const delivery = currentDeliveryContext(stateOverride);
     const cards = catalogGrid.querySelectorAll('.product-card[data-card-product]');
     cards.forEach(card => {
       const product = window.GATE_PAGE_API.productById(card.dataset.cardProduct);
@@ -153,6 +153,10 @@
         setText(note, delivery.city
           ? `Подтвердите ${delivery.city} — пока показана цена без доставки`
           : 'Подтвердите населённый пункт — пока показана цена без доставки');
+      } else if (delivery.kind === 'loading' || delivery.kind === 'pending') {
+        setText(note, delivery.city
+          ? `Считаем доставку в ${delivery.city} — пока показана цена без доставки`
+          : 'Считаем доставку — пока показана цена без доставки');
       } else {
         setText(note, 'Доставка рассчитывается после выбора места установки');
       }
@@ -160,14 +164,24 @@
     return true;
   };
 
-  const scheduleCatalogDeliverySync = () => {
+  const scheduleCatalogDeliverySync = stateOverride => {
+    if (stateOverride && typeof stateOverride === 'object') pendingDeliveryState = stateOverride;
     if (catalogDeliverySyncQueued) return;
     catalogDeliverySyncQueued = true;
     requestAnimationFrame(() => {
       catalogDeliverySyncQueued = false;
-      syncCatalogDeliveryPrices();
+      const state = pendingDeliveryState;
+      pendingDeliveryState = null;
+      syncCatalogDeliveryPrices(state);
     });
   };
+
+  // app.js emits this after every calculation, including every delivery state
+  // transition. Listening to it directly avoids relying on DOM mutation timing.
+  document.addEventListener('gate:calculated', () => {
+    const state = window.GATE_PAGE_API?.deliveryState?.() || null;
+    scheduleCatalogDeliverySync(state);
+  });
 
   if (catalogGrid) {
     new MutationObserver(records => {
@@ -190,12 +204,13 @@
   routeButton?.addEventListener('click', () => { setTimeout(scheduleCatalogDeliverySync, 0); setTimeout(scheduleCatalogDeliverySync, 500); });
   deliveryChooser?.addEventListener('click', () => setTimeout(scheduleCatalogDeliverySync, 0));
   deliveryChange?.addEventListener('click', () => setTimeout(scheduleCatalogDeliverySync, 0));
+  window.addEventListener('pageshow', () => setTimeout(scheduleCatalogDeliverySync, 0));
 
   let catalogDeliveryReadyAttempts = 0;
   const waitForCatalogDeliveryApi = () => {
     if (syncCatalogDeliveryPrices()) return;
     catalogDeliveryReadyAttempts += 1;
-    if (catalogDeliveryReadyAttempts < 40) setTimeout(waitForCatalogDeliveryApi, 100);
+    if (catalogDeliveryReadyAttempts < 80) setTimeout(waitForCatalogDeliveryApi, 100);
   };
   waitForCatalogDeliveryApi();
 
