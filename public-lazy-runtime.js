@@ -116,11 +116,12 @@
   const deliveryChange = document.getElementById('deliveryChange');
   const catalogMoney = value => new Intl.NumberFormat('ru-RU').format(Math.round(Number(value)) || 0) + ' ₽';
   const setText = (node, value) => { if (node && node.textContent !== value) node.textContent = value; };
+  const isDeliveryState = value => Boolean(value && !Array.isArray(value) && typeof value === 'object' && typeof value.kind === 'string');
   let catalogDeliverySyncQueued = false;
   let pendingDeliveryState = null;
 
   const currentDeliveryContext = stateOverride => {
-    const state = stateOverride || window.GATE_PAGE_API?.deliveryState?.() || {kind:'empty'};
+    const state = isDeliveryState(stateOverride) ? stateOverride : window.GATE_PAGE_API?.deliveryState?.() || {kind:'empty'};
     const kind = String(state.kind || 'empty');
     const city = String(state.shortName || state.resolvedName || state.name || cityInput?.value || '').trim();
     const resolved = kind === 'fixed' || kind === 'calculated';
@@ -165,7 +166,7 @@
   };
 
   const scheduleCatalogDeliverySync = stateOverride => {
-    if (stateOverride && typeof stateOverride === 'object') pendingDeliveryState = stateOverride;
+    if (isDeliveryState(stateOverride)) pendingDeliveryState = stateOverride;
     if (catalogDeliverySyncQueued) return;
     catalogDeliverySyncQueued = true;
     requestAnimationFrame(() => {
@@ -195,12 +196,12 @@
     }).observe(catalogGrid,{childList:true,subtree:true,characterData:true});
   }
 
-  const deliveryUiObserver = new MutationObserver(scheduleCatalogDeliverySync);
+  const deliveryUiObserver = new MutationObserver(() => scheduleCatalogDeliverySync());
   [deliverySummary,deliverySummaryValue,deliveryResult,routeButton,deliveryChooser].filter(Boolean).forEach(node => {
     deliveryUiObserver.observe(node,{attributes:true,childList:true,subtree:true,characterData:true});
   });
-  cityInput?.addEventListener('input', scheduleCatalogDeliverySync);
-  cityInput?.addEventListener('change', scheduleCatalogDeliverySync);
+  cityInput?.addEventListener('input', () => scheduleCatalogDeliverySync());
+  cityInput?.addEventListener('change', () => scheduleCatalogDeliverySync());
   routeButton?.addEventListener('click', () => { setTimeout(scheduleCatalogDeliverySync, 0); setTimeout(scheduleCatalogDeliverySync, 500); });
   deliveryChooser?.addEventListener('click', () => setTimeout(scheduleCatalogDeliverySync, 0));
   deliveryChange?.addEventListener('click', () => setTimeout(scheduleCatalogDeliverySync, 0));
