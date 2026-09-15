@@ -7,6 +7,7 @@ async function openFirstGate(page) {
   await expect(card).toBeVisible();
   await card.locator('.select-product').click();
   await expect(page.locator('#calculator')).toBeVisible();
+  await expect.poll(() => page.evaluate(() => [...document.scripts].some(script => script.src.includes('/calculator.bundle.js?v=delivery-20260915-3')))).toBe(true);
   return card;
 }
 
@@ -51,7 +52,8 @@ test('routed village previews delivery in card before confirmation and keeps dis
   await expect(card.locator('.price-delivery-note')).toContainText('подтвердите пункт');
 
   // Simulate a late formula/Excel refresh writing the base prices again.
-  // The delivery synchronizer must restore delivery-inclusive card totals by itself.
+  // The delivery synchronizers must restore delivery-inclusive totals and keep
+  // the resolved district, even after their periodic reconciliation has run.
   await card.evaluate(node => {
     const prices = node.querySelectorAll('.price-row strong');
     prices[0].textContent = '64 600 ₽';
@@ -59,6 +61,10 @@ test('routed village previews delivery in card before confirmation and keeps dis
   });
   await expect(card.locator('.price-row').nth(0).locator('strong')).toHaveText('73 240 ₽');
   await expect(card.locator('.price-row').nth(1).locator('strong')).toHaveText('98 240 ₽');
+  await page.waitForTimeout(1300);
+  await expect(card.locator('.price-row').nth(0).locator('strong')).toHaveText('73 240 ₽');
+  await expect(card.locator('.price-row').nth(1).locator('strong')).toHaveText('98 240 ₽');
+  await expect(card.locator('.price-delivery-note')).toContainText('Ишеево, Ишимбайский район');
 
   await page.locator('#routeButton').click();
   await expect(page.locator('#deliverySummaryValue')).toContainText('Ишеево, Ишимбайский район — доставка учтена в итоговой сумме');
