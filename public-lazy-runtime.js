@@ -34,7 +34,7 @@
   window.KUZDVOR_ENSURE_CALCULATOR = () => {
     if (window.KUZDVOR_CALCULATOR_LOADED && window.GATE_CALC?.calculateGate) return Promise.resolve(window.GATE_CALC);
     if (calculatorPromise) return calculatorPromise;
-    calculatorPromise = loadScript('/calculator.bundle.js?v=delivery-20260915-3')
+    calculatorPromise = loadScript('/calculator.bundle.js?v=delivery-20260915-4')
       .then(() => {
         if (!window.GATE_CALC?.ready) throw new Error('Калькулятор не инициализирован');
         return Promise.resolve(window.GATE_CALC.ready);
@@ -124,8 +124,22 @@
   let catalogDeliverySyncQueued = false;
   let pendingDeliveryState = null;
 
+  const readSavedDeliveryState = () => {
+    try {
+      const saved = JSON.parse(sessionStorage.getItem('kuzdvor:delivery-context') || 'null');
+      return isDeliveryState(saved) ? saved : null;
+    } catch {
+      return null;
+    }
+  };
+
   const currentDeliveryContext = stateOverride => {
-    const state = isDeliveryState(stateOverride) ? stateOverride : window.GATE_PAGE_API?.deliveryState?.() || {kind:'empty'};
+    let state = isDeliveryState(stateOverride) ? stateOverride : window.GATE_PAGE_API?.deliveryState?.() || null;
+    if (!isDeliveryState(state) || ['empty','pending','loading'].includes(String(state.kind || 'empty'))) {
+      const saved = readSavedDeliveryState();
+      if (saved && ['fixed','calculated','out-of-area'].includes(String(saved.kind || ''))) state = saved;
+    }
+    if (!isDeliveryState(state)) state = {kind:'empty'};
     const kind = String(state.kind || 'empty');
     const city = String(state.city || state.shortName || state.resolvedName || state.name || cityInput?.value || '').trim();
     const confirmed = kind === 'fixed' || kind === 'calculated';
@@ -188,14 +202,14 @@
 
   const resyncDeliveryBurst = stateOverride => {
     scheduleCatalogDeliverySync(stateOverride);
-    [60, 180, 500, 1200].forEach(delay => setTimeout(() => scheduleCatalogDeliverySync(), delay));
+    [40, 120, 300, 700, 1500].forEach(delay => setTimeout(() => scheduleCatalogDeliverySync(), delay));
   };
 
   // app.js emits this after every calculation, including every delivery state
   // transition. Repeat the sync briefly because lazy formula scripts can finish
   // after the first event and rewrite the same card price with a base-only value.
   document.addEventListener('gate:calculated', () => {
-    const state = window.GATE_PAGE_API?.deliveryState?.() || null;
+    const state = window.GATE_PAGE_API?.deliveryState?.() || readSavedDeliveryState();
     resyncDeliveryBurst(state);
   });
 
@@ -218,24 +232,26 @@
   cityInput?.addEventListener('input', () => scheduleCatalogDeliverySync());
   cityInput?.addEventListener('change', () => scheduleCatalogDeliverySync());
   routeButton?.addEventListener('click', () => { resyncDeliveryBurst(); });
-  deliveryChooser?.addEventListener('click', () => setTimeout(scheduleCatalogDeliverySync, 0));
-  deliveryChange?.addEventListener('click', () => setTimeout(scheduleCatalogDeliverySync, 0));
+  deliveryChooser?.addEventListener('click', () => setTimeout(() => resyncDeliveryBurst(), 0));
+  deliveryChange?.addEventListener('click', () => setTimeout(() => resyncDeliveryBurst(), 0));
   window.addEventListener('pageshow', () => resyncDeliveryBurst());
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) resyncDeliveryBurst();
+  });
 
-  // Lightweight safety net: while delivery has a real price, keep the visible
-  // catalog cards consistent with it. The function only writes when text differs,
-  // so this does not cause layout work in the steady state.
+  // Keep the visible catalog consistent even when another late-loading module
+  // rewrites a base price after delivery has already been chosen. This also
+  // repairs mobile pages restored from the browser back/forward cache.
   setInterval(() => {
     if (document.hidden) return;
-    const delivery = currentDeliveryContext();
-    if (delivery.priced) syncCatalogDeliveryPrices(delivery);
-  }, 900);
+    syncCatalogDeliveryPrices();
+  }, 250);
 
   let catalogDeliveryReadyAttempts = 0;
   const waitForCatalogDeliveryApi = () => {
     if (syncCatalogDeliveryPrices()) return;
     catalogDeliveryReadyAttempts += 1;
-    if (catalogDeliveryReadyAttempts < 80) setTimeout(waitForCatalogDeliveryApi, 100);
+    if (catalogDeliveryReadyAttempts < 120) setTimeout(waitForCatalogDeliveryApi, 100);
   };
   waitForCatalogDeliveryApi();
 
