@@ -166,6 +166,10 @@
     return true;
   };
 
+  // Single public synchronizer for any module that updates the base gate prices.
+  // This prevents a later Excel/formula refresh from leaving cards without delivery.
+  window.KUZDVOR_SYNC_CATALOG_DELIVERY_PRICES = syncCatalogDeliveryPrices;
+
   const scheduleCatalogDeliverySync = stateOverride => {
     if (isDeliveryState(stateOverride)) pendingDeliveryState = stateOverride;
     if (catalogDeliverySyncQueued) return;
@@ -178,11 +182,17 @@
     });
   };
 
+  const resyncDeliveryBurst = stateOverride => {
+    scheduleCatalogDeliverySync(stateOverride);
+    [60, 180, 500, 1200].forEach(delay => setTimeout(() => scheduleCatalogDeliverySync(), delay));
+  };
+
   // app.js emits this after every calculation, including every delivery state
-  // transition. Listening to it directly avoids relying on DOM mutation timing.
+  // transition. Repeat the sync briefly because lazy formula scripts can finish
+  // after the first event and rewrite the same card price with a base-only value.
   document.addEventListener('gate:calculated', () => {
     const state = window.GATE_PAGE_API?.deliveryState?.() || null;
-    scheduleCatalogDeliverySync(state);
+    resyncDeliveryBurst(state);
   });
 
   if (catalogGrid) {
@@ -203,10 +213,19 @@
   });
   cityInput?.addEventListener('input', () => scheduleCatalogDeliverySync());
   cityInput?.addEventListener('change', () => scheduleCatalogDeliverySync());
-  routeButton?.addEventListener('click', () => { setTimeout(scheduleCatalogDeliverySync, 0); setTimeout(scheduleCatalogDeliverySync, 500); });
+  routeButton?.addEventListener('click', () => { resyncDeliveryBurst(); });
   deliveryChooser?.addEventListener('click', () => setTimeout(scheduleCatalogDeliverySync, 0));
   deliveryChange?.addEventListener('click', () => setTimeout(scheduleCatalogDeliverySync, 0));
-  window.addEventListener('pageshow', () => setTimeout(scheduleCatalogDeliverySync, 0));
+  window.addEventListener('pageshow', () => resyncDeliveryBurst());
+
+  // Lightweight safety net: while delivery has a real price, keep the visible
+  // catalog cards consistent with it. The function only writes when text differs,
+  // so this does not cause layout work in the steady state.
+  setInterval(() => {
+    if (document.hidden) return;
+    const delivery = currentDeliveryContext();
+    if (delivery.priced) syncCatalogDeliveryPrices(delivery);
+  }, 900);
 
   let catalogDeliveryReadyAttempts = 0;
   const waitForCatalogDeliveryApi = () => {
