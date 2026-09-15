@@ -1,4 +1,5 @@
 import { readFile, writeFile } from 'node:fs/promises';
+import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 
 const root = process.cwd();
@@ -6,13 +7,18 @@ const output = path.join(root, 'timeweb-dist');
 const indexPath = path.join(output, 'index.html');
 const bundlePath = path.join(output, 'site.bundle.js');
 
-const requestedSha = String(process.env.KUZDVOR_SOURCE_SHA || process.env.GITHUB_SHA || '').trim();
-let sourceSha = requestedSha;
+let sourceSha = String(process.env.KUZDVOR_SOURCE_SHA || process.env.GITHUB_SHA || '').trim();
 
 if (!/^[0-9a-f]{40}$/i.test(sourceSha)) {
   try {
     const version = JSON.parse(await readFile(path.join(output, 'deployment-version.json'), 'utf8'));
     sourceSha = String(version?.sourceSha || '').trim();
+  } catch {}
+}
+
+if (!/^[0-9a-f]{40}$/i.test(sourceSha)) {
+  try {
+    sourceSha = String(execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' })).trim();
   } catch {}
 }
 
