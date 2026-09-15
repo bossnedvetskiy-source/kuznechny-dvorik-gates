@@ -40,3 +40,71 @@ jobs:
           npx playwright install --with-deps chromium
       - name: Run customer journey tests
         run: npx playwright test
+      - name: Wait for this commit on Timeweb
+        run: |
+          set -euo pipefail
+          expected="$GITHUB_SHA"
+          echo "Waiting for Timeweb to serve $expected"
+          for attempt in $(seq 1 36); do
+            body="$(curl -fsS --connect-timeout 3 --max-time 6 "https://kuzdvor.tw1.ru/deployment-version.json?live_test=${attempt}&expected=${expected}" 2>/dev/null || true)"
+            live="$(BODY="$body" node -e "try{process.stdout.write(JSON.parse(process.env.BODY||'{}').sourceSha||'')}catch{}")"
+            echo "Attempt ${attempt}/36: ${live:-unavailable}"
+            if [ "$live" = "$expected" ]; then
+              echo "Current commit is live on Timeweb."
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Timeweb did not publish $expected within the test window." >&2
+          exit 1
+      - name: Verify delivery prices on live Timeweb
+        run: |
+          node --input-type=module <<'NODE'
+          import { chromium } from '@playwright/test';
+
+          const moneyValue = text => Number(String(text || '').replace(/[^0-9]/g, '')) || 0;
+          const browser = await chromium.launch();
+          try {
+            const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+            await page.goto(`https://kuzdvor.tw1.ru/?live_test=${Date.now()}`, { waitUntil: 'domcontentloaded', timeout: 30000 });
+            await page.waitForSelector('#catalogGrid .product-card', { state: 'visible', timeout: 15000 });
+            await page.waitForFunction(() => window.GATE_PAGE_API && document.querySelectorAll('#catalogGrid .product-card').length >= 2, null, { timeout: 15000 });
+
+            const before = await page.locator('#catalogGrid .product-card').evaluateAll(cards => cards.slice(0, 3).map(card => {
+              const node = card.querySelector('.price-row strong');
+              return Number(String(node?.textContent || '').replace(/[^0-9]/g, '')) || 0;
+            }));
+            if (before.length < 2 || before.some(value => value <= 0)) throw new Error(`Bad initial catalog prices: ${JSON.stringify(before)}`);
+
+            await page.locator('#catalogGrid .product-card').first().locator('.select-product').click();
+            await page.waitForSelector('#calculator', { state: 'visible', timeout: 15000 });
+            await page.locator('[data-delivery-choice="other"]').click();
+            await page.locator('#cityInput').fill('Салават');
+            await page.waitForFunction(() => String(document.querySelector('#deliverySummaryValue')?.textContent || '').includes('Салават'), null, { timeout: 10000 });
+
+            const checkDeliveryAdded = async label => {
+              await page.waitForFunction(expected => {
+                const cards = [...document.querySelectorAll('#catalogGrid .product-card')].slice(0, expected.length);
+                return cards.length === expected.length && cards.every((card, index) => {
+                  const current = Number(String(card.querySelector('.price-row strong')?.textContent || '').replace(/[^0-9]/g, '')) || 0;
+                  return current - expected[index] === 4500;
+                });
+              }, before, { timeout: 10000 });
+              const after = await page.locator('#catalogGrid .product-card').evaluateAll(cards => cards.slice(0, 3).map(card => moneyValue(card.querySelector('.price-row strong')?.textContent)));
+              console.log(`${label}: before=${before.join(',')} after=${after.join(',')}`);
+            };
+
+            await checkDeliveryAdded('delivery-selected');
+            await page.waitForTimeout(1800);
+            await checkDeliveryAdded('delivery-stable-after-formula-sync');
+            await page.evaluate(() => window.GATE_PAGE_API?.closeCalculator?.());
+            await page.waitForTimeout(1000);
+            await checkDeliveryAdded('delivery-stable-after-calculator-close');
+
+            const notes = await page.locator('#catalogGrid .product-card .price-delivery-note').evaluateAll(nodes => nodes.slice(0, 3).map(node => String(node.textContent || '')));
+            if (notes.some(text => !text.includes('С учётом доставки в Салават'))) throw new Error(`Delivery note mismatch: ${JSON.stringify(notes)}`);
+            console.log('Live Timeweb delivery-price smoke test passed.');
+          } finally {
+            await browser.close();
+          }
+          NODE
