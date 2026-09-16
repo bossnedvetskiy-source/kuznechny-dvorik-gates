@@ -57,7 +57,7 @@
     toast.textContent = 'Не удалось загрузить калькулятор. Обновите страницу и попробуйте ещё раз.';
     toast.classList.add('show');
     clearTimeout(window.toastTimer);
-    window.toastTimer = setTimeout(() => toast.classList.remove('show'), 3200);
+    window.toastTimer = window.setTimeout(() => toast.classList.remove('show'), 3200);
   };
 
   document.addEventListener('pointerover', event => {
@@ -197,7 +197,8 @@
     if (!mobileKeyboardMedia.matches) setCityKeyboardActive(false);
   });
 
-  const catalogMoney = value => new Intl.NumberFormat('ru-RU').format(Math.round(Number(value)) || 0) + ' ₽';
+  const roundCatalogMoney100 = value => Math.round((Number(value) || 0) / 100) * 100;
+  const catalogMoney = value => new Intl.NumberFormat('ru-RU').format(roundCatalogMoney100(value)) + ' ₽';
   const setText = (node, value) => { if (node && node.textContent !== value) node.textContent = value; };
   const isDeliveryState = value => Boolean(value && !Array.isArray(value) && typeof value === 'object' && typeof value.kind === 'string');
   let catalogDeliverySyncQueued = false;
