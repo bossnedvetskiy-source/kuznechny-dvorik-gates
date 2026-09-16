@@ -366,7 +366,17 @@
       event.preventDefault();
       if (!modalAction.disabled) modalAction.click();
     });
-    modalAction.addEventListener('click', () => {
+
+    const resolveDelivery = async () => {
+      const resolver = window.GATE_PAGE_API?.resolveDelivery;
+      if (typeof resolver === 'function') {
+        await resolver();
+        return;
+      }
+      if (!sourceRoute.hidden && !sourceRoute.disabled) sourceRoute.click();
+    };
+
+    modalAction.addEventListener('click', async () => {
       const value = modalInput.value.trim();
       if (value.length < 2) {
         modalStatus.textContent = 'Введите населённый пункт полностью.';
@@ -374,17 +384,26 @@
         return;
       }
       const current = getState();
-      if (String(current.kind || '') === 'confirm' && !sourceRoute.hidden && !sourceRoute.disabled) {
-        sourceRoute.click();
-        window.setTimeout(syncModal,0);
+      if (String(current.kind || '') === 'confirm') {
+        modalAction.disabled = true;
+        modalAction.textContent = 'Подтверждаем…';
+        await resolveDelivery();
+        requestAnimationFrame(() => {
+          sync();
+          syncModal();
+        });
         return;
       }
       sourceCity.value = value;
       sourceCity.dispatchEvent(new Event('input',{bubbles:true}));
-      window.setTimeout(() => {
-        if (!isSelected(getState()) && !sourceRoute.hidden && !sourceRoute.disabled) sourceRoute.click();
-        syncModal();
-      },0);
+      requestAnimationFrame(async () => {
+        const next = getState();
+        if (!isSelected(next) && !['loading','confirm'].includes(String(next.kind || ''))) await resolveDelivery();
+        requestAnimationFrame(() => {
+          sync();
+          syncModal();
+        });
+      });
     });
 
     const dismiss = () => {
