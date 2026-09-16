@@ -42,6 +42,7 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
+          from textwrap import dedent
 
           server = Path('scripts/e2e-server.mjs')
           text = server.read_text(encoding='utf-8')
@@ -66,7 +67,8 @@ jobs:
               favorites.write_text(text, encoding='utf-8')
 
           helper = Path('tests/location-helpers.js')
-          helper.write_text("""import {expect} from '@playwright/test';
+          helper.write_text(dedent("""\
+          import {expect} from '@playwright/test';
 
           export async function openLocationSelector(page) {
             const modal = page.locator('#catalogLocationGateModal');
@@ -120,7 +122,7 @@ jobs:
             await page.goto('/', {waitUntil:'domcontentloaded'});
             return selectInstallationPlace(page, place);
           }
-          """.replace(/^          /gm, ''), encoding='utf-8')
+          """), encoding='utf-8')
 
           prices = Path('tests/delivery-card-prices.spec.js')
           text = prices.read_text(encoding='utf-8').replace('73 240 ₽','73 200 ₽').replace('98 240 ₽','98 200 ₽')
