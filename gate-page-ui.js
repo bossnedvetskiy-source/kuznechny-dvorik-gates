@@ -45,7 +45,7 @@
     .profile-color-option.is-more .profile-color-dot{background:conic-gradient(#d92d1f,#f39a22,#f0d329,#2fa64a,#1794b8,#2866c2,#8c3bc2,#d92d1f)}
     .profile-color-option.is-more .profile-color-dot::after{content:"+";position:absolute;inset:5px;display:grid;place-items:center;border-radius:50%;background:rgba(0,0,0,.72);color:#fff;font-size:17px;font-weight:900}
     .profile-color-note{margin:7px 0 0;color:#8a8379;font-size:8.5px;line-height:1.35}
-    @media(max-width:620px){.color-profile-badge{left:9px;top:9px;width:166px;min-height:48px;padding:5px 8px 5px 6px;gap:6px}.color-fan{flex-basis:38px;width:38px;height:34px}.color-fan i{left:15px;width:8px;height:29px}.color-copy strong{font-size:12px}.color-copy span{font-size:11px}.profile-color-picker{padding:9px 10px 8px}.profile-color-picker-head{margin-bottom:7px}.profile-color-picker-head strong{font-size:10px}.profile-color-status{font-size:8.5px}.profile-color-swatches{gap:3px}.profile-color-dot{width:29px;height:29px}.profile-color-option{font-size:7.5px}.profile-color-note{font-size:8px}.dimension-help,.color-note,.delivery-help summary{color:rgba(255,255,255,.68)!important}}
+    @media(max-width:620px){.color-profile-badge{left:9px;top:9px;width:166px;min-height:48px;padding:5px 8px 5px 6px;gap:6px}.color-fan{flex-basis:38px;width:38px;height:34px}.color-fan i{left:15px;width:8px;height:29px}.color-copy strong{font-size:12px}.color-copy span{font-size:11px}.profile-color-picker{padding:9px 10px 8px}.profile-color-picker-head{margin-bottom:7px}.profile-color-picker-head strong{font-size:10px}.profile-color-status{font-size:8.5px}.profile-color-swatches{gap:3px}.profile-color-dot{width:29px;height:29px}.profile-color-option{font-size:7.5px}.profile-color-note{font-size:8px}.dimension-help,.color-note,.delivery-help summary{color:rgba(255,255,255,.68)!important}body.dimension-keyboard-open .mobile-cta{display:none!important}.dimensions label{scroll-margin-top:14px;scroll-margin-bottom:28px}}
     @media(max-width:390px){.color-profile-badge{width:150px;min-height:44px}.color-fan{flex-basis:33px;width:33px;height:31px}.color-fan i{left:13px;width:7px;height:26px}.color-copy strong{font-size:11px}.color-copy span{font-size:10px}.profile-color-dot{width:27px;height:27px}.profile-color-option{font-size:7px}}
   `;
   document.head.append(colorBadgeStyle);
@@ -135,6 +135,63 @@
   const sizeNotice = document.getElementById('sizeNotice');
   const postsCheck = document.getElementById('postsCheck');
   const postsChoice = postsCheck?.closest('.choice');
+  const dimensionInputs = [widthInput,wicketWidthInput,heightInput,wicketHeightInput].filter(Boolean);
+  let dimensionKeyboardTimer = 0;
+
+  const ensureDimensionInputVisible = () => {
+    if (!mobile.matches) return;
+    const input = dimensionInputs.find(item => item === document.activeElement);
+    if (!input) return;
+    const viewport = window.visualViewport;
+    const viewportTop = Number(viewport?.offsetTop) || 0;
+    const viewportHeight = Number(viewport?.height) || window.innerHeight;
+    const viewportBottom = viewportTop + viewportHeight;
+    const target = input.closest('label') || input;
+    const rect = target.getBoundingClientRect();
+    const minTop = viewportTop + 14;
+    const maxBottom = viewportBottom - 18;
+    if (rect.top >= minTop && rect.bottom <= maxBottom) return;
+    const preferredTop = viewportTop + Math.max(14, Math.min(72, viewportHeight * 0.14));
+    window.scrollBy({top:rect.top - preferredTop,left:0,behavior:'smooth'});
+  };
+
+  const scheduleDimensionInputVisibility = () => {
+    clearTimeout(dimensionKeyboardTimer);
+    requestAnimationFrame(ensureDimensionInputVisible);
+    dimensionKeyboardTimer = window.setTimeout(ensureDimensionInputVisible, 140);
+  };
+
+  const setDimensionKeyboardActive = active => {
+    const enabled = Boolean(active && mobile.matches);
+    document.body.classList.toggle('dimension-keyboard-open', enabled);
+    if (!enabled) return;
+    scheduleDimensionInputVisibility();
+    window.setTimeout(ensureDimensionInputVisible, 320);
+  };
+
+  dimensionInputs.forEach((input,index) => {
+    input.setAttribute('enterkeyhint', index < dimensionInputs.length - 1 ? 'next' : 'done');
+    input.addEventListener('focus', () => setDimensionKeyboardActive(true));
+    input.addEventListener('blur', () => window.setTimeout(() => {
+      if (!dimensionInputs.includes(document.activeElement)) setDimensionKeyboardActive(false);
+    }, 90));
+    input.addEventListener('keydown', event => {
+      if (event.key !== 'Enter') return;
+      event.preventDefault();
+      const next = dimensionInputs[index + 1];
+      if (next) {
+        next.focus({preventScroll:true});
+        scheduleDimensionInputVisibility();
+      } else {
+        input.blur();
+      }
+    });
+  });
+  window.visualViewport?.addEventListener('resize', scheduleDimensionInputVisibility, {passive:true});
+  window.visualViewport?.addEventListener('scroll', scheduleDimensionInputVisibility, {passive:true});
+  mobile.addEventListener('change', () => {
+    if (!mobile.matches) setDimensionKeyboardActive(false);
+  });
 
   const syncPostsChoice = () => {
     postsChoice?.classList.toggle('is-selected', Boolean(postsCheck?.checked));
