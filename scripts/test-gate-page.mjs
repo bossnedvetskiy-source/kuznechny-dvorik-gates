@@ -54,7 +54,7 @@ for (const ambiguous of ['Под ключ с новыми столбами','<b>
   assert(!html.includes(ambiguous), `Ambiguous public copy returned: ${ambiguous}`);
 }
 assert(!app.includes('Под ключ с новыми столбами') && !app.includes('Расчёт под ключ'), 'Ambiguous turnkey wording returned to gate runtime');
-assert(!delivery.includes('Пункта нет в прайсе') && delivery.includes('нет готовой стоимости доставки'), 'Delivery copy must avoid internal price-list jargon');
+assert(!/прайс/i.test(delivery), 'Delivery copy must avoid internal price-list jargon');
 assert(html.includes('Если подходящие столбы уже есть') && html.includes('без доставки'), 'Initial prices must clearly state posts condition and delivery exclusion');
 assert(html.includes('Даю согласие на обработку персональных данных.'), 'Consent wording must explicitly mention personal data');
 assert(ui.includes('Указать место установки'), 'Mobile CTA must work for cities, villages and settlements');
