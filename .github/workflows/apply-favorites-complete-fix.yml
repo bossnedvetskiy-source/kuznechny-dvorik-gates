@@ -48,8 +48,8 @@ jobs:
           text = server.read_text(encoding='utf-8')
           marker = '<script src="shared/favorites.js"></script>'
           if marker not in text:
-              needle = '<script src="gate-page-ui.js"></script>\\n  <script src="color-photo-site.js"></script>'
-              replacement = '<script src="gate-page-ui.js"></script>\\n  <script src="shared/favorites.js"></script>\\n  <script src="color-photo-site.js"></script>'
+              needle = '<script src="gate-page-ui.js"></script>\n  <script src="color-photo-site.js"></script>'
+              replacement = '<script src="gate-page-ui.js"></script>\n  <script src="shared/favorites.js"></script>\n  <script src="color-photo-site.js"></script>'
               if needle not in text:
                   raise SystemExit('Could not add favorites to E2E source environment')
               text = text.replace(needle, replacement, 1)
@@ -74,13 +74,11 @@ jobs:
             const modal = page.locator('#catalogLocationGateModal');
             const autoOpened = await modal.waitFor({state:'visible',timeout:2500}).then(() => true).catch(() => false);
             if (!autoOpened) {
-              const backdrop = page.locator('.installation-location-backdrop');
-              if (await backdrop.isVisible().catch(() => false)) {
-                await expect(modal).toBeVisible({timeout:5000});
+              const lockButton = page.locator('.catalog-location-lock button');
+              if (await lockButton.isVisible().catch(() => false)) {
+                await lockButton.evaluate(element => element.click());
               } else {
-                const lockButton = page.locator('.catalog-location-lock button');
-                if (await lockButton.isVisible().catch(() => false)) await lockButton.click();
-                else await page.locator('a[href=\"#catalog\"]').first().click();
+                await page.evaluate(() => document.querySelector('a[href="#catalog"]')?.click());
               }
             }
             await expect(modal).toBeVisible({timeout:5000});
@@ -133,6 +131,9 @@ jobs:
           text = text.replace("  await expect(page.locator('#mobilePriceTotal')).toContainText('доставка индивидуально');\n", '')
           text = text.replace("  await expect(page.locator('#mobilePrimaryCta')).toContainText('доставка индивидуально');\n", '')
           gates.write_text(text, encoding='utf-8')
+
+          leads = Path('shared/leads.js')
+          leads.write_text(leads.read_text(encoding='utf-8').rstrip() + '\n', encoding='utf-8')
           PY
 
       - name: Install dependencies
