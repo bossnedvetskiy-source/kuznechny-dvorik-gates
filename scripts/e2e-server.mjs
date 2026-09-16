@@ -34,7 +34,7 @@ const server = http.createServer(async (req, res) => {
       html = html.replace('<script id="deliveryData" type="application/json">{}</script>', `<script id="deliveryData" type="application/json">${delivery.replace(/</g,'\\u003c')}</script>`);
       html = html.replace(
         '<script src="gate-page-ui.js"></script>',
-        '<script src="gate-page-ui.js"></script>\n  <script src="color-photo-site.js"></script>\n  <script src="catalog-delivery-sync.js"></script>\n  <script src="gate-formula-prices-site.js"></script>'
+        '<script src="gate-page-ui.js"></script>\n  <script src="shared/favorites.js"></script>\n  <script src="color-photo-site.js"></script>\n  <script src="catalog-delivery-sync.js"></script>\n  <script src="gate-formula-prices-site.js"></script>'
       );
       return send(res, 200, html, mime['.html']);
     }
