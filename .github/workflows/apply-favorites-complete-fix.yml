@@ -11,6 +11,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: apply-favorites-complete-fix
+  cancel-in-progress: true
+
 env:
   CI: true
 
@@ -48,6 +52,31 @@ jobs:
                   raise SystemExit('Could not add favorites to E2E source environment')
               text = text.replace(old, new, 1)
               server.write_text(text, encoding='utf-8')
+
+          favorites = Path('shared/favorites.js')
+          text = favorites.read_text(encoding='utf-8')
+          old = """    grid.querySelectorAll('.favorite-toggle').forEach(button => {
+              const active = favorites.has(button.dataset.favoriteId);
+              button.setAttribute('aria-pressed', String(active));
+              button.setAttribute('aria-label', active ? 'Убрать модель из избранного' : 'Сохранить модель в избранное');
+              button.title = active ? 'Убрать из избранного' : 'Сохранить';
+              button.innerHTML = `<span class=\"heart\">${active ? '♥' : '♡'}</span><span>${active ? 'Сохранено' : 'Сохранить'}</span>`;
+            });
+          """
+          new = """    grid.querySelectorAll('.favorite-toggle').forEach(button => {
+              const active = favorites.has(button.dataset.favoriteId);
+              const state = active ? '1' : '0';
+              if (button.dataset.favoriteState === state) return;
+              button.dataset.favoriteState = state;
+              button.setAttribute('aria-pressed', String(active));
+              button.setAttribute('aria-label', active ? 'Убрать модель из избранного' : 'Сохранить модель в избранное');
+              button.title = active ? 'Убрать из избранного' : 'Сохранить';
+              button.innerHTML = `<span class=\"heart\">${active ? '♥' : '♡'}</span><span>${active ? 'Сохранено' : 'Сохранить'}</span>`;
+            });
+          """
+          if old not in text:
+              raise SystemExit('Favorites sync fragment not found')
+          favorites.write_text(text.replace(old, new, 1), encoding='utf-8')
 
           helper = Path('tests/location-helpers.js')
           text = helper.read_text(encoding='utf-8')
