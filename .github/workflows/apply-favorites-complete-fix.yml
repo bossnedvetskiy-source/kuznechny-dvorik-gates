@@ -149,8 +149,8 @@ jobs:
 
       - name: Verify favorites is bundled
         run: |
-          grep -Fq 'KUZDVOR_FAVORITES' timeweb-dist/site.bundle.js
-          test -s timeweb-dist/site.bundle.js
+          grep -Fq 'KUZDVOR_FAVORITES' dist/client/site.bundle.js
+          test -s dist/client/site.bundle.js
 
       - name: Remove temporary applicator
         run: |
