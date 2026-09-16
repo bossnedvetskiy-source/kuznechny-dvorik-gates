@@ -73,6 +73,7 @@ jobs:
           test -s timeweb-dist/admin.html
           test -s timeweb-dist/site.css
           test -s timeweb-dist/site.bundle.js
+          grep -Fq 'KUZDVOR_FAVORITES' timeweb-dist/site.bundle.js
           test -s timeweb-dist/xlsx.bundle.js
           test -s timeweb-dist/deployment-version.json
           grep -Fq '<script src="/xlsx.bundle.js"></script>' timeweb-dist/admin.html
@@ -219,6 +220,7 @@ jobs:
 
           curl -fsS --connect-timeout 4 --max-time 15 --retry 1 --retry-delay 2 -o /tmp/timeweb-site.js "${base}/site.bundle.js"
           grep -Fq 'С учётом доставки' /tmp/timeweb-site.js
+          grep -Fq 'KUZDVOR_FAVORITES' /tmp/timeweb-site.js
           curl -fsS --connect-timeout 4 --max-time 15 --retry 1 --retry-delay 2 -o /dev/null "${base}/xlsx.bundle.js"
 
           legacy_code="$(curl -sS --connect-timeout 4 --max-time 15 -o /dev/null -w '%{http_code}' "${base}/api-proxy.php?__proxy_path=api/health" || true)"
@@ -240,4 +242,4 @@ jobs:
             echo
             echo "Source: \`${expected_sha}\`"
           } >> "$GITHUB_STEP_SUMMARY"
-          echo 'Live Timeweb verification passed: current main, local PHP/MySQL, admin XLSX, delivery prices, legacy proxy removal and HTTPS are healthy.'
+          echo 'Live Timeweb verification passed: current main, local PHP/MySQL, admin XLSX, delivery prices, favorites, legacy proxy removal and HTTPS are healthy.'
