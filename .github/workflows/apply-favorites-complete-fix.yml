@@ -1,0 +1,66 @@
+name: Apply favorites complete fix
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - scripts/apply-favorites-complete-fix-ci.py
+      - .github/workflows/apply-favorites-complete-fix.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  CI: true
+
+jobs:
+  apply-test-and-push:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Apply favorites_complete_fix and update E2E
+        run: python3 scripts/apply-favorites-complete-fix-ci.py
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build production package
+        run: npm run build
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run E2E
+        run: npm run test:e2e
+
+      - name: Verify favorites is bundled
+        run: |
+          grep -Fq 'KUZDVOR_FAVORITES' timeweb-dist/site.bundle.js
+          test -s timeweb-dist/site.bundle.js
+
+      - name: Remove temporary applicator
+        run: |
+          rm -f scripts/apply-favorites-complete-fix-ci.py
+          rm -f .github/workflows/apply-favorites-complete-fix.yml
+
+      - name: Commit and push green fix
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git diff --cached --check
+          git commit -m 'Bundle favorites and update location E2E'
+          git push origin HEAD:main
