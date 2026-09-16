@@ -4,7 +4,8 @@ const catalogImageData = window.CATALOG_IMAGES;
 if (!catalogImageData) throw new Error('Не найден файл catalog-images.js');
 if (!window.KUZDVOR_DELIVERY || !window.KUZDVOR_LEADS || !window.KUZDVOR_CUSTOMER) throw new Error('Не загружены общие модули сайта');
 
-const money = value => new Intl.NumberFormat('ru-RU').format(Math.round(Number(value) || 0)) + ' ₽';
+const roundMoney100 = value => Math.round((Number(value) || 0) / 100) * 100;
+const money = value => new Intl.NumberFormat('ru-RU').format(roundMoney100(value)) + ' ₽';
 const reachGoal = (name, params = {}) => { try { if (typeof window.ym === 'function') window.ym(107269914, 'reachGoal', name, params); } catch {} };
 const escapeHTML = value => String(value).replace(/[&<>'"]/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[character]));
 const sketchArticles = new Set(['Арт.4','Арт.11','Арт.34','Арт.37']);
@@ -559,7 +560,7 @@ function leadPayload(){
     wicketWidth:Number(wicketWidthInput.value)||null,wicketHeight:Number(wicketHeightInput.value)||null,
     install:true,posts:Boolean(postsCheck.checked),color:'',
     configuration:{article:product.art,width:Number(widthInput.value)||null,height:Number(heightInput.value)||null,wicketWidth:Number(wicketWidthInput.value)||null,wicketHeight:Number(wicketHeightInput.value)||null,posts:Boolean(postsCheck.checked)},
-    total:Math.round(total),deliveryPending:Boolean(deliveryPending),deliveryKind:deliveryController?.getState?.()?.kind||'empty',website:document.getElementById('websiteInput')?.value||'',consent:true,policyVersion:'2026-09-09',comment:commentInput.value.trim(),message:buildMessage()
+    total:roundMoney100(total),deliveryPending:Boolean(deliveryPending),deliveryKind:deliveryController?.getState?.()?.kind||'empty',website:document.getElementById('websiteInput')?.value||'',consent:true,policyVersion:'2026-09-09',comment:commentInput.value.trim(),message:buildMessage()
   };
 }
 
