@@ -53,6 +53,7 @@
     if (!byKey.has(normalize('Мелеуз'))) byKey.set(normalize('Мелеуз'), {name:'Мелеуз', price:0});
     if (datalist) datalist.innerHTML = destinations.map(item => `<option value="${escapeHTML(item.name)}"></option>`).join('');
 
+    let placeChoices = null;
     if (input) {
       input.placeholder = 'Начните вводить населённый пункт';
       input.setAttribute('enterkeyhint','search');
@@ -60,10 +61,17 @@
       if (label && !label.querySelector('.delivery-input-help')) {
         const help = document.createElement('small');
         help.className = 'delivery-input-help';
-        help.id = 'cityInputHelp';
-        help.textContent = 'Например: Салават, Ишимбай, Стерлитамак. Нет в списке — введите название полностью.';
+        help.id = `${input.id || 'cityInput'}Help`;
+        help.textContent = 'Например: Салават, Ишимбай, Покровка. Если названий несколько — покажем районы для выбора.';
         input.insertAdjacentElement('afterend', help);
-        input.setAttribute('aria-describedby','cityInputHelp');
+        input.setAttribute('aria-describedby', help.id);
+      }
+      if (label) {
+        placeChoices = document.createElement('div');
+        placeChoices.className = 'delivery-place-choices';
+        placeChoices.hidden = true;
+        placeChoices.setAttribute('aria-live','polite');
+        label.insertAdjacentElement('afterend', placeChoices);
       }
       if (!document.getElementById('deliveryUxStyles')) {
         const style = document.createElement('style');
@@ -74,7 +82,16 @@
           .calc-form .city-label:not(.is-visible){display:none!important}
           .calc-form .city-label.is-visible{display:grid!important}
           .delivery-input-help{display:block;color:rgba(255,255,255,.58);font-size:10px;line-height:1.45;margin-top:-1px}
-          @media(max-width:620px){.delivery-input-help{font-size:11px;line-height:1.45}}
+          .delivery-place-choices{display:grid;gap:8px;margin:8px 0 2px;padding:12px;border:1px solid rgba(212,175,55,.42);border-radius:14px;background:rgba(16,16,16,.96)}
+          .delivery-place-choices[hidden]{display:none!important}
+          .delivery-place-choices__title{font-size:14px;font-weight:800;line-height:1.25;color:#fff}
+          .delivery-place-choices__hint{font-size:12px;line-height:1.35;color:rgba(255,255,255,.68);margin-top:-3px}
+          .delivery-place-choices__button{display:grid;width:100%;gap:3px;text-align:left;padding:12px 13px;border:1px solid rgba(255,255,255,.16);border-radius:12px;background:rgba(255,255,255,.055);color:#fff;cursor:pointer;touch-action:manipulation}
+          .delivery-place-choices__button:hover,.delivery-place-choices__button:focus-visible{border-color:rgba(212,175,55,.8);background:rgba(212,175,55,.10);outline:none}
+          .delivery-place-choices__button:active{transform:translateY(1px)}
+          .delivery-place-choices__name{font-size:14px;font-weight:800;line-height:1.25}
+          .delivery-place-choices__area{font-size:12px;line-height:1.35;color:rgba(255,255,255,.68)}
+          @media(max-width:620px){.delivery-input-help{font-size:11px;line-height:1.45}.delivery-place-choices{padding:10px;gap:8px}.delivery-place-choices__button{min-height:58px;padding:11px 12px}.delivery-place-choices__name{font-size:15px}.delivery-place-choices__area{font-size:12px}}
         `;
         document.head.append(style);
       }
@@ -84,11 +101,26 @@
 
     let state = {kind:'empty', name:'', resolvedName:'', shortName:'', price:null};
     let editingOther = false;
+    let searchTimer = null;
+    let searchSequence = 0;
 
     const setResult = (message, kind='') => {
       if (!result) return;
       result.textContent = message;
       result.className = `delivery-result${kind ? ` ${kind}` : ''}`;
+    };
+
+    const clearPlaceChoices = () => {
+      if (!placeChoices) return;
+      placeChoices.hidden = true;
+      placeChoices.replaceChildren();
+    };
+
+    const cancelPlaceSearch = () => {
+      searchSequence += 1;
+      if (searchTimer) clearTimeout(searchTimer);
+      searchTimer = null;
+      clearPlaceChoices();
     };
 
     const selectedCityName = () => ['fixed','calculated','out-of-area'].includes(state.kind)
@@ -117,6 +149,7 @@
     const syncUi = () => {
       const resolved = ['fixed','calculated'].includes(state.kind);
       const selected = resolved || state.kind === 'out-of-area';
+      const choosing = state.kind === 'choosing';
       const city = selectedCityName();
       if (chooser) chooser.hidden = selected || editingOther;
       if (summary) summary.hidden = !selected;
@@ -128,8 +161,9 @@
             : `${city} · доставка учтена`;
       }
       input?.closest('.city-label')?.classList.toggle('is-visible', editingOther && !selected);
-      if (result) result.hidden = selected || state.kind === 'empty';
-      if (routeButton) routeButton.hidden = selected || state.kind === 'empty';
+      if (result) result.hidden = selected || state.kind === 'empty' || choosing;
+      if (routeButton) routeButton.hidden = selected || state.kind === 'empty' || choosing;
+      if (placeChoices && !choosing) placeChoices.hidden = true;
     };
 
     const emit = () => {
@@ -140,7 +174,7 @@
 
     const makeRequestError = (message, technical = false) => Object.assign(new Error(message), {technical});
 
-    const requestDelivery = async place => {
+    const requestDelivery = async (place, expectedInputValue = String(input?.value || '').trim()) => {
       let lastError = null;
       for (let attempt = 0; attempt < 2; attempt += 1) {
         try {
@@ -162,7 +196,7 @@
             : error;
           if (attempt === 0 && lastError?.technical === true) {
             await wait(350);
-            if (String(input?.value || '').trim() !== place) throw makeRequestError('Расчёт отменён', false);
+            if (String(input?.value || '').trim() !== expectedInputValue) throw makeRequestError('Расчёт отменён', false);
             continue;
           }
           throw lastError;
@@ -171,7 +205,15 @@
       throw lastError || makeRequestError('Не удалось рассчитать доставку', true);
     };
 
+    const requestPlaceChoices = async place => {
+      const response = await fetch(`/api/delivery-search?place=${encodeURIComponent(place)}`, {headers:{accept:'application/json'}});
+      if (!response.ok) return [];
+      const payload = await response.json().catch(() => null);
+      return Array.isArray(payload?.choices) ? payload.choices : [];
+    };
+
     const resolveFixed = known => {
+      cancelPlaceSearch();
       const city = String(known.name || '').trim();
       const price = Number(known.price) || 0;
       if (input) input.value = city;
@@ -184,8 +226,88 @@
       emit();
     };
 
+    const renderPlaceChoices = (entered, choices) => {
+      if (!placeChoices || !choices.length) return false;
+      const sameName = choices.length > 1 && choices.every(choice => normalize(choice.name) === normalize(choices[0]?.name));
+      placeChoices.replaceChildren();
+
+      const title = document.createElement('div');
+      title.className = 'delivery-place-choices__title';
+      title.textContent = sameName ? 'Нашли несколько населённых пунктов' : 'Выберите населённый пункт';
+      placeChoices.append(title);
+
+      const hint = document.createElement('div');
+      hint.className = 'delivery-place-choices__hint';
+      hint.textContent = sameName ? 'Выберите нужный район:' : 'Нажмите на подходящий вариант:';
+      placeChoices.append(hint);
+
+      choices.forEach(choice => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'delivery-place-choices__button';
+
+        const name = document.createElement('span');
+        name.className = 'delivery-place-choices__name';
+        name.textContent = String(choice.name || entered).trim();
+        button.append(name);
+
+        const area = String(choice.secondary || '').trim();
+        if (area) {
+          const secondary = document.createElement('span');
+          secondary.className = 'delivery-place-choices__area';
+          secondary.textContent = area;
+          button.append(secondary);
+        }
+
+        button.addEventListener('click', () => {
+          const label = String(choice.label || choice.name || entered).trim();
+          const query = String(choice.query || label).trim();
+          cancelPlaceSearch();
+          if (input) input.value = label;
+          calculateRoute(query, {preferredLabel:label, skipConfirm:true});
+        });
+        placeChoices.append(button);
+      });
+
+      state = {kind:'choosing', name:entered, resolvedName:'', shortName:'', price:null};
+      placeChoices.hidden = false;
+      if (routeButton) routeButton.hidden = true;
+      emit();
+      placeChoices.hidden = false;
+      return true;
+    };
+
+    const searchPlaces = entered => {
+      if (!input || entered.length < 2) return;
+      const sequence = ++searchSequence;
+      if (searchTimer) clearTimeout(searchTimer);
+      searchTimer = setTimeout(async () => {
+        searchTimer = null;
+        try {
+          const choices = await requestPlaceChoices(entered);
+          if (sequence !== searchSequence || String(input.value || '').trim() !== entered) return;
+          if (!choices.length) return;
+
+          const exact = choices.filter(choice => normalize(choice.name) === normalize(entered));
+          if (exact.length === 1 && choices.length === 1) {
+            const choice = exact[0];
+            const label = String(choice.label || choice.name || entered).trim();
+            const query = String(choice.query || label).trim();
+            if (input) input.value = label;
+            calculateRoute(query, {preferredLabel:label, skipConfirm:true});
+            return;
+          }
+          renderPlaceChoices(entered, exact.length > 1 ? exact : choices);
+        } catch {
+          // Search suggestions are an enhancement. The normal delivery button
+          // remains available if the lookup service is temporarily unavailable.
+        }
+      }, 420);
+    };
+
     const updateFromInput = () => {
       const entered = String(input?.value || '').trim();
+      cancelPlaceSearch();
       const known = byKey.get(normalize(entered));
       if (known) {
         resolveFixed(known);
@@ -198,24 +320,30 @@
           routeButton.disabled = false;
           routeButton.textContent = 'Рассчитать доставку';
         }
-        setResult('Не нашли точное совпадение? Введите название полностью и нажмите «Рассчитать доставку».', 'pending');
+        setResult('Ищем подходящий населённый пункт. Если названий несколько — выберите нужный район.', 'pending');
+        emit();
+        searchPlaces(entered);
       } else {
         state = {kind:'empty', name:entered, resolvedName:'', shortName:'', price:null};
         if (routeButton) routeButton.hidden = true;
         setResult('', 'pending');
+        emit();
       }
-      emit();
     };
 
-    const calculateRoute = async () => {
-      const place = String(input?.value || '').trim();
+    async function calculateRoute(requestedPlace = '', options = {}) {
+      const displayAtStart = String(input?.value || '').trim();
+      const place = String(requestedPlace || displayAtStart).trim();
+      const preferredLabel = String(options.preferredLabel || '').trim();
+      const skipConfirm = options.skipConfirm === true;
       if (place.length < 2) {
         editingOther = true;
         updateFromInput();
         input?.focus();
         return;
       }
-      if (state.kind === 'confirm') {
+      cancelPlaceSearch();
+      if (!requestedPlace && state.kind === 'confirm') {
         state = {...state, kind:'calculated'};
         editingOther = false;
         setResult(`${state.shortName} · доставка учтена в итоговой сумме`, 'success');
@@ -223,17 +351,18 @@
         emit();
         return;
       }
-      state = {kind:'loading', name:place, resolvedName:'', shortName:'', price:null};
-      if (routeButton) { routeButton.disabled = true; routeButton.textContent = 'Считаем…'; }
+      state = {kind:'loading', name:preferredLabel || displayAtStart || place, resolvedName:'', shortName:'', price:null};
+      if (routeButton) { routeButton.hidden = false; routeButton.disabled = true; routeButton.textContent = 'Считаем…'; }
       setResult('Ищем населённый пункт и автомобильный маршрут…', 'pending');
       emit();
       try {
-        const payload = await requestDelivery(place);
-        if (String(input?.value || '').trim() !== place) return;
-        const shortName = payload.shortName || payload.resolvedName || place;
+        const payload = await requestDelivery(place, displayAtStart);
+        if (String(input?.value || '').trim() !== displayAtStart) return;
+        const shortName = preferredLabel || payload.shortName || payload.resolvedName || displayAtStart || place;
+        if (input && preferredLabel) input.value = preferredLabel;
         if (payload.outOfArea) {
           state = {
-            kind:'out-of-area', name:place, resolvedName:payload.resolvedName || shortName, shortName,
+            kind:'out-of-area', name:shortName, resolvedName:preferredLabel || payload.resolvedName || shortName, shortName,
             price:null, distanceKm:Number(payload.distanceKm)||null,
             serviceAreaKm:Number(payload.serviceAreaKm)||data.serviceAreaKm, outOfArea:true
           };
@@ -244,12 +373,25 @@
           emit();
           return;
         }
-        state = {kind:'confirm', name:place, resolvedName:payload.resolvedName || shortName, shortName, price:Number(payload.price)||0, distanceKm:Number(payload.distanceKm)||null, serviceAreaKm:Number(payload.serviceAreaKm)||data.serviceAreaKm};
+        if (skipConfirm) {
+          state = {
+            kind:'calculated', name:shortName, resolvedName:preferredLabel || payload.resolvedName || shortName, shortName,
+            price:Number(payload.price)||0, distanceKm:Number(payload.distanceKm)||null,
+            serviceAreaKm:Number(payload.serviceAreaKm)||data.serviceAreaKm
+          };
+          editingOther = false;
+          if (routeButton) { routeButton.hidden = true; routeButton.disabled = false; routeButton.textContent = 'Рассчитать доставку'; }
+          setResult(`${shortName} · доставка учтена в итоговой сумме`, 'success');
+          saveSelected(state);
+          emit();
+          return;
+        }
+        state = {kind:'confirm', name:displayAtStart || place, resolvedName:payload.resolvedName || shortName, shortName, price:Number(payload.price)||0, distanceKm:Number(payload.distanceKm)||null, serviceAreaKm:Number(payload.serviceAreaKm)||data.serviceAreaKm};
         if (routeButton) { routeButton.hidden = false; routeButton.disabled = false; routeButton.textContent = 'Да, это нужный пункт'; }
         setResult(`Найдено: ${shortName}. Подтвердите населённый пункт.`, 'pending');
       } catch (error) {
-        if (String(input?.value || '').trim() !== place) return;
-        state = {kind:'error', name:place, resolvedName:'', shortName:'', price:null};
+        if (String(input?.value || '').trim() !== displayAtStart) return;
+        state = {kind:'error', name:displayAtStart || place, resolvedName:'', shortName:'', price:null};
         if (routeButton) { routeButton.hidden = false; routeButton.disabled = false; routeButton.textContent = 'Повторить расчёт'; }
         const message = error?.technical === true
           ? 'Не удалось автоматически рассчитать доставку.'
@@ -257,11 +399,12 @@
         setResult(`${message} Оставьте заявку — стоимость уточним вручную.`, 'pending');
       }
       emit();
-    };
+    }
 
     const chooseMeleuz = () => resolveFixed(byKey.get(normalize('Мелеуз')) || {name:'Мелеуз',price:0});
     const chooseOther = () => {
       clearSaved();
+      cancelPlaceSearch();
       editingOther = true;
       state = {kind:'empty', name:'', resolvedName:'', shortName:'', price:null};
       if (input) input.value = '';
@@ -272,6 +415,7 @@
     const edit = () => {
       const previousCity = selectedCityName();
       clearSaved();
+      cancelPlaceSearch();
       editingOther = true;
       state = {kind:'empty', name:previousCity, resolvedName:'', shortName:'', price:null};
       if (input) input.value = previousCity;
@@ -288,7 +432,7 @@
     changeButton?.addEventListener('click', edit);
     input?.addEventListener('input', updateFromInput);
     input?.addEventListener('change', updateFromInput);
-    routeButton?.addEventListener('click', calculateRoute);
+    routeButton?.addEventListener('click', () => calculateRoute());
 
     const restore = () => {
       const customerCity = window.KUZDVOR_CUSTOMER?.read()?.city || '';
