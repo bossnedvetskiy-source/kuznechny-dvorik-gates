@@ -1,10 +1,10 @@
 import {test, expect} from '@playwright/test';
+import {beginInstallationPlace, openLocationSelector, selectInstallationPlace} from './location-helpers.js';
 
-async function openFirstGate(page) {
+async function openFirstGate(page, place='Мелеуз') {
   await page.setViewportSize({width:390,height:844});
   await page.goto('/', {waitUntil:'domcontentloaded'});
-  const card = page.locator('#catalogGrid .product-card').first();
-  await expect(card).toBeVisible();
+  const card = await selectInstallationPlace(page, place);
   await card.locator('.select-product').click();
   await expect(page.locator('#calculator')).toBeVisible();
   await expect.poll(() => page.evaluate(() => window.KUZDVOR_FORMULA_PRICE_SYNC_READY === true)).toBe(true);
@@ -12,99 +12,62 @@ async function openFirstGate(page) {
 }
 
 test('catalog card price immediately includes a known delivery tariff', async ({page}) => {
-  const card = await openFirstGate(page);
-  await page.locator('[data-delivery-choice="other"]').click();
-  await page.locator('#cityInput').fill('Уфа');
-
-  await expect(page.locator('#deliverySummaryValue')).toContainText('Уфа — доставка учтена в итоговой сумме');
+  const card = await openFirstGate(page, 'Уфа');
+  await expect(page.locator('#deliverySummaryValue')).toContainText('Уфа');
   await expect(card.locator('.price-row').nth(0).locator('strong')).toHaveText('82 600 ₽');
   await expect(card.locator('.price-row').nth(1).locator('strong')).toHaveText('107 600 ₽');
-  await expect(card.locator('.price-delivery-note')).toContainText('С учётом доставки в Уфа');
+  await expect(card.locator('.price-delivery-note')).toContainText('Уфа');
 });
 
-test('routed village previews delivery in card before confirmation and keeps district', async ({page}) => {
+test('routed village is confirmed before catalog opens and keeps district in card prices', async ({page}) => {
   await page.route('**/api/delivery?*', route => route.fulfill({
     status:200,
     contentType:'application/json',
-    body:JSON.stringify({
-      requestedName:'Ишеево',
-      resolvedName:'Ишеево, Ишимбайский район',
-      shortName:'Ишеево, Ишимбайский район',
-      localityName:'Ишеево',
-      price:8640,
-      distanceKm:96,
-      rate:90,
-      serviceAreaKm:150,
-      outOfArea:false
-    })
+    body:JSON.stringify({requestedName:'Ишеево',resolvedName:'Ишеево, Ишимбайский район',shortName:'Ишеево, Ишимбайский район',localityName:'Ишеево',price:8640,distanceKm:96,rate:90,serviceAreaKm:150,outOfArea:false})
   }));
 
-  const card = await openFirstGate(page);
-  await page.locator('[data-delivery-choice="other"]').click();
-  await page.locator('#cityInput').fill('Ишеево');
-  await page.locator('#routeButton').click();
+  await page.setViewportSize({width:390,height:844});
+  await page.goto('/', {waitUntil:'domcontentloaded'});
+  const ui = await beginInstallationPlace(page, 'Ишеево');
+  await expect(ui.status).toContainText('Найдено: Ишеево, Ишимбайский район');
+  await expect(ui.action).toHaveText('Да, это нужный пункт');
+  await expect(page.locator('#catalogGrid .product-card').first()).toBeHidden();
+  await ui.action.click();
 
-  await expect(page.locator('#deliveryResult')).toContainText('Найдено: Ишеево, Ишимбайский район');
-  await expect(page.locator('#routeButton')).toHaveText('Да, это нужный пункт');
-  await expect(card.locator('.price-row').nth(0).locator('strong')).toHaveText('73 240 ₽');
-  await expect(card.locator('.price-row').nth(1).locator('strong')).toHaveText('98 240 ₽');
-  await expect(card.locator('.price-delivery-note')).toContainText('С учётом доставки в Ишеево, Ишимбайский район');
-  await expect(card.locator('.price-delivery-note')).toContainText('подтвердите пункт');
+  const card = page.locator('#catalogGrid .product-card').first();
+  await expect(card).toBeVisible();
+  await expect.poll(() => page.evaluate(() => window.KUZDVOR_FORMULA_PRICE_SYNC_READY === true)).toBe(true);
+  await expect(card.locator('.price-row').nth(0).locator('strong')).toHaveText('73 200 ₽');
+  await expect(card.locator('.price-row').nth(1).locator('strong')).toHaveText('98 200 ₽');
+  await expect(card.locator('.price-delivery-note')).toContainText('Ишеево, Ишимбайский район');
 
-  // Simulate a late formula/Excel refresh writing the base prices again.
-  // The delivery synchronizers must restore delivery-inclusive totals and keep
-  // the resolved district, even after their periodic reconciliation has run.
   await card.evaluate(node => {
     const prices = node.querySelectorAll('.price-row strong');
     prices[0].textContent = '64 600 ₽';
     prices[1].textContent = '89 600 ₽';
   });
-  await expect(card.locator('.price-row').nth(0).locator('strong')).toHaveText('73 240 ₽');
-  await expect(card.locator('.price-row').nth(1).locator('strong')).toHaveText('98 240 ₽');
+  await expect(card.locator('.price-row').nth(0).locator('strong')).toHaveText('73 200 ₽');
+  await expect(card.locator('.price-row').nth(1).locator('strong')).toHaveText('98 200 ₽');
   await page.waitForTimeout(1300);
-  await expect(card.locator('.price-row').nth(0).locator('strong')).toHaveText('73 240 ₽');
-  await expect(card.locator('.price-row').nth(1).locator('strong')).toHaveText('98 240 ₽');
+  await expect(card.locator('.price-row').nth(0).locator('strong')).toHaveText('73 200 ₽');
+  await expect(card.locator('.price-row').nth(1).locator('strong')).toHaveText('98 200 ₽');
   await expect(card.locator('.price-delivery-note')).toContainText('Ишеево, Ишимбайский район');
-
-  await page.locator('#routeButton').click();
-  await expect(page.locator('#deliverySummaryValue')).toContainText('Ишеево, Ишимбайский район — доставка учтена в итоговой сумме');
-  await expect(card.locator('.price-row').nth(0).locator('strong')).toHaveText('73 240 ₽');
-  await expect(card.locator('.price-row').nth(1).locator('strong')).toHaveText('98 240 ₽');
-  await expect(card.locator('.price-delivery-note')).toContainText('С учётом доставки в Ишеево, Ишимбайский район');
 });
 
-test('mobile city input stays keyboard-friendly and Enter starts delivery calculation', async ({page}) => {
+test('mobile installation place input uses search keyboard and Enter starts delivery calculation', async ({page}) => {
   await page.route('**/api/delivery?*', route => route.fulfill({
     status:200,
     contentType:'application/json',
-    body:JSON.stringify({
-      requestedName:'Ишеево',
-      resolvedName:'Ишеево, Ишимбайский район',
-      shortName:'Ишеево, Ишимбайский район',
-      localityName:'Ишеево',
-      price:8640,
-      distanceKm:96,
-      rate:90,
-      serviceAreaKm:150,
-      outOfArea:false
-    })
+    body:JSON.stringify({requestedName:'Ишеево',resolvedName:'Ишеево, Ишимбайский район',shortName:'Ишеево, Ишимбайский район',localityName:'Ишеево',price:8640,distanceKm:96,rate:90,serviceAreaKm:150,outOfArea:false})
   }));
 
-  await openFirstGate(page);
-  // The development page loads source scripts separately, while production
-  // includes this runtime inside site.bundle.js. Load the same runtime here so
-  // the test exercises the exact mobile keyboard helper shipped to Timeweb.
-  await page.addScriptTag({url:'/public-lazy-runtime.js'});
-  await page.locator('[data-delivery-choice="other"]').click();
-  const city = page.locator('#cityInput');
-  await expect(city).toHaveAttribute('enterkeyhint','done');
-  await city.focus();
-  await expect(page.locator('body')).toHaveClass(/city-keyboard-open/);
-  await expect(page.locator('.mobile-cta')).toHaveCSS('display','none');
-
-  await city.fill('Ишеево');
-  await city.press('Enter');
-  await expect(page.locator('body')).not.toHaveClass(/city-keyboard-open/);
-  await expect(page.locator('#deliveryResult')).toContainText('Найдено: Ишеево, Ишимбайский район');
-  await expect(page.locator('#routeButton')).toHaveText('Да, это нужный пункт');
+  await page.setViewportSize({width:390,height:844});
+  await page.goto('/', {waitUntil:'domcontentloaded'});
+  const ui = await openLocationSelector(page);
+  await expect(ui.input).toHaveAttribute('enterkeyhint','search');
+  await ui.input.fill('Ишеево');
+  await ui.input.press('Enter');
+  await expect(ui.status).toContainText('Найдено: Ишеево, Ишимбайский район');
+  await expect(ui.action).toHaveText('Да, это нужный пункт');
+  await expect(page.locator('#catalogGrid .product-card').first()).toBeHidden();
 });

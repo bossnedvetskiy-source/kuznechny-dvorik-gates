@@ -6,7 +6,7 @@ await mkdir('dist/server', { recursive: true });
 await mkdir('dist/client', { recursive: true });
 await mkdir('dist/.openai', { recursive: true });
 
-const [htmlSource, homeHtmlSource, homeCss, productCategoriesSource, css, storefrontCss, gatePageCss, catalogImages, pricesSource, deliveryPricesSource, customerContextSource, deliverySharedSource, leadsSharedSource, lazyRuntimeSource, js, publicSiteJsSource, gatePageUiSource, colorPhotoSiteSource, gateFormulaPricesSiteSource, adminHtmlSource, adminCss, adminJsSource, adminColorsJsSource, adminPricesJsSource, adminSiteJsSource, adminLeadsJsSource, adminEnhancementsJsSource, adminExcelImportSource, workerSource, adminAuthSource, siteSettingsSource, excelPricingSource, catalogMediaSource, catalogColorsSource, gateQuoteSource, publicPricesRuntimeSource, leadAntispamSource, leadsSource, xlsxBrowserSource] = await Promise.all([
+const [htmlSource, homeHtmlSource, homeCss, productCategoriesSource, css, storefrontCss, gatePageCss, catalogImages, pricesSource, deliveryPricesSource, customerContextSource, deliverySharedSource, leadsSharedSource, favoritesSharedSource, lazyRuntimeSource, js, publicSiteJsSource, gatePageUiSource, colorPhotoSiteSource, gateFormulaPricesSiteSource, adminHtmlSource, adminCss, adminJsSource, adminColorsJsSource, adminPricesJsSource, adminSiteJsSource, adminLeadsJsSource, adminEnhancementsJsSource, adminExcelImportSource, workerSource, adminAuthSource, siteSettingsSource, excelPricingSource, catalogMediaSource, catalogColorsSource, gateQuoteSource, publicPricesRuntimeSource, leadAntispamSource, leadsSource, xlsxBrowserSource] = await Promise.all([
   readFile('index.html', 'utf8'),
   readFile('home.html', 'utf8'),
   readFile('home.css', 'utf8'),
@@ -20,6 +20,7 @@ const [htmlSource, homeHtmlSource, homeCss, productCategoriesSource, css, storef
   readFile('shared/customer-context.js', 'utf8'),
   readFile('shared/delivery.js', 'utf8'),
   readFile('shared/leads.js', 'utf8'),
+  readFile('shared/favorites.js', 'utf8'),
   readFile('public-lazy-runtime.js', 'utf8'),
   readFile('app.js', 'utf8'),
   readFile('public-site-settings.js', 'utf8'),
@@ -120,7 +121,8 @@ const publicSiteBundle = [
   lazyRuntimeSource,
   optimizedAppSource,
   publicSiteJsSource,
-  gatePageUiSource
+  gatePageUiSource,
+  favoritesSharedSource
 ].join('\n');
 const calculatorBundle = [
   ...gateCalcSources.slice(1),
@@ -136,6 +138,9 @@ if (!calculatorBundle.includes('GATE_CALC_MODELS_READY') || !calculatorBundle.in
 }
 if (!publicSiteBundle.includes('/calculator.bundle.js') || !publicSiteBundle.includes('/catalog-enhancements.bundle.js')) {
   throw new Error('Начальный bundle не содержит lazy-loader для тяжёлых модулей');
+}
+if (!publicSiteBundle.includes('KUZDVOR_FAVORITES')) {
+  throw new Error('Избранное ворот не попало в production bundle');
 }
 
 const googleFontsHref = 'https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Prata&display=swap';

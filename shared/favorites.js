@@ -126,7 +126,8 @@
 
   const syncButtons = () => {
     const count = favorites.size;
-    const catalogUnlocked = !catalog.classList.contains('location-locked');
+    const delivery = deliveryContext();
+    const catalogUnlocked = delivery.resolved || delivery.manual;
     toolbarButton.querySelector('.favorites-count').textContent = String(count);
     toolbarButton.querySelector('.favorites-heart').textContent = count ? '♥' : '♡';
     toolbarButton.classList.toggle('has-favorites', count > 0);
@@ -135,6 +136,9 @@
 
     grid.querySelectorAll('.favorite-toggle').forEach(button => {
       const active = favorites.has(button.dataset.favoriteId);
+      const state = active ? '1' : '0';
+      if (button.dataset.favoriteState === state) return;
+      button.dataset.favoriteState = state;
       button.setAttribute('aria-pressed', String(active));
       button.setAttribute('aria-label', active ? 'Убрать модель из избранного' : 'Сохранить модель в избранное');
       button.title = active ? 'Убрать из избранного' : 'Сохранить';
@@ -285,6 +289,9 @@
     });
   }).observe(grid,{childList:true,subtree:true});
   new MutationObserver(syncButtons).observe(catalog,{attributes:true,attributeFilter:['class']});
+
+  document.addEventListener('gate:calculated', syncButtons);
+  window.addEventListener('pageshow', syncButtons);
 
   window.KUZDVOR_FAVORITES = {
     open:openModal,

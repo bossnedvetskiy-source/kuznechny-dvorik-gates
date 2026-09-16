@@ -160,15 +160,3 @@
 
   window.KUZDVOR_LEADS = {validate, submit, phoneDigits, tracking, attributionSource};
 })();
-
-(() => {
-  const loadFavorites = () => {
-    if (window.KUZDVOR_FAVORITES || document.querySelector('script[data-kuzdvor-favorites]')) return;
-    const script = document.createElement('script');
-    script.src = 'shared/favorites.js';
-    script.dataset.kuzdvorFavorites = 'true';
-    document.body.append(script);
-  };
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', loadFavorites, {once:true});
-  else loadFavorites();
-})();

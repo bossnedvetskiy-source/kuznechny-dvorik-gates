@@ -1,12 +1,11 @@
 import {test, expect} from '@playwright/test';
+import {openMobileAt} from './location-helpers.js';
 
 test('mobile Back closes gate photo viewer without leaving the site', async ({page}) => {
-  await page.setViewportSize({width:390,height:844});
-  await page.goto('/', {waitUntil:'domcontentloaded'});
-  await expect(page.locator('#catalogGrid .product-card').first()).toBeVisible();
-
+  await openMobileAt(page, 'Мелеуз');
+  const card = page.locator('#catalogGrid .product-card').first();
   const startUrl = page.url();
-  await page.locator('#catalogGrid .product-card').first().locator('.product-image-open').click();
+  await card.locator('.product-image-open').click();
   await expect(page.locator('#lightbox')).toBeVisible();
   await expect.poll(() => page.evaluate(() => Boolean(history.state?.__kuzdvorLightbox))).toBe(true);
 
@@ -14,16 +13,14 @@ test('mobile Back closes gate photo viewer without leaving the site', async ({pa
 
   await expect(page.locator('#lightbox')).toBeHidden();
   expect(page.url()).toBe(startUrl);
-  await expect(page.locator('#catalogGrid .product-card').first()).toBeVisible();
+  await expect(card).toBeVisible();
 });
 
 test('closing the photo viewer manually removes its temporary history entry', async ({page}) => {
-  await page.setViewportSize({width:390,height:844});
-  await page.goto('/', {waitUntil:'domcontentloaded'});
-  await expect(page.locator('#catalogGrid .product-card').first()).toBeVisible();
-
+  await openMobileAt(page, 'Мелеуз');
+  const card = page.locator('#catalogGrid .product-card').first();
   const startUrl = page.url();
-  await page.locator('#catalogGrid .product-card').first().locator('.product-image-open').click();
+  await card.locator('.product-image-open').click();
   await expect(page.locator('#lightbox')).toBeVisible();
   await expect.poll(() => page.evaluate(() => Boolean(history.state?.__kuzdvorLightbox))).toBe(true);
 
@@ -38,19 +35,11 @@ test('mobile photo viewer is focused, full-width and supports swipe navigation',
   await page.route('**/api/catalog-images', route => route.fulfill({
     status:200,
     contentType:'application/json',
-    body:JSON.stringify({galleries:{
-      'Арт.6':{
-        photos:['/catalog/art-6-1.webp','/catalog/art-6-2.webp'],
-        mediaType:'photo',
-        colorPhotos:{}
-      }
-    }})
+    body:JSON.stringify({galleries:{'Арт.6':{photos:['/catalog/art-6-1.webp','/catalog/art-6-2.webp'],mediaType:'photo',colorPhotos:{}}}})
   }));
 
-  await page.setViewportSize({width:390,height:844});
-  await page.goto('/', {waitUntil:'domcontentloaded'});
+  await openMobileAt(page, 'Мелеуз');
   const card = page.locator('#catalogGrid .product-card').first();
-  await expect(card).toBeVisible();
   await expect(card.locator('[data-photo-count]')).toHaveText('1 из 2');
   await card.locator('.product-image-open').click();
 

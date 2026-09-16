@@ -1,10 +1,5 @@
 import {test, expect} from '@playwright/test';
-
-async function openMobile(page) {
-  await page.setViewportSize({width:390,height:844});
-  await page.goto('/', {waitUntil:'domcontentloaded'});
-  await expect(page.locator('#catalogGrid .product-card').first()).toBeVisible();
-}
+import {beginInstallationPlace, openLocationSelector, openMobileAt} from './location-helpers.js';
 
 async function chooseFirstGate(page) {
   await page.locator('.product-card').first().locator('.select-product').click();
@@ -22,16 +17,16 @@ async function revealGate(page, article) {
   return card;
 }
 
-test('mobile customer can select gates, choose Meleuz and submit a lead', async ({page}) => {
+test('mobile customer can select Meleuz, choose gates and submit a lead', async ({page}) => {
   let submitted = null;
   await page.route('**/api/leads', async route => {
     submitted = route.request().postDataJSON();
     await route.fulfill({status:201,contentType:'application/json',body:JSON.stringify({ok:true,id:101,quote:{verified:true,total:submitted.total}})});
   });
 
-  await openMobile(page);
+  await openMobileAt(page, 'Мелеуз');
   await chooseFirstGate(page);
-  await page.locator('[data-delivery-choice="meleuz"]').click();
+  await expect(page.locator('#deliverySummaryValue')).toContainText('Мелеуз');
   await expect(page.locator('#mobilePrimaryCta')).toContainText('Заказать бесплатный замер');
   await page.locator('#mobilePrimaryCta').click();
   await expect(page.locator('#leadRequest')).toBeVisible();
@@ -55,11 +50,7 @@ test('real color photo follows customer into calculator and lead', async ({page}
     status:200,
     contentType:'application/json',
     body:JSON.stringify({galleries:{
-      'Арт.6':{
-        photos:['/catalog/art-6-1.webp'],
-        mediaType:'photo',
-        colorPhotos:{graphite:'/catalog/art-28-1.webp'}
-      }
+      'Арт.6':{photos:['/catalog/art-6-1.webp'],mediaType:'photo',colorPhotos:{graphite:'/catalog/art-28-1.webp'}}
     }})
   }));
   await page.route('**/api/leads', async route => {
@@ -67,7 +58,7 @@ test('real color photo follows customer into calculator and lead', async ({page}
     await route.fulfill({status:201,contentType:'application/json',body:JSON.stringify({ok:true,id:202,quote:{verified:true,total:submitted.total}})});
   });
 
-  await openMobile(page);
+  await openMobileAt(page, 'Мелеуз');
   const card = await revealGate(page, 'Арт.6');
   const graphite = card.locator('[data-profile-color="graphite"]');
   const mint = card.locator('[data-profile-color="mint"]');
@@ -105,7 +96,6 @@ test('real color photo follows customer into calculator and lead', async ({page}
   await expect(page.locator('#selectedProductImage')).toHaveAttribute('src', /art-28-1\.webp/);
   await expect(page.locator('#selectedProductCaption')).toContainText('Графит');
 
-  await page.locator('[data-delivery-choice="meleuz"]').click();
   await page.locator('#mobilePrimaryCta').click();
   await page.locator('#phoneInput').fill('+7 937 111-22-33');
   await page.locator('#consentInput').check();
@@ -113,6 +103,7 @@ test('real color photo follows customer into calculator and lead', async ({page}
   await expect(page.locator('#successModal')).toBeVisible();
 
   expect(submitted).toBeTruthy();
+  expect(submitted.city).toBe('Мелеуз');
   expect(submitted.color).toBe('Графит · RAL 7024');
   expect(submitted.configuration.color).toBe('graphite');
   expect(submitted.configuration.colorLabel).toBe('Графит');
@@ -120,7 +111,7 @@ test('real color photo follows customer into calculator and lead', async ({page}
 });
 
 test('gate dimensions persist when comparing another design', async ({page}) => {
-  await openMobile(page);
+  await openMobileAt(page, 'Мелеуз');
   await chooseFirstGate(page);
   await page.locator('#sizeToggle').click();
   await page.locator('#widthInput').fill('3.8');
@@ -135,83 +126,72 @@ test('gate dimensions persist when comparing another design', async ({page}) => 
   await expect(page.locator('#widthInput')).toHaveValue('3.8');
 });
 
-test('explicit delivery tariff is honored without inferring distance from its price', async ({page}) => {
-  await openMobile(page);
+test('explicit delivery tariff is honored after installation place selection', async ({page}) => {
+  await openMobileAt(page, 'Уфа');
   await chooseFirstGate(page);
-  await page.locator('[data-delivery-choice="other"]').click();
-  await page.locator('#cityInput').fill('Уфа');
 
   await expect(page.locator('#deliverySummary')).toBeVisible();
-  await expect(page.locator('#deliverySummaryValue')).toContainText('Уфа — доставка учтена в итоговой сумме');
+  await expect(page.locator('#deliverySummaryValue')).toContainText('Уфа');
+  await expect(page.locator('.delivery-location-readonly-note')).toContainText('Доставка уже учтена');
   await expect(page.locator('#estimateTotalLabel')).toHaveText('Предварительно с доставкой');
   await expect(page.locator('#mobilePrimaryCta')).toContainText('Заказать бесплатный замер');
 });
 
-test('unknown destination outside standard area becomes an individual delivery quote', async ({page}) => {
+test('unknown destination outside standard area unlocks catalog with individual delivery quote', async ({page}) => {
   await page.route('**/api/delivery?*', route => route.fulfill({
     status:200,
     contentType:'application/json',
-    body:JSON.stringify({
-      requestedName:'Дальнее',resolvedName:'Дальнее, Республика Башкортостан',shortName:'Дальнее',
-      price:null,distanceKm:180,rate:90,serviceAreaKm:150,outOfArea:true
-    })
+    body:JSON.stringify({requestedName:'Дальнее',resolvedName:'Дальнее, Республика Башкортостан',shortName:'Дальнее',price:null,distanceKm:180,rate:90,serviceAreaKm:150,outOfArea:true})
   }));
 
-  await openMobile(page);
+  await openMobileAt(page, 'Дальнее');
   await chooseFirstGate(page);
-  await page.locator('[data-delivery-choice="other"]').click();
-  await page.locator('#cityInput').fill('Дальнее');
-  await page.locator('#routeButton').click();
-  await expect(page.locator('#deliverySummaryValue')).toContainText('индивидуально');
+  await expect(page.locator('#deliverySummaryValue')).toContainText('Дальнее');
+  await expect(page.locator('.delivery-location-readonly-note')).toContainText('индивидуально');
   await expect(page.locator('#estimateTotalLabel')).toHaveText('Ориентир без доставки');
-  await expect(page.locator('#mobilePriceTotal')).toContainText('доставка индивидуально');
-  await expect(page.locator('#mobilePrimaryCta')).toContainText('доставка индивидуально');
 });
 
-test('unknown destination can be routed and confirmed inside the standard area', async ({page}) => {
+test('unknown destination can be routed and confirmed in installation place modal', async ({page}) => {
   await page.route('**/api/delivery?*', route => route.fulfill({
     status:200,
     contentType:'application/json',
-    body:JSON.stringify({
-      requestedName:'Тестово',resolvedName:'Тестово, Республика Башкортостан',shortName:'Тестово',
-      price:9000,distanceKm:100,rate:90,serviceAreaKm:150,outOfArea:false
-    })
+    body:JSON.stringify({requestedName:'Тестово',resolvedName:'Тестово, Республика Башкортостан',shortName:'Тестово',price:9000,distanceKm:100,rate:90,serviceAreaKm:150,outOfArea:false})
   }));
 
-  await openMobile(page);
+  await page.setViewportSize({width:390,height:844});
+  await page.goto('/', {waitUntil:'domcontentloaded'});
+  const ui = await beginInstallationPlace(page, 'Тестово');
+  await expect(ui.status).toContainText('Найдено: Тестово');
+  await expect(ui.action).toHaveText('Да, это нужный пункт');
+  await ui.action.click();
+  await expect(page.locator('#catalogGrid .product-card').first()).toBeVisible();
   await chooseFirstGate(page);
-  await page.locator('[data-delivery-choice="other"]').click();
-  await page.locator('#cityInput').fill('Тестово');
-  await page.locator('#routeButton').click();
-  await expect(page.locator('#deliveryResult')).toContainText('Найдено: Тестово');
-  await expect(page.locator('#routeButton')).toHaveText('Да, это нужный пункт');
-  await page.locator('#routeButton').click();
-  await expect(page.locator('#deliverySummaryValue')).toContainText('доставка учтена в итоговой сумме');
+  await expect(page.locator('#deliverySummaryValue')).toContainText('Тестово');
+  await expect(page.locator('.delivery-location-readonly-note')).toContainText('Доставка уже учтена');
   await expect(page.locator('#estimateTotalLabel')).toHaveText('Предварительно с доставкой');
 });
 
-test('delivery service error is sanitized and still lets customer request a manual quote', async ({page}) => {
+test('delivery service error is sanitized in installation place selector and can be retried', async ({page}) => {
   let requests = 0;
   await page.route('**/api/delivery?*', async route => {
     requests += 1;
     await route.fulfill({status:502,contentType:'text/html',body:'<!DOCTYPE html><html><body>temporary gateway page</body></html>'});
   });
 
-  await openMobile(page);
-  await chooseFirstGate(page);
-  await page.locator('[data-delivery-choice="other"]').click();
-  await page.locator('#cityInput').fill('Тестовый посёлок');
-  await page.locator('#routeButton').click();
+  await page.setViewportSize({width:390,height:844});
+  await page.goto('/', {waitUntil:'domcontentloaded'});
+  const ui = await beginInstallationPlace(page, 'Тестовый посёлок');
   await expect.poll(() => requests).toBe(2);
-  await expect(page.locator('#deliveryResult')).toContainText('Не удалось автоматически рассчитать доставку');
-  await expect(page.locator('#deliveryResult')).not.toContainText('Unexpected token');
-  await expect(page.locator('#deliveryResult')).not.toContainText('DOCTYPE');
-  await expect(page.locator('#deliveryResult')).toContainText('стоимость уточним вручную');
-  await expect(page.locator('#mobilePriceTotal')).toContainText('доставка уточняется');
-  await expect(page.locator('#mobilePrimaryCta')).toContainText('доставка уточняется');
+  await expect(ui.status).toContainText('Не удалось автоматически рассчитать доставку');
+  await expect(ui.status).not.toContainText('Unexpected token');
+  await expect(ui.status).not.toContainText('DOCTYPE');
+  await expect(ui.status).toContainText('стоимость уточним вручную');
+  await expect(ui.action).toHaveText('Повторить расчёт');
+  await expect(page.locator('#catalog')).toHaveClass(/location-locked/);
+  await expect(page.locator('#catalogGrid .product-card').first()).toBeHidden();
 });
 
-test('delivery retry recovers when the first response is temporary HTML', async ({page}) => {
+test('delivery retry recovers in installation place selector when first response is temporary HTML', async ({page}) => {
   let requests = 0;
   await page.route('**/api/delivery?*', async route => {
     requests += 1;
@@ -219,19 +199,15 @@ test('delivery retry recovers when the first response is temporary HTML', async 
       await route.fulfill({status:503,contentType:'text/html',body:'<!DOCTYPE html><html><body>maintenance</body></html>'});
       return;
     }
-    await route.fulfill({
-      status:200,
-      contentType:'application/json',
-      body:JSON.stringify({shortName:'Тестово',resolvedName:'Тестово, Республика Башкортостан',price:9000,distanceKm:100,serviceAreaKm:150,outOfArea:false})
-    });
+    await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({shortName:'Тестово',resolvedName:'Тестово, Республика Башкортостан',price:9000,distanceKm:100,serviceAreaKm:150,outOfArea:false})});
   });
 
-  await openMobile(page);
-  await chooseFirstGate(page);
-  await page.locator('[data-delivery-choice="other"]').click();
-  await page.locator('#cityInput').fill('Тестово');
-  await page.locator('#routeButton').click();
+  await page.setViewportSize({width:390,height:844});
+  await page.goto('/', {waitUntil:'domcontentloaded'});
+  const ui = await beginInstallationPlace(page, 'Тестово');
   await expect.poll(() => requests).toBe(2);
-  await expect(page.locator('#deliveryResult')).toContainText('Найдено: Тестово');
-  await expect(page.locator('#routeButton')).toHaveText('Да, это нужный пункт');
+  await expect(ui.status).toContainText('Найдено: Тестово');
+  await expect(ui.action).toHaveText('Да, это нужный пункт');
+  await ui.action.click();
+  await expect(page.locator('#catalogGrid .product-card').first()).toBeVisible();
 });
