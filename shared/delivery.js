@@ -61,7 +61,7 @@
         const help = document.createElement('small');
         help.className = 'delivery-input-help';
         help.id = 'cityInputHelp';
-        help.textContent = 'Например: Салават, Ишимбай, Стерлитамак. Нет в списке — введите название полностью.';
+        help.textContent = 'Например: Салават, Ишимбай, Стерлитамак. Если пункта нет в подсказках, введите название полностью.';
         input.insertAdjacentElement('afterend', help);
         input.setAttribute('aria-describedby','cityInputHelp');
       }
@@ -93,44 +93,24 @@
       ? String(state.shortName || state.resolvedName || state.name || input?.value || '').trim()
       : String(input?.value || '').trim();
 
-    const applyDeliveryEstimatePresentation = (detail = {}) => {
+    const syncManualDeliveryMessaging = () => {
+      if (!['error','out-of-area'].includes(state.kind)) return;
       queueMicrotask(() => {
-        const kind = state.kind;
-        const city = selectedCityName();
-        const resolved = ['fixed','calculated'].includes(kind);
-        const isMeleuz = resolved && normalize(city) === normalize('Мелеуз');
-        const totalNodes = [document.getElementById('estimateTotal'), document.getElementById('mobilePriceTotal')].filter(Boolean);
-        const rawTotal = String(detail.totalText || totalNodes[0]?.textContent || '').trim();
-        const baseTotal = rawTotal.replace(/\s*(?:\+|·)\s*доставка.*$/i,'').trim();
-        let shownTotal = baseTotal;
-        if (kind === 'out-of-area') shownTotal = `${baseTotal} + доставка индивидуально`;
-        else if (kind === 'error') shownTotal = `${baseTotal} + доставка уточняется`;
-        else if (!resolved) shownTotal = `${baseTotal} + доставка`;
-        else if (isMeleuz) shownTotal = `${baseTotal} · доставка бесплатно`;
-        if (baseTotal) totalNodes.forEach(node => { node.textContent = shownTotal; });
-
-        const noteNodes = [document.getElementById('estimateNote'), document.getElementById('mobilePriceNote')].filter(Boolean);
-        if (['empty','pending','loading'].includes(kind)) {
-          noteNodes.forEach(node => { node.textContent = 'Укажите место установки — доставка автоматически добавится к итоговой стоимости.'; });
-        } else if (kind === 'confirm') {
-          noteNodes.forEach(node => { node.textContent = 'Подтвердите место установки — доставка автоматически добавится к итоговой стоимости.'; });
-        } else if (isMeleuz) {
-          noteNodes.forEach(node => { node.textContent = 'Доставка по Мелеузу бесплатна. Окончательная стоимость фиксируется в договоре после бесплатного замера.'; });
-        }
-
+        const suffix = state.kind === 'out-of-area' ? 'доставка индивидуально' : 'доставка уточняется';
+        [document.getElementById('estimateTotal'), document.getElementById('mobilePriceTotal')].forEach(node => {
+          const current = String(node?.textContent || '').trim();
+          if (node && current && !current.includes('доставка')) node.textContent = `${current} + ${suffix}`;
+        });
         const cta = document.getElementById('mobilePrimaryCta');
         const calculator = document.getElementById('calculator');
         const leadOpen = document.body.classList.contains('mobile-lead-open');
-        if (cta && calculator && !calculator.hidden && !leadOpen && ['error','out-of-area'].includes(kind)) {
-          cta.textContent = kind === 'out-of-area'
+        if (cta && calculator && !calculator.hidden && !leadOpen) {
+          cta.textContent = state.kind === 'out-of-area'
             ? 'Заказать бесплатный замер · доставка индивидуально'
             : 'Заказать бесплатный замер · доставка уточняется';
         }
       });
     };
-
-    const syncManualDeliveryMessaging = () => applyDeliveryEstimatePresentation();
-    document.addEventListener('gate:calculated', event => applyDeliveryEstimatePresentation(event.detail || {}));
 
     const syncUi = () => {
       const resolved = ['fixed','calculated'].includes(state.kind);
