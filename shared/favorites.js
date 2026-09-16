@@ -29,7 +29,10 @@
     });
   const byId = new Map(products.map(product => [product.id, product]));
 
-  let favorites = new Set((safeJson(localStorage.getItem(STORAGE_KEY)) || []).filter(id => byId.has(id)));
+  const storedFavorites = (() => {
+    try { return safeJson(localStorage.getItem(STORAGE_KEY)) || []; } catch { return []; }
+  })();
+  let favorites = new Set(storedFavorites.filter(id => byId.has(id)));
   let modalOpen = false;
   let mutationFrame = 0;
   let toastTimer = 0;
@@ -123,10 +126,11 @@
 
   const syncButtons = () => {
     const count = favorites.size;
+    const catalogUnlocked = !catalog.classList.contains('location-locked');
     toolbarButton.querySelector('.favorites-count').textContent = String(count);
     toolbarButton.querySelector('.favorites-heart').textContent = count ? '♥' : '♡';
     toolbarButton.classList.toggle('has-favorites', count > 0);
-    floatingButton.hidden = count === 0 || modalOpen;
+    floatingButton.hidden = count === 0 || modalOpen || !catalogUnlocked;
     floatingButton.querySelector('b').textContent = String(count);
 
     grid.querySelectorAll('.favorite-toggle').forEach(button => {
@@ -280,6 +284,7 @@
       installFavoriteButtons(grid);
     });
   }).observe(grid,{childList:true,subtree:true});
+  new MutationObserver(syncButtons).observe(catalog,{attributes:true,attributeFilter:['class']});
 
   window.KUZDVOR_FAVORITES = {
     open:openModal,
