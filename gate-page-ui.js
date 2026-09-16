@@ -31,6 +31,8 @@
     .mobile-price-breakdown>summary{cursor:default!important}
     .mobile-payment-note{margin:10px 0 0;padding:10px 11px;border:1px solid rgba(230,189,105,.22);border-radius:10px;background:rgba(200,152,60,.07);color:rgba(255,255,255,.68);font-size:10px;line-height:1.5}
     .mobile-payment-note strong{display:block;margin-bottom:2px;color:#fff;font-size:11px}
+    .choice.is-selected{border-color:rgba(230,189,105,.5)!important;background:rgba(200,152,60,.09)!important;box-shadow:inset 0 0 0 1px rgba(230,189,105,.08)}
+    .choice.is-selected input{accent-color:#d2a143}
     .profile-color-picker{padding:10px 12px 9px;border-top:1px solid rgba(17,18,20,.08);background:#fff;color:#171717}
     .profile-color-picker-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:8px}
     .profile-color-picker-head strong{font-size:11px;line-height:1.2;font-weight:900}
@@ -43,7 +45,7 @@
     .profile-color-option.is-more .profile-color-dot{background:conic-gradient(#d92d1f,#f39a22,#f0d329,#2fa64a,#1794b8,#2866c2,#8c3bc2,#d92d1f)}
     .profile-color-option.is-more .profile-color-dot::after{content:"+";position:absolute;inset:5px;display:grid;place-items:center;border-radius:50%;background:rgba(0,0,0,.72);color:#fff;font-size:17px;font-weight:900}
     .profile-color-note{margin:7px 0 0;color:#8a8379;font-size:8.5px;line-height:1.35}
-    @media(max-width:620px){.color-profile-badge{left:9px;top:9px;width:166px;min-height:48px;padding:5px 8px 5px 6px;gap:6px}.color-fan{flex-basis:38px;width:38px;height:34px}.color-fan i{left:15px;width:8px;height:29px}.color-copy strong{font-size:12px}.color-copy span{font-size:11px}.profile-color-picker{padding:9px 10px 8px}.profile-color-picker-head{margin-bottom:7px}.profile-color-picker-head strong{font-size:10px}.profile-color-status{font-size:8.5px}.profile-color-swatches{gap:3px}.profile-color-dot{width:29px;height:29px}.profile-color-option{font-size:7.5px}.profile-color-note{font-size:8px}}
+    @media(max-width:620px){.color-profile-badge{left:9px;top:9px;width:166px;min-height:48px;padding:5px 8px 5px 6px;gap:6px}.color-fan{flex-basis:38px;width:38px;height:34px}.color-fan i{left:15px;width:8px;height:29px}.color-copy strong{font-size:12px}.color-copy span{font-size:11px}.profile-color-picker{padding:9px 10px 8px}.profile-color-picker-head{margin-bottom:7px}.profile-color-picker-head strong{font-size:10px}.profile-color-status{font-size:8.5px}.profile-color-swatches{gap:3px}.profile-color-dot{width:29px;height:29px}.profile-color-option{font-size:7.5px}.profile-color-note{font-size:8px}.dimension-help,.color-note,.delivery-help summary{color:rgba(255,255,255,.68)!important}}
     @media(max-width:390px){.color-profile-badge{width:150px;min-height:44px}.color-fan{flex-basis:33px;width:33px;height:31px}.color-fan i{left:13px;width:7px;height:26px}.color-copy strong{font-size:11px}.color-copy span{font-size:10px}.profile-color-dot{width:27px;height:27px}.profile-color-option{font-size:7px}}
   `;
   document.head.append(colorBadgeStyle);
@@ -115,6 +117,8 @@
   const leadClose = document.getElementById('leadSheetClose');
   const sendButton = document.getElementById('sendButton');
   const mobilePriceTotal = document.getElementById('mobilePriceTotal');
+  const mobilePriceNote = document.getElementById('mobilePriceNote');
+  const estimateNote = document.getElementById('estimateNote');
   let leadOpen = false;
   let deliveryCanProceed = false;
   let deliveryKind = 'empty';
@@ -129,12 +133,38 @@
   const heightInput = document.getElementById('heightInput');
   const wicketHeightInput = document.getElementById('wicketHeightInput');
   const sizeNotice = document.getElementById('sizeNotice');
+  const postsCheck = document.getElementById('postsCheck');
+  const postsChoice = postsCheck?.closest('.choice');
+
+  const syncPostsChoice = () => {
+    postsChoice?.classList.toggle('is-selected', Boolean(postsCheck?.checked));
+  };
+  postsCheck?.addEventListener('change', syncPostsChoice);
 
   function updateSizeSummary() {
     if (!sizeSummaryValue) return;
     const format = value => String(value || '').replace('.', ',');
     sizeSummaryLabel.textContent = sizeNotice?.hidden === false ? 'Ваш размер' : 'Стандартный размер';
     sizeSummaryValue.textContent = `Ворота ${format(widthInput?.value)} × ${format(heightInput?.value)} м · калитка ${format(wicketWidthInput?.value)} × ${format(wicketHeightInput?.value || heightInput?.value)} м`;
+  }
+
+  function syncResolvedDeliveryNote(detail = {}) {
+    if (detail.deliveryPending !== false || detail.dimensionsValid === false) return;
+    const state = window.GATE_PAGE_API?.deliveryState?.() || {};
+    const kind = String(state.kind || '');
+    if (!['fixed','calculated'].includes(kind)) return;
+    const city = String(state.shortName || state.resolvedName || state.name || '').trim();
+    const normalized = city.toLocaleLowerCase('ru-RU').replace(/ё/g,'е');
+    const deliveryText = normalized === 'мелеуз'
+      ? 'Доставка по Мелеузу — бесплатно.'
+      : city
+        ? `Доставка до ${city} учтена в стоимости.`
+        : 'Доставка учтена в стоимости.';
+    const finalText = detail.nonStandard
+      ? `${deliveryText} Итоговую цену по вашим размерам зафиксируем после бесплатного замера.`
+      : `${deliveryText} Окончательная стоимость фиксируется в договоре после бесплатного замера.`;
+    if (estimateNote) estimateNote.textContent = finalText;
+    if (mobilePriceNote) mobilePriceNote.textContent = finalText;
   }
 
   sizeToggle?.addEventListener('click', () => {
@@ -171,7 +201,7 @@
     else if (leadOpen) cta.textContent = `Отправить заявку${price ? ` · ${price}` : ''}`;
     else if (!dimensionsValid) cta.textContent = `Проверьте размеры${price ? ` · ${price}` : ''}`;
     else if (!deliveryCanProceed) cta.textContent = `Указать место установки${price ? ` · ${price}` : ''}`;
-    else cta.textContent = `Заказать бесплатный замер${price ? ` · ${price}` : ''}`;
+    else cta.textContent = `Заказать бесплатный замер${price ? ` · расчёт ${price}` : ''}`;
   }
 
   function openLead() {
@@ -317,11 +347,14 @@
     deliveryCanProceed = event.detail?.deliveryPending === false || ['out-of-area','error'].includes(deliveryKind);
     dimensionsValid = event.detail?.dimensionsValid !== false;
     updateSizeSummary();
+    syncPostsChoice();
+    syncResolvedDeliveryNote(event.detail || {});
     syncMobileCta();
   });
   if (calculator) new MutationObserver(() => { if (calculator.hidden) closeLead(); syncMobileCta(); }).observe(calculator,{attributes:true,attributeFilter:['hidden']});
 
   updateSizeSummary();
+  syncPostsChoice();
   syncMobileCta();
   queueMicrotask(syncCatalogEnhancements);
 })();
