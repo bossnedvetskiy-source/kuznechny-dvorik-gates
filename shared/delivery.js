@@ -53,6 +53,33 @@
     if (!byKey.has(normalize('Мелеуз'))) byKey.set(normalize('Мелеуз'), {name:'Мелеуз', price:0});
     if (datalist) datalist.innerHTML = destinations.map(item => `<option value="${escapeHTML(item.name)}"></option>`).join('');
 
+    if (input) {
+      input.placeholder = 'Начните вводить населённый пункт';
+      input.setAttribute('enterkeyhint','search');
+      const label = input.closest('.city-label');
+      if (label && !label.querySelector('.delivery-input-help')) {
+        const help = document.createElement('small');
+        help.className = 'delivery-input-help';
+        help.id = 'cityInputHelp';
+        help.textContent = 'Например: Салават, Ишимбай, Стерлитамак. Если пункта нет в подсказках, введите название полностью.';
+        input.insertAdjacentElement('afterend', help);
+        input.setAttribute('aria-describedby','cityInputHelp');
+      }
+      if (!document.getElementById('deliveryUxStyles')) {
+        const style = document.createElement('style');
+        style.id = 'deliveryUxStyles';
+        style.textContent = `
+          #cityInput::-webkit-calendar-picker-indicator{display:none!important;opacity:0!important;pointer-events:none!important;width:0!important;height:0!important}
+          #cityInput::-webkit-list-button{display:none!important;opacity:0!important;pointer-events:none!important;width:0!important;height:0!important}
+          .delivery-input-help{display:block;color:rgba(255,255,255,.46);font-size:10px;line-height:1.45;margin-top:-1px}
+          @media(max-width:620px){.delivery-input-help{font-size:11px;line-height:1.45}}
+        `;
+        document.head.append(style);
+      }
+    }
+    const meleuzButton = chooser?.querySelector('[data-delivery-choice="meleuz"]');
+    if (meleuzButton) meleuzButton.textContent = 'Мелеуз — бесплатно';
+
     let state = {kind:'empty', name:'', resolvedName:'', shortName:'', price:null};
     let editingOther = false;
 
@@ -99,7 +126,7 @@
             : `${city} — доставка учтена в итоговой сумме`;
       }
       input?.closest('.city-label')?.classList.toggle('is-visible', editingOther && !selected);
-      if (result) result.hidden = selected;
+      if (result) result.hidden = selected || state.kind === 'empty';
       if (routeButton) routeButton.hidden = selected || state.kind === 'empty';
     };
 
@@ -169,11 +196,11 @@
           routeButton.disabled = false;
           routeButton.textContent = 'Рассчитать доставку';
         }
-        setResult('Для этого населённого пункта нет готовой стоимости доставки. Рассчитайте её по автомобильному маршруту.', 'pending');
+        setResult('Не нашли точное совпадение? Введите название полностью и нажмите «Рассчитать доставку».', 'pending');
       } else {
         state = {kind:'empty', name:entered, resolvedName:'', shortName:'', price:null};
         if (routeButton) routeButton.hidden = true;
-        setResult('Введите населённый пункт.', 'pending');
+        setResult('', 'pending');
       }
       emit();
     };
@@ -236,7 +263,7 @@
       editingOther = true;
       state = {kind:'empty', name:'', resolvedName:'', shortName:'', price:null};
       if (input) input.value = '';
-      setResult('Введите населённый пункт.', 'pending');
+      setResult('', 'pending');
       emit();
       setTimeout(() => input?.focus(), 40);
     };
@@ -245,7 +272,7 @@
       editingOther = false;
       state = {kind:'empty', name:'', resolvedName:'', shortName:'', price:null};
       if (input) input.value = '';
-      setResult('Выберите место установки.', 'pending');
+      setResult('', 'pending');
       emit();
     };
 
