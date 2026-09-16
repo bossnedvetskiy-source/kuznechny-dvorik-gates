@@ -2,7 +2,8 @@
   if (window.KUZDVOR_FORMULA_PRICE_SYNC_READY) return;
   window.KUZDVOR_FORMULA_PRICE_SYNC_READY = true;
 
-  const money = value => new Intl.NumberFormat('ru-RU').format(Math.round(Number(value) || 0)) + ' ₽';
+  const roundMoney100 = value => Math.round((Number(value) || 0) / 100) * 100;
+  const money = value => new Intl.NumberFormat('ru-RU').format(roundMoney100(value)) + ' ₽';
   const idForArticle = art => `catalog-${String(art||'').replace(/^Арт\.\s*/,'').toLowerCase().replace('с','s')}`;
   const standardInput = art => ({article:art,gateWidth:3.4,gateHeight:1.8,wicketWidth:1,wicketHeight:1.8});
   const normalizeCity = value => String(value || '').trim().toLocaleLowerCase('ru-RU').replace(/ё/g,'е');
