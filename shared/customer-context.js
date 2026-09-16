@@ -373,6 +373,12 @@
         modalInput.focus();
         return;
       }
+      const current = getState();
+      if (String(current.kind || '') === 'confirm' && !sourceRoute.hidden && !sourceRoute.disabled) {
+        sourceRoute.click();
+        window.setTimeout(syncModal,0);
+        return;
+      }
       sourceCity.value = value;
       sourceCity.dispatchEvent(new Event('input',{bubbles:true}));
       window.setTimeout(() => {
