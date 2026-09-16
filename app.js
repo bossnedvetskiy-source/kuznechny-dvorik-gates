@@ -651,7 +651,7 @@ document.addEventListener('keydown',event=>{
 });
 document.querySelectorAll('[data-proof-image]').forEach(button=>button.addEventListener('click',()=>openGallery([button.dataset.proofImage],'Выполненная работа','Мелеуз и ближайшие районы','Выполненная работа Кузнечного Дворика')));
 
-window.GATE_PAGE_API={selectedProduct,productById,closeCalculator,openCalculatorForProduct,showCardImage,deliveryState:()=>deliveryController?.getState()||{kind:'empty'},dimensionState};
+window.GATE_PAGE_API={selectedProduct,productById,closeCalculator,openCalculatorForProduct,showCardImage,deliveryState:()=>deliveryController?.getState()||{kind:'empty'},resolveDelivery:()=>deliveryController?.calculateRoute?.(),dimensionState};
 renderProducts();
 loadPublishedGalleries();
 chooseProduct(selectedProductId);
