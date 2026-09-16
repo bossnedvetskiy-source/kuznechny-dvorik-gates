@@ -2,7 +2,8 @@
   if (window.KUZDVOR_CATALOG_DELIVERY_SYNC_READY) return;
   window.KUZDVOR_CATALOG_DELIVERY_SYNC_READY = true;
 
-  const money = value => new Intl.NumberFormat('ru-RU').format(Math.round(Number(value) || 0)) + ' ₽';
+  const roundMoney100 = value => Math.round((Number(value) || 0) / 100) * 100;
+  const money = value => new Intl.NumberFormat('ru-RU').format(roundMoney100(value)) + ' ₽';
   const normalize = value => String(value || '').trim().toLocaleLowerCase('ru-RU').replace(/ё/g,'е');
 
   function context() {
