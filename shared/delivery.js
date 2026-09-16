@@ -332,7 +332,7 @@
     };
 
     restore();
-    return {getState:()=>({...state}), selectedCityName, line, updateFromInput, restore, chooseMeleuz, chooseOther};
+    return {getState:()=>({...state}), selectedCityName, line, updateFromInput, calculateRoute, restore, chooseMeleuz, chooseOther};
   }
 
   window.KUZDVOR_DELIVERY = {createController, normalize};
