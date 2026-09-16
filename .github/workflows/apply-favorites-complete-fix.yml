@@ -153,16 +153,14 @@ jobs:
           grep -Fq 'KUZDVOR_FAVORITES' dist/client/site.bundle.js
           test -s dist/client/site.bundle.js
 
-      - name: Remove temporary applicator
+      - name: Commit and push tested code only
         run: |
-          rm -f scripts/apply-favorites-complete-fix-ci.py
-          rm -f .github/workflows/apply-favorites-complete-fix.yml
-
-      - name: Commit and push green fix
-        run: |
+          set -euo pipefail
+          git checkout -- .github/workflows/deploy-timeweb-main.yml
+          rm -rf test-results
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -A
+          git add scripts/build.mjs shared/leads.js shared/favorites.js scripts/e2e-server.mjs tests/location-helpers.js tests/gate-e2e.spec.js tests/delivery-card-prices.spec.js tests/lightbox-history.spec.js tests/favorites.spec.js
           git diff --cached --check
           git commit -m 'Bundle favorites and update location E2E'
           git push origin HEAD:main
