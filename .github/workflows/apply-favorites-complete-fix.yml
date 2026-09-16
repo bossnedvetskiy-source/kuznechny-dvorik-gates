@@ -45,51 +45,30 @@ jobs:
 
           server = Path('scripts/e2e-server.mjs')
           text = server.read_text(encoding='utf-8')
-          old = '<script src="gate-page-ui.js"></script>\\n  <script src="color-photo-site.js"></script>'
-          new = '<script src="gate-page-ui.js"></script>\\n  <script src="shared/favorites.js"></script>\\n  <script src="color-photo-site.js"></script>'
-          if new not in text:
-              if old not in text:
+          marker = '<script src="shared/favorites.js"></script>'
+          if marker not in text:
+              needle = '<script src="gate-page-ui.js"></script>\\n  <script src="color-photo-site.js"></script>'
+              replacement = '<script src="gate-page-ui.js"></script>\\n  <script src="shared/favorites.js"></script>\\n  <script src="color-photo-site.js"></script>'
+              if needle not in text:
                   raise SystemExit('Could not add favorites to E2E source environment')
-              text = text.replace(old, new, 1)
+              text = text.replace(needle, replacement, 1)
               server.write_text(text, encoding='utf-8')
 
           favorites = Path('shared/favorites.js')
           text = favorites.read_text(encoding='utf-8')
-          old = """    grid.querySelectorAll('.favorite-toggle').forEach(button => {
-              const active = favorites.has(button.dataset.favoriteId);
-              button.setAttribute('aria-pressed', String(active));
-              button.setAttribute('aria-label', active ? 'Убрать модель из избранного' : 'Сохранить модель в избранное');
-              button.title = active ? 'Убрать из избранного' : 'Сохранить';
-              button.innerHTML = `<span class=\"heart\">${active ? '♥' : '♡'}</span><span>${active ? 'Сохранено' : 'Сохранить'}</span>`;
-            });
-          """
-          new = """    grid.querySelectorAll('.favorite-toggle').forEach(button => {
-              const active = favorites.has(button.dataset.favoriteId);
-              const state = active ? '1' : '0';
-              if (button.dataset.favoriteState === state) return;
-              button.dataset.favoriteState = state;
-              button.setAttribute('aria-pressed', String(active));
-              button.setAttribute('aria-label', active ? 'Убрать модель из избранного' : 'Сохранить модель в избранное');
-              button.title = active ? 'Убрать из избранного' : 'Сохранить';
-              button.innerHTML = `<span class=\"heart\">${active ? '♥' : '♡'}</span><span>${active ? 'Сохранено' : 'Сохранить'}</span>`;
-            });
-          """
-          if old not in text:
-              raise SystemExit('Favorites sync fragment not found')
-          favorites.write_text(text.replace(old, new, 1), encoding='utf-8')
+          guarded = "      const state = active ? '1' : '0';\n      if (button.dataset.favoriteState === state) return;\n      button.dataset.favoriteState = state;"
+          if guarded not in text:
+              needle = "      const active = favorites.has(button.dataset.favoriteId);\n      button.setAttribute('aria-pressed', String(active));"
+              replacement = "      const active = favorites.has(button.dataset.favoriteId);\n      const state = active ? '1' : '0';\n      if (button.dataset.favoriteState === state) return;\n      button.dataset.favoriteState = state;\n      button.setAttribute('aria-pressed', String(active));"
+              if needle not in text:
+                  raise SystemExit('Favorites sync marker not found')
+              text = text.replace(needle, replacement, 1)
+              favorites.write_text(text, encoding='utf-8')
 
           helper = Path('tests/location-helpers.js')
-          text = helper.read_text(encoding='utf-8')
-          old = """export async function openLocationSelector(page) {
-            const modal = page.locator('#catalogLocationGateModal');
-            if (!await modal.isVisible().catch(() => false)) {
-              const lockButton = page.locator('.catalog-location-lock button');
-              if (await lockButton.isVisible().catch(() => false)) await lockButton.click();
-              else await page.locator('a[href=\"#catalog\"]').first().click();
-            }
-            await expect(modal).toBeVisible();
-          """
-          new = """export async function openLocationSelector(page) {
+          helper.write_text("""import {expect} from '@playwright/test';
+
+          export async function openLocationSelector(page) {
             const modal = page.locator('#catalogLocationGateModal');
             const autoOpened = await modal.waitFor({state:'visible',timeout:2500}).then(() => true).catch(() => false);
             if (!autoOpened) {
@@ -103,10 +82,45 @@ jobs:
               }
             }
             await expect(modal).toBeVisible({timeout:5000});
-          """
-          if old not in text:
-              raise SystemExit('Location helper fragment not found')
-          helper.write_text(text.replace(old, new, 1), encoding='utf-8')
+            return {
+              modal,
+              input:page.locator('#installationLocationInput'),
+              action:page.locator('#installationLocationAction'),
+              status:page.locator('#installationLocationStatus')
+            };
+          }
+
+          export async function beginInstallationPlace(page, place) {
+            const firstCard = page.locator('#catalogGrid .product-card').first();
+            if (await firstCard.isVisible().catch(() => false)) return {selected:true, firstCard};
+            const ui = await openLocationSelector(page);
+            await ui.input.fill(place);
+            if (await firstCard.isVisible().catch(() => false)) return {...ui, selected:true, firstCard};
+            await expect(ui.action).toBeEnabled();
+            await ui.action.click();
+            return {...ui, selected:false, firstCard};
+          }
+
+          export async function selectInstallationPlace(page, place='Мелеуз') {
+            const firstCard = page.locator('#catalogGrid .product-card').first();
+            if (await firstCard.isVisible().catch(() => false)) return firstCard;
+            const ui = await beginInstallationPlace(page, place);
+            if (await firstCard.isVisible().catch(() => false)) return firstCard;
+            if (await ui.modal?.isVisible().catch(() => false)) {
+              await expect(ui.action).toBeEnabled({timeout:10000});
+              const text = String(await ui.action.textContent() || '');
+              if (/Да, это нужный пункт/.test(text)) await ui.action.click();
+            }
+            await expect(firstCard).toBeVisible({timeout:10000});
+            return firstCard;
+          }
+
+          export async function openMobileAt(page, place='Мелеуз') {
+            await page.setViewportSize({width:390,height:844});
+            await page.goto('/', {waitUntil:'domcontentloaded'});
+            return selectInstallationPlace(page, place);
+          }
+          """.replace(/^          /gm, ''), encoding='utf-8')
 
           prices = Path('tests/delivery-card-prices.spec.js')
           text = prices.read_text(encoding='utf-8').replace('73 240 ₽','73 200 ₽').replace('98 240 ₽','98 200 ₽')
