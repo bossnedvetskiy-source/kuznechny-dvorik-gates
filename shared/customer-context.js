@@ -149,217 +149,279 @@
 })();
 
 (() => {
-  const mobile = window.matchMedia('(max-width: 620px)');
-  const calculator = document.getElementById('calculator');
-  const stickyCta = document.getElementById('mobilePrimaryCta');
-  const deliveryChooser = document.getElementById('deliveryChooser');
-  const deliveryBlock = deliveryChooser?.closest('.form-block');
-  if (!calculator || !stickyCta || !deliveryChooser || !deliveryBlock) return;
-
-  const style = document.createElement('style');
-  style.id = 'deliveryLocationNoticeStyles';
-  style.textContent = `
-    .delivery-location-notice{display:none}
-    @media(max-width:620px){
-      .delivery-location-notice{position:fixed;left:12px;right:12px;bottom:74px;z-index:460;display:grid;grid-template-columns:42px minmax(0,1fr);gap:10px;align-items:center;padding:12px 13px;border:1px solid rgba(230,189,105,.72);border-radius:15px;background:rgba(17,18,20,.97);color:#fff;box-shadow:0 14px 40px rgba(0,0,0,.42),0 0 0 2px rgba(210,161,67,.1);font-family:Manrope,Arial,sans-serif;opacity:0;visibility:hidden;transform:translateY(14px) scale(.98);pointer-events:none;transition:opacity .18s ease,transform .18s ease,visibility .18s ease;cursor:pointer}
-      .delivery-location-notice.is-visible{opacity:1;visibility:visible;transform:none;pointer-events:auto}
-      .delivery-location-notice-icon{display:grid;place-items:center;width:42px;height:42px;border-radius:12px;background:rgba(210,161,67,.16);color:#e6bd69;font-size:22px}
-      .delivery-location-notice-copy{display:grid;gap:3px;min-width:0}
-      .delivery-location-notice-copy strong{font-size:13px;line-height:1.25;font-weight:900;color:#fff}
-      .delivery-location-notice-copy span{font-size:11px;line-height:1.38;font-weight:650;color:rgba(255,255,255,.74)}
-      .delivery-location-required{scroll-margin-top:14px!important;border-radius:14px!important;animation:deliveryLocationPulse .72s ease 0s 3}
-      .delivery-location-required .delivery-choice-buttons button{border-color:rgba(230,189,105,.86)!important;box-shadow:0 0 0 2px rgba(210,161,67,.12),0 7px 18px rgba(0,0,0,.16)}
-      @keyframes deliveryLocationPulse{0%,100%{box-shadow:0 0 0 0 rgba(210,161,67,0)}50%{box-shadow:0 0 0 5px rgba(210,161,67,.18)}}
-    }
-  `;
-  document.head.append(style);
-
-  const notice = document.createElement('div');
-  notice.className = 'delivery-location-notice';
-  notice.setAttribute('role','status');
-  notice.setAttribute('aria-live','assertive');
-  notice.innerHTML = '<div class="delivery-location-notice-icon" aria-hidden="true">⌖</div><div class="delivery-location-notice-copy"><strong>Сначала укажите место установки</strong><span>Это нужно, чтобы учесть доставку и показать итоговую стоимость. Выберите «Мелеуз» или «Другой населённый пункт».</span></div>';
-  document.body.append(notice);
-
-  let hideTimer = 0;
-  const needsInstallationPlace = () => mobile.matches
-    && !calculator.hidden
-    && !document.body.classList.contains('mobile-lead-open')
-    && String(stickyCta.textContent || '').includes('Указать место установки');
-
-  const hideNotice = () => {
-    notice.classList.remove('is-visible');
-    deliveryBlock.classList.remove('delivery-location-required');
-  };
-
-  const showNotice = () => {
-    if (!needsInstallationPlace()) return;
-    clearTimeout(hideTimer);
-    notice.classList.add('is-visible');
-    deliveryBlock.classList.remove('delivery-location-required');
-    void deliveryBlock.offsetWidth;
-    deliveryBlock.classList.add('delivery-location-required');
-    hideTimer = window.setTimeout(hideNotice, 5200);
-  };
-
-  notice.addEventListener('click', () => {
-    deliveryBlock.scrollIntoView({behavior:'smooth',block:'center'});
-    window.setTimeout(() => deliveryChooser.querySelector('button')?.focus({preventScroll:true}), 320);
-  });
-
-  document.addEventListener('click', event => {
-    const target = event.target?.closest?.('#mobilePrimaryCta,.mobile-price-breakdown,.mobile-inline-order-cta');
-    if (!target || !needsInstallationPlace()) return;
-    showNotice();
-  }, true);
-
-  new MutationObserver(() => {
-    if (!needsInstallationPlace()) hideNotice();
-  }).observe(stickyCta,{childList:true,characterData:true,subtree:true});
-
-  mobile.addEventListener('change', () => {
-    if (!mobile.matches) hideNotice();
-  });
-})();
-
-(() => {
   const install = () => {
-    if (document.getElementById('catalogLocationPanel')) return true;
+    if (document.getElementById('catalogLocationGateModal')) return true;
     const catalog = document.getElementById('catalog');
     const catalogSummary = catalog?.querySelector('.catalog-summary');
     const sourceChooser = document.getElementById('deliveryChooser');
     const sourceCity = document.getElementById('cityInput');
     const sourceResult = document.getElementById('deliveryResult');
     const sourceRoute = document.getElementById('routeButton');
-    if (!catalog || !catalogSummary || !sourceChooser || !sourceCity || !sourceResult || !sourceRoute || !window.GATE_PAGE_API?.deliveryState) return false;
+    const sourceSummary = document.getElementById('deliverySummary');
+    const sourceSummaryValue = document.getElementById('deliverySummaryValue');
+    const sourceOther = sourceChooser?.querySelector('[data-delivery-choice="other"]');
+    const deliveryBlock = sourceChooser?.closest('.form-block');
+    const calculator = document.getElementById('calculator');
+    const stickyCta = document.getElementById('mobilePrimaryCta');
+    const catalogGrid = document.getElementById('catalogGrid');
+    if (!catalog || !catalogSummary || !sourceChooser || !sourceCity || !sourceResult || !sourceRoute || !sourceSummary || !sourceSummaryValue || !sourceOther || !deliveryBlock || !calculator || !stickyCta || !window.GATE_PAGE_API?.deliveryState) return false;
+
+    document.getElementById('catalogLocationPanel')?.remove();
+    document.getElementById('catalogLocationPanelStyles')?.remove();
 
     const style = document.createElement('style');
-    style.id = 'catalogLocationPanelStyles';
+    style.id = 'catalogLocationGateStyles';
     style.textContent = `
-      .catalog-location-panel{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px 22px;align-items:center;margin:0 0 18px;padding:15px 17px;border:1px solid rgba(210,161,67,.44);border-radius:16px;background:linear-gradient(135deg,#151619,#0e0f11);color:#fff;box-shadow:0 10px 28px rgba(17,18,20,.08)}
-      .catalog-location-copy{display:grid;gap:3px;min-width:0}.catalog-location-copy strong{font-size:15px;line-height:1.25;font-weight:900}.catalog-location-copy span{color:rgba(255,255,255,.67);font-size:11px;line-height:1.45}
-      .catalog-location-actions{display:flex;gap:8px;align-items:center;justify-content:flex-end}.catalog-location-actions button,.catalog-location-change,.catalog-location-route{min-height:40px;padding:9px 13px;border-radius:10px;border:1px solid rgba(230,189,105,.38);background:#1b1c1f;color:#fff;font:800 11px/1.2 Manrope,Arial,sans-serif;cursor:pointer;transition:border-color .15s ease,background .15s ease,transform .08s ease}.catalog-location-actions button:first-child{background:#d2a143;color:#17130d;border-color:#d2a143}.catalog-location-actions button:active,.catalog-location-change:active,.catalog-location-route:active{transform:translateY(1px)}
-      .catalog-location-summary{display:flex;align-items:center;justify-content:flex-end;gap:10px;min-width:0}.catalog-location-summary strong{color:#e6bd69;font-size:13px;line-height:1.25;font-weight:900;text-align:right}.catalog-location-change{min-height:36px;padding:8px 11px;background:transparent;color:#e6bd69}
-      .catalog-location-editor{grid-column:1/-1;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}.catalog-location-editor[hidden]{display:none!important}.catalog-location-editor input{width:100%;min-height:44px;box-sizing:border-box;padding:10px 12px;border:1px solid rgba(255,255,255,.2);border-radius:10px;background:#fff;color:#171717;font:700 14px/1.2 Manrope,Arial,sans-serif;outline:none}.catalog-location-editor input:focus{border-color:#d2a143;box-shadow:0 0 0 3px rgba(210,161,67,.15)}.catalog-location-route{min-width:170px;background:#d2a143;color:#17130d;border-color:#d2a143}.catalog-location-route:disabled{opacity:.65;cursor:wait}.catalog-location-status{grid-column:1/-1;margin:-5px 0 0;color:rgba(255,255,255,.7);font-size:10.5px;line-height:1.45}.catalog-location-status:empty{display:none}
-      @media(max-width:620px){.catalog-location-panel{grid-template-columns:1fr;gap:11px;margin:0 0 14px;padding:13px;border-radius:14px}.catalog-location-copy strong{font-size:14px}.catalog-location-copy span{font-size:10.5px}.catalog-location-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px}.catalog-location-actions button{min-height:46px;padding:9px 8px;font-size:10.5px}.catalog-location-summary{justify-content:space-between}.catalog-location-summary strong{text-align:left;font-size:12px}.catalog-location-editor{grid-template-columns:1fr}.catalog-location-editor input{min-height:46px;font-size:16px}.catalog-location-route{width:100%;min-width:0;min-height:44px}.catalog-location-status{font-size:10px}}
+      body.installation-location-modal-open{overflow:hidden!important}
+      .catalog.location-locked .catalog-summary,.catalog.location-locked .catalog-grid,.catalog.location-locked .catalog-trust-strip,.catalog.location-locked .catalog-more,.catalog.location-locked .empty-state{display:none!important}
+      .catalog-location-lock{display:grid;justify-items:center;gap:9px;margin:0;padding:24px 18px;border:1px solid rgba(210,161,67,.3);border-radius:18px;background:#fff;text-align:center;box-shadow:0 10px 28px rgba(17,18,20,.06)}
+      .catalog-location-lock[hidden],.catalog-location-bar[hidden]{display:none!important}
+      .catalog-location-lock strong{font-size:17px;line-height:1.25;color:#171717}.catalog-location-lock span{max-width:560px;color:#746e65;font-size:12px;line-height:1.5}.catalog-location-lock button{min-height:46px;margin-top:3px;padding:10px 20px;border:0;border-radius:12px;background:#d2a143;color:#17130d;font:900 12px/1.2 Manrope,Arial,sans-serif;cursor:pointer}
+      .catalog-location-bar{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:0 0 16px;padding:11px 13px;border:1px solid rgba(17,18,20,.11);border-radius:13px;background:#fff;color:#171717}
+      .catalog-location-bar-copy{display:grid;gap:2px;min-width:0}.catalog-location-bar-copy span{color:#8b8378;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.07em}.catalog-location-bar-copy strong{font-size:12px;line-height:1.3;font-weight:900}.catalog-location-bar button{flex:0 0 auto;min-height:36px;padding:8px 11px;border:1px solid rgba(210,161,67,.42);border-radius:9px;background:transparent;color:#8a6320;font:800 10px/1.2 Manrope,Arial,sans-serif;cursor:pointer}
+      .delivery-location-source-hidden .delivery-choice-buttons,.delivery-location-source-hidden .city-label,.delivery-location-source-hidden .delivery-result,.delivery-location-source-hidden .route-button,.delivery-location-source-hidden .delivery-help,.delivery-location-source-hidden #deliveryChange{display:none!important}
+      .delivery-location-source-hidden .delivery-selected-summary{display:flex!important;margin-top:0!important}.delivery-location-source-hidden .delivery-selected-summary>div>span{font-size:10px!important}.delivery-location-source-hidden .delivery-selected-summary>div>strong{font-size:14px!important}.delivery-location-readonly-note{display:block;margin:8px 0 0;color:rgba(255,255,255,.62);font-size:10px;line-height:1.45}
+      .installation-location-backdrop{position:fixed;inset:0;z-index:12000;background:rgba(5,6,8,.68);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px)}.installation-location-backdrop[hidden],.installation-location-modal[hidden]{display:none!important}
+      .installation-location-modal{position:fixed;z-index:12001;left:50%;top:50%;width:min(520px,calc(100vw - 28px));box-sizing:border-box;transform:translate(-50%,-50%);padding:22px;border:1px solid rgba(230,189,105,.38);border-radius:20px;background:linear-gradient(155deg,#191a1d,#0e0f11);color:#fff;box-shadow:0 26px 80px rgba(0,0,0,.48);font-family:Manrope,Arial,sans-serif}
+      .installation-location-close{position:absolute;right:12px;top:12px;width:38px;height:38px;border:1px solid rgba(255,255,255,.14);border-radius:50%;background:#202125;color:#fff;font-size:22px;line-height:1;cursor:pointer}.installation-location-modal h2{margin:0 46px 7px 0;font-size:21px;line-height:1.2}.installation-location-modal>p{margin:0 0 16px;color:rgba(255,255,255,.68);font-size:11.5px;line-height:1.5}.installation-location-field{display:grid;gap:6px}.installation-location-field span{color:rgba(255,255,255,.72);font-size:10px;font-weight:800}.installation-location-field input{width:100%;min-height:50px;box-sizing:border-box;padding:11px 13px;border:1px solid rgba(255,255,255,.2);border-radius:12px;background:#fff;color:#171717;font:700 16px/1.2 Manrope,Arial,sans-serif;outline:none}.installation-location-field input:focus{border-color:#d2a143;box-shadow:0 0 0 3px rgba(210,161,67,.15)}.installation-location-status{min-height:18px;margin:8px 0 0;color:rgba(255,255,255,.69);font-size:10.5px;line-height:1.45}.installation-location-action{width:100%;min-height:48px;margin-top:11px;border:0;border-radius:12px;background:#d2a143;color:#17130d;font:900 12px/1.2 Manrope,Arial,sans-serif;cursor:pointer}.installation-location-action:disabled{opacity:.48;cursor:not-allowed}.installation-location-hint{display:block;margin-top:9px;color:rgba(255,255,255,.47);font-size:9.5px;line-height:1.4;text-align:center}
+      @media(max-width:620px){.catalog-location-lock{padding:19px 14px;border-radius:15px}.catalog-location-lock strong{font-size:15px}.catalog-location-lock span{font-size:11px}.catalog-location-lock button{width:100%;min-height:48px}.catalog-location-bar{margin-bottom:12px;padding:10px 11px}.catalog-location-bar-copy strong{font-size:11.5px}.installation-location-modal{left:0;right:0;top:auto;bottom:0;width:100%;max-height:min(82dvh,640px);transform:none;padding:20px 16px max(18px,env(safe-area-inset-bottom));border-radius:22px 22px 0 0}.installation-location-modal h2{font-size:19px}.installation-location-modal>p{font-size:11px}.installation-location-field input{min-height:52px;font-size:16px}.installation-location-action{min-height:50px}}
     `;
     document.head.append(style);
 
-    const panel = document.createElement('div');
-    panel.id = 'catalogLocationPanel';
-    panel.className = 'catalog-location-panel';
-    panel.setAttribute('aria-label','Место установки для расчёта цен каталога');
-    panel.innerHTML = `
-      <div class="catalog-location-copy"><strong>Куда устанавливаем?</strong><span>Выберите место — цены в каталоге сразу покажем с учётом доставки.</span></div>
-      <div class="catalog-location-actions" id="catalogLocationActions"><button type="button" data-catalog-location="meleuz">Мелеуз · бесплатно</button><button type="button" data-catalog-location="other">Другой населённый пункт</button></div>
-      <div class="catalog-location-summary" id="catalogLocationSummary" hidden><strong id="catalogLocationSummaryValue"></strong><button class="catalog-location-change" id="catalogLocationChange" type="button">Изменить</button></div>
-      <div class="catalog-location-editor" id="catalogLocationEditor" hidden><input id="catalogLocationInput" list="citySuggestions" type="text" placeholder="Начните вводить населённый пункт" autocomplete="address-level2" enterkeyhint="search"><button class="catalog-location-route" id="catalogLocationRoute" type="button">Рассчитать доставку</button></div>
-      <div class="catalog-location-status" id="catalogLocationStatus" role="status" aria-live="polite"></div>`;
-    catalogSummary.before(panel);
+    deliveryBlock.classList.add('delivery-location-source-hidden');
+    const stepLabel = deliveryBlock.querySelector('.step-label');
+    if (stepLabel) stepLabel.textContent = '03 · Место установки';
+    let readonlyNote = deliveryBlock.querySelector('.delivery-location-readonly-note');
+    if (!readonlyNote) {
+      readonlyNote = document.createElement('small');
+      readonlyNote.className = 'delivery-location-readonly-note';
+      sourceSummary.after(readonlyNote);
+    }
+    const sourceSummaryLabel = sourceSummary.querySelector('span');
+    if (sourceSummaryLabel) sourceSummaryLabel.textContent = 'Место установки';
 
-    const actions = panel.querySelector('#catalogLocationActions');
-    const summary = panel.querySelector('#catalogLocationSummary');
-    const summaryValue = panel.querySelector('#catalogLocationSummaryValue');
-    const change = panel.querySelector('#catalogLocationChange');
-    const editor = panel.querySelector('#catalogLocationEditor');
-    const input = panel.querySelector('#catalogLocationInput');
-    const route = panel.querySelector('#catalogLocationRoute');
-    const status = panel.querySelector('#catalogLocationStatus');
-    const sourceOther = sourceChooser.querySelector('[data-delivery-choice="other"]');
-    const sourceMeleuz = sourceChooser.querySelector('[data-delivery-choice="meleuz"]');
-    let topEditing = false;
+    const lock = document.createElement('div');
+    lock.className = 'catalog-location-lock';
+    lock.innerHTML = '<strong>Сначала укажите место установки</strong><span>После этого откроем каталог и сразу покажем цены с учётом доставки.</span><button type="button">Указать населённый пункт</button>';
+    catalog.querySelector('.section-head')?.after(lock);
 
+    const bar = document.createElement('div');
+    bar.className = 'catalog-location-bar';
+    bar.hidden = true;
+    bar.innerHTML = '<div class="catalog-location-bar-copy"><span>Место установки</span><strong></strong></div><button type="button">Изменить</button>';
+    catalogSummary.before(bar);
+    const barValue = bar.querySelector('strong');
+
+    const backdrop = document.createElement('div');
+    backdrop.className = 'installation-location-backdrop';
+    backdrop.hidden = true;
+    const modal = document.createElement('section');
+    modal.id = 'catalogLocationGateModal';
+    modal.className = 'installation-location-modal';
+    modal.hidden = true;
+    modal.setAttribute('role','dialog');
+    modal.setAttribute('aria-modal','true');
+    modal.setAttribute('aria-labelledby','installationLocationTitle');
+    modal.innerHTML = `
+      <button class="installation-location-close" type="button" aria-label="Закрыть">×</button>
+      <h2 id="installationLocationTitle">Куда устанавливаем ворота?</h2>
+      <p>Введите населённый пункт. После выбора мы откроем каталог уже с ценами, рассчитанными для вашего места установки.</p>
+      <label class="installation-location-field"><span>Населённый пункт</span><input id="installationLocationInput" list="citySuggestions" type="text" placeholder="Например: Салават" autocomplete="address-level2" enterkeyhint="search"></label>
+      <div class="installation-location-status" id="installationLocationStatus" role="status" aria-live="polite"></div>
+      <button class="installation-location-action" id="installationLocationAction" type="button" disabled>Продолжить</button>
+      <small class="installation-location-hint">Телефон и регистрация не нужны — сначала просто покажем актуальные цены.</small>`;
+    document.body.append(backdrop,modal);
+
+    const modalInput = modal.querySelector('#installationLocationInput');
+    const modalStatus = modal.querySelector('#installationLocationStatus');
+    const modalAction = modal.querySelector('#installationLocationAction');
+    const modalClose = modal.querySelector('.installation-location-close');
+    let navigateAfterSelection = false;
+    let autoPromptDismissed = false;
+    let closing = false;
+    let noteSyncQueued = false;
+
+    const getState = () => window.GATE_PAGE_API?.deliveryState?.() || {kind:'empty'};
     const cityFromState = state => String(state?.shortName || state?.resolvedName || state?.name || sourceCity.value || '').trim();
-    const selectedState = state => ['fixed','calculated','out-of-area'].includes(String(state?.kind || ''));
-    const sourceEditing = () => sourceCity.closest('.city-label')?.classList.contains('is-visible') === true;
+    const isSelected = state => ['fixed','calculated','out-of-area'].includes(String(state?.kind || '')) && Boolean(cityFromState(state));
+
+    const normalizeCatalogNotes = state => {
+      if (!catalogGrid || !isSelected(state)) return;
+      const city = cityFromState(state);
+      const outOfArea = String(state.kind || '') === 'out-of-area';
+      const wanted = outOfArea
+        ? `Доставка в ${city} рассчитывается индивидуально`
+        : `✓ Цена с учётом доставки в ${city}`;
+      catalogGrid.querySelectorAll('.price-delivery-note').forEach(node => {
+        if (node.textContent !== wanted) node.textContent = wanted;
+      });
+    };
+
+    const queueNoteSync = state => {
+      if (noteSyncQueued) return;
+      noteSyncQueued = true;
+      requestAnimationFrame(() => {
+        noteSyncQueued = false;
+        normalizeCatalogNotes(state || getState());
+      });
+    };
+
+    const syncModal = () => {
+      const state = getState();
+      const kind = String(state.kind || 'empty');
+      const sourceText = String(sourceResult.textContent || '').trim();
+      if (document.activeElement !== modalInput && !modalInput.value && sourceCity.value) modalInput.value = sourceCity.value;
+      modalStatus.textContent = kind === 'empty' && !modalInput.value
+        ? 'Введите название населённого пункта.'
+        : sourceText;
+      if (kind === 'loading') {
+        modalAction.disabled = true;
+        modalAction.textContent = 'Считаем доставку…';
+      } else if (!sourceRoute.hidden && !sourceRoute.disabled) {
+        modalAction.disabled = false;
+        modalAction.textContent = String(sourceRoute.textContent || 'Продолжить');
+      } else {
+        modalAction.disabled = modalInput.value.trim().length < 2;
+        modalAction.textContent = 'Продолжить';
+      }
+    };
+
+    const closeModal = ({navigate = false} = {}) => {
+      if (closing) return;
+      closing = true;
+      modal.hidden = true;
+      backdrop.hidden = true;
+      document.body.classList.remove('installation-location-modal-open');
+      const shouldNavigate = navigate && isSelected(getState());
+      navigateAfterSelection = false;
+      window.setTimeout(() => {
+        closing = false;
+        if (shouldNavigate) catalog.scrollIntoView({behavior:'smooth',block:'start'});
+      },80);
+    };
 
     const sync = () => {
-      const state = window.GATE_PAGE_API?.deliveryState?.() || {kind:'empty'};
-      const kind = String(state.kind || 'empty');
+      const state = getState();
+      const selected = isSelected(state);
       const city = cityFromState(state);
-      const selected = selectedState(state);
-      if (selected) topEditing = false;
-      else if (sourceEditing()) topEditing = true;
-
-      actions.hidden = selected || topEditing;
-      summary.hidden = !selected;
-      editor.hidden = selected || !topEditing;
-
+      catalog.classList.toggle('location-locked', !selected);
+      lock.hidden = selected;
+      bar.hidden = !selected;
       if (selected) {
-        const meleuz = /^мелеуз$/i.test(city.replace(/ё/g,'е'));
-        summaryValue.textContent = kind === 'out-of-area'
-          ? `${city} · доставка индивидуально`
-          : meleuz
-            ? 'Мелеуз · бесплатно'
-            : `${city} · доставка учтена`;
-        status.textContent = kind === 'out-of-area'
+        barValue.textContent = city;
+        if (sourceSummaryValue.textContent !== city) sourceSummaryValue.textContent = city;
+        readonlyNote.textContent = String(state.kind || '') === 'out-of-area'
           ? 'Стоимость доставки уточним индивидуально.'
-          : 'Цены карточек ниже уже пересчитаны с учётом выбранного места установки.';
-      } else if (topEditing) {
-        if (document.activeElement !== input && sourceCity.value && input.value !== sourceCity.value) input.value = sourceCity.value;
-        route.hidden = sourceRoute.hidden;
-        route.disabled = sourceRoute.disabled;
-        route.textContent = String(sourceRoute.textContent || 'Рассчитать доставку');
-        status.textContent = String(sourceResult.textContent || '').trim();
+          : 'Доставка уже учтена в общей стоимости.';
+        window.KUZDVOR_SYNC_CATALOG_DELIVERY_PRICES?.(state);
+        queueNoteSync(state);
+        if (!modal.hidden) closeModal({navigate:navigateAfterSelection});
       } else {
-        input.value = '';
-        status.textContent = 'Сначала выберите место установки — после этого цены каталога будут показаны с доставкой.';
+        if (calculator.hidden && stickyCta.textContent !== 'Указать место установки') stickyCta.textContent = 'Указать место установки';
+        syncModal();
       }
-      window.KUZDVOR_SYNC_CATALOG_DELIVERY_PRICES?.(state);
+      if (!calculator.hidden && selected && sourceSummary.hidden) sourceSummary.hidden = false;
+      const mobilePriceNote = document.getElementById('mobilePriceNote');
+      if (selected && /^мелеуз$/i.test(city.replace(/ё/g,'е')) && mobilePriceNote && /бесплат/i.test(mobilePriceNote.textContent || '')) {
+        mobilePriceNote.textContent = 'Доставка до Мелеуза учтена в общей стоимости.';
+      }
     };
 
-    const startOther = () => {
-      topEditing = true;
-      sourceCity.disabled = true;
-      sourceOther?.click();
+    const openModal = ({navigate = false, change = false} = {}) => {
+      const before = getState();
+      const previousCity = cityFromState(before);
+      if (change || !isSelected(before)) {
+        sourceOther.click();
+        modalInput.value = change ? previousCity : '';
+        sourceCity.value = change ? previousCity : '';
+      }
+      navigateAfterSelection = navigate;
+      autoPromptDismissed = false;
+      backdrop.hidden = false;
+      modal.hidden = false;
+      document.body.classList.add('installation-location-modal-open');
+      syncModal();
       window.setTimeout(() => {
-        sourceCity.disabled = false;
-        input.value = '';
-        sync();
-        input.focus({preventScroll:true});
-      },70);
+        modalInput.focus({preventScroll:true});
+        if (change && modalInput.value) modalInput.select?.();
+      },100);
     };
 
-    sourceMeleuz?.addEventListener('click', () => requestAnimationFrame(sync));
-    sourceOther?.addEventListener('click', () => requestAnimationFrame(sync));
-    sourceCity.addEventListener('input', () => requestAnimationFrame(sync));
-    sourceRoute.addEventListener('click', () => requestAnimationFrame(sync));
-
-    actions.querySelector('[data-catalog-location="meleuz"]')?.addEventListener('click', () => {
-      topEditing = false;
-      sourceMeleuz?.click();
-      requestAnimationFrame(sync);
-    });
-    actions.querySelector('[data-catalog-location="other"]')?.addEventListener('click', startOther);
-    change.addEventListener('click', () => {
-      const current = cityFromState(window.GATE_PAGE_API?.deliveryState?.());
-      startOther();
-      window.setTimeout(() => {
-        input.value = current;
-        input.select?.();
-      },85);
-    });
-    input.addEventListener('input', () => {
-      topEditing = true;
-      sourceCity.value = input.value;
+    modalInput.addEventListener('input', () => {
+      sourceCity.value = modalInput.value;
       sourceCity.dispatchEvent(new Event('input',{bubbles:true}));
-      requestAnimationFrame(sync);
+      requestAnimationFrame(() => {
+        syncModal();
+        sync();
+      });
     });
-    input.addEventListener('keydown', event => {
+    modalInput.addEventListener('keydown', event => {
       if (event.key !== 'Enter') return;
       event.preventDefault();
-      if (!route.hidden && !route.disabled) route.click();
+      if (!modalAction.disabled) modalAction.click();
     });
-    route.addEventListener('click', () => {
-      sourceCity.value = input.value;
+    modalAction.addEventListener('click', () => {
+      const value = modalInput.value.trim();
+      if (value.length < 2) {
+        modalStatus.textContent = 'Введите населённый пункт полностью.';
+        modalInput.focus();
+        return;
+      }
+      sourceCity.value = value;
       sourceCity.dispatchEvent(new Event('input',{bubbles:true}));
       window.setTimeout(() => {
-        if (!sourceRoute.hidden && !sourceRoute.disabled) sourceRoute.click();
+        if (!isSelected(getState()) && !sourceRoute.hidden && !sourceRoute.disabled) sourceRoute.click();
+        syncModal();
       },0);
     });
 
+    const dismiss = () => {
+      autoPromptDismissed = true;
+      closeModal();
+    };
+    modalClose.addEventListener('click', dismiss);
+    backdrop.addEventListener('click', dismiss);
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape' && !modal.hidden) dismiss();
+    });
+
+    lock.querySelector('button')?.addEventListener('click', () => openModal({navigate:true}));
+    bar.querySelector('button')?.addEventListener('click', () => openModal({change:true}));
+
+    document.addEventListener('click', event => {
+      const target = event.target?.closest?.('a[href="#catalog"],#mobilePrimaryCta');
+      if (!target || isSelected(getState())) return;
+      event.preventDefault();
+      event.stopPropagation();
+      openModal({navigate:true});
+    }, true);
+
+    if ('IntersectionObserver' in window) {
+      const observer = new IntersectionObserver(entries => {
+        const entry = entries[0];
+        if (!entry?.isIntersecting || entry.intersectionRatio < .18 || isSelected(getState()) || !modal.hidden || autoPromptDismissed) return;
+        openModal({navigate:true});
+      },{threshold:[0,.18,.4]});
+      observer.observe(catalog);
+    }
+
+    [sourceCity,sourceResult,sourceRoute,sourceSummaryValue].forEach(node => {
+      if (!node) return;
+      new MutationObserver(() => requestAnimationFrame(sync)).observe(node,{childList:true,characterData:true,subtree:true,attributes:true,attributeFilter:['hidden','disabled']});
+    });
+    sourceCity.addEventListener('input', () => requestAnimationFrame(sync));
+    sourceCity.addEventListener('change', () => requestAnimationFrame(sync));
+    sourceRoute.addEventListener('click', () => window.setTimeout(sync,20));
     document.addEventListener('gate:calculated', () => requestAnimationFrame(sync));
     window.addEventListener('pageshow', () => requestAnimationFrame(sync));
+
+    if (catalogGrid) {
+      new MutationObserver(() => queueNoteSync(getState())).observe(catalogGrid,{childList:true,subtree:true,characterData:true});
+    }
+    new MutationObserver(() => {
+      if (!isSelected(getState()) && calculator.hidden && stickyCta.textContent !== 'Указать место установки') stickyCta.textContent = 'Указать место установки';
+    }).observe(stickyCta,{childList:true,characterData:true,subtree:true});
+
     sync();
     return true;
   };
@@ -369,7 +431,7 @@
     let attempts = 0;
     const timer = window.setInterval(() => {
       attempts += 1;
-      if (install() || attempts >= 50) window.clearInterval(timer);
+      if (install() || attempts >= 70) window.clearInterval(timer);
     },100);
   };
   queueMicrotask(start);
