@@ -61,7 +61,7 @@
         const help = document.createElement('small');
         help.className = 'delivery-input-help';
         help.id = 'cityInputHelp';
-        help.textContent = 'Например: Салават, Ишимбай, Стерлитамак. Если пункта нет в подсказках, введите название полностью.';
+        help.textContent = 'Например: Салават, Ишимбай, Стерлитамак. Нет в списке — введите название полностью.';
         input.insertAdjacentElement('afterend', help);
         input.setAttribute('aria-describedby','cityInputHelp');
       }
@@ -71,7 +71,9 @@
         style.textContent = `
           #cityInput::-webkit-calendar-picker-indicator{display:none!important;opacity:0!important;pointer-events:none!important;width:0!important;height:0!important}
           #cityInput::-webkit-list-button{display:none!important;opacity:0!important;pointer-events:none!important;width:0!important;height:0!important}
-          .delivery-input-help{display:block;color:rgba(255,255,255,.46);font-size:10px;line-height:1.45;margin-top:-1px}
+          .calc-form .city-label:not(.is-visible){display:none!important}
+          .calc-form .city-label.is-visible{display:grid!important}
+          .delivery-input-help{display:block;color:rgba(255,255,255,.58);font-size:10px;line-height:1.45;margin-top:-1px}
           @media(max-width:620px){.delivery-input-help{font-size:11px;line-height:1.45}}
         `;
         document.head.append(style);
@@ -120,10 +122,10 @@
       if (summary) summary.hidden = !selected;
       if (summaryValue && selected) {
         summaryValue.textContent = state.kind === 'out-of-area'
-          ? `${city} — доставка рассчитывается индивидуально`
+          ? `${city} · доставка индивидуально`
           : normalize(city) === normalize('Мелеуз')
-            ? 'Мелеуз — бесплатно'
-            : `${city} — доставка учтена в итоговой сумме`;
+            ? 'Мелеуз · бесплатно'
+            : `${city} · доставка учтена`;
       }
       input?.closest('.city-label')?.classList.toggle('is-visible', editingOther && !selected);
       if (result) result.hidden = selected || state.kind === 'empty';
@@ -268,12 +270,17 @@
       setTimeout(() => input?.focus(), 40);
     };
     const edit = () => {
+      const previousCity = selectedCityName();
       clearSaved();
-      editingOther = false;
-      state = {kind:'empty', name:'', resolvedName:'', shortName:'', price:null};
-      if (input) input.value = '';
+      editingOther = true;
+      state = {kind:'empty', name:previousCity, resolvedName:'', shortName:'', price:null};
+      if (input) input.value = previousCity;
       setResult('', 'pending');
       emit();
+      setTimeout(() => {
+        input?.focus();
+        input?.select?.();
+      }, 40);
     };
 
     chooser?.querySelector('[data-delivery-choice="meleuz"]')?.addEventListener('click', chooseMeleuz);
