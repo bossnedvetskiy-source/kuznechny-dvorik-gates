@@ -57,7 +57,8 @@
     const stickyCta = document.getElementById('mobilePrimaryCta');
     const stickyBar = document.querySelector('.mobile-cta');
     const priceNode = document.getElementById('mobilePriceTotal');
-    if (!priceBody || !stickyCta || !stickyBar || !priceNode) return false;
+    const estimateCard = document.querySelector('.mobile-price-breakdown');
+    if (!priceBody || !stickyCta || !stickyBar || !priceNode || !estimateCard) return false;
     if (priceBody.querySelector('.mobile-inline-order-cta')) return true;
 
     const style = document.createElement('style');
@@ -69,9 +70,32 @@
         .mobile-inline-order-cta strong{font-size:14px;line-height:1.25;font-weight:900}
         .mobile-inline-order-cta small{font-size:10px;line-height:1.3;font-weight:800;opacity:.78}
         .mobile-cta.is-inline-cta-visible{opacity:0!important;visibility:hidden!important;pointer-events:none!important}
+        .mobile-price-breakdown.mobile-estimate-order-target{cursor:pointer;touch-action:manipulation;transition:border-color .15s ease,box-shadow .15s ease,transform .08s ease}
+        .mobile-price-breakdown.mobile-estimate-order-target:active{transform:translateY(1px);border-color:rgba(230,189,105,.62);box-shadow:0 0 0 2px rgba(210,161,67,.12)}
+        .mobile-price-breakdown.mobile-estimate-order-target:focus-visible{outline:2px solid #d2a143;outline-offset:3px}
       }
     `;
     if (!document.getElementById(style.id)) document.head.append(style);
+
+    estimateCard.classList.add('mobile-estimate-order-target');
+    estimateCard.setAttribute('role','button');
+    estimateCard.setAttribute('tabindex','0');
+    estimateCard.setAttribute('aria-label','Перейти к заказу бесплатного замера');
+
+    const activateEstimateOrder = event => {
+      if (!mobile.matches) return;
+      const interactive = event.target?.closest?.('button,a,input,textarea,select,label,[role="button"]');
+      if (interactive && interactive !== estimateCard) return;
+      event.preventDefault();
+      stickyCta.click();
+    };
+
+    estimateCard.addEventListener('click', activateEstimateOrder);
+    estimateCard.addEventListener('keydown', event => {
+      if (!mobile.matches || event.target !== estimateCard || !['Enter',' '].includes(event.key)) return;
+      event.preventDefault();
+      stickyCta.click();
+    });
 
     const inlineCta = document.createElement('button');
     inlineCta.type = 'button';
@@ -92,6 +116,7 @@
 
     inlineCta.addEventListener('click', event => {
       event.preventDefault();
+      event.stopPropagation();
       stickyCta.click();
     });
 
