@@ -69,8 +69,8 @@
         const style = document.createElement('style');
         style.id = 'deliveryUxStyles';
         style.textContent = `
-          #cityInput::-webkit-calendar-picker-indicator{display:none!important;opacity:0!important;pointer-events:none!important;width:0!important;height:0!important}
-          #cityInput::-webkit-list-button{display:none!important;opacity:0!important;pointer-events:none!important;width:0!important;height:0!important}
+          #cityInput::-webkit-calendar-picker-indicator,#installationLocationInput::-webkit-calendar-picker-indicator{display:none!important;opacity:0!important;pointer-events:none!important;width:0!important;height:0!important}
+          #cityInput::-webkit-list-button,#installationLocationInput::-webkit-list-button{display:none!important;opacity:0!important;pointer-events:none!important;width:0!important;height:0!important}
           .calc-form .city-label:not(.is-visible){display:none!important}
           .calc-form .city-label.is-visible{display:grid!important}
           .delivery-input-help{display:block;color:rgba(255,255,255,.58);font-size:10px;line-height:1.45;margin-top:-1px}
