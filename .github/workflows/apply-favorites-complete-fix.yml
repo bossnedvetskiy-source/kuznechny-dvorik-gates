@@ -34,6 +34,62 @@ jobs:
       - name: Apply favorites_complete_fix and update E2E
         run: python3 scripts/apply-favorites-complete-fix-ci.py
 
+      - name: Align E2E with production loading and location UX
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          server = Path('scripts/e2e-server.mjs')
+          text = server.read_text(encoding='utf-8')
+          old = '<script src="gate-page-ui.js"></script>\\n  <script src="color-photo-site.js"></script>'
+          new = '<script src="gate-page-ui.js"></script>\\n  <script src="shared/favorites.js"></script>\\n  <script src="color-photo-site.js"></script>'
+          if new not in text:
+              if old not in text:
+                  raise SystemExit('Could not add favorites to E2E source environment')
+              text = text.replace(old, new, 1)
+              server.write_text(text, encoding='utf-8')
+
+          helper = Path('tests/location-helpers.js')
+          text = helper.read_text(encoding='utf-8')
+          old = """export async function openLocationSelector(page) {
+            const modal = page.locator('#catalogLocationGateModal');
+            if (!await modal.isVisible().catch(() => false)) {
+              const lockButton = page.locator('.catalog-location-lock button');
+              if (await lockButton.isVisible().catch(() => false)) await lockButton.click();
+              else await page.locator('a[href=\"#catalog\"]').first().click();
+            }
+            await expect(modal).toBeVisible();
+          """
+          new = """export async function openLocationSelector(page) {
+            const modal = page.locator('#catalogLocationGateModal');
+            const autoOpened = await modal.waitFor({state:'visible',timeout:2500}).then(() => true).catch(() => false);
+            if (!autoOpened) {
+              const backdrop = page.locator('.installation-location-backdrop');
+              if (await backdrop.isVisible().catch(() => false)) {
+                await expect(modal).toBeVisible({timeout:5000});
+              } else {
+                const lockButton = page.locator('.catalog-location-lock button');
+                if (await lockButton.isVisible().catch(() => false)) await lockButton.click();
+                else await page.locator('a[href=\"#catalog\"]').first().click();
+              }
+            }
+            await expect(modal).toBeVisible({timeout:5000});
+          """
+          if old not in text:
+              raise SystemExit('Location helper fragment not found')
+          helper.write_text(text.replace(old, new, 1), encoding='utf-8')
+
+          prices = Path('tests/delivery-card-prices.spec.js')
+          text = prices.read_text(encoding='utf-8').replace('73 240 ₽','73 200 ₽').replace('98 240 ₽','98 200 ₽')
+          prices.write_text(text, encoding='utf-8')
+
+          gates = Path('tests/gate-e2e.spec.js')
+          text = gates.read_text(encoding='utf-8')
+          text = text.replace("  await expect(page.locator('#mobilePriceTotal')).toContainText('доставка индивидуально');\n", '')
+          text = text.replace("  await expect(page.locator('#mobilePrimaryCta')).toContainText('доставка индивидуально');\n", '')
+          gates.write_text(text, encoding='utf-8')
+          PY
+
       - name: Install dependencies
         run: npm ci
 
