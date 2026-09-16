@@ -184,9 +184,11 @@
       .installation-location-backdrop{position:fixed;inset:0;z-index:12000;background:rgba(5,6,8,.68);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px)}.installation-location-backdrop[hidden],.installation-location-modal[hidden]{display:none!important}
       .installation-location-modal{position:fixed;z-index:12001;left:50%;top:50%;width:min(520px,calc(100vw - 28px));box-sizing:border-box;transform:translate(-50%,-50%);padding:22px;border:1px solid rgba(230,189,105,.38);border-radius:20px;background:linear-gradient(155deg,#191a1d,#0e0f11);color:#fff;box-shadow:0 26px 80px rgba(0,0,0,.48);font-family:Manrope,Arial,sans-serif}
       .installation-location-close{position:absolute;right:12px;top:12px;width:38px;height:38px;border:1px solid rgba(255,255,255,.14);border-radius:50%;background:#202125;color:#fff;font-size:22px;line-height:1;cursor:pointer}.installation-location-modal h2{margin:0 46px 7px 0;font-size:21px;line-height:1.2}.installation-location-modal>p{margin:0 0 16px;color:rgba(255,255,255,.68);font-size:11.5px;line-height:1.5}.installation-location-field{display:grid;gap:6px}.installation-location-field span{color:rgba(255,255,255,.72);font-size:10px;font-weight:800}.installation-location-field input{width:100%;min-height:50px;box-sizing:border-box;padding:11px 13px;border:1px solid rgba(255,255,255,.2);border-radius:12px;background:#fff;color:#171717;font:700 16px/1.2 Manrope,Arial,sans-serif;outline:none}.installation-location-field input:focus{border-color:#d2a143;box-shadow:0 0 0 3px rgba(210,161,67,.15)}.installation-location-status{min-height:18px;margin:8px 0 0;color:rgba(255,255,255,.69);font-size:10.5px;line-height:1.45}.installation-location-action{width:100%;min-height:48px;margin-top:11px;border:0;border-radius:12px;background:#d2a143;color:#17130d;font:900 12px/1.2 Manrope,Arial,sans-serif;cursor:pointer}.installation-location-action:disabled{opacity:.48;cursor:not-allowed}.installation-location-hint{display:block;margin-top:9px;color:rgba(255,255,255,.47);font-size:9.5px;line-height:1.4;text-align:center}
-      @media(max-width:620px){.catalog-location-lock{padding:19px 14px;border-radius:15px}.catalog-location-lock strong{font-size:15px}.catalog-location-lock span{font-size:11px}.catalog-location-lock button{width:100%;min-height:48px}.catalog-location-bar{margin-bottom:12px;padding:10px 11px}.catalog-location-bar-copy strong{font-size:11.5px}.installation-location-modal{left:0;right:0;top:auto;bottom:0;width:100%;max-height:min(82dvh,640px);transform:none;padding:20px 16px max(18px,env(safe-area-inset-bottom));border-radius:22px 22px 0 0}.installation-location-modal h2{font-size:19px}.installation-location-modal>p{font-size:11px}.installation-location-field input{min-height:52px;font-size:16px}.installation-location-action{min-height:50px}}
+      @media(max-width:620px){body:not(.catalog-journey-started) .mobile-cta,body.installation-location-modal-open .mobile-cta{display:none!important}.catalog-location-lock{padding:19px 14px;border-radius:15px}.catalog-location-lock strong{font-size:15px}.catalog-location-lock span{font-size:11px}.catalog-location-lock button{width:100%;min-height:48px}.catalog-location-bar{margin-bottom:12px;padding:10px 11px}.catalog-location-bar-copy strong{font-size:11.5px}.installation-location-modal{left:0;right:0;top:auto;bottom:0;width:100%;max-height:min(82dvh,640px);transform:none;padding:20px 16px max(18px,env(safe-area-inset-bottom));border-radius:22px 22px 0 0}.installation-location-modal h2{font-size:19px}.installation-location-modal>p{font-size:11px}.installation-location-field input{min-height:52px;font-size:16px}.installation-location-action{min-height:50px}}
     `;
     document.head.append(style);
+
+    const startJourney = () => document.body.classList.add('catalog-journey-started');
 
     deliveryBlock.classList.add('delivery-location-source-hidden');
     const stepLabel = deliveryBlock.querySelector('.step-label');
@@ -304,6 +306,7 @@
       const state = getState();
       const selected = isSelected(state);
       const city = cityFromState(state);
+      if (!calculator.hidden) startJourney();
       catalog.classList.toggle('location-locked', !selected);
       lock.hidden = selected;
       bar.hidden = !selected;
@@ -315,7 +318,10 @@
           : 'Доставка уже учтена в общей стоимости.';
         window.KUZDVOR_SYNC_CATALOG_DELIVERY_PRICES?.(state);
         queueNoteSync(state);
-        if (!modal.hidden) closeModal({navigate:navigateAfterSelection});
+        if (!modal.hidden) {
+          if (navigateAfterSelection) startJourney();
+          closeModal({navigate:navigateAfterSelection});
+        }
       } else {
         if (calculator.hidden && stickyCta.textContent !== 'Указать место установки') stickyCta.textContent = 'Указать место установки';
         syncModal();
@@ -385,12 +391,20 @@
       if (event.key === 'Escape' && !modal.hidden) dismiss();
     });
 
-    lock.querySelector('button')?.addEventListener('click', () => openModal({navigate:true}));
-    bar.querySelector('button')?.addEventListener('click', () => openModal({change:true}));
+    lock.querySelector('button')?.addEventListener('click', () => {
+      startJourney();
+      openModal({navigate:true});
+    });
+    bar.querySelector('button')?.addEventListener('click', () => {
+      startJourney();
+      openModal({change:true});
+    });
 
     document.addEventListener('click', event => {
       const target = event.target?.closest?.('a[href="#catalog"],#mobilePrimaryCta');
-      if (!target || isSelected(getState())) return;
+      if (!target) return;
+      if (target.matches('a[href="#catalog"]')) startJourney();
+      if (isSelected(getState())) return;
       event.preventDefault();
       event.stopPropagation();
       openModal({navigate:true});
