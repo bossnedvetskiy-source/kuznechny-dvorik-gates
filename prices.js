@@ -38,6 +38,39 @@ if (typeof document !== 'undefined') {
     syncOrderProcessLayout();
     window.matchMedia?.('(max-width: 620px)').addEventListener?.('change', syncOrderProcessLayout);
   }
+
+  // Расчёт выбранной модели — временное состояние интерфейса, а не отдельная
+  // страница. Некоторые мобильные Chromium-браузеры восстанавливают динамически
+  // открытый calculator при обновлении/возврате из BFCache. Из-за этого после
+  // обычного Reload пользователь снова видел последнюю модель вместо каталога.
+  const closeTransientCalculator = ({scrollToCatalog = false} = {}) => {
+    const calculator = document.getElementById('calculator');
+    if (!calculator) return false;
+    const wasOpen = !calculator.hidden || document.body.classList.contains('calculator-open');
+    if (!wasOpen) return false;
+
+    calculator.hidden = true;
+    const parking = document.getElementById('calculatorParking');
+    if (parking && calculator.parentElement !== parking) parking.append(calculator);
+    document.body.classList.remove('calculator-open', 'mobile-lead-open');
+    document.getElementById('leadBackdrop')?.setAttribute('hidden', '');
+    document.querySelectorAll('.select-product[aria-expanded="true"]').forEach(button => button.setAttribute('aria-expanded', 'false'));
+
+    if (scrollToCatalog) {
+      requestAnimationFrame(() => {
+        document.getElementById('catalog')?.scrollIntoView({block:'start', behavior:'auto'});
+      });
+    }
+    return true;
+  };
+
+  const navigationEntry = performance.getEntriesByType?.('navigation')?.[0];
+  const isReload = navigationEntry?.type === 'reload' || performance.navigation?.type === 1;
+  if (isReload) closeTransientCalculator({scrollToCatalog:true});
+
+  window.addEventListener('pageshow', event => {
+    if (event.persisted) closeTransientCalculator({scrollToCatalog:true});
+  });
 }
 
 window.PRICE_DATA = {
