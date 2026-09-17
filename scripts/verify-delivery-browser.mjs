@@ -38,22 +38,19 @@ const assertDeliveryNote = async (page, label) => {
   }
 };
 
+const readOrderProcessSnapshot = page => page.evaluate(() => [...document.querySelectorAll('section')]
+  .map(section => ({
+    id: String(section.id || ''),
+    marked: section.hasAttribute('data-order-process'),
+    heading: String(section.querySelector('h2')?.textContent || '').trim(),
+    steps: section.querySelectorAll('.order-steps-grid article, article').length
+  }))
+  .filter(item => /^(Как проходит заказ|Что будет после заявки)$/i.test(item.heading)));
+
 const assertSingleOrderProcess = async (page, label) => {
-  await page.waitForFunction(() => {
-    const sections = [...document.querySelectorAll('section')].filter(section => {
-      const heading = String(section.querySelector('h2')?.textContent || '').trim();
-      return /^(Как проходит заказ|Что будет после заявки)$/i.test(heading);
-    });
-    return sections.length === 1 && sections[0].querySelectorAll('.order-steps-grid article, article').length >= 5;
-  }, null, { timeout: 10000 });
-
-  const snapshot = await page.evaluate(() => [...document.querySelectorAll('section')]
-    .map(section => ({
-      heading: String(section.querySelector('h2')?.textContent || '').trim(),
-      steps: section.querySelectorAll('.order-steps-grid article, article').length
-    }))
-    .filter(item => /^(Как проходит заказ|Что будет после заявки)$/i.test(item.heading)));
-
+  await page.waitForTimeout(1400);
+  const snapshot = await readOrderProcessSnapshot(page);
+  console.log(`${label} order-process snapshot: ${JSON.stringify(snapshot)}`);
   if (snapshot.length !== 1 || snapshot[0].steps !== 5) {
     throw new Error(`${label} order process mismatch: ${JSON.stringify(snapshot)}`);
   }
