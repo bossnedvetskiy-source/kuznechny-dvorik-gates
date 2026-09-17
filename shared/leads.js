@@ -122,7 +122,10 @@
     return saved;
   }
 
-  const savedCalculator = restoreCalculatorMemory();
+  // Keep useful order parameters between visits, but never reopen the last selected
+  // model automatically. The selected-model calculator is a temporary UI state;
+  // opening it on every reload trapped mobile visitors on the previous article.
+  restoreCalculatorMemory();
 
   function saveCalculatorMemory(patch = {}) {
     const current = readJson(localStorage, CALCULATOR_KEY) || {};
@@ -151,12 +154,6 @@
     const button = event.target?.closest?.('[data-product]');
     if (button?.dataset?.product) saveCalculatorMemory({productId:String(button.dataset.product)});
   });
-
-  if (savedCalculator?.productId) {
-    setTimeout(() => {
-      try { window.GATE_PAGE_API?.openCalculatorForProduct?.(String(savedCalculator.productId), false); } catch {}
-    }, 0);
-  }
 
   window.KUZDVOR_LEADS = {validate, submit, phoneDigits, tracking, attributionSource};
 })();
