@@ -10,7 +10,7 @@
  */
 
 // Убираем старый статический блок процесса до загрузки улучшенного 5-шагового блока.
-document.getElementById('afterRequest')?.remove();
+if (typeof document !== 'undefined') document.getElementById('afterRequest')?.remove();
 
 window.PRICE_DATA = {
   updatedAt: '2026-09-01',
