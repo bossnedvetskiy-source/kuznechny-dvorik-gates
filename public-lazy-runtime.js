@@ -8,6 +8,7 @@
   // seconds, but stop immediately as soon as the customer actually selects a gate.
   let resetRestoredCalculator = true;
   const markRealCalculatorIntent = event => {
+    if (!event.isTrusted) return;
     if (event.target?.closest?.('.select-product')) resetRestoredCalculator = false;
   };
   document.addEventListener('pointerdown', markRealCalculatorIntent, true);
