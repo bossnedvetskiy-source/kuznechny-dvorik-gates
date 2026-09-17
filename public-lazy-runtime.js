@@ -2,17 +2,10 @@
   if (window.KUZDVOR_LAZY_RUNTIME_READY) return;
   window.KUZDVOR_LAZY_RUNTIME_READY = true;
 
-  // The selected-model calculator is transient UI. Some Android Chromium-based
-  // browsers restore its mutated DOM and scroll position on Reload / BFCache,
-  // which makes the last selected article appear again immediately after refresh.
-  // Keep a short reset window around restored navigations because DOM restoration
-  // can happen before or after deferred scripts execute depending on the browser.
-  const navigationEntry = performance.getEntriesByType?.('navigation')?.[0];
-  const initialNavigationWasReload = navigationEntry?.type === 'reload' || performance.navigation?.type === 1;
-  let restoredUiResetUntil = initialNavigationWasReload ? Date.now() + 3000 : 0;
-
-  const closeRestoredCalculator = ({scrollToCatalog = false} = {}) => {
-    if (!restoredUiResetUntil || Date.now() > restoredUiResetUntil) return false;
+  // The selected-model calculator is transient UI, not navigation state. Mobile
+  // browsers can restore the mutated DOM on Reload/BFCache, so normalize it both
+  // before app.js reads calculator.hidden and again on the real pageshow event.
+  const closeTransientCalculator = ({scrollToCatalog = false} = {}) => {
     const calculator = document.getElementById('calculator');
     if (!calculator) return false;
     const wasOpen = !calculator.hidden || document.body.classList.contains('calculator-open');
@@ -36,18 +29,10 @@
     return true;
   };
 
-  const resetRestoredUiBurst = ({scrollToCatalog = false} = {}) => {
-    [0, 40, 120, 300, 700, 1400, 2600].forEach(delay => {
-      window.setTimeout(() => closeRestoredCalculator({scrollToCatalog}), delay);
-    });
-  };
-
-  if (initialNavigationWasReload) resetRestoredUiBurst({scrollToCatalog:true});
-  window.addEventListener('pageshow', event => {
-    if (!event.persisted && !initialNavigationWasReload) return;
-    restoredUiResetUntil = Date.now() + 3000;
-    resetRestoredUiBurst({scrollToCatalog:true});
-  });
+  // First pass runs before the catalog application initializes. The pageshow pass
+  // catches browsers that restore form/DOM state after deferred scripts execute.
+  closeTransientCalculator();
+  window.addEventListener('pageshow', () => closeTransientCalculator({scrollToCatalog:true}));
 
   const scriptPromises = new Map();
   const loadScript = src => {
