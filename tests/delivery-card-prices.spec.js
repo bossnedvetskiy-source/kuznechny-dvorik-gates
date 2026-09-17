@@ -50,7 +50,7 @@ test('mobile installation place input uses search keyboard and Enter starts rout
   await openPage(page);
   const ui = await openLocationSelector(page);
   await page.locator('#deliveryChooser [data-delivery-choice="other"]').click();
-  await expect(ui.input).toHaveAttribute('enterkeyhint','done');
+  await expect(ui.input).toHaveAttribute('enterkeyhint','search');
   await ui.input.fill('Ишеево');
   await ui.input.press('Enter');
 
