@@ -38,6 +38,28 @@ const assertDeliveryNote = async (page, label) => {
   }
 };
 
+const assertSingleOrderProcess = async (page, label) => {
+  await page.waitForFunction(() => {
+    const sections = [...document.querySelectorAll('section')].filter(section => {
+      const heading = String(section.querySelector('h2')?.textContent || '').trim();
+      return /^(Как проходит заказ|Что будет после заявки)$/i.test(heading);
+    });
+    return sections.length === 1 && sections[0].querySelectorAll('.order-steps-grid article, article').length >= 5;
+  }, null, { timeout: 10000 });
+
+  const snapshot = await page.evaluate(() => [...document.querySelectorAll('section')]
+    .map(section => ({
+      heading: String(section.querySelector('h2')?.textContent || '').trim(),
+      steps: section.querySelectorAll('.order-steps-grid article, article').length
+    }))
+    .filter(item => /^(Как проходит заказ|Что будет после заявки)$/i.test(item.heading)));
+
+  if (snapshot.length !== 1 || snapshot[0].steps !== 5) {
+    throw new Error(`${label} order process mismatch: ${JSON.stringify(snapshot)}`);
+  }
+  console.log(`${label}: one 5-step order process section is present (${snapshot[0].heading}).`);
+};
+
 const selectInstallationPlace = async page => {
   const firstCard = page.locator('#catalogGrid .product-card').first();
   if (await firstCard.isVisible().catch(() => false)) return firstCard;
@@ -87,6 +109,7 @@ try {
     timeout: 30000
   });
   await page.waitForFunction(() => window.GATE_PAGE_API && document.querySelectorAll('#catalogGrid .product-card').length >= 2, null, { timeout: 15000 });
+  await assertSingleOrderProcess(page, 'initial-page');
   const firstCard = await selectInstallationPlace(page);
 
   await page.waitForFunction(({ expectedCity, delta }) => {
@@ -130,6 +153,7 @@ try {
   }, city, { timeout: 15000 });
   await page.waitForSelector('#catalogGrid .product-card', { state: 'visible', timeout: 15000 });
   await page.waitForTimeout(1000);
+  await assertSingleOrderProcess(page, 'reloaded-page');
   await assertEveryVisibleCardUsesDelivery(page, 'delivery-restored-after-reload');
   await assertDeliveryNote(page, 'reloaded-cards');
 
@@ -137,7 +161,7 @@ try {
     throw new Error(`Browser errors detected: ${errors.join(' | ')}`);
   }
 
-  console.log(`Delivery-price browser smoke passed for ${baseUrl}: ${city}, +${expectedDelivery}; location-first selection, formula sync, catalog expansion and reload are stable.`);
+  console.log(`Delivery-price browser smoke passed for ${baseUrl}: ${city}, +${expectedDelivery}; location-first selection, single order process, formula sync, catalog expansion and reload are stable.`);
 } finally {
   await browser.close();
 }
