@@ -45,6 +45,7 @@ test('applied parameters stay compact after reload and nonstandard prices do not
   await expect(page.locator('#catalogOrderConfigurator')).toBeHidden();
   await expect(page.locator('#catalogOrderSummary')).toBeVisible();
   await expect(page.locator('#catalogOrderSummary')).toContainText('3,8');
+  await expect(page.locator('#mobilePrimaryCta')).toHaveText('К моделям');
   await expect.poll(async () => String(await page.locator('#catalogGrid .product-card').first().locator('.catalog-primary-quote strong').textContent()), {timeout:8000})
     .not.toContain('Пересчитываем');
 });
