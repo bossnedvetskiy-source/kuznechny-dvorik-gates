@@ -8,6 +8,10 @@
  * catalogPosts        — комплект новых усиленных столбов;
  * Тарифы доставки находятся отдельно в delivery-prices.json / настройках доставки.
  */
+
+// Убираем старый статический блок процесса до загрузки улучшенного 5-шагового блока.
+document.getElementById('afterRequest')?.remove();
+
 window.PRICE_DATA = {
   updatedAt: '2026-09-01',
   catalogInstallation: 8000,
@@ -59,11 +63,7 @@ window.PRICE_DATA = {
     { id: 'wicket', type: 'wicket', art: 'Арт.6', title: 'Только калитка', description: 'Отдельная калитка с замком, ручкой и ключами.', price: 18500, install: 2700, posts: 13000, standard: [1, 1.8] },
     { id: 'frame', type: 'frame', art: 'DIY', title: 'Каркас без покраски', description: 'Каркас ворот и калитки для самостоятельной комплектации.', price: 31800, install: 0, posts: 0, standard: [3.35, 1.8], wicketWidth: 0.95 },
     { id: 'frame-kit', type: 'frame', art: 'DIY+', title: 'Каркас с фурнитурой', description: 'Каркас, петли, замок, ключи, засовы и штыри.', price: 36500, install: 0, posts: 7200, standard: [3.35, 1.8], wicketWidth: 0.95 },
-    { id: 'sliding', type: 'sliding', art: 'Откатные', title: 'Откатные ворота', description: 'Откатная конструкция без автоматики.', price: 75000, install: 0, posts: 0, standard: [4, 1.8], from: true },
+    { id: 'sliding', type: 'sliding', art: 'Арт.6', title: 'Откатные ворота', description: 'Откатная конструкция без автоматики.', price: 75000, install: 0, posts: 0, standard: [4, 1.8], from: true },
     { id: 'sliding-auto', type: 'sliding', art: 'Автоматика', title: 'Откатные с автоматикой', description: 'Откатная конструкция с приводом.', price: 105000, install: 0, posts: 0, standard: [4, 1.8], from: true }
   ]
 };
-
-// The legacy static process block duplicates the enhanced 5-step mobile process
-// inserted by public-site-settings.js. Remove it before that enhancement runs.
-document.getElementById('afterRequest')?.remove();
