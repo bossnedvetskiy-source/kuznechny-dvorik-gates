@@ -298,12 +298,19 @@
     targets.forEach(target => observer.observe(target));
   };
 
+  const syncLeadBackdropLayer = () => {
+    const calculator = document.getElementById('calculator');
+    const backdrop = document.getElementById('leadBackdrop');
+    if (calculator && backdrop && backdrop.parentElement !== calculator) calculator.append(backdrop);
+  };
+
   const applyFinalUx = () => {
     normalizeOrderFlow();
     syncCtaCopy();
     bindPackageNumbering();
     syncPackageNumbers();
     bindEndVisibility();
+    syncLeadBackdropLayer();
   };
 
   queueMicrotask(applyFinalUx);
