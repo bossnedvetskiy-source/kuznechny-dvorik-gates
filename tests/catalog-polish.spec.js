@@ -58,3 +58,21 @@ test('sticky CTA switches from catalog navigation to the selected quote', async 
   await expect(page.locator('#calculator')).toBeVisible();
   await expect(page.locator('#mobilePrimaryCta')).toHaveText(/^На замер · (?:от )?[\d\s ]+ ₽$/);
 });
+
+test('restored mobile page never reopens the last selected calculator automatically', async ({page}) => {
+  await openMobile(page);
+
+  const thirdCard = page.locator('#catalogGrid .product-card').nth(2);
+  await expect(thirdCard.locator('.product-art')).toContainText('Арт.31');
+  await thirdCard.locator('.select-product').click();
+  await expect(page.locator('#calculator')).toBeVisible();
+  await expect(page.locator('#selectedProductCaption')).toContainText('Арт.31');
+
+  await page.evaluate(() => {
+    window.dispatchEvent(new PageTransitionEvent('pageshow', {persisted:true}));
+  });
+
+  await expect(page.locator('#calculator')).toBeHidden();
+  await expect(page.locator('body')).not.toHaveClass(/calculator-open/);
+  await expect(page.locator('#mobilePrimaryCta')).toHaveText('К моделям');
+});
