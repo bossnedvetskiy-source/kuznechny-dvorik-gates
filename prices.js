@@ -63,3 +63,7 @@ window.PRICE_DATA = {
     { id: 'sliding-auto', type: 'sliding', art: 'Автоматика', title: 'Откатные с автоматикой', description: 'Откатная конструкция с приводом.', price: 105000, install: 0, posts: 0, standard: [4, 1.8], from: true }
   ]
 };
+
+// The legacy static process block duplicates the enhanced 5-step mobile process
+// inserted by public-site-settings.js. Remove it before that enhancement runs.
+document.getElementById('afterRequest')?.remove();
