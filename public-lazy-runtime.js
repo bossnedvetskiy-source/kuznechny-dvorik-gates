@@ -2,10 +2,19 @@
   if (window.KUZDVOR_LAZY_RUNTIME_READY) return;
   window.KUZDVOR_LAZY_RUNTIME_READY = true;
 
-  // The selected-model calculator is transient UI, not navigation state. Mobile
-  // browsers can restore the mutated DOM on Reload/BFCache, so normalize it both
-  // before app.js reads calculator.hidden and again on the real pageshow event.
+  // The selected-model calculator is transient UI, not navigation state. Some
+  // Android browsers restore the dynamically opened calculator after our first
+  // scripts have already run. Keep normalizing that restored state for a few
+  // seconds, but stop immediately as soon as the customer actually selects a gate.
+  let resetRestoredCalculator = true;
+  const markRealCalculatorIntent = event => {
+    if (event.target?.closest?.('.select-product')) resetRestoredCalculator = false;
+  };
+  document.addEventListener('pointerdown', markRealCalculatorIntent, true);
+  document.addEventListener('click', markRealCalculatorIntent, true);
+
   const closeTransientCalculator = ({scrollToCatalog = false} = {}) => {
+    if (!resetRestoredCalculator) return false;
     const calculator = document.getElementById('calculator');
     if (!calculator) return false;
     const wasOpen = !calculator.hidden || document.body.classList.contains('calculator-open');
@@ -29,10 +38,15 @@
     return true;
   };
 
-  // First pass runs before the catalog application initializes. The pageshow pass
-  // catches browsers that restore form/DOM state after deferred scripts execute.
+  const resetRestoredCalculatorBurst = ({scrollToCatalog = false} = {}) => {
+    [0, 40, 120, 300, 700, 1400, 2600, 4200, 6500].forEach(delay => {
+      window.setTimeout(() => closeTransientCalculator({scrollToCatalog}), delay);
+    });
+  };
+
   closeTransientCalculator();
-  window.addEventListener('pageshow', () => closeTransientCalculator({scrollToCatalog:true}));
+  resetRestoredCalculatorBurst();
+  window.addEventListener('pageshow', () => resetRestoredCalculatorBurst({scrollToCatalog:true}));
 
   const scriptPromises = new Map();
   const loadScript = src => {
