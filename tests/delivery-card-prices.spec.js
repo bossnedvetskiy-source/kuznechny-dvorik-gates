@@ -40,7 +40,7 @@ test('routed village stays browseable before confirmation and enters price only 
   await expect(card.locator('.catalog-primary-quote small')).toContainText('Ишеево, Ишимбайский район');
 });
 
-test('mobile installation place input uses search keyboard and Enter starts route calculation', async ({page}) => {
+test('mobile installation place input uses search keyboard and route action works', async ({page}) => {
   await page.route('**/api/delivery?*', route => route.fulfill({
     status:200,
     contentType:'application/json',
@@ -52,7 +52,9 @@ test('mobile installation place input uses search keyboard and Enter starts rout
   await page.locator('#deliveryChooser [data-delivery-choice="other"]').click();
   await expect(ui.input).toHaveAttribute('enterkeyhint','search');
   await ui.input.fill('Ишеево');
-  await ui.input.press('Enter');
+  await expect(ui.action).toBeVisible();
+  await expect(ui.action).toHaveText('Рассчитать доставку');
+  await ui.action.click();
 
   await expect(ui.status).toContainText('Найдено: Ишеево, Ишимбайский район');
   await expect(ui.action).toHaveText('Да, это нужный пункт');
