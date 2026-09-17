@@ -2,53 +2,6 @@
   if (window.KUZDVOR_LAZY_RUNTIME_READY) return;
   window.KUZDVOR_LAZY_RUNTIME_READY = true;
 
-  // The selected-model calculator is transient UI, not navigation state. Some
-  // Android browsers restore the dynamically opened calculator after our first
-  // scripts have already run. Keep normalizing that restored state for a few
-  // seconds, but stop immediately as soon as the customer actually selects a gate.
-  let resetRestoredCalculator = true;
-  const markRealCalculatorIntent = event => {
-    if (!event.isTrusted) return;
-    if (event.target?.closest?.('.select-product')) resetRestoredCalculator = false;
-  };
-  document.addEventListener('pointerdown', markRealCalculatorIntent, true);
-  document.addEventListener('click', markRealCalculatorIntent, true);
-
-  const closeTransientCalculator = ({scrollToCatalog = false} = {}) => {
-    if (!resetRestoredCalculator) return false;
-    const calculator = document.getElementById('calculator');
-    if (!calculator) return false;
-    const wasOpen = !calculator.hidden || document.body.classList.contains('calculator-open');
-    if (!wasOpen) return false;
-
-    if (window.GATE_PAGE_API?.closeCalculator) {
-      window.GATE_PAGE_API.closeCalculator();
-    } else {
-      calculator.hidden = true;
-      const parking = document.getElementById('calculatorParking');
-      if (parking && calculator.parentElement !== parking) parking.append(calculator);
-      document.body.classList.remove('calculator-open');
-      document.querySelectorAll('.select-product[aria-expanded="true"]').forEach(button => button.setAttribute('aria-expanded','false'));
-    }
-    document.body.classList.remove('mobile-lead-open');
-    document.getElementById('leadBackdrop')?.setAttribute('hidden','');
-
-    if (scrollToCatalog) {
-      requestAnimationFrame(() => document.getElementById('catalog')?.scrollIntoView({block:'start',behavior:'auto'}));
-    }
-    return true;
-  };
-
-  const resetRestoredCalculatorBurst = ({scrollToCatalog = false} = {}) => {
-    [0, 40, 120, 300, 700, 1400, 2600, 4200, 6500].forEach(delay => {
-      window.setTimeout(() => closeTransientCalculator({scrollToCatalog}), delay);
-    });
-  };
-
-  closeTransientCalculator();
-  resetRestoredCalculatorBurst();
-  window.addEventListener('pageshow', () => resetRestoredCalculatorBurst({scrollToCatalog:true}));
-
   const scriptPromises = new Map();
   const loadScript = src => {
     if (scriptPromises.has(src)) return scriptPromises.get(src);
