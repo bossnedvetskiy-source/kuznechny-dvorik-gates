@@ -8,8 +8,8 @@ if (!Number.isFinite(expectedDelivery) || expectedDelivery < 0) {
   throw new Error(`Invalid EXPECTED_DELIVERY: ${process.env.EXPECTED_DELIVERY || ''}`);
 }
 
-const readInstalledPrices = (page, limit = 3) => page.locator('#catalogGrid .product-card').evaluateAll((cards, max) => cards.slice(0, max).map(card => {
-  const text = String(card.querySelector('.price-row strong')?.textContent || '');
+const readCatalogQuotes = (page, limit = 3) => page.locator('#catalogGrid .product-card').evaluateAll((cards, max) => cards.slice(0, max).map(card => {
+  const text = String(card.querySelector('.catalog-primary-quote strong')?.textContent || '');
   return Number(text.replace(/[^0-9]/g, '')) || 0;
 }), limit);
 
@@ -20,21 +20,21 @@ const assertEveryVisibleCardUsesDelivery = async (page, label) => {
     if (!api?.productById || cards.length < 1) return false;
     return cards.every(card => {
       const product = api.productById(card.dataset.cardProduct);
-      const text = String(card.querySelector('.price-row strong')?.textContent || '');
+      const text = String(card.querySelector('.catalog-primary-quote strong')?.textContent || '');
       const shown = Number(text.replace(/[^0-9]/g, '')) || 0;
       return product && shown === Math.round(Number(product.price) + Number(product.install) + delta);
     });
-  }, expectedDelivery, { timeout: 10000 });
+  }, expectedDelivery, { timeout: 12000 });
 
   const count = await page.locator('#catalogGrid .product-card').count();
-  console.log(`${label}: ${count} visible cards include delivery=${expectedDelivery}`);
+  console.log(`${label}: ${count} visible single-price quotes include delivery=${expectedDelivery}`);
 };
 
 const assertDeliveryNote = async (page, label) => {
-  const notes = await page.locator('#catalogGrid .product-card .price-delivery-note').evaluateAll(nodes => nodes.map(node => String(node.textContent || '')));
-  const expectedText = `учётом доставки в ${city}`.toLocaleLowerCase('ru-RU');
+  const notes = await page.locator('#catalogGrid .product-card .catalog-primary-quote small').evaluateAll(nodes => nodes.map(node => String(node.textContent || '')));
+  const expectedText = `доставкой в ${city}`.toLocaleLowerCase('ru-RU');
   if (!notes.length || notes.some(text => !text.toLocaleLowerCase('ru-RU').includes(expectedText))) {
-    throw new Error(`${label} delivery note mismatch: ${JSON.stringify(notes)}`);
+    throw new Error(`${label} delivery quote mismatch: ${JSON.stringify(notes)}`);
   }
 };
 
@@ -59,39 +59,49 @@ const assertSingleOrderProcess = async (page, label) => {
 
 const selectInstallationPlace = async page => {
   const firstCard = page.locator('#catalogGrid .product-card').first();
-  if (await firstCard.isVisible().catch(() => false)) return firstCard;
+  await firstCard.waitFor({ state: 'visible', timeout: 10000 });
+  await page.locator('#catalogOrderConfigurator').waitFor({ state: 'visible', timeout: 10000 }).catch(() => {});
 
-  const modal = page.locator('#catalogLocationGateModal');
-  const autoOpened = await modal.waitFor({ state: 'visible', timeout: 3000 }).then(() => true).catch(() => false);
-  if (!autoOpened) {
-    const lockButton = page.locator('.catalog-location-lock button');
-    if (await lockButton.isVisible().catch(() => false)) await lockButton.evaluate(element => element.click());
-    else await page.evaluate(() => document.querySelector('a[href="#catalog"]')?.click());
-  }
+  const stateAlreadyMatches = await page.evaluate(({ expectedCity, delta }) => {
+    const state = window.GATE_PAGE_API?.deliveryState?.();
+    const selected = String(state?.shortName || state?.resolvedName || state?.name || '');
+    return ['fixed','calculated'].includes(String(state?.kind || '')) && selected.includes(expectedCity) && Number(state?.price) === delta;
+  }, { expectedCity: city, delta: expectedDelivery });
+  if (stateAlreadyMatches) return firstCard;
 
-  await modal.waitFor({ state: 'visible', timeout: 5000 });
-  const input = page.locator('#installationLocationInput');
-  const action = page.locator('#installationLocationAction');
+  const other = page.locator('#deliveryChooser [data-delivery-choice="other"]');
+  if (await other.isVisible().catch(() => false)) await other.click();
+
+  const input = page.locator('#cityInput');
+  await input.waitFor({ state: 'visible', timeout: 5000 });
   await input.fill(city);
+  await input.dispatchEvent('change');
 
-  if (!(await firstCard.isVisible().catch(() => false))) {
+  const selectedSummary = page.locator('#deliverySummary');
+  if (!(await selectedSummary.isVisible().catch(() => false))) {
+    const action = page.locator('#routeButton');
     await action.waitFor({ state: 'visible', timeout: 10000 });
     await page.waitForFunction(() => {
-      const button = document.querySelector('#installationLocationAction');
+      const button = document.querySelector('#routeButton');
       return button && !button.disabled;
     }, null, { timeout: 10000 });
     await action.click();
-  }
 
-  if (!(await firstCard.isVisible().catch(() => false)) && await modal.isVisible().catch(() => false)) {
     await page.waitForFunction(() => {
-      const button = document.querySelector('#installationLocationAction');
-      return button && !button.disabled && /Да, это нужный пункт/.test(String(button.textContent || ''));
+      const state = window.GATE_PAGE_API?.deliveryState?.();
+      return ['fixed','calculated','confirm','out-of-area','error'].includes(String(state?.kind || ''));
     }, null, { timeout: 10000 });
-    await action.click();
+
+    const actionText = String(await action.textContent().catch(() => '') || '');
+    if (/Да, это нужный пункт/.test(actionText)) await action.click();
   }
 
-  await firstCard.waitFor({ state: 'visible', timeout: 10000 });
+  await page.waitForFunction(({ expectedCity, delta }) => {
+    const state = window.GATE_PAGE_API?.deliveryState?.();
+    const selected = String(state?.shortName || state?.resolvedName || state?.name || '');
+    return ['fixed','calculated'].includes(String(state?.kind || '')) && selected.includes(expectedCity) && Number(state?.price) === delta;
+  }, { expectedCity: city, delta: expectedDelivery }, { timeout: 10000 });
+
   return firstCard;
 };
 
@@ -106,27 +116,22 @@ try {
     timeout: 30000
   });
   await page.waitForFunction(() => window.GATE_PAGE_API && document.querySelectorAll('#catalogGrid .product-card').length >= 2, null, { timeout: 15000 });
+  await page.waitForSelector('#catalogGrid .product-card', { state: 'visible', timeout: 10000 });
   await assertSingleOrderProcess(page, 'initial-page');
   const firstCard = await selectInstallationPlace(page);
 
-  await page.waitForFunction(({ expectedCity, delta }) => {
-    const state = window.GATE_PAGE_API?.deliveryState?.();
-    const selected = String(state?.shortName || state?.resolvedName || state?.name || '');
-    return ['fixed','calculated'].includes(String(state?.kind || '')) && selected.includes(expectedCity) && Number(state?.price) === delta;
-  }, { expectedCity: city, delta: expectedDelivery }, { timeout: 10000 });
-
   await assertEveryVisibleCardUsesDelivery(page, 'delivery-location-selected');
   await assertDeliveryNote(page, 'initial-cards');
-  const installed = await readInstalledPrices(page);
+  const installed = await readCatalogQuotes(page);
   if (installed.length < 2 || installed.some(value => value <= expectedDelivery)) {
-    throw new Error(`Bad catalog prices after delivery selection: ${JSON.stringify(installed)}`);
+    throw new Error(`Bad catalog quotes after delivery selection: ${JSON.stringify(installed)}`);
   }
 
   await firstCard.locator('.select-product').click();
   await page.waitForSelector('#calculator', { state: 'visible', timeout: 15000 });
   await page.waitForFunction(expectedCity => String(document.querySelector('#deliverySummaryValue')?.textContent || '').includes(expectedCity), city, { timeout: 10000 });
   await page.waitForTimeout(1300);
-  await assertEveryVisibleCardUsesDelivery(page, 'delivery-stable-after-formula-sync');
+  await assertEveryVisibleCardUsesDelivery(page, 'delivery-stable-after-model-selection');
 
   await page.evaluate(() => window.GATE_PAGE_API?.closeCalculator?.());
   await page.waitForTimeout(700);
@@ -158,7 +163,7 @@ try {
     throw new Error(`Browser errors detected: ${errors.join(' | ')}`);
   }
 
-  console.log(`Delivery-price browser smoke passed for ${baseUrl}: ${city}, +${expectedDelivery}; location-first selection, single order process, formula sync, catalog expansion and reload are stable.`);
+  console.log(`Delivery-price browser smoke passed for ${baseUrl}: ${city}, +${expectedDelivery}; always-visible catalog, one-price quotes, single order process, catalog expansion and reload are stable.`);
 } finally {
   await browser.close();
 }
