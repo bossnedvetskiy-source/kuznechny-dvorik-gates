@@ -3,6 +3,7 @@
 (() => {
   if (window.KUZDVOR_CATALOG_POLISH_V2) return;
   window.KUZDVOR_CATALOG_POLISH_V2 = true;
+  if (typeof document === 'undefined') return;
 
   const CONFIG_APPLIED_KEY = 'kuzdvor:catalog-config-applied-v2';
   const STANDARD = {gateWidth:3.4, gateHeight:1.8, wicketWidth:1, wicketHeight:1.8};
