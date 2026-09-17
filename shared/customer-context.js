@@ -49,429 +49,447 @@
 })();
 
 (() => {
-  const mobile = window.matchMedia('(max-width: 620px)');
+  if (window.KUZDVOR_GLOBAL_CATALOG_FLOW) return;
+  window.KUZDVOR_GLOBAL_CATALOG_FLOW = true;
 
-  const install = () => {
-    const priceBody = document.querySelector('.mobile-price-breakdown-body');
-    const paymentNote = priceBody?.querySelector('.mobile-payment-note');
-    const stickyCta = document.getElementById('mobilePrimaryCta');
-    const stickyBar = document.querySelector('.mobile-cta');
-    const priceNode = document.getElementById('mobilePriceTotal');
-    const estimateCard = document.querySelector('.mobile-price-breakdown');
-    if (!priceBody || !stickyCta || !stickyBar || !priceNode || !estimateCard) return false;
-    if (priceBody.querySelector('.mobile-inline-order-cta')) return true;
+  const money = value => `${new Intl.NumberFormat('ru-RU').format(Math.round((Number(value) || 0) / 100) * 100)} ₽`;
+  const num = node => Number(String(node?.value ?? '').replace(',', '.'));
+  const closeTo = (a, b) => Math.abs(Number(a) - Number(b)) < 0.001;
 
-    const style = document.createElement('style');
-    style.id = 'mobileInlineOrderCtaStyles';
-    style.textContent = `
-      .mobile-inline-order-cta{display:none}
-      @media(max-width:620px){
-        .mobile-inline-order-cta{display:grid;width:100%;min-height:62px;margin:12px 0 0;padding:11px 16px;border:0;border-radius:12px;background:#d2a143;color:#17130d;place-items:center;gap:2px;font-family:Manrope,Arial,sans-serif;cursor:pointer;box-shadow:0 8px 20px rgba(0,0,0,.18)}
-        .mobile-inline-order-cta strong{font-size:14px;line-height:1.25;font-weight:900}
-        .mobile-inline-order-cta small{font-size:10px;line-height:1.3;font-weight:800;opacity:.78}
-        .mobile-cta.is-inline-cta-visible{opacity:0!important;visibility:hidden!important;pointer-events:none!important}
-        .mobile-price-breakdown.mobile-estimate-order-target{cursor:pointer;touch-action:manipulation;transition:border-color .15s ease,box-shadow .15s ease,transform .08s ease}
-        .mobile-price-breakdown.mobile-estimate-order-target:active{transform:translateY(1px);border-color:rgba(230,189,105,.62);box-shadow:0 0 0 2px rgba(210,161,67,.12)}
-        .mobile-price-breakdown.mobile-estimate-order-target:focus-visible{outline:2px solid #d2a143;outline-offset:3px}
-      }
-    `;
-    if (!document.getElementById(style.id)) document.head.append(style);
-
-    estimateCard.classList.add('mobile-estimate-order-target');
-    estimateCard.setAttribute('role','button');
-    estimateCard.setAttribute('tabindex','0');
-    estimateCard.setAttribute('aria-label','Перейти к заказу бесплатного замера');
-
-    const activateEstimateOrder = event => {
-      if (!mobile.matches) return;
-      const interactive = event.target?.closest?.('button,a,input,textarea,select,label,[role="button"]');
-      if (interactive && interactive !== estimateCard) return;
-      event.preventDefault();
-      stickyCta.click();
-    };
-
-    estimateCard.addEventListener('click', activateEstimateOrder);
-    estimateCard.addEventListener('keydown', event => {
-      if (!mobile.matches || event.target !== estimateCard || !['Enter',' '].includes(event.key)) return;
-      event.preventDefault();
-      stickyCta.click();
-    });
-
-    const inlineCta = document.createElement('button');
-    inlineCta.type = 'button';
-    inlineCta.className = 'mobile-inline-order-cta';
-    inlineCta.setAttribute('aria-label','Заказать бесплатный замер');
-    inlineCta.innerHTML = '<strong>Заказать бесплатный замер</strong><small></small>';
-    (paymentNote || priceBody.lastElementChild)?.after?.(inlineCta) || priceBody.append(inlineCta);
-
-    const inlinePrice = inlineCta.querySelector('small');
-    const syncPrice = () => {
-      const price = String(priceNode.textContent || '').trim();
-      inlinePrice.textContent = price ? `Предварительный расчёт: ${price}` : 'Предварительный расчёт';
-    };
-    syncPrice();
-
-    new MutationObserver(syncPrice).observe(priceNode,{childList:true,characterData:true,subtree:true});
-    document.addEventListener('gate:calculated', () => requestAnimationFrame(syncPrice));
-
-    inlineCta.addEventListener('click', event => {
-      event.preventDefault();
-      event.stopPropagation();
-      stickyCta.click();
-    });
-
-    const syncStickyVisibility = visible => {
-      stickyBar.classList.toggle('is-inline-cta-visible', Boolean(visible && mobile.matches));
-    };
-
-    if ('IntersectionObserver' in window) {
-      const observer = new IntersectionObserver(entries => {
-        const entry = entries[0];
-        syncStickyVisibility(Boolean(entry?.isIntersecting && entry.intersectionRatio >= .35));
-      },{threshold:[0,.35,.7,1]});
-      observer.observe(inlineCta);
-      mobile.addEventListener('change', () => {
-        if (!mobile.matches) syncStickyVisibility(false);
-      });
-    }
-
-    return true;
+  const ready = () => {
+    const catalog = document.getElementById('catalog');
+    const grid = document.getElementById('catalogGrid');
+    const calculator = document.getElementById('calculator');
+    const sizeBlock = document.getElementById('gateDimensions')?.closest('.form-block');
+    const postsBlock = document.getElementById('postsCheck')?.closest('.form-block');
+    const deliveryBlock = document.getElementById('deliveryChooser')?.closest('.form-block');
+    const api = window.GATE_PAGE_API;
+    return catalog && grid && calculator && sizeBlock && postsBlock && deliveryBlock && api?.productById && api?.deliveryState
+      ? {catalog, grid, calculator, sizeBlock, postsBlock, deliveryBlock, api}
+      : null;
   };
 
-  queueMicrotask(() => {
-    if (install()) return;
-    const observer = new MutationObserver(() => {
-      if (install()) observer.disconnect();
-    });
-    observer.observe(document.body,{childList:true,subtree:true});
-    window.setTimeout(() => observer.disconnect(),5000);
-  });
-})();
+  function install() {
+    if (document.getElementById('catalogOrderConfigurator')) return true;
+    const refs = ready();
+    if (!refs) return false;
+    const {catalog, grid, calculator, sizeBlock, postsBlock, deliveryBlock, api} = refs;
 
-(() => {
-  const install = () => {
-    if (document.getElementById('catalogLocationGateModal')) return true;
-    const catalog = document.getElementById('catalog');
-    const catalogSummary = catalog?.querySelector('.catalog-summary');
-    const sourceChooser = document.getElementById('deliveryChooser');
-    const sourceCity = document.getElementById('cityInput');
-    const sourceResult = document.getElementById('deliveryResult');
-    const sourceRoute = document.getElementById('routeButton');
-    const sourceSummary = document.getElementById('deliverySummary');
-    const sourceSummaryValue = document.getElementById('deliverySummaryValue');
-    const sourceOther = sourceChooser?.querySelector('[data-delivery-choice="other"]');
-    const deliveryBlock = sourceChooser?.closest('.form-block');
-    const calculator = document.getElementById('calculator');
-    const stickyCta = document.getElementById('mobilePrimaryCta');
-    const catalogGrid = document.getElementById('catalogGrid');
-    if (!catalog || !catalogSummary || !sourceChooser || !sourceCity || !sourceResult || !sourceRoute || !sourceSummary || !sourceSummaryValue || !sourceOther || !deliveryBlock || !calculator || !stickyCta || !window.GATE_PAGE_API?.deliveryState) return false;
-
-    document.getElementById('catalogLocationPanel')?.remove();
-    document.getElementById('catalogLocationPanelStyles')?.remove();
+    const widthInput = document.getElementById('widthInput');
+    const wicketWidthInput = document.getElementById('wicketWidthInput');
+    const heightInput = document.getElementById('heightInput');
+    const wicketHeightInput = document.getElementById('wicketHeightInput');
+    const postsCheck = document.getElementById('postsCheck');
+    const cityInput = document.getElementById('cityInput');
+    const showMore = document.getElementById('showMoreButton');
+    const mobileCta = document.getElementById('mobilePrimaryCta');
 
     const style = document.createElement('style');
-    style.id = 'catalogLocationGateStyles';
+    style.id = 'catalogGlobalFlowStyles';
     style.textContent = `
-      body.installation-location-modal-open{overflow:hidden!important}
-      .catalog.location-locked .catalog-summary,.catalog.location-locked .catalog-grid,.catalog.location-locked .catalog-trust-strip,.catalog.location-locked .catalog-more,.catalog.location-locked .empty-state{display:none!important}
-      .catalog-location-lock{display:grid;justify-items:center;gap:9px;margin:0;padding:24px 18px;border:1px solid rgba(210,161,67,.3);border-radius:18px;background:#fff;text-align:center;box-shadow:0 10px 28px rgba(17,18,20,.06)}
-      .catalog-location-lock[hidden],.catalog-location-bar[hidden]{display:none!important}
-      .catalog-location-lock strong{font-size:17px;line-height:1.25;color:#171717}.catalog-location-lock span{max-width:560px;color:#746e65;font-size:12px;line-height:1.5}.catalog-location-lock button{min-height:46px;margin-top:3px;padding:10px 20px;border:0;border-radius:12px;background:#d2a143;color:#17130d;font:900 12px/1.2 Manrope,Arial,sans-serif;cursor:pointer}
-      .catalog-location-bar{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:0 0 16px;padding:11px 13px;border:1px solid rgba(17,18,20,.11);border-radius:13px;background:#fff;color:#171717}
-      .catalog-location-bar-copy{display:grid;gap:2px;min-width:0}.catalog-location-bar-copy span{color:#8b8378;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.07em}.catalog-location-bar-copy strong{font-size:12px;line-height:1.3;font-weight:900}.catalog-location-bar button{flex:0 0 auto;min-height:36px;padding:8px 11px;border:1px solid rgba(210,161,67,.42);border-radius:9px;background:transparent;color:#8a6320;font:800 10px/1.2 Manrope,Arial,sans-serif;cursor:pointer}
-      .delivery-location-source-hidden .delivery-choice-buttons,.delivery-location-source-hidden .city-label,.delivery-location-source-hidden .delivery-result,.delivery-location-source-hidden .route-button,.delivery-location-source-hidden .delivery-help,.delivery-location-source-hidden #deliveryChange{display:none!important}
-      .delivery-location-source-hidden .delivery-selected-summary{display:flex!important;margin-top:0!important}.delivery-location-source-hidden .delivery-selected-summary>div>span{font-size:10px!important}.delivery-location-source-hidden .delivery-selected-summary>div>strong{font-size:14px!important}.delivery-location-readonly-note{display:block;margin:8px 0 0;color:rgba(255,255,255,.62);font-size:10px;line-height:1.45}
-      .installation-location-backdrop{position:fixed;inset:0;z-index:12000;background:rgba(5,6,8,.68);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px)}.installation-location-backdrop[hidden],.installation-location-modal[hidden]{display:none!important}
-      .installation-location-modal{position:fixed;z-index:12001;left:50%;top:50%;width:min(520px,calc(100vw - 28px));box-sizing:border-box;transform:translate(-50%,-50%);padding:22px;border:1px solid rgba(230,189,105,.38);border-radius:20px;background:linear-gradient(155deg,#191a1d,#0e0f11);color:#fff;box-shadow:0 26px 80px rgba(0,0,0,.48);font-family:Manrope,Arial,sans-serif}
-      .installation-location-close{position:absolute;right:12px;top:12px;width:38px;height:38px;border:1px solid rgba(255,255,255,.14);border-radius:50%;background:#202125;color:#fff;font-size:22px;line-height:1;cursor:pointer}.installation-location-modal h2{margin:0 46px 7px 0;font-size:21px;line-height:1.2}.installation-location-modal>p{margin:0 0 16px;color:rgba(255,255,255,.68);font-size:11.5px;line-height:1.5}.installation-location-field{display:grid;gap:6px}.installation-location-field span{color:rgba(255,255,255,.72);font-size:10px;font-weight:800}.installation-location-field input{width:100%;min-height:50px;box-sizing:border-box;padding:11px 13px;border:1px solid rgba(255,255,255,.2);border-radius:12px;background:#fff;color:#171717;font:700 16px/1.2 Manrope,Arial,sans-serif;outline:none}.installation-location-field input:focus{border-color:#d2a143;box-shadow:0 0 0 3px rgba(210,161,67,.15)}.installation-location-status{min-height:18px;margin:8px 0 0;color:rgba(255,255,255,.69);font-size:10.5px;line-height:1.45}.installation-location-action{width:100%;min-height:48px;margin-top:11px;border:0;border-radius:12px;background:#d2a143;color:#17130d;font:900 12px/1.2 Manrope,Arial,sans-serif;cursor:pointer}.installation-location-action:disabled{opacity:.48;cursor:not-allowed}.installation-location-hint{display:block;margin-top:9px;color:rgba(255,255,255,.47);font-size:9.5px;line-height:1.4;text-align:center}
-      @media(max-width:620px){body:not(.catalog-journey-started) .mobile-cta,body.installation-location-modal-open .mobile-cta{display:none!important}.catalog-location-lock{padding:19px 14px;border-radius:15px}.catalog-location-lock strong{font-size:15px}.catalog-location-lock span{font-size:11px}.catalog-location-lock button{width:100%;min-height:48px}.catalog-location-bar{margin-bottom:12px;padding:10px 11px}.catalog-location-bar-copy strong{font-size:11.5px}.installation-location-modal{left:0;right:0;top:auto;bottom:0;width:100%;max-height:min(82dvh,640px);transform:none;padding:20px 16px max(18px,env(safe-area-inset-bottom));border-radius:22px 22px 0 0}.installation-location-modal h2{font-size:19px}.installation-location-modal>p{font-size:11px}.installation-location-field input{min-height:52px;font-size:16px}.installation-location-action{min-height:50px}}
+      .catalog-order-config{margin:0 0 18px;padding:18px;border:1px solid rgba(210,161,67,.34);border-radius:18px;background:linear-gradient(155deg,#17181b,#0e0f11);color:#fff;box-shadow:0 14px 34px rgba(17,18,20,.10)}
+      .catalog-order-config__head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:14px}.catalog-order-config__eyebrow{display:block;margin:0 0 5px;color:#e6bd69;font-size:9px;font-weight:900;letter-spacing:.09em;text-transform:uppercase}.catalog-order-config h3{margin:0;font:25px/1.15 Prata,serif}.catalog-order-config__head p{max-width:540px;margin:6px 0 0;color:rgba(255,255,255,.66);font-size:11px;line-height:1.5}
+      .catalog-order-config__fields.calc-form{display:grid;grid-template-columns:1.08fr .92fr .92fr;gap:12px;padding:0!important;background:transparent!important}.catalog-order-config .form-block{min-width:0;margin:0!important;padding:13px!important;border:1px solid rgba(255,255,255,.11)!important;border-radius:14px!important;background:rgba(255,255,255,.045)!important}.catalog-order-config .step-label{margin-bottom:10px!important}.catalog-order-config .base-install-note,.catalog-order-config .option-list,.catalog-order-config .color-note,.catalog-order-config .size-notice,.catalog-order-config .size-memory-note{display:none!important}
+      .catalog-order-config .posts-reassurance{margin:8px 0 0!important;color:rgba(255,255,255,.58)!important;font-size:9.5px!important;line-height:1.4!important}.catalog-order-config .posts-reassurance strong{color:#fff!important}.catalog-order-config .dimension-help{display:block;margin-top:7px;color:rgba(255,255,255,.56);font-size:9.5px;line-height:1.4}.catalog-order-config .mobile-size-summary{margin-bottom:8px}.catalog-order-config .mobile-size-summary button{min-height:34px}
+      .catalog-posts-choice{display:grid;grid-template-columns:1fr 1fr;gap:7px}.catalog-posts-choice button{display:grid;gap:3px;min-height:62px;padding:9px 10px;border:1px solid rgba(255,255,255,.14);border-radius:11px;background:rgba(255,255,255,.045);color:#fff;text-align:left;font-family:Manrope,Arial,sans-serif;cursor:pointer}.catalog-posts-choice button b{font-size:11px;line-height:1.2}.catalog-posts-choice button small{color:rgba(255,255,255,.55);font-size:8.5px;line-height:1.3}.catalog-posts-choice button.is-active{border-color:#d2a143;background:rgba(210,161,67,.14);box-shadow:inset 0 0 0 1px rgba(210,161,67,.15)}.catalog-posts-choice button.is-active b{color:#e6bd69}
+      .catalog-order-config .delivery-help{margin-top:8px}.catalog-order-config .delivery-input-help{color:rgba(255,255,255,.54)!important}.catalog-order-config .delivery-choice-buttons button{min-height:42px}.catalog-order-config .delivery-selected-summary{margin:0}.catalog-order-config .city-label input{min-height:44px}.catalog-order-config .route-button{min-height:42px}
+      .catalog-order-config__actions{display:flex;align-items:center;gap:12px;margin-top:14px}.catalog-order-config__apply{min-height:46px;padding:10px 20px;border:0;border-radius:11px;background:#d2a143;color:#17130d;font:900 11px/1.2 Manrope,Arial,sans-serif;cursor:pointer}.catalog-order-config__actions small{color:rgba(255,255,255,.53);font-size:9.5px;line-height:1.4}
+      .catalog-order-summary{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 14px;padding:11px 13px;border:1px solid rgba(17,18,20,.11);border-radius:13px;background:#fff}.catalog-order-summary[hidden]{display:none!important}.catalog-order-summary__copy{display:grid;gap:2px;min-width:0}.catalog-order-summary__copy span{color:#8d857a;font-size:8.5px;font-weight:900;letter-spacing:.06em;text-transform:uppercase}.catalog-order-summary__copy strong{font-size:11px;line-height:1.35}.catalog-order-summary button{flex:0 0 auto;min-height:34px;padding:7px 10px;border:1px solid rgba(210,161,67,.46);border-radius:9px;background:transparent;color:#8a6320;font:800 9.5px/1.2 Manrope,Arial,sans-serif;cursor:pointer}
+      .catalog-color-global{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 14px;padding:10px 12px;border-radius:12px;background:#f0eadf;color:#3c372f}.catalog-color-global strong{font-size:10px}.catalog-color-global span{color:#7c7368;font-size:9.5px;line-height:1.35}.catalog-color-swatches{display:flex;gap:5px;flex:0 0 auto}.catalog-color-swatches i{width:17px;height:17px;border:2px solid #fff;border-radius:50%;box-shadow:0 0 0 1px rgba(17,18,20,.13)}.catalog-color-swatches i:nth-child(1){background:#3a302b}.catalog-color-swatches i:nth-child(2){background:#4b4c4e}.catalog-color-swatches i:nth-child(3){background:#31513c}.catalog-color-swatches i:nth-child(4){background:#1d7b4a}.catalog-color-swatches i:nth-child(5){background:#6d3036}
+      .product-card .price-stack,.product-card>.price-delivery-note,.product-card .product-meta,.product-card .profile-color-picker{display:none!important}.product-card .product-info>p{display:none!important}.catalog-primary-quote{display:grid;gap:3px;margin:10px 0 11px;padding:10px 11px;border-radius:11px;background:#f6f1e8}.catalog-primary-quote strong{font-size:20px;line-height:1.1;color:#171717}.catalog-primary-quote small{color:#766e64;font-size:9.5px;line-height:1.35}.catalog-primary-quote.is-manual strong{font-size:15px}.product-card .select-product{min-height:44px}
+      .selected-order-summary{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 12px;align-items:center;margin:0 0 11px;padding:11px 12px;border:1px solid rgba(230,189,105,.22);border-radius:11px;background:rgba(200,152,60,.07);color:#fff}.selected-order-summary span{display:block;color:rgba(255,255,255,.55);font-size:8.5px;font-weight:900;letter-spacing:.06em;text-transform:uppercase}.selected-order-summary strong{display:block;margin-top:3px;font-size:10.5px;line-height:1.4}.selected-order-summary button{grid-row:1/3;grid-column:2;min-height:34px;padding:7px 9px;border:1px solid rgba(230,189,105,.35);border-radius:9px;background:transparent;color:#e6bd69;font:800 9px/1.2 Manrope,Arial,sans-serif;cursor:pointer}
+      .selected-color-panel{margin:0 0 11px;padding:11px 12px;border:1px solid rgba(255,255,255,.10);border-radius:11px;background:rgba(255,255,255,.035);color:#fff}.selected-color-panel__head{display:flex;align-items:center;justify-content:space-between;gap:10px}.selected-color-panel__head strong{font-size:10.5px}.selected-color-panel__head button{border:0;background:transparent;color:#e6bd69;font:800 9px/1.2 Manrope,Arial,sans-serif;cursor:pointer}.selected-color-panel__options{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}.selected-color-panel__options[hidden]{display:none!important}.selected-color-panel__options button{min-height:31px;padding:6px 8px;border:1px solid rgba(255,255,255,.13);border-radius:8px;background:rgba(255,255,255,.05);color:#fff;font:700 8.5px/1.1 Manrope,Arial,sans-serif;cursor:pointer}.selected-color-panel__options button.is-active{border-color:#d2a143;color:#e6bd69;background:rgba(210,161,67,.12)}
+      #calculator .size-notice,#calculator .size-memory-note{display:none!important}#calculator .mobile-payment-note{padding:7px 0 0!important;border:0!important;background:transparent!important;font-size:9.5px!important}#calculator .mobile-payment-note strong{display:inline!important;margin:0!important;font-size:9.5px!important}.order-process{display:none!important}
+      @media(max-width:900px){.catalog-order-config__fields.calc-form{grid-template-columns:1fr}.catalog-order-config__head{display:block}.catalog-order-config h3{font-size:22px}}
+      @media(max-width:620px){.catalog-order-config{margin:0 0 13px;padding:13px;border-radius:15px}.catalog-order-config h3{font-size:19px}.catalog-order-config__head p{font-size:10.5px}.catalog-order-config__fields.calc-form{gap:8px}.catalog-order-config .form-block{padding:11px!important}.catalog-order-config__actions{display:grid;gap:7px}.catalog-order-config__apply{width:100%;min-height:48px}.catalog-order-summary{margin-bottom:10px;padding:9px 10px}.catalog-order-summary__copy strong{font-size:10px}.catalog-color-global{margin-bottom:10px;padding:9px 10px}.catalog-color-global span{font-size:9px}.catalog-color-swatches i{width:15px;height:15px}.catalog-posts-choice button{min-height:58px}.catalog-primary-quote{margin:7px 0 9px;padding:9px 10px}.catalog-primary-quote strong{font-size:18px}.catalog-primary-quote small{font-size:9px}}
     `;
     document.head.append(style);
 
-    const startJourney = () => document.body.classList.add('catalog-journey-started');
+    const config = document.createElement('section');
+    config.id = 'catalogOrderConfigurator';
+    config.className = 'catalog-order-config';
+    config.innerHTML = `
+      <div class="catalog-order-config__head">
+        <div><span class="catalog-order-config__eyebrow">Один раз для всего каталога</span><h3>Узнайте цены для вашего заказа</h3><p>Укажите размеры, место установки и столбы. Все модели ниже пересчитаются по одним и тем же условиям. Можно ничего не менять и сразу смотреть стандартные цены.</p></div>
+      </div>
+      <div class="catalog-order-config__fields calc-form" id="catalogOrderFields"></div>
+      <div class="catalog-order-config__actions"><button class="catalog-order-config__apply" id="applyCatalogParams" type="button">Показать цены</button><small>Не знаете размеры? Оставьте стандартные — уточним на бесплатном замере.</small></div>`;
 
-    deliveryBlock.classList.add('delivery-location-source-hidden');
-    const stepLabel = deliveryBlock.querySelector('.step-label');
-    if (stepLabel) stepLabel.textContent = '03 · Место установки';
-    let readonlyNote = deliveryBlock.querySelector('.delivery-location-readonly-note');
-    if (!readonlyNote) {
-      readonlyNote = document.createElement('small');
-      readonlyNote.className = 'delivery-location-readonly-note';
-      sourceSummary.after(readonlyNote);
-    }
-    const sourceSummaryLabel = sourceSummary.querySelector('span');
-    if (sourceSummaryLabel) sourceSummaryLabel.textContent = 'Место установки';
+    const summary = document.createElement('div');
+    summary.id = 'catalogOrderSummary';
+    summary.className = 'catalog-order-summary';
+    summary.hidden = true;
+    summary.innerHTML = `<div class="catalog-order-summary__copy"><span>Ваш расчёт</span><strong></strong></div><button type="button">Изменить</button>`;
 
-    const lock = document.createElement('div');
-    lock.className = 'catalog-location-lock';
-    lock.innerHTML = '<strong>Сначала укажите место установки</strong><span>После этого откроем каталог и сразу покажем цены с учётом доставки.</span><button type="button">Указать населённый пункт</button>';
-    catalog.querySelector('.section-head')?.after(lock);
+    const colors = document.createElement('div');
+    colors.className = 'catalog-color-global';
+    colors.innerHTML = `<div><strong>Любой цвет профнастила</strong><br><span>Цвет не меняет предварительную стоимость. Выбрать оттенок можно после выбора модели.</span></div><div class="catalog-color-swatches" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>`;
 
-    const bar = document.createElement('div');
-    bar.className = 'catalog-location-bar';
-    bar.hidden = true;
-    bar.innerHTML = '<div class="catalog-location-bar-copy"><span>Место установки</span><strong></strong></div><button type="button">Изменить</button>';
-    catalogSummary.before(bar);
-    const barValue = bar.querySelector('strong');
+    const sectionHead = catalog.querySelector('.section-head');
+    sectionHead?.after(config, summary, colors);
+    const fields = config.querySelector('#catalogOrderFields');
+    fields.append(sizeBlock, postsBlock, deliveryBlock);
 
-    const backdrop = document.createElement('div');
-    backdrop.className = 'installation-location-backdrop';
-    backdrop.hidden = true;
-    const modal = document.createElement('section');
-    modal.id = 'catalogLocationGateModal';
-    modal.className = 'installation-location-modal';
-    modal.hidden = true;
-    modal.setAttribute('role','dialog');
-    modal.setAttribute('aria-modal','true');
-    modal.setAttribute('aria-labelledby','installationLocationTitle');
-    modal.innerHTML = `
-      <button class="installation-location-close" type="button" aria-label="Закрыть">×</button>
-      <h2 id="installationLocationTitle">Куда устанавливаем ворота?</h2>
-      <p>Введите населённый пункт. После выбора мы откроем каталог уже с ценами, рассчитанными для вашего места установки.</p>
-      <label class="installation-location-field"><span>Населённый пункт</span><input id="installationLocationInput" list="citySuggestions" type="text" placeholder="Например: Салават" autocomplete="address-level2" enterkeyhint="search"></label>
-      <div class="installation-location-status" id="installationLocationStatus" role="status" aria-live="polite"></div>
-      <button class="installation-location-action" id="installationLocationAction" type="button" disabled>Продолжить</button>
-      <small class="installation-location-hint">Телефон и регистрация не нужны — сначала просто покажем актуальные цены.</small>`;
-    document.body.append(backdrop,modal);
+    const catalogIntro = sectionHead?.querySelector('p');
+    if (catalogIntro) catalogIntro.textContent = 'Сравнивайте дизайн и уже пересчитанную стоимость. Параметры выше действуют сразу для всех 38 моделей.';
 
-    const modalInput = modal.querySelector('#installationLocationInput');
-    const modalStatus = modal.querySelector('#installationLocationStatus');
-    const modalAction = modal.querySelector('#installationLocationAction');
-    const modalClose = modal.querySelector('.installation-location-close');
-    let navigateAfterSelection = false;
-    let autoPromptDismissed = false;
-    let closing = false;
-    let noteSyncQueued = false;
+    const postsSegment = document.createElement('div');
+    postsSegment.className = 'catalog-posts-choice';
+    postsSegment.innerHTML = `<button type="button" data-posts-choice="0"><b>На мои столбы</b><small>Установка уже включена</small></button><button type="button" data-posts-choice="1"><b>Нужны новые</b><small>Усиленные столбы со связкой</small></button>`;
+    postsBlock.querySelector('.option-list')?.before(postsSegment);
+    const postsStep = postsBlock.querySelector('.step-label');
+    if (postsStep) postsStep.textContent = '02 · Столбы';
+    const postsHint = postsBlock.querySelector('.posts-reassurance');
+    if (postsHint) postsHint.innerHTML = '<strong>Не уверены?</strong> Проверим ваши столбы на бесплатном замере.';
 
-    const getState = () => window.GATE_PAGE_API?.deliveryState?.() || {kind:'empty'};
-    const cityFromState = state => String(state?.shortName || state?.resolvedName || state?.name || sourceCity.value || '').trim();
-    const isSelected = state => ['fixed','calculated','out-of-area'].includes(String(state?.kind || '')) && Boolean(cityFromState(state));
+    const deliveryStep = deliveryBlock.querySelector('.step-label');
+    if (deliveryStep) deliveryStep.textContent = '03 · Место установки';
 
-    const normalizeCatalogNotes = state => {
-      if (!catalogGrid || !isSelected(state)) return;
-      const city = cityFromState(state);
-      const outOfArea = String(state.kind || '') === 'out-of-area';
-      const wanted = outOfArea
-        ? `Доставка в ${city} рассчитывается индивидуально`
-        : `✓ Цена с учётом доставки в ${city}`;
-      catalogGrid.querySelectorAll('.price-delivery-note').forEach(node => {
-        if (node.textContent !== wanted) node.textContent = wanted;
-      });
-    };
+    const sizeNotice = document.getElementById('sizeNotice');
+    const sizeMemory = document.getElementById('sizeMemoryNote');
+    if (sizeNotice) sizeNotice.hidden = true;
+    if (sizeMemory) sizeMemory.hidden = true;
 
-    const queueNoteSync = state => {
-      if (noteSyncQueued) return;
-      noteSyncQueued = true;
-      requestAnimationFrame(() => {
-        noteSyncQueued = false;
-        normalizeCatalogNotes(state || getState());
-      });
-    };
+    const selectedSummary = document.createElement('div');
+    selectedSummary.className = 'selected-order-summary';
+    selectedSummary.innerHTML = `<div><span>Ваш расчёт</span><strong></strong></div><button type="button">Изменить</button>`;
+    const preview = calculator.querySelector('.selected-product-preview');
+    preview?.after(selectedSummary);
 
-    const syncModal = () => {
-      const state = getState();
+    const selectedColor = document.createElement('div');
+    selectedColor.className = 'selected-color-panel';
+    selectedColor.innerHTML = `<div class="selected-color-panel__head"><strong>Цвет профнастила</strong><button type="button" aria-expanded="false">Посмотреть цвета</button></div><div class="selected-color-panel__options" hidden></div>`;
+    selectedSummary.after(selectedColor);
+    const colorOptions = [
+      ['chocolate','Шоколад'], ['graphite','Графит'], ['moss','Зелёный мох'],
+      ['mint','Зелёная мята'], ['wine','Винно-красный'], ['other','Другой цвет']
+    ];
+    const colorOptionsNode = selectedColor.querySelector('.selected-color-panel__options');
+    colorOptionsNode.innerHTML = colorOptions.map(([id,label]) => `<button type="button" data-selected-color="${id}">${label}</button>`).join('');
+
+    const calcHeading = calculator.querySelector('.section-head h2');
+    const calcIntro = calculator.querySelector('.section-head p');
+    if (calcHeading) calcHeading.textContent = 'Выбранная модель и предварительный итог';
+    if (calcIntro) calcIntro.textContent = 'Параметры применены ко всему каталогу. Здесь можно проверить итог и заказать бесплатный замер.';
+
+    let calcLoadPromise = null;
+    let quoteFrame = 0;
+    let inputTimer = 0;
+    let lastSelectedProduct = '';
+
+    const dimensions = () => ({
+      gateWidth:num(widthInput),
+      gateHeight:num(heightInput),
+      wicketWidth:num(wicketWidthInput),
+      wicketHeight:num(wicketHeightInput)
+    });
+
+    const dimensionsValid = d => [d.gateWidth,d.gateHeight,d.wicketWidth,d.wicketHeight].every(value => Number.isFinite(value) && value > 0);
+    const isStandard = d => closeTo(d.gateWidth,3.4) && closeTo(d.gateHeight,1.8) && closeTo(d.wicketWidth,1) && closeTo(d.wicketHeight,1.8);
+
+    const delivery = () => {
+      const state = api.deliveryState?.() || {kind:'empty'};
       const kind = String(state.kind || 'empty');
-      const sourceText = String(sourceResult.textContent || '').trim();
-      if (document.activeElement !== modalInput && !modalInput.value && sourceCity.value) modalInput.value = sourceCity.value;
-      modalStatus.textContent = kind === 'empty' && !modalInput.value
-        ? 'Введите название населённого пункта.'
-        : sourceText;
-      if (kind === 'loading') {
-        modalAction.disabled = true;
-        modalAction.textContent = 'Считаем доставку…';
-      } else if (!sourceRoute.hidden && !sourceRoute.disabled) {
-        modalAction.disabled = false;
-        modalAction.textContent = String(sourceRoute.textContent || 'Продолжить');
-      } else {
-        modalAction.disabled = modalInput.value.trim().length < 2;
-        modalAction.textContent = 'Продолжить';
+      const city = String(state.shortName || state.resolvedName || state.name || cityInput?.value || '').trim();
+      const resolved = kind === 'fixed' || kind === 'calculated';
+      return {state, kind, city, resolved, price:resolved ? Number(state.price) || 0 : 0};
+    };
+
+    const selectedPosts = () => Boolean(postsCheck?.checked);
+    const summaryText = () => {
+      const d = dimensions();
+      const place = delivery();
+      const fmt = value => Number(value).toLocaleString('ru-RU', {maximumFractionDigits:2});
+      const size = dimensionsValid(d)
+        ? `ворота ${fmt(d.gateWidth)}×${fmt(d.gateHeight)} м · калитка ${fmt(d.wicketWidth)}×${fmt(d.wicketHeight)} м`
+        : 'проверьте размеры';
+      const city = place.city && (place.resolved || place.kind === 'out-of-area')
+        ? place.city
+        : place.city
+          ? `${place.city} · не подтверждено`
+          : 'место не указано';
+      return `${size} · ${city} · ${selectedPosts() ? 'новые столбы' : 'на ваши столбы'}`;
+    };
+
+    const syncPostsSegment = () => {
+      postsSegment.querySelectorAll('[data-posts-choice]').forEach(button => {
+        button.classList.toggle('is-active', (button.dataset.postsChoice === '1') === selectedPosts());
+      });
+    };
+
+    const ensureCalculator = () => {
+      if (window.GATE_CALC?.calculateGate) return Promise.resolve(window.GATE_CALC);
+      if (!window.KUZDVOR_ENSURE_CALCULATOR) return Promise.resolve(null);
+      if (!calcLoadPromise) {
+        calcLoadPromise = window.KUZDVOR_ENSURE_CALCULATOR()
+          .catch(() => null)
+          .finally(() => { calcLoadPromise = null; });
+      }
+      return calcLoadPromise;
+    };
+
+    const productBase = (product, d) => {
+      if (!product || !dimensionsValid(d)) return {value:null, manual:true};
+      if (isStandard(d)) return {value:Number(product.price) || 0, manual:false};
+      if (!window.GATE_CALC?.calculateGate || !window.GATE_CALC?.hasArticle?.(product.art)) return {value:null, loading:true};
+      try {
+        const result = window.GATE_CALC.calculateGate({
+          article:product.art,
+          gateWidth:d.gateWidth,
+          gateHeight:d.gateHeight,
+          wicketWidth:d.wicketWidth,
+          wicketHeight:d.wicketHeight
+        });
+        const value = Number(result?.total);
+        return Number.isFinite(value) && value > 0 ? {value, manual:false} : {value:null, manual:true};
+      } catch {
+        return {value:null, manual:true};
       }
     };
 
-    const closeModal = ({navigate = false} = {}) => {
-      if (closing) return;
-      closing = true;
-      modal.hidden = true;
-      backdrop.hidden = true;
-      document.body.classList.remove('installation-location-modal-open');
-      const shouldNavigate = navigate && isSelected(getState());
-      navigateAfterSelection = false;
-      window.setTimeout(() => {
-        closing = false;
-        if (shouldNavigate) catalog.scrollIntoView({behavior:'smooth',block:'start'});
-      },80);
+    const ensureQuoteNode = card => {
+      let node = card.querySelector('.catalog-primary-quote');
+      if (!node) {
+        node = document.createElement('div');
+        node.className = 'catalog-primary-quote';
+        node.innerHTML = '<strong></strong><small></small>';
+        const action = card.querySelector('.select-product');
+        (action?.parentElement || card.querySelector('.product-info') || card).insertBefore(node, action || null);
+      }
+      const action = card.querySelector('.select-product');
+      if (action) action.textContent = 'Выбрать эту модель';
+      return node;
     };
 
-    const sync = () => {
-      const state = getState();
-      const selected = isSelected(state);
-      const city = cityFromState(state);
-      if (!calculator.hidden) startJourney();
-      catalog.classList.toggle('location-locked', !selected);
-      lock.hidden = selected;
-      bar.hidden = !selected;
-      if (selected) {
-        barValue.textContent = city;
-        if (sourceSummaryValue.textContent !== city) sourceSummaryValue.textContent = city;
-        readonlyNote.textContent = String(state.kind || '') === 'out-of-area'
-          ? 'Стоимость доставки уточним индивидуально.'
-          : 'Доставка уже учтена в общей стоимости.';
-        window.KUZDVOR_SYNC_CATALOG_DELIVERY_PRICES?.(state);
-        queueNoteSync(state);
-        if (!modal.hidden) {
-          if (navigateAfterSelection) startJourney();
-          closeModal({navigate:navigateAfterSelection});
+    const quoteContext = place => {
+      const posts = selectedPosts();
+      const packageText = posts ? 'С установкой и новыми столбами' : 'С установкой';
+      if (place.resolved) return `${packageText} и доставкой в ${place.city}`;
+      if (place.kind === 'out-of-area') return `${packageText} · доставка рассчитывается индивидуально`;
+      if (place.kind === 'error') return `${packageText} · доставка уточняется`;
+      if (place.kind === 'loading' || place.kind === 'pending' || place.kind === 'confirm') return `${packageText} · доставка пока не учтена`;
+      return `${packageText} · доставка после выбора места установки`;
+    };
+
+    const syncCardQuotes = () => {
+      quoteFrame = 0;
+      const d = dimensions();
+      const place = delivery();
+      grid.querySelectorAll('.product-card[data-card-product]').forEach(card => {
+        const product = api.productById(card.dataset.cardProduct);
+        if (!product) return;
+        const node = ensureQuoteNode(card);
+        const strong = node.querySelector('strong');
+        const small = node.querySelector('small');
+        const base = productBase(product, d);
+        node.classList.toggle('is-manual', Boolean(base.manual));
+        if (base.loading) {
+          strong.textContent = 'Пересчитываем…';
+          small.textContent = 'Загружаем расчёт по вашим размерам';
+          return;
         }
-      } else {
-        if (calculator.hidden && stickyCta.textContent !== 'Указать место установки') stickyCta.textContent = 'Указать место установки';
-        syncModal();
-      }
-      if (!calculator.hidden && selected && sourceSummary.hidden) sourceSummary.hidden = false;
-      const mobilePriceNote = document.getElementById('mobilePriceNote');
-      if (selected && /^мелеуз$/i.test(city.replace(/ё/g,'е')) && mobilePriceNote && /бесплат/i.test(mobilePriceNote.textContent || '')) {
-        mobilePriceNote.textContent = 'Доставка до Мелеуза учтена в общей стоимости.';
-      }
-    };
-
-    const openModal = ({navigate = false, change = false} = {}) => {
-      const before = getState();
-      const previousCity = cityFromState(before);
-      if (change || !isSelected(before)) {
-        sourceOther.click();
-        modalInput.value = change ? previousCity : '';
-        sourceCity.value = change ? previousCity : '';
-      }
-      navigateAfterSelection = navigate;
-      autoPromptDismissed = false;
-      backdrop.hidden = false;
-      modal.hidden = false;
-      document.body.classList.add('installation-location-modal-open');
-      syncModal();
-      window.setTimeout(() => {
-        modalInput.focus({preventScroll:true});
-        if (change && modalInput.value) modalInput.select?.();
-      },100);
-    };
-
-    modalInput.addEventListener('input', () => {
-      sourceCity.value = modalInput.value;
-      sourceCity.dispatchEvent(new Event('input',{bubbles:true}));
-      requestAnimationFrame(() => {
-        syncModal();
-        sync();
+        if (base.manual || !Number.isFinite(base.value)) {
+          strong.textContent = 'Нужен индивидуальный расчёт';
+          small.textContent = 'Выбранный размер уточним на бесплатном замере';
+          return;
+        }
+        const total = base.value + Number(product.install || 0) + (selectedPosts() ? Number(product.posts || 0) : 0) + place.price;
+        strong.textContent = money(total);
+        small.textContent = quoteContext(place);
       });
-    });
-    modalInput.addEventListener('keydown', event => {
-      if (event.key !== 'Enter') return;
-      event.preventDefault();
-      if (!modalAction.disabled) modalAction.click();
-    });
-
-    const resolveDelivery = async () => {
-      const resolver = window.GATE_PAGE_API?.resolveDelivery;
-      if (typeof resolver === 'function') {
-        await resolver();
-        return;
-      }
-      if (!sourceRoute.hidden && !sourceRoute.disabled) sourceRoute.click();
     };
 
-    modalAction.addEventListener('click', async () => {
-      const value = modalInput.value.trim();
-      if (value.length < 2) {
-        modalStatus.textContent = 'Введите населённый пункт полностью.';
-        modalInput.focus();
-        return;
-      }
-      const current = getState();
-      if (String(current.kind || '') === 'confirm') {
-        modalAction.disabled = true;
-        modalAction.textContent = 'Подтверждаем…';
-        await resolveDelivery();
-        requestAnimationFrame(() => {
-          sync();
-          syncModal();
-        });
-        return;
-      }
-      sourceCity.value = value;
-      sourceCity.dispatchEvent(new Event('input',{bubbles:true}));
-      requestAnimationFrame(async () => {
-        const next = getState();
-        if (!isSelected(next) && !['loading','confirm'].includes(String(next.kind || ''))) await resolveDelivery();
-        requestAnimationFrame(() => {
-          sync();
-          syncModal();
-        });
+    const scheduleQuotes = () => {
+      if (quoteFrame) cancelAnimationFrame(quoteFrame);
+      quoteFrame = requestAnimationFrame(syncCardQuotes);
+    };
+
+    const syncSummaries = () => {
+      const text = summaryText();
+      summary.querySelector('strong').textContent = text;
+      selectedSummary.querySelector('strong').textContent = text;
+      syncPostsSegment();
+    };
+
+    const syncSelectedColor = () => {
+      const product = api.selectedProduct?.();
+      if (!product) return;
+      const card = grid.querySelector(`.product-card[data-card-product="${CSS.escape(product.id)}"]`);
+      if (!card) return;
+      colorOptionsNode.querySelectorAll('[data-selected-color]').forEach(button => {
+        const original = card.querySelector(`[data-profile-color="${CSS.escape(button.dataset.selectedColor)}"]`);
+        const active = original?.getAttribute('aria-pressed') === 'true';
+        button.classList.toggle('is-active', active);
+      });
+      lastSelectedProduct = product.id;
+    };
+
+    const syncAll = () => {
+      syncSummaries();
+      scheduleQuotes();
+      if (!calculator.hidden) syncSelectedColor();
+    };
+
+    const openConfigurator = () => {
+      config.hidden = false;
+      summary.hidden = true;
+      config.scrollIntoView({behavior:'smooth', block:'start'});
+    };
+
+    const collapseConfigurator = () => {
+      config.hidden = true;
+      summary.hidden = false;
+      syncAll();
+      const firstCard = grid.querySelector('.product-card');
+      firstCard?.scrollIntoView({behavior:'smooth', block:'start'});
+    };
+
+    postsSegment.addEventListener('click', event => {
+      const button = event.target.closest('[data-posts-choice]');
+      if (!button || !postsCheck) return;
+      postsCheck.checked = button.dataset.postsChoice === '1';
+      postsCheck.dispatchEvent(new Event('change', {bubbles:true}));
+      syncAll();
+    });
+
+    config.querySelector('#applyCatalogParams')?.addEventListener('click', () => {
+      const d = dimensions();
+      const load = !isStandard(d) ? ensureCalculator() : Promise.resolve();
+      Promise.resolve(load).finally(() => {
+        syncAll();
+        collapseConfigurator();
       });
     });
 
-    const dismiss = () => {
-      autoPromptDismissed = true;
-      closeModal();
-    };
-    modalClose.addEventListener('click', dismiss);
-    backdrop.addEventListener('click', dismiss);
-    document.addEventListener('keydown', event => {
-      if (event.key === 'Escape' && !modal.hidden) dismiss();
+    summary.querySelector('button')?.addEventListener('click', openConfigurator);
+    selectedSummary.querySelector('button')?.addEventListener('click', openConfigurator);
+
+    selectedColor.querySelector('.selected-color-panel__head button')?.addEventListener('click', event => {
+      const willOpen = colorOptionsNode.hidden;
+      colorOptionsNode.hidden = !willOpen;
+      event.currentTarget.setAttribute('aria-expanded', String(willOpen));
+      event.currentTarget.textContent = willOpen ? 'Скрыть цвета' : 'Посмотреть цвета';
+      if (willOpen) syncSelectedColor();
     });
 
-    lock.querySelector('button')?.addEventListener('click', () => {
-      startJourney();
-      openModal({navigate:true});
+    colorOptionsNode.addEventListener('click', event => {
+      const button = event.target.closest('[data-selected-color]');
+      if (!button) return;
+      const product = api.selectedProduct?.();
+      const card = product ? grid.querySelector(`.product-card[data-card-product="${CSS.escape(product.id)}"]`) : null;
+      const original = card?.querySelector(`[data-profile-color="${CSS.escape(button.dataset.selectedColor)}"]`);
+      original?.click();
+      setTimeout(syncSelectedColor, 0);
     });
-    bar.querySelector('button')?.addEventListener('click', () => {
-      startJourney();
-      openModal({change:true});
+
+    [widthInput,wicketWidthInput,heightInput,wicketHeightInput].forEach(input => {
+      input?.addEventListener('input', () => {
+        clearTimeout(inputTimer);
+        inputTimer = window.setTimeout(async () => {
+          const d = dimensions();
+          if (!isStandard(d)) await ensureCalculator();
+          syncAll();
+        }, 180);
+      });
+      input?.addEventListener('change', syncAll);
     });
+    postsCheck?.addEventListener('change', syncAll);
+    cityInput?.addEventListener('input', syncAll);
+    cityInput?.addEventListener('change', syncAll);
+
+    document.addEventListener('gate:calculated', () => {
+      syncAll();
+      setTimeout(syncAll, 80);
+    });
+
+    const gridObserver = new MutationObserver(records => {
+      const addedCard = records.some(record => [...record.addedNodes].some(node => node.nodeType === 1 && (node.matches?.('.product-card') || node.querySelector?.('.product-card'))));
+      if (addedCard) {
+        scheduleQuotes();
+        setTimeout(syncSelectedColor, 0);
+      }
+    });
+    gridObserver.observe(grid, {childList:true,subtree:true});
+
+    const removeDuplicateOrderProcess = () => {
+      if (!document.querySelector('.order-steps')) return;
+      document.querySelectorAll('.order-process').forEach(section => section.remove());
+    };
+    removeDuplicateOrderProcess();
+    new MutationObserver(removeDuplicateOrderProcess).observe(document.body, {childList:true,subtree:true});
+
+    if (showMore) {
+      showMore.addEventListener('click', () => {
+        const before = grid.querySelectorAll('.product-card').length;
+        setTimeout(() => {
+          const cards = grid.querySelectorAll('.product-card');
+          cards[before]?.scrollIntoView({behavior:'smooth',block:'start'});
+        }, 180);
+      });
+    }
+
+    if (mobileCta) {
+      let ctaSyncing = false;
+      const syncCta = () => {
+        if (ctaSyncing) return;
+        ctaSyncing = true;
+        requestAnimationFrame(() => {
+          ctaSyncing = false;
+          if (document.body.classList.contains('mobile-lead-open')) return;
+          if (calculator.hidden) {
+            mobileCta.textContent = 'К моделям';
+            return;
+          }
+          const total = String(document.getElementById('mobilePriceTotal')?.textContent || document.getElementById('estimateTotal')?.textContent || '').trim();
+          mobileCta.textContent = total ? `На замер · ${total}` : 'На бесплатный замер';
+        });
+      };
+      mobileCta.addEventListener('click', event => {
+        if (!calculator.hidden) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        grid.scrollIntoView({behavior:'smooth',block:'start'});
+      }, true);
+      new MutationObserver(syncCta).observe(calculator, {attributes:true,attributeFilter:['hidden']});
+      const total = document.getElementById('mobilePriceTotal');
+      if (total) new MutationObserver(syncCta).observe(total,{childList:true,subtree:true,characterData:true});
+      document.addEventListener('gate:calculated', syncCta);
+      syncCta();
+    }
+
+    const cardSelectionObserver = new MutationObserver(() => {
+      const product = api.selectedProduct?.();
+      if (!calculator.hidden && product?.id !== lastSelectedProduct) {
+        lastSelectedProduct = product?.id || '';
+        syncSelectedColor();
+      }
+    });
+    cardSelectionObserver.observe(calculator,{attributes:true,attributeFilter:['hidden']});
 
     document.addEventListener('click', event => {
-      const target = event.target?.closest?.('a[href="#catalog"],#mobilePrimaryCta');
-      if (!target) return;
-      if (target.matches('a[href="#catalog"]')) startJourney();
-      if (isSelected(getState())) return;
-      event.preventDefault();
-      event.stopPropagation();
-      openModal({navigate:true});
-    }, true);
-
-    if ('IntersectionObserver' in window) {
-      const observer = new IntersectionObserver(entries => {
-        const entry = entries[0];
-        if (!entry?.isIntersecting || entry.intersectionRatio < .18 || isSelected(getState()) || !modal.hidden || autoPromptDismissed) return;
-        openModal({navigate:true});
-      },{threshold:[0,.18,.4]});
-      observer.observe(catalog);
-    }
-
-    [sourceCity,sourceResult,sourceRoute,sourceSummaryValue].forEach(node => {
-      if (!node) return;
-      new MutationObserver(() => requestAnimationFrame(sync)).observe(node,{childList:true,characterData:true,subtree:true,attributes:true,attributeFilter:['hidden','disabled']});
+      if (!event.target.closest?.('.select-product')) return;
+      setTimeout(() => {
+        syncSummaries();
+        syncSelectedColor();
+      }, 30);
     });
-    sourceCity.addEventListener('input', () => requestAnimationFrame(sync));
-    sourceCity.addEventListener('change', () => requestAnimationFrame(sync));
-    sourceRoute.addEventListener('click', () => window.setTimeout(sync,20));
-    document.addEventListener('gate:calculated', () => requestAnimationFrame(sync));
-    window.addEventListener('pageshow', () => requestAnimationFrame(sync));
 
-    if (catalogGrid) {
-      new MutationObserver(() => queueNoteSync(getState())).observe(catalogGrid,{childList:true,subtree:true,characterData:true});
-    }
-    new MutationObserver(() => {
-      if (!isSelected(getState()) && calculator.hidden && stickyCta.textContent !== 'Указать место установки') stickyCta.textContent = 'Указать место установки';
-    }).observe(stickyCta,{childList:true,characterData:true,subtree:true});
+    const catalogProgress = document.getElementById('catalogProgress');
+    if (catalogProgress) catalogProgress.setAttribute('aria-live','polite');
 
-    sync();
+    syncAll();
     return true;
-  };
+  }
 
-  const start = () => {
+  const tryInstall = () => {
     if (install()) return;
     let attempts = 0;
     const timer = window.setInterval(() => {
       attempts += 1;
-      if (install() || attempts >= 70) window.clearInterval(timer);
-    },100);
+      if (install() || attempts > 120) window.clearInterval(timer);
+    }, 50);
   };
-  queueMicrotask(start);
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', tryInstall, {once:true});
+  else tryInstall();
 })();
