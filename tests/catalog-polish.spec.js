@@ -50,13 +50,17 @@ test('applied parameters stay compact after reload and nonstandard prices do not
     .not.toContain('Пересчитываем');
 });
 
-test('sticky CTA switches from catalog navigation to the selected quote', async ({page}) => {
+test('sticky CTA switches from catalog navigation to the selected quote without a fullscreen popup', async ({page}) => {
   await openMobile(page);
 
   await expect(page.locator('#mobilePrimaryCta')).toHaveText('К моделям');
   await page.locator('#catalogGrid .product-card').first().locator('.select-product').click();
-  await expect(page.locator('#calculator')).toBeVisible();
+  const calculator = page.locator('#calculator');
+  await expect(calculator).toBeVisible();
   await expect(page.locator('#mobilePrimaryCta')).toHaveText(/^На замер · (?:от )?[\d\s ]+ ₽$/);
+  await expect.poll(async () => calculator.evaluate(node => getComputedStyle(node).position), {timeout:5000}).toBe('relative');
+  await expect.poll(async () => page.locator('body').evaluate(node => getComputedStyle(node).overflowY), {timeout:5000}).not.toBe('hidden');
+  await expect(calculator).toBeInViewport();
 });
 
 test('real mobile reload closes the last selected calculator', async ({page}) => {
