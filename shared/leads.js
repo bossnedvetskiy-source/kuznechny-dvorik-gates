@@ -163,6 +163,10 @@
 
 /* Keep the lower half of the landing page concise: one order flow, one CTA. */
 (() => {
+  const setTextIfDifferent = (node, value) => {
+    if (node && node.textContent !== value) node.textContent = value;
+  };
+
   const simplifyOrderContent = () => {
     const orderSection = document.getElementById('afterRequest');
     const trustSection = document.querySelector('.trust');
@@ -175,10 +179,8 @@
       if (String(heading?.textContent || '').trim() === 'Как проходит заказ') section.remove();
     });
 
-    const heading = orderSection.querySelector('.section-head h2');
-    const intro = orderSection.querySelector('.section-head > p');
-    if (heading) heading.textContent = 'Как проходит заказ';
-    if (intro) intro.textContent = 'Пять шагов от выбора модели до установки. На сайте ничего оплачивать не нужно.';
+    setTextIfDifferent(orderSection.querySelector('.section-head h2'), 'Как проходит заказ');
+    setTextIfDifferent(orderSection.querySelector('.section-head > p'), 'Пять шагов от выбора модели до установки. На сайте ничего оплачивать не нужно.');
 
     const cards = orderSection.querySelectorAll('.order-steps-grid article');
     const copy = [
@@ -191,10 +193,8 @@
     cards.forEach((card, index) => {
       const item = copy[index];
       if (!item) return;
-      const title = card.querySelector('b');
-      const text = card.querySelector('p');
-      if (title) title.textContent = item[0];
-      if (text) text.textContent = item[1];
+      setTextIfDifferent(card.querySelector('b'), item[0]);
+      setTextIfDifferent(card.querySelector('p'), item[1]);
     });
 
     let trustCta = document.querySelector('[data-trust-catalog-cta]');
@@ -216,13 +216,12 @@
 
   let stopTimer = 0;
   const observer = new MutationObserver(() => {
-    clearTimeout(stopTimer);
     queueMicrotask(simplifyOrderContent);
-    stopTimer = window.setTimeout(() => observer.disconnect(), 2500);
   });
   queueMicrotask(() => {
     if (!document.body) return;
     observer.observe(document.body,{childList:true,subtree:true});
+    clearTimeout(stopTimer);
     stopTimer = window.setTimeout(() => observer.disconnect(), 2500);
   });
 })();
