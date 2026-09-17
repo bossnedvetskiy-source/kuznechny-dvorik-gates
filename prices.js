@@ -9,8 +9,36 @@
  * Тарифы доставки находятся отдельно в delivery-prices.json / настройках доставки.
  */
 
-// Убираем старый статический блок процесса до загрузки улучшенного 5-шагового блока.
-if (typeof document !== 'undefined') document.getElementById('afterRequest')?.remove();
+// На странице уже есть полноценный блок из пяти этапов. Помечаем его как основной,
+// чтобы public-site-settings.js не создавал второй блок с тем же смыслом.
+if (typeof document !== 'undefined') {
+  const orderProcess = document.getElementById('afterRequest');
+  if (orderProcess) {
+    orderProcess.dataset.orderProcess = 'true';
+    const heading = orderProcess.querySelector('h2');
+    const intro = orderProcess.querySelector('.section-head > p');
+    if (heading) heading.textContent = 'Как проходит заказ';
+    if (intro) intro.textContent = 'Пять шагов от выбора модели до установки. На сайте ничего оплачивать не нужно.';
+
+    const steps = orderProcess.querySelectorAll('.order-steps-grid article');
+    const firstTitle = steps[0]?.querySelector('b');
+    const firstText = steps[0]?.querySelector('p');
+    if (firstTitle) firstTitle.textContent = 'Выбираете модель';
+    if (firstText) firstText.textContent = 'Смотрите реальные цены и получаете предварительный расчёт по своим размерам.';
+
+    const syncOrderProcessLayout = () => {
+      const grid = orderProcess.querySelector('.order-steps-grid');
+      if (!grid) return;
+      if (window.matchMedia?.('(max-width: 620px)').matches) {
+        grid.style.setProperty('grid-template-columns', '1fr', 'important');
+      } else {
+        grid.style.removeProperty('grid-template-columns');
+      }
+    };
+    syncOrderProcessLayout();
+    window.matchMedia?.('(max-width: 620px)').addEventListener?.('change', syncOrderProcessLayout);
+  }
+}
 
 window.PRICE_DATA = {
   updatedAt: '2026-09-01',
