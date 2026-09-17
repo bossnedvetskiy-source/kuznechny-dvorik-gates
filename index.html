@@ -21,7 +21,22 @@
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="storefront.css">
   <link rel="stylesheet" href="gate-page.css">
-  <style>@media(max-width:620px){.hero{min-height:auto!important}.hero-photo{display:none!important}}</style>
+  <style>
+    @media(max-width:620px){
+      .hero{min-height:auto!important}.hero-photo{display:none!important}
+      body{padding-bottom:82px!important}
+      .product-card .price-row strong{font-size:18px!important;line-height:1.08!important;letter-spacing:-.2px!important}
+      .product-card .price-row small{font-size:10px!important;line-height:1.32!important;font-weight:700!important}
+      .calculator.inline-calculator:not([hidden]) .form-block{padding-bottom:11px!important;margin-bottom:11px!important}
+      .calculator.inline-calculator:not([hidden]) .selected-product-preview{margin-bottom:9px!important}
+      .calculator.inline-calculator:not([hidden]) .dimension-help{margin-top:7px!important}
+      .calculator.inline-calculator:not([hidden]) .size-notice,
+      .calculator.inline-calculator:not([hidden]) .size-memory-note{margin-top:7px!important}
+      .calculator.inline-calculator:not([hidden]) .base-install-note{margin:0 0 8px!important;padding:10px 12px!important;border:1px solid rgba(230,189,105,.28)!important;border-radius:10px!important;background:rgba(200,152,60,.08)!important;color:#fff!important;font-size:12px!important;line-height:1.45!important;font-weight:800!important}
+      .calculator.inline-calculator:not([hidden]) .posts-reassurance{margin:8px 0 0!important}
+      .calculator.inline-calculator:not([hidden]) .color-note{margin-top:6px!important}
+    }
+  </style>
   <script type="text/javascript">
     (function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};m[i].l=1*new Date();for(var j=0;j<document.scripts.length;j++){if(document.scripts[j].src===r){return}}k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)})(window,document,'script','https://mc.yandex.ru/metrika/tag.js','ym');
     ym(107269914,'init',{clickmap:true,trackLinks:true,accurateTrackBounce:true,webvisor:true});
@@ -113,7 +128,7 @@
             </div>
             <small class="dimension-help">Ворота и калитка указываются отдельно. Не знаете точные размеры? Оставьте стандартные — замерщик измерит проём бесплатно.</small>
             <div class="size-notice" id="sizeNotice" hidden>Цена пересчитана по выбранным размерам</div>
-            <div class="size-memory-note" id="sizeMemoryNote" hidden>✓ Размер сохранён — можно сравнивать другие дизайны</div>
+            <div class="size-memory-note" id="sizeMemoryNote" hidden>✓ Размеры сохранены — для другой модели вводить их заново не нужно</div>
           </div>
 
           <div class="form-block">
