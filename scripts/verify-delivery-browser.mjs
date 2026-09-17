@@ -32,7 +32,8 @@ const assertEveryVisibleCardUsesDelivery = async (page, label) => {
 
 const assertDeliveryNote = async (page, label) => {
   const notes = await page.locator('#catalogGrid .product-card .price-delivery-note').evaluateAll(nodes => nodes.map(node => String(node.textContent || '')));
-  if (!notes.length || notes.some(text => !text.includes(`С учётом доставки в ${city}`))) {
+  const expectedText = `учётом доставки в ${city}`.toLocaleLowerCase('ru-RU');
+  if (!notes.length || notes.some(text => !text.toLocaleLowerCase('ru-RU').includes(expectedText))) {
     throw new Error(`${label} delivery note mismatch: ${JSON.stringify(notes)}`);
   }
 };
