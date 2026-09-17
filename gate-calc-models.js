@@ -40,9 +40,34 @@ window.GATE_CALC_MODELS_READY=(async()=>{
       }
       .calculator.inline-calculator:not([hidden]).inline-calculator .selected-product-preview{
         position:relative!important;top:auto!important;z-index:auto!important;
-        margin:0 0 12px!important;box-shadow:none!important
+        margin:0 0 12px!important;padding:8px 54px 8px 8px!important;box-shadow:none!important
+      }
+      .calculator.inline-calculator:not([hidden]).inline-calculator .change-product{
+        position:absolute!important;top:10px!important;right:10px!important;bottom:auto!important;left:auto!important;
+        width:38px!important;height:38px!important;min-height:38px!important;margin:0!important;padding:0!important;
+        display:grid!important;place-items:center!important;border:1px solid rgba(255,255,255,.16)!important;
+        border-radius:50%!important;background:rgba(255,255,255,.06)!important;color:#f0c96f!important;
+        font:400 28px/1 Arial,sans-serif!important;text-align:center!important;cursor:pointer!important
       }
     }
   `;
   document.head.append(style);
+
+  const decorateCloseButton=()=>{
+    const button=document.getElementById('changeProductButton');
+    if(!button)return null;
+    if(button.textContent!=='×')button.textContent='×';
+    button.setAttribute('aria-label','Закрыть расчёт');
+    button.setAttribute('title','Закрыть расчёт');
+    return button;
+  };
+  const closeButton=decorateCloseButton();
+  if(closeButton){
+    new MutationObserver(()=>decorateCloseButton()).observe(closeButton,{childList:true,subtree:true});
+  }else{
+    const observer=new MutationObserver(()=>{
+      if(decorateCloseButton())observer.disconnect();
+    });
+    observer.observe(document.documentElement,{childList:true,subtree:true});
+  }
 })();
