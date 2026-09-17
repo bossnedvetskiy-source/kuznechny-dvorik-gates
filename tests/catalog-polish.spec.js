@@ -50,17 +50,24 @@ test('applied parameters stay compact after reload and nonstandard prices do not
     .not.toContain('Пересчитываем');
 });
 
-test('sticky CTA switches from catalog navigation to the selected quote without a fullscreen popup', async ({page}) => {
+test('sticky CTA switches to selected quote and calculator has a compact close button', async ({page}) => {
   await openMobile(page);
 
   await expect(page.locator('#mobilePrimaryCta')).toHaveText('К моделям');
   await page.locator('#catalogGrid .product-card').first().locator('.select-product').click();
   const calculator = page.locator('#calculator');
+  const closeButton = page.locator('#changeProductButton');
   await expect(calculator).toBeVisible();
   await expect(page.locator('#mobilePrimaryCta')).toHaveText(/^На замер · (?:от )?[\d\s ]+ ₽$/);
   await expect.poll(async () => calculator.evaluate(node => getComputedStyle(node).position), {timeout:5000}).toBe('relative');
   await expect.poll(async () => page.locator('body').evaluate(node => getComputedStyle(node).overflowY), {timeout:5000}).not.toBe('hidden');
   await expect(calculator).toBeInViewport();
+  await expect(closeButton).toHaveText('×');
+  await expect(closeButton).toHaveAttribute('aria-label','Закрыть расчёт');
+
+  await closeButton.click();
+  await expect(calculator).toBeHidden();
+  await expect(page.locator('#mobilePrimaryCta')).toHaveText('К моделям');
 });
 
 test('real mobile reload closes the last selected calculator', async ({page}) => {
