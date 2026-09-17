@@ -160,3 +160,69 @@
 
   window.KUZDVOR_LEADS = {validate, submit, phoneDigits, tracking, attributionSource};
 })();
+
+/* Keep the lower half of the landing page concise: one order flow, one CTA. */
+(() => {
+  const simplifyOrderContent = () => {
+    const orderSection = document.getElementById('afterRequest');
+    const trustSection = document.querySelector('.trust');
+    if (!orderSection || !trustSection) return;
+
+    document.querySelectorAll('[data-order-process]').forEach(section => section.remove());
+    document.querySelectorAll('main section').forEach(section => {
+      if (section === orderSection) return;
+      const heading = section.querySelector('.section-head h2');
+      if (String(heading?.textContent || '').trim() === 'Как проходит заказ') section.remove();
+    });
+
+    const heading = orderSection.querySelector('.section-head h2');
+    const intro = orderSection.querySelector('.section-head > p');
+    if (heading) heading.textContent = 'Как проходит заказ';
+    if (intro) intro.textContent = 'Пять шагов от выбора модели до установки. На сайте ничего оплачивать не нужно.';
+
+    const cards = orderSection.querySelectorAll('.order-steps-grid article');
+    const copy = [
+      ['Выбираете модель','Смотрите реальные цены и получаете предварительный расчёт по своим размерам.'],
+      ['Бесплатный замер','Мастер проверит проём, размеры, столбы и условия монтажа.'],
+      ['Договор и 50%','Согласуем комплектацию и зафиксируем стоимость в договоре. Оплата — 50%.'],
+      ['Изготовление','Изготовим ворота по согласованным размерам. Срок — до 30 рабочих дней.'],
+      ['Монтаж и оставшиеся 50%','Установим ворота. Оставшиеся 50% оплачиваются после установки.']
+    ];
+    cards.forEach((card, index) => {
+      const item = copy[index];
+      if (!item) return;
+      const title = card.querySelector('b');
+      const text = card.querySelector('p');
+      if (title) title.textContent = item[0];
+      if (text) text.textContent = item[1];
+    });
+
+    let trustCta = document.querySelector('[data-trust-catalog-cta]');
+    if (!trustCta) {
+      trustCta = document.createElement('div');
+      trustCta.className = 'section-shell';
+      trustCta.dataset.trustCatalogCta = 'true';
+      trustCta.style.cssText = 'padding-top:0;padding-bottom:18px;display:flex;justify-content:center';
+      trustCta.innerHTML = '<a class="button button-primary" href="#catalog" style="width:min(100%,430px);min-height:50px;text-align:center">Выбрать модель и узнать цену</a>';
+      trustSection.after(trustCta);
+      trustCta.querySelector('a')?.addEventListener('click', () => {
+        try { window.ym?.(107269914,'reachGoal','trust_catalog_cta'); } catch {}
+      });
+    }
+  };
+
+  queueMicrotask(simplifyOrderContent);
+  window.addEventListener('pageshow', simplifyOrderContent);
+
+  let stopTimer = 0;
+  const observer = new MutationObserver(() => {
+    clearTimeout(stopTimer);
+    queueMicrotask(simplifyOrderContent);
+    stopTimer = window.setTimeout(() => observer.disconnect(), 2500);
+  });
+  queueMicrotask(() => {
+    if (!document.body) return;
+    observer.observe(document.body,{childList:true,subtree:true});
+    stopTimer = window.setTimeout(() => observer.disconnect(), 2500);
+  });
+})();
