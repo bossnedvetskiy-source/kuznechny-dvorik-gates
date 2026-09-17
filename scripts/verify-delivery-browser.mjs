@@ -37,6 +37,44 @@ const assertDeliveryNote = async (page, label) => {
   }
 };
 
+const selectInstallationPlace = async page => {
+  const firstCard = page.locator('#catalogGrid .product-card').first();
+  if (await firstCard.isVisible().catch(() => false)) return firstCard;
+
+  const modal = page.locator('#catalogLocationGateModal');
+  const autoOpened = await modal.waitFor({ state: 'visible', timeout: 3000 }).then(() => true).catch(() => false);
+  if (!autoOpened) {
+    const lockButton = page.locator('.catalog-location-lock button');
+    if (await lockButton.isVisible().catch(() => false)) await lockButton.evaluate(element => element.click());
+    else await page.evaluate(() => document.querySelector('a[href="#catalog"]')?.click());
+  }
+
+  await modal.waitFor({ state: 'visible', timeout: 5000 });
+  const input = page.locator('#installationLocationInput');
+  const action = page.locator('#installationLocationAction');
+  await input.fill(city);
+
+  if (!(await firstCard.isVisible().catch(() => false))) {
+    await action.waitFor({ state: 'visible', timeout: 10000 });
+    await page.waitForFunction(() => {
+      const button = document.querySelector('#installationLocationAction');
+      return button && !button.disabled;
+    }, null, { timeout: 10000 });
+    await action.click();
+  }
+
+  if (!(await firstCard.isVisible().catch(() => false)) && await modal.isVisible().catch(() => false)) {
+    await page.waitForFunction(() => {
+      const button = document.querySelector('#installationLocationAction');
+      return button && !button.disabled && /Да, это нужный пункт/.test(String(button.textContent || ''));
+    }, null, { timeout: 10000 });
+    await action.click();
+  }
+
+  await firstCard.waitFor({ state: 'visible', timeout: 10000 });
+  return firstCard;
+};
+
 const browser = await chromium.launch();
 try {
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
@@ -47,43 +85,32 @@ try {
     waitUntil: 'domcontentloaded',
     timeout: 30000
   });
-  await page.waitForSelector('#catalogGrid .product-card', { state: 'visible', timeout: 15000 });
   await page.waitForFunction(() => window.GATE_PAGE_API && document.querySelectorAll('#catalogGrid .product-card').length >= 2, null, { timeout: 15000 });
+  const firstCard = await selectInstallationPlace(page);
 
-  const before = await readInstalledPrices(page);
-  if (before.length < 2 || before.some(value => value <= 0)) {
-    throw new Error(`Bad initial catalog prices: ${JSON.stringify(before)}`);
+  await page.waitForFunction(({ expectedCity, delta }) => {
+    const state = window.GATE_PAGE_API?.deliveryState?.();
+    const selected = String(state?.shortName || state?.resolvedName || state?.name || '');
+    return ['fixed','calculated'].includes(String(state?.kind || '')) && selected.includes(expectedCity) && Number(state?.price) === delta;
+  }, { expectedCity: city, delta: expectedDelivery }, { timeout: 10000 });
+
+  await assertEveryVisibleCardUsesDelivery(page, 'delivery-location-selected');
+  await assertDeliveryNote(page, 'initial-cards');
+  const installed = await readInstalledPrices(page);
+  if (installed.length < 2 || installed.some(value => value <= expectedDelivery)) {
+    throw new Error(`Bad catalog prices after delivery selection: ${JSON.stringify(installed)}`);
   }
 
-  await page.locator('#catalogGrid .product-card').first().locator('.select-product').click();
+  await firstCard.locator('.select-product').click();
   await page.waitForSelector('#calculator', { state: 'visible', timeout: 15000 });
-  await page.locator('[data-delivery-choice="other"]').click();
-  await page.locator('#cityInput').fill(city);
   await page.waitForFunction(expectedCity => String(document.querySelector('#deliverySummaryValue')?.textContent || '').includes(expectedCity), city, { timeout: 10000 });
-
-  const assertDeliveryAdded = async label => {
-    await page.waitForFunction(({ expected, delta }) => {
-      const cards = [...document.querySelectorAll('#catalogGrid .product-card')].slice(0, expected.length);
-      return cards.length === expected.length && cards.every((card, index) => {
-        const text = String(card.querySelector('.price-row strong')?.textContent || '');
-        const current = Number(text.replace(/[^0-9]/g, '')) || 0;
-        return current - expected[index] === delta;
-      });
-    }, { expected: before, delta: expectedDelivery }, { timeout: 10000 });
-
-    const after = await readInstalledPrices(page);
-    console.log(`${label}: before=${before.join(',')} after=${after.join(',')} delivery=${expectedDelivery}`);
-  };
-
-  await assertDeliveryAdded('delivery-selected');
-  await page.waitForTimeout(1800);
-  await assertDeliveryAdded('delivery-stable-after-formula-sync');
+  await page.waitForTimeout(1300);
+  await assertEveryVisibleCardUsesDelivery(page, 'delivery-stable-after-formula-sync');
 
   await page.evaluate(() => window.GATE_PAGE_API?.closeCalculator?.());
-  await page.waitForTimeout(1000);
-  await assertDeliveryAdded('delivery-stable-after-calculator-close');
-  await assertEveryVisibleCardUsesDelivery(page, 'delivery-all-initial-cards');
-  await assertDeliveryNote(page, 'initial-cards');
+  await page.waitForTimeout(700);
+  await assertEveryVisibleCardUsesDelivery(page, 'delivery-stable-after-calculator-close');
+  await assertDeliveryNote(page, 'calculator-close-cards');
 
   const showMore = page.locator('#showMoreButton');
   if (await showMore.isVisible().catch(() => false)) {
@@ -95,13 +122,13 @@ try {
   }
 
   await page.reload({ waitUntil: 'domcontentloaded', timeout: 30000 });
-  await page.waitForSelector('#catalogGrid .product-card', { state: 'visible', timeout: 15000 });
   await page.waitForFunction(expectedCity => {
     const state = window.GATE_PAGE_API?.deliveryState?.();
     const selected = String(state?.shortName || state?.resolvedName || state?.name || '');
     return ['fixed','calculated'].includes(String(state?.kind || '')) && selected.includes(expectedCity);
   }, city, { timeout: 15000 });
-  await page.waitForTimeout(1200);
+  await page.waitForSelector('#catalogGrid .product-card', { state: 'visible', timeout: 15000 });
+  await page.waitForTimeout(1000);
   await assertEveryVisibleCardUsesDelivery(page, 'delivery-restored-after-reload');
   await assertDeliveryNote(page, 'reloaded-cards');
 
@@ -109,7 +136,7 @@ try {
     throw new Error(`Browser errors detected: ${errors.join(' | ')}`);
   }
 
-  console.log(`Delivery-price browser smoke passed for ${baseUrl}: ${city}, +${expectedDelivery}; selection, formula sync, catalog expansion and reload are stable.`);
+  console.log(`Delivery-price browser smoke passed for ${baseUrl}: ${city}, +${expectedDelivery}; location-first selection, formula sync, catalog expansion and reload are stable.`);
 } finally {
   await browser.close();
 }
