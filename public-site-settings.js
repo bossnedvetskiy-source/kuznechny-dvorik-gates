@@ -415,15 +415,6 @@
       heroText.append(note);
     }
 
-    const catalogSummary = document.querySelector('.catalog-summary');
-    if (catalogSummary && !document.querySelector('[data-catalog-start-hint]')) {
-      const hint = document.createElement('div');
-      hint.dataset.catalogStartHint = 'true';
-      hint.textContent = 'Не знаете, с чего начать? Арт.6 отмечен как «Хит продаж».';
-      hint.style.cssText = 'margin-top:8px;padding:9px 11px;border:1px solid rgba(200,152,60,.22);border-radius:10px;background:#faf6ee;color:#6a5a3f;font-size:11px;line-height:1.4;font-weight:700';
-      catalogSummary.after(hint);
-    }
-
     const packageGrid = document.querySelector('.package-grid');
     if (packageGrid && !document.querySelector('[data-package-toggle]')) {
       const toggle = document.createElement('button');
