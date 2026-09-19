@@ -5,6 +5,7 @@ import {extname, join, normalize} from 'node:path';
 const root = process.cwd();
 const port = Number(process.env.PORT || 4173);
 const delivery = await readFile(join(root, 'delivery-prices.json'), 'utf8');
+const deliveryData = JSON.parse(delivery);
 const mime = {
   '.html':'text/html; charset=utf-8', '.js':'text/javascript; charset=utf-8', '.css':'text/css; charset=utf-8',
   '.json':'application/json; charset=utf-8', '.webp':'image/webp', '.jpg':'image/jpeg', '.jpeg':'image/jpeg', '.png':'image/png', '.svg':'image/svg+xml'
@@ -18,6 +19,20 @@ function send(res, status, body, type='text/plain; charset=utf-8') {
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url || '/', `http://${req.headers.host || `127.0.0.1:${port}`}`);
   if (url.pathname === '/api/catalog-images') return send(res, 200, JSON.stringify({galleries:{}}), mime['.json']);
+  if (url.pathname === '/api/delivery-search') {
+    const query = String(url.searchParams.get('place') || '').trim();
+    const normalizePlace = value => String(value || '').toLocaleLowerCase('ru-RU').replace(/ё/g,'е').replace(/[^а-яa-z0-9]/gi,'');
+    const matches = (deliveryData.destinations || [])
+      .filter(item => normalizePlace(item.name) === normalizePlace(query))
+      .slice(0, 6)
+      .map(item => ({
+        name:item.name,
+        label:item.name,
+        secondary:'Республика Башкортостан',
+        query:`${item.name}, Республика Башкортостан, Россия`
+      }));
+    return send(res, 200, JSON.stringify({query, choices:matches}), mime['.json']);
+  }
   if (url.pathname === '/api/leads') {
     if (req.method !== 'POST') return send(res, 405, JSON.stringify({error:'Метод не поддерживается'}), mime['.json']);
     let raw='';
