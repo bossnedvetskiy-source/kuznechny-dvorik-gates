@@ -7,13 +7,15 @@ if (kd_method() !== 'GET') kd_json(['error' => 'Метод не поддержи
 if (!kd_is_configured()) kd_json(['error' => 'PHP/MySQL backend ещё не настроен', 'backend' => 'timeweb-php'], 503);
 
 try {
-    kd_json(kd_delivery_api_quote((string)($_GET['place'] ?? '')));
+    $lat = isset($_GET['lat']) && is_numeric($_GET['lat']) ? (float)$_GET['lat'] : null;
+    $lon = isset($_GET['lon']) && is_numeric($_GET['lon']) ? (float)$_GET['lon'] : null;
+    kd_json(kd_delivery_api_quote((string)($_GET['place'] ?? ''), $lat, $lon));
 } catch (Throwable $e) {
     error_log('Kuzdvor delivery API: ' . $e->getMessage());
     kd_json(['error' => 'Не удалось рассчитать доставку. Попробуйте ещё раз.'], 503);
 }
 
-function kd_delivery_api_quote(string $place): array
+function kd_delivery_api_quote(string $place, ?float $selectedLat = null, ?float $selectedLon = null): array
 {
     $place = preg_replace('/\s+/u', ' ', trim($place)) ?? '';
     if (mb_strlen($place, 'UTF-8') < 2 || mb_strlen($place, 'UTF-8') > 100) {
@@ -43,31 +45,47 @@ function kd_delivery_api_quote(string $place): array
     }
 
     $origin = $settings['origin'] ?? ['lat' => 52.96328, 'lon' => 55.928612, 'name' => 'Мелеуз'];
-    $searchUrl = 'https://nominatim.openstreetmap.org/search?' . http_build_query([
-        'q' => $place . ', Россия',
-        'format' => 'jsonv2',
-        'addressdetails' => '1',
-        'accept-language' => 'ru',
-        'countrycodes' => 'ru',
-        'limit' => '5',
-    ]);
-    $results = kd_delivery_api_http_json($searchUrl, ['User-Agent: KuznechnyDvorikDeliveryCalculator/2.1 (https://kuzdvor.tw1.ru)']);
-    if (!$results) kd_json(['error' => 'Населённый пункт не найден. Уточните название или добавьте район.'], 404);
-
     $best = null;
-    $bestDistance = INF;
-    foreach ($results as $candidate) {
-        if (!is_array($candidate)) continue;
-        $lat = (float)($candidate['lat'] ?? 0);
-        $lon = (float)($candidate['lon'] ?? 0);
-        if (!$lat || !$lon) continue;
-        $distance = kd_delivery_api_haversine((float)($origin['lat'] ?? 52.96328), (float)($origin['lon'] ?? 55.928612), $lat, $lon);
-        if ($distance < $bestDistance) {
-            $bestDistance = $distance;
-            $best = $candidate;
+
+    $hasSelectedCoordinates = $selectedLat !== null && $selectedLon !== null
+        && $selectedLat >= -90 && $selectedLat <= 90
+        && $selectedLon >= -180 && $selectedLon <= 180
+        && abs($selectedLat) > 0.000001 && abs($selectedLon) > 0.000001;
+
+    if ($hasSelectedCoordinates) {
+        $best = [
+            'lat' => (string)$selectedLat,
+            'lon' => (string)$selectedLon,
+            'name' => $place,
+            'address' => [],
+        ];
+    } else {
+        $searchPlace = preg_match('/(?:^|,\s*)Россия(?:\s*$)/ui', $place) ? $place : $place . ', Россия';
+        $searchUrl = 'https://nominatim.openstreetmap.org/search?' . http_build_query([
+            'q' => $searchPlace,
+            'format' => 'jsonv2',
+            'addressdetails' => '1',
+            'accept-language' => 'ru',
+            'countrycodes' => 'ru',
+            'limit' => '5',
+        ]);
+        $results = kd_delivery_api_http_json($searchUrl, ['User-Agent: KuznechnyDvorikDeliveryCalculator/2.2 (https://kuzdvor.tw1.ru)']);
+        if (!$results) kd_json(['error' => 'Населённый пункт не найден. Уточните название или добавьте район.'], 404);
+
+        $bestDistance = INF;
+        foreach ($results as $candidate) {
+            if (!is_array($candidate)) continue;
+            $candidateLat = (float)($candidate['lat'] ?? 0);
+            $candidateLon = (float)($candidate['lon'] ?? 0);
+            if (!$candidateLat || !$candidateLon) continue;
+            $distance = kd_delivery_api_haversine((float)($origin['lat'] ?? 52.96328), (float)($origin['lon'] ?? 55.928612), $candidateLat, $candidateLon);
+            if ($distance < $bestDistance) {
+                $bestDistance = $distance;
+                $best = $candidate;
+            }
         }
+        if (!$best) kd_json(['error' => 'Населённый пункт не найден.'], 404);
     }
-    if (!$best) kd_json(['error' => 'Населённый пункт не найден.'], 404);
 
     $lat = (float)$best['lat'];
     $lon = (float)$best['lon'];
