@@ -288,7 +288,8 @@
         pendingPlaceChoice = null;
         clearPlaceChoices();
         const entered = String(input?.value || '').trim();
-        state = {kind:'pending', name:entered, resolvedName:'', shortName:'', price:null};
+        state = {kind:'empty', name:entered, resolvedName:'', shortName:'', price:null};
+        setResult('', '');
         if (routeButton) routeButton.hidden = true;
         emit();
         window.setTimeout(() => {
