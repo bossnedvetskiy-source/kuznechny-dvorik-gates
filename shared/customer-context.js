@@ -479,7 +479,7 @@
 
     const sharedParams = new URLSearchParams(window.location.search);
     const sharedMode = sharedParams.get('share') === '1' ||
-      ['city','loc','posts','gw','gh','ww','wh','art'].some(name => sharedParams.has(name));
+      ['city','loc','place','name','posts','gw','gh','ww','wh','art'].some(name => sharedParams.has(name));
 
     const numberParam = (name, fallback, min, max) => {
       const raw = sharedParams.get(name);
@@ -491,6 +491,8 @@
     const applySharedOrder = async () => {
       if (!sharedMode) return;
       const city = String(sharedParams.get('city') || sharedParams.get('loc') || '').trim();
+      const routePlace = String(sharedParams.get('place') || city).trim();
+      const lookupName = String(sharedParams.get('name') || city).trim();
       if (!city) return;
 
       const sharedDimensions = {
@@ -526,7 +528,7 @@
       syncAll();
 
       try {
-        await api.setDeliveryPlace?.(city);
+        await api.setDeliveryPlace?.(routePlace, {label:city, lookupName});
       } catch {
         // Delivery controller already exposes a safe manual state on failure.
       }
