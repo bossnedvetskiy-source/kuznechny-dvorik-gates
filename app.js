@@ -651,7 +651,62 @@ document.addEventListener('keydown',event=>{
 });
 document.querySelectorAll('[data-proof-image]').forEach(button=>button.addEventListener('click',()=>openGallery([button.dataset.proofImage],'Выполненная работа','Мелеуз и ближайшие районы','Выполненная работа Кузнечного Дворика')));
 
-window.GATE_PAGE_API={selectedProduct,productById,closeCalculator,openCalculatorForProduct,showCardImage,deliveryState:()=>deliveryController?.getState()||{kind:'empty'},resolveDelivery:()=>deliveryController?.calculateRoute?.(),dimensionState};
+function normalizeArticleLookup(value) {
+  return String(value || '')
+    .toLocaleLowerCase('ru-RU')
+    .replace(/ё/g,'е')
+    .replace(/^арт\.?\s*/i,'')
+    .replace(/\s+/g,'');
+}
+
+function productByArticle(article) {
+  const wanted=normalizeArticleLookup(article);
+  if(!wanted)return null;
+  return catalogProducts.find(product=>normalizeArticleLookup(product.art)===wanted)||null;
+}
+
+async function setDeliveryPlace(place) {
+  const value=String(place||'').trim();
+  if(!deliveryController)return {kind:'empty'};
+  if(!value){
+    deliveryController.chooseOther?.();
+    return deliveryController.getState?.()||{kind:'empty'};
+  }
+  const normalize=window.KUZDVOR_DELIVERY?.normalize||((input)=>String(input||'').toLocaleLowerCase('ru-RU').replace(/ё/g,'е').replace(/[^а-яa-z0-9]/gi,''));
+  if(normalize(value)===normalize('Мелеуз')){
+    deliveryController.chooseMeleuz?.();
+    return deliveryController.getState?.()||{kind:'fixed',name:'Мелеуз',price:0};
+  }
+  if(cityInput)cityInput.value=value;
+  deliveryController.updateFromInput?.();
+  const immediate=deliveryController.getState?.()||{kind:'empty'};
+  if(immediate.kind==='fixed')return immediate;
+  await deliveryController.calculateRoute?.(value,{preferredLabel:value,skipConfirm:true});
+  return deliveryController.getState?.()||{kind:'empty'};
+}
+
+function showProductByArticle(article,{open=false}={}) {
+  const product=productByArticle(article);
+  if(!product)return false;
+  const index=catalogProducts.findIndex(item=>item.id===product.id);
+  if(index>=visibleCount){
+    visibleCount=Math.min(catalogProducts.length,index+1);
+    renderProducts();
+  }
+  const card=grid.querySelector(`[data-card-product="${CSS.escape(product.id)}"]`);
+  if(!card)return false;
+  if(open)openCalculatorForProduct(product.id,true);
+  else window.setTimeout(()=>card.scrollIntoView({behavior:'smooth',block:'start'}),80);
+  return true;
+}
+
+window.GATE_PAGE_API={
+  selectedProduct,productById,productByArticle,closeCalculator,openCalculatorForProduct,showProductByArticle,showCardImage,
+  deliveryState:()=>deliveryController?.getState()||{kind:'empty'},
+  resolveDelivery:()=>deliveryController?.calculateRoute?.(),
+  setDeliveryPlace,
+  dimensionState
+};
 renderProducts();
 loadPublishedGalleries();
 chooseProduct(selectedProductId);
