@@ -57,8 +57,8 @@
   const style = document.createElement('style');
   style.id = 'gateFavoritesStyles';
   style.textContent = `
-    .catalog-summary{display:flex!important;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
-    .favorites-open-button{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:38px;padding:8px 12px;border:1px solid rgba(17,18,20,.16);border-radius:11px;background:#fff;color:#2b2925;font:800 11px/1.2 Manrope,Arial,sans-serif;cursor:pointer;box-shadow:0 5px 16px rgba(17,18,20,.05)}
+    .catalog-summary{display:flex!important;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}.catalog-summary[hidden]{display:none!important}
+    .favorites-open-button{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-height:32px;padding:6px 9px;border:1px solid rgba(17,18,20,.12);border-radius:9px;background:transparent;color:#625a50;font:800 9.5px/1.2 Manrope,Arial,sans-serif;cursor:pointer;box-shadow:none}.favorites-open-button[hidden]{display:none!important}
     .favorites-open-button .favorites-heart{font-size:17px;line-height:1;color:#a87723}.favorites-open-button.has-favorites{border-color:rgba(210,161,67,.5);background:#fffaf0}.favorites-count{display:grid;min-width:20px;height:20px;padding:0 5px;place-items:center;border-radius:999px;background:#171819;color:#e6bd69;font-size:9px;font-weight:900}
     .favorite-toggle{position:absolute;z-index:12;right:10px;top:10px;display:inline-flex;align-items:center;justify-content:center;gap:5px;min-height:34px;padding:7px 9px;border:1px solid rgba(17,18,20,.14);border-radius:999px;background:rgba(255,255,255,.93);color:#4b463f;font:800 9px/1 Manrope,Arial,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.14);cursor:pointer;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
     .favorite-toggle .heart{font-size:16px;line-height:1;color:#9b7a42}.favorite-toggle[aria-pressed="true"]{border-color:#d2a143;background:#171819;color:#fff}.favorite-toggle[aria-pressed="true"] .heart{color:#e6bd69}
@@ -84,6 +84,8 @@
   toolbarButton.className = 'favorites-open-button';
   toolbarButton.setAttribute('aria-label','Открыть избранные модели и сравнить');
   toolbarButton.innerHTML = '<span class="favorites-heart">♡</span><span>Избранное</span><b class="favorites-count">0</b>';
+  toolbarButton.hidden = favorites.size === 0;
+  catalogSummary.hidden = favorites.size === 0;
   catalogSummary.append(toolbarButton);
 
   const floatingButton = document.createElement('button');
@@ -131,6 +133,8 @@
     toolbarButton.querySelector('.favorites-count').textContent = String(count);
     toolbarButton.querySelector('.favorites-heart').textContent = count ? '♥' : '♡';
     toolbarButton.classList.toggle('has-favorites', count > 0);
+    toolbarButton.hidden = count === 0;
+    catalogSummary.hidden = count === 0;
     floatingButton.hidden = count === 0 || modalOpen || !catalogUnlocked;
     floatingButton.querySelector('b').textContent = String(count);
 
