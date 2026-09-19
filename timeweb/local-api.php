@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require __DIR__ . '/backend/bootstrap.php';
+require __DIR__ . '/backend/manager-push.php';
 
 $route = trim((string)($_GET['__route'] ?? ''), '/');
 unset($_GET['__route']);
@@ -51,6 +52,19 @@ try {
         kd_require_admin();
         kd_logout_admin();
         kd_json(['ok' => true]);
+    }
+
+    if ($route === 'admin/manager-push-key' && $method === 'GET') {
+        kd_require_admin();
+        kd_manager_push_key_response();
+    }
+
+    if ($route === 'admin/manager-push-subscriptions') {
+        if ($method !== 'POST' && $method !== 'DELETE') kd_json(['error' => 'Метод не поддерживается'], 405);
+        kd_require_same_origin();
+        $session = kd_require_admin();
+        if ($method === 'POST') kd_manager_push_subscription_save((int)$session['admin_id']);
+        kd_manager_push_subscription_delete((int)$session['admin_id']);
     }
 
     if (str_starts_with($route, 'admin/')) {
@@ -221,7 +235,11 @@ function kd_create_lead(): never
         $clientTotal, $clientTotal, $deliveryPending ? 1 : 0, !empty($delivery['outOfArea']) ? 1 : 0, $delivery['distanceKm'] ?? null,
         mb_substr(trim((string)($body['policyVersion'] ?? '')),0,64), mb_substr(trim((string)($body['comment'] ?? '')),0,1000), mb_substr($message,0,8000)
     ]);
-    kd_json(['ok' => true, 'id' => (int)kd_db()->lastInsertId(), 'quote' => ['total' => $clientTotal, 'verified' => false, 'deliveryPending' => $deliveryPending]], 201);
+    $leadId = (int)kd_db()->lastInsertId();
+    register_shutdown_function(static function() use ($leadId): void {
+        kd_send_manager_push_notifications($leadId);
+    });
+    kd_json(['ok' => true, 'id' => $leadId, 'quote' => ['total' => $clientTotal, 'verified' => false, 'deliveryPending' => $deliveryPending]], 201);
 }
 
 function kd_nullable_number(mixed $value): ?float
