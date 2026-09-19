@@ -233,8 +233,8 @@
   body{padding-bottom:54px!important}
   .mobile-cta{height:54px!important;padding:6px 8px!important;grid-template-columns:.62fr 1.38fr!important;gap:6px!important}
   .mobile-cta a{border-radius:9px!important;font-size:11px!important;padding:0 5px!important}
-  .mobile-cta a:last-child{font-size:0!important}
-  .mobile-cta a:last-child::after{content:"Рассчитать";font-size:12px;font-weight:800}
+  .mobile-cta a:last-child{font-size:12px!important;line-height:1.15!important;white-space:nowrap!important;font-weight:800!important}
+  .mobile-cta a:last-child::after{content:none!important;display:none!important}
   .toast{bottom:68px!important}
 }
 
@@ -275,8 +275,8 @@
 .catalog-trust-strip span{display:flex;align-items:center;justify-content:center;min-height:42px;padding:8px 10px;border:1px solid rgba(17,18,20,.08);border-radius:11px;background:#f7f4ee;color:#5f594f;font-size:11px;font-weight:800;text-align:center}
 @media(max-width:620px){
   .hero-size-note{display:block!important;margin:9px 0 0!important;color:rgba(255,255,255,.66)!important;font-size:12px!important;line-height:1.45!important}
-  .catalog-trust-strip{grid-template-columns:1fr 1fr;gap:6px;margin:12px 0 10px}
-  .catalog-trust-strip span{min-height:38px;padding:7px 8px;font-size:10px}
+  .catalog-trust-strip{grid-template-columns:1fr 1fr;gap:5px;margin:9px 0 7px}
+  .catalog-trust-strip span{min-height:34px;padding:6px 7px;border-radius:9px;font-size:9.5px}
 }
 
 
