@@ -17,7 +17,7 @@ test('personalized link applies city and own posts without asking the customer',
   await expect(page.locator('#catalogOrderSummary')).toContainText('на ваши столбы');
 
   const quote = page.locator('#catalogGrid .product-card').first().locator('.catalog-primary-quote');
-  await expect(quote).toContainText('С доставкой');
+  await expect(quote).toContainText(/доставкой в Салават/i);
   await expect(quote.locator('strong')).not.toContainText('Пересчитываем');
 });
 
