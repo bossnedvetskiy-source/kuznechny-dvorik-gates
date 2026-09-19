@@ -104,3 +104,18 @@ CREATE TABLE IF NOT EXISTS lead_workflow (
   PRIMARY KEY (lead_id),
   CONSTRAINT fk_workflow_lead FOREIGN KEY (lead_id) REFERENCES site_leads(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+CREATE TABLE IF NOT EXISTS manager_push_subscriptions (
+  endpoint_hash CHAR(64) NOT NULL,
+  admin_id INT UNSIGNED NOT NULL,
+  endpoint TEXT NOT NULL,
+  p256dh VARCHAR(255) NOT NULL DEFAULT '',
+  auth_token VARCHAR(255) NOT NULL DEFAULT '',
+  user_agent VARCHAR(500) NOT NULL DEFAULT '',
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (endpoint_hash),
+  KEY idx_manager_push_admin (admin_id),
+  KEY idx_manager_push_updated (updated_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
