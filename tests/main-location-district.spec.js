@@ -16,19 +16,28 @@ test('main site requires district selection and OK before delivery is accepted',
       name:'Ишеево',
       label:'Ишеево, Аургазинский район',
       secondary:'Аургазинский район, Республика Башкортостан',
-      query:'Ишеево, Аургазинский район, Республика Башкортостан, Россия'
+      query:'Ишеево, Аургазинский район, Республика Башкортостан, Россия',
+      lat:54.3001,
+      lon:55.9001
     },
     {
       name:'Ишеево',
       label:'Ишеево, Ишимбайский район',
       secondary:'Ишимбайский район, Республика Башкортостан',
-      query:'Ишеево, Ишимбайский район, Республика Башкортостан, Россия'
+      query:'Ишеево, Ишимбайский район, Республика Башкортостан, Россия',
+      lat:53.4502,
+      lon:56.0502
     }
   ]);
 
   let routedPlace = '';
-  await page.route('**/api/delivery?place=*', async route => {
-    routedPlace = new URL(route.request().url()).searchParams.get('place') || '';
+  let routedLat = '';
+  let routedLon = '';
+  await page.route('**/api/delivery?*', async route => {
+    const url = new URL(route.request().url());
+    routedPlace = url.searchParams.get('place') || '';
+    routedLat = url.searchParams.get('lat') || '';
+    routedLon = url.searchParams.get('lon') || '';
     await route.fulfill({
       status:200,
       contentType:'application/json',
@@ -74,6 +83,8 @@ test('main site requires district selection and OK before delivery is accepted',
   await expect(page.locator('#routeButton')).toBeHidden();
   await expect(page.locator('.delivery-place-choices__confirm')).toHaveCount(0);
   await expect.poll(() => routedPlace, {timeout:8000}).toContain('Ишимбайский район');
+  await expect.poll(() => routedLat, {timeout:8000}).toBe('53.4502');
+  await expect.poll(() => routedLon, {timeout:8000}).toBe('56.0502');
   await expect(page.locator('#deliverySummary')).toBeVisible({timeout:8000});
   await expect(page.locator('#routeButton')).toBeHidden();
   await expect(page.locator('#catalogOrderConfigurator')).toBeHidden({timeout:5000});
