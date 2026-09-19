@@ -13,7 +13,9 @@ test('fresh visitor sees no confirmed city and a clean mobile catalog CTA', asyn
   await expect(page.locator('#deliverySummary')).toBeHidden();
   await expect(page.locator('#cityInput')).toHaveValue('');
   await expect(page.locator('#deliveryChooser')).toBeVisible();
-  await expect(page.locator('#mobilePrimaryCta')).toHaveText('К моделям');
+  const mobilePrimary = page.locator('#mobilePrimaryCta');
+  await expect(mobilePrimary).toHaveText('К моделям');
+  await expect.poll(async () => mobilePrimary.evaluate(node => getComputedStyle(node,'::after').content)).toMatch(/^(none|""|'')$/);
 
   const firstCard = page.locator('#catalogGrid .product-card').first();
   await expect(firstCard.locator('.product-art')).toBeVisible();
@@ -26,6 +28,7 @@ test('fresh visitor sees no confirmed city and a clean mobile catalog CTA', asyn
   await expect(page.locator('#catalogProgress')).toHaveText(/Ещё 32 модели в каталоге/);
   await expect(showMore).toHaveText(/Показать ещё 6 моделей ↓$/);
   await expect.poll(async () => showMore.evaluate(node => getComputedStyle(node).backgroundColor)).not.toBe('rgba(0, 0, 0, 0)');
+  await expect.poll(async () => showMore.evaluate(node => getComputedStyle(node).color)).toMatch(/rgb\(23,\s*18,\s*11\)/);
   await expect.poll(async () => showMore.evaluate(node => Math.round(node.getBoundingClientRect().height))).toBeGreaterThanOrEqual(48);
   await expect.poll(async () => page.evaluate(() => {
     const more = document.getElementById('catalogMore');
@@ -72,6 +75,7 @@ test('sticky CTA switches to selected quote and calculator has a compact close b
   const closeButton = page.locator('#changeProductButton');
   await expect(calculator).toBeVisible();
   await expect(page.locator('#mobilePrimaryCta')).toHaveText(/^На замер · (?:от )?[\d\s ]+ ₽$/);
+  await expect.poll(async () => page.locator('#mobilePrimaryCta').evaluate(node => getComputedStyle(node,'::after').content)).toMatch(/^(none|""|'')$/);
   await expect.poll(async () => calculator.evaluate(node => getComputedStyle(node).position), {timeout:5000}).toBe('relative');
   await expect.poll(async () => page.locator('body').evaluate(node => getComputedStyle(node).overflowY), {timeout:5000}).not.toBe('hidden');
   await expect(calculator).toBeInViewport();
