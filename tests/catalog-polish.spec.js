@@ -36,8 +36,12 @@ test('fresh visitor sees no confirmed city and a clean mobile catalog CTA', asyn
     return Boolean(more && trust && (more.compareDocumentPosition(trust) & Node.DOCUMENT_POSITION_FOLLOWING));
   })).toBe(true);
 
-  const colorDescription = page.locator('.catalog-color-global > div').first().locator('span');
-  await expect(colorDescription).toBeHidden();
+  await expect(page.locator('.catalog-section-head h2')).toHaveText('Каталог моделей');
+  await expect(page.locator('.catalog-section-subtitle')).toContainText('38 моделей');
+  await expect.poll(async () => page.locator('#catalogCount').evaluate(node => Boolean(node.closest('.section-head')))).toBe(true);
+  await expect(page.locator('.catalog-color-global')).toHaveCount(0);
+  await expect(page.locator('[data-catalog-start-hint]')).toHaveCount(0);
+  await expect(page.locator('.favorites-open-button:visible')).toHaveCount(0);
   await expect(page.locator('#catalogOrderConfigurator .mobile-size-summary small')).toBeHidden();
   await expect(page.locator('#catalogOrderConfigurator .catalog-posts-choice small').first()).toBeHidden();
   await expect.poll(async () => page.locator('#catalogOrderConfigurator .catalog-posts-choice button').first().evaluate(node => Math.round(node.getBoundingClientRect().height))).toBeLessThanOrEqual(42);
