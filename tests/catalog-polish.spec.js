@@ -18,7 +18,20 @@ test('fresh visitor sees no confirmed city and a clean mobile catalog CTA', asyn
   const firstCard = page.locator('#catalogGrid .product-card').first();
   await expect(firstCard.locator('.product-art')).toBeVisible();
   await expect(firstCard.locator('.product-art')).toContainText('Арт.');
-  await expect(page.locator('#showMoreButton')).toHaveText(/↓$/);
+
+  const more = page.locator('#catalogMore');
+  const showMore = page.locator('#showMoreButton');
+  const trust = page.locator('.catalog-trust-strip');
+  await expect(more).toBeVisible();
+  await expect(page.locator('#catalogProgress')).toHaveText(/Ещё 32 модели в каталоге/);
+  await expect(showMore).toHaveText(/Показать ещё 6 моделей ↓$/);
+  await expect.poll(async () => showMore.evaluate(node => getComputedStyle(node).backgroundColor)).not.toBe('rgba(0, 0, 0, 0)');
+  await expect.poll(async () => showMore.evaluate(node => Math.round(node.getBoundingClientRect().height))).toBeGreaterThanOrEqual(56);
+  await expect.poll(async () => page.evaluate(() => {
+    const more = document.getElementById('catalogMore');
+    const trust = document.querySelector('.catalog-trust-strip');
+    return Boolean(more && trust && (more.compareDocumentPosition(trust) & Node.DOCUMENT_POSITION_FOLLOWING));
+  })).toBe(true);
 
   const colorDescription = page.locator('.catalog-color-global > div').first().locator('span');
   await expect(colorDescription).toBeHidden();
@@ -84,4 +97,19 @@ test('real mobile reload closes the last selected calculator', async ({page}) =>
   await expect(page.locator('#calculator')).toBeHidden({timeout:5000});
   await expect(page.locator('body')).not.toHaveClass(/calculator-open/);
   await expect(page.locator('#mobilePrimaryCta')).toHaveText('К моделям');
+});
+
+
+test('show more CTA updates remaining count and reveals the next six models', async ({page}) => {
+  await openMobile(page);
+
+  const before = await page.locator('#catalogGrid .product-card').count();
+  expect(before).toBe(6);
+  await expect(page.locator('#catalogProgress')).toHaveText('Ещё 32 модели в каталоге');
+
+  await page.locator('#showMoreButton').click();
+
+  await expect(page.locator('#catalogGrid .product-card')).toHaveCount(12);
+  await expect(page.locator('#catalogProgress')).toHaveText('Ещё 26 моделей в каталоге');
+  await expect(page.locator('#showMoreButton')).toHaveText('Показать ещё 6 моделей ↓');
 });
