@@ -166,7 +166,7 @@ test('delivery retry recovers after a temporary HTML response without blocking b
   const ui = await beginInstallationPlace(page, 'Тестово');
   await expect.poll(() => requests).toBe(2);
   await expect(ui.status).toContainText('Найдено: Тестово');
-  await expect(ui.action).toHaveText('Да, это нужный пункт');
+  await expect(ui.action).toHaveText('ОК');
   await ui.action.click();
   await expect(page.locator('#catalogGrid .product-card').first()).toBeVisible();
   await expect(page.locator('#catalogGrid .product-card').first().locator('.catalog-primary-quote small')).toContainText('Тестово');
