@@ -88,7 +88,7 @@
     style.id = 'catalogGlobalFlowStyles';
     style.textContent = `
       .catalog-order-config{margin:0 0 18px;padding:18px;border:1px solid rgba(210,161,67,.34);border-radius:18px;background:linear-gradient(155deg,#17181b,#0e0f11);color:#fff;box-shadow:0 14px 34px rgba(17,18,20,.10)}
-      .catalog-order-config__head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:14px}.catalog-order-config__eyebrow{display:block;margin:0 0 5px;color:#e6bd69;font-size:9px;font-weight:900;letter-spacing:.09em;text-transform:uppercase}.catalog-order-config h3{margin:0;font:25px/1.15 Prata,serif}.catalog-order-config__head p{max-width:540px;margin:6px 0 0;color:rgba(255,255,255,.66);font-size:11px;line-height:1.5}
+      .catalog-order-config__head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:14px}.catalog-order-config__eyebrow{display:block;margin:0 0 5px;color:#e6bd69;font-size:9px;font-weight:900;letter-spacing:.09em;text-transform:uppercase}.catalog-order-config h3{margin:0;font:25px/1.15 Prata,serif}.catalog-order-title-mobile{display:none}.catalog-order-config__head p{max-width:540px;margin:6px 0 0;color:rgba(255,255,255,.66);font-size:11px;line-height:1.5}
       .catalog-order-config__fields.calc-form{display:grid;grid-template-columns:1.08fr .92fr .92fr;gap:12px;padding:0!important;background:transparent!important}.catalog-order-config .form-block{min-width:0;margin:0!important;padding:13px!important;border:1px solid rgba(255,255,255,.11)!important;border-radius:14px!important;background:rgba(255,255,255,.045)!important}.catalog-order-config .step-label{margin-bottom:10px!important}.catalog-order-config .base-install-note,.catalog-order-config .option-list,.catalog-order-config .color-note,.catalog-order-config .size-notice,.catalog-order-config .size-memory-note{display:none!important}
       .catalog-order-config .posts-reassurance{margin:8px 0 0!important;color:rgba(255,255,255,.58)!important;font-size:9.5px!important;line-height:1.4!important}.catalog-order-config .posts-reassurance strong{color:#fff!important}.catalog-order-config .dimension-help{display:block;margin-top:7px;color:rgba(255,255,255,.56);font-size:9.5px;line-height:1.4}.catalog-order-config .mobile-size-summary{margin-bottom:8px}.catalog-order-config .mobile-size-summary button{min-height:34px}
       .catalog-posts-choice{display:grid;grid-template-columns:1fr 1fr;gap:7px}.catalog-posts-choice button{display:grid;gap:3px;min-height:62px;padding:9px 10px;border:1px solid rgba(255,255,255,.14);border-radius:11px;background:rgba(255,255,255,.045);color:#fff;text-align:left;font-family:Manrope,Arial,sans-serif;cursor:pointer}.catalog-posts-choice button b{font-size:11px;line-height:1.2}.catalog-posts-choice button small{color:rgba(255,255,255,.55);font-size:8.5px;line-height:1.3}.catalog-posts-choice button.is-active{border-color:#d2a143;background:rgba(210,161,67,.14);box-shadow:inset 0 0 0 1px rgba(210,161,67,.15)}.catalog-posts-choice button.is-active b{color:#e6bd69}
@@ -104,8 +104,9 @@
       @media(max-width:620px){
         .catalog-order-config{margin:0 0 11px;padding:11px 12px 12px;border-radius:14px;box-shadow:0 8px 22px rgba(17,18,20,.09)}
         .catalog-order-config__head{margin-bottom:7px!important}
-        .catalog-order-config__eyebrow{margin-bottom:3px;font-size:8px}
-        .catalog-order-config h3{font-size:18px;line-height:1.12}
+        .catalog-order-config__eyebrow{display:none!important}
+        .catalog-order-title-desktop{display:none!important}.catalog-order-title-mobile{display:inline!important}
+        .catalog-order-config h3{font:16px/1.15 Manrope,Arial,sans-serif;font-weight:900}
         .catalog-order-config__head p{display:none!important}
         .catalog-order-config__fields.calc-form{gap:0!important}
         .catalog-order-config .form-block{padding:10px 0!important;border:0!important;border-bottom:1px solid rgba(255,255,255,.10)!important;border-radius:0!important;background:transparent!important}
@@ -116,20 +117,18 @@
         .catalog-order-config .mobile-size-summary small{font-size:8.5px!important}
         .catalog-order-config .mobile-size-summary strong{font-size:12px!important}
         .catalog-order-config .mobile-size-summary button{min-height:34px!important;padding:0 10px!important}
-        .catalog-order-config .dimension-help{margin-top:5px!important;font-size:9px!important;line-height:1.35!important}
+        .catalog-order-config .dimension-help{display:none!important}
         .catalog-posts-choice{gap:6px}
         .catalog-posts-choice button{min-height:50px;padding:7px 9px}
         .catalog-posts-choice button b{font-size:10.5px}
         .catalog-posts-choice button small{font-size:8px}
         .catalog-order-config .posts-reassurance{display:none!important}
-        .catalog-order-config .city-label input{min-height:46px!important}
-        .catalog-order-config .delivery-input-help{font-size:9.5px!important;line-height:1.35!important}
-        .catalog-order-config .delivery-result{margin-top:6px!important;padding:7px 8px!important;font-size:10px!important}
-        .catalog-order-config .delivery-help{margin-top:5px!important}
-        .catalog-order-config .delivery-help summary{font-size:9.5px!important}
-        .catalog-order-config__actions{display:grid;gap:5px;margin-top:9px!important}
-        .catalog-order-config__apply{width:100%;min-height:42px}
-        .catalog-order-config__actions small{display:none!important}
+        .catalog-order-config .city-label{font-size:0!important;gap:0!important}
+        .catalog-order-config .city-label input{min-height:44px!important;font-size:16px!important}
+        .catalog-order-config .delivery-input-help{display:none!important}
+        .catalog-order-config .delivery-result{margin-top:5px!important;padding:6px 8px!important;font-size:9.5px!important}
+        .catalog-order-config .delivery-help{display:none!important}
+        .catalog-order-config__actions{display:none!important}
         .catalog-order-summary{margin-bottom:10px;padding:10px 11px;border-color:rgba(210,161,67,.42);background:linear-gradient(135deg,#fffaf0,#f5ead3);box-shadow:0 7px 20px rgba(133,94,26,.08)}
         .catalog-order-summary__copy{gap:3px}
         .catalog-order-summary__copy span{color:#8a6320;font-size:8px}
@@ -146,7 +145,7 @@
     config.className = 'catalog-order-config';
     config.innerHTML = `
       <div class="catalog-order-config__head">
-        <div><span class="catalog-order-config__eyebrow">Один раз для всего каталога</span><h3>Узнайте цены для вашего заказа</h3><p>Укажите размеры, место установки и столбы. Все модели ниже пересчитаются по одним и тем же условиям. Можно ничего не менять и сразу смотреть стандартные цены.</p></div>
+        <div><span class="catalog-order-config__eyebrow">Один раз для всего каталога</span><h3><span class="catalog-order-title-desktop">Узнайте цены для вашего заказа</span><span class="catalog-order-title-mobile">Параметры расчёта</span></h3><p>Укажите размеры, место установки и столбы. Все модели ниже пересчитаются по одним и тем же условиям. Можно ничего не менять и сразу смотреть стандартные цены.</p></div>
       </div>
       <div class="catalog-order-config__fields calc-form" id="catalogOrderFields"></div>
       <div class="catalog-order-config__actions"><button class="catalog-order-config__apply" id="applyCatalogParams" type="button">Показать цены</button><small>Не знаете размеры? Оставьте стандартные — уточним на бесплатном замере.</small></div>`;
@@ -169,17 +168,20 @@
     const catalogIntro = sectionHead?.querySelector('p');
     if (catalogIntro) catalogIntro.textContent = 'Сравнивайте дизайн и уже пересчитанную стоимость. Параметры выше действуют сразу для всех 38 моделей.';
 
+    const sizeStep = sizeBlock.querySelector('.step-label');
+    if (sizeStep) sizeStep.textContent = 'Размеры';
+
     const postsSegment = document.createElement('div');
     postsSegment.className = 'catalog-posts-choice';
     postsSegment.innerHTML = `<button type="button" data-posts-choice="0"><b>На мои столбы</b><small>Установка уже включена</small></button><button type="button" data-posts-choice="1"><b>Нужны новые</b><small>Усиленные столбы со связкой</small></button>`;
     postsBlock.querySelector('.option-list')?.before(postsSegment);
     const postsStep = postsBlock.querySelector('.step-label');
-    if (postsStep) postsStep.textContent = '02 · Столбы';
+    if (postsStep) postsStep.textContent = 'Столбы';
     const postsHint = postsBlock.querySelector('.posts-reassurance');
     if (postsHint) postsHint.innerHTML = '<strong>Не уверены?</strong> Проверим ваши столбы на бесплатном замере.';
 
     const deliveryStep = deliveryBlock.querySelector('.step-label');
-    if (deliveryStep) deliveryStep.textContent = '03 · Место установки';
+    if (deliveryStep) deliveryStep.textContent = 'Место установки';
 
     const sizeNotice = document.getElementById('sizeNotice');
     const sizeMemory = document.getElementById('sizeMemoryNote');
