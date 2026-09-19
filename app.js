@@ -520,6 +520,7 @@ deliveryController=window.KUZDVOR_DELIVERY.createController({
   changeButton:document.getElementById('deliveryChange'),
   onChange:(state)=>{
     calculate();
+    document.dispatchEvent(new CustomEvent('delivery:changed',{detail:{state:{...(state||{})}}}));
     if(['fixed','calculated','out-of-area','error'].includes(state?.kind)){
       const city=deliveryController?.selectedCityName?.()||cityInput.value.trim();
       const key=`${state.kind}:${city}`;
