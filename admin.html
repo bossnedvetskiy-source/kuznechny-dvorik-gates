@@ -222,15 +222,21 @@
             </div>
             <p class="client-link-intro">Укажите условия клиента. При открытии ссылки сайт сам возьмёт текущие цены ворот и доставки, применит параметры и сразу покажет готовый каталог.</p>
             <div class="client-link-grid">
-              <label class="client-link-wide">Населённый пункт
-                <input id="clientLinkCity" type="text" list="clientLinkCities" autocomplete="off" placeholder="Например: Салават" maxlength="120">
-                <datalist id="clientLinkCities">
-                  <option value="Мелеуз"></option><option value="Салават"></option><option value="Стерлитамак"></option>
-                  <option value="Ишимбай"></option><option value="Кумертау"></option><option value="Мраково"></option>
-                  <option value="Стерлибашево"></option><option value="Ермолаево"></option><option value="Зирган"></option>
-                  <option value="Юмагузино"></option><option value="Исянгулово"></option>
-                </datalist>
-              </label>
+              <div class="client-link-city-field client-link-wide">
+                <label>Населённый пункт
+                  <input id="clientLinkCity" type="text" autocomplete="off" inputmode="search" enterkeyhint="search" placeholder="Начните вводить, например: Ишеево" maxlength="120">
+                </label>
+                <div class="client-link-place-status" id="clientLinkPlaceStatus">Введите название — покажем найденные населённые пункты и районы.</div>
+                <div class="client-link-place-choices" id="clientLinkPlaceChoices" hidden></div>
+                <div class="client-link-place-confirm" id="clientLinkPlaceConfirm" hidden>
+                  <div><span>Подтвердите населённый пункт</span><strong id="clientLinkPendingPlace"></strong><small id="clientLinkPendingArea"></small></div>
+                  <button id="clientLinkPlaceOk" type="button">ОК</button>
+                </div>
+                <div class="client-link-place-confirmed" id="clientLinkPlaceConfirmed" hidden>
+                  <div><span>✓ Населённый пункт подтверждён</span><strong id="clientLinkConfirmedPlace"></strong></div>
+                  <button id="clientLinkPlaceChange" type="button">Изменить</button>
+                </div>
+              </div>
               <fieldset class="client-link-posts">
                 <legend>Столбы</legend>
                 <label><input type="radio" name="clientLinkPosts" value="own" checked><span><b>Свои столбы</b><small>установка на готовые</small></span></label>
@@ -376,7 +382,16 @@
       const hint = document.getElementById('clientLinkHint');
       const copy = document.getElementById('copyClientLink');
       const whatsapp = document.getElementById('whatsappClientLink');
-      if (!city || !output) return;
+      const placeStatus = document.getElementById('clientLinkPlaceStatus');
+      const placeChoices = document.getElementById('clientLinkPlaceChoices');
+      const placeConfirm = document.getElementById('clientLinkPlaceConfirm');
+      const pendingPlace = document.getElementById('clientLinkPendingPlace');
+      const pendingArea = document.getElementById('clientLinkPendingArea');
+      const placeOk = document.getElementById('clientLinkPlaceOk');
+      const placeConfirmed = document.getElementById('clientLinkPlaceConfirmed');
+      const confirmedPlaceText = document.getElementById('clientLinkConfirmedPlace');
+      const placeChange = document.getElementById('clientLinkPlaceChange');
+      if (!city || !output || !placeChoices || !placeOk) return;
 
       const dimensionInputs = {
         gw:document.getElementById('clientLinkGateWidth'),
@@ -389,25 +404,141 @@
       style.textContent = `
         .client-link-card{border-color:#d9c28f;background:linear-gradient(180deg,#fffdf8,#fff)}
         .client-link-intro{margin:-4px 0 16px;color:var(--muted);font-size:11px;line-height:1.55}
-        .client-link-grid{display:grid;grid-template-columns:1.2fr 1fr;gap:12px}.client-link-grid>label,.client-link-sizes label,.client-link-result>label{display:grid;gap:6px;color:var(--muted);font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.45px}.client-link-wide{grid-column:1/-1}
+        .client-link-grid{display:grid;grid-template-columns:1.2fr 1fr;gap:12px}.client-link-grid>label,.client-link-city-field>label,.client-link-sizes label,.client-link-result>label{display:grid;gap:6px;color:var(--muted);font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.45px}.client-link-wide{grid-column:1/-1}
         .client-link-grid input[type="text"],.client-link-grid input[type="number"],.client-link-sizes input,.client-link-result input{width:100%;height:44px;padding:0 11px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);font:700 14px Manrope,Arial,sans-serif;text-transform:none;letter-spacing:0;outline:none}.client-link-grid input:focus,.client-link-sizes input:focus,.client-link-result input:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(198,147,63,.13)}
+        .client-link-city-field{position:relative;min-width:0}.client-link-place-status{margin-top:6px;color:var(--muted);font-size:9.5px;line-height:1.4}.client-link-place-status.is-loading{color:#8a6326}.client-link-place-status.is-error{color:#a44b42}
+        .client-link-place-choices{display:grid;gap:6px;margin-top:7px;padding:7px;border:1px solid #ded5c8;border-radius:12px;background:#fff;box-shadow:0 12px 28px rgba(18,16,13,.10)}.client-link-place-choices[hidden]{display:none!important}.client-link-place-choice{display:grid;gap:3px;width:100%;min-height:52px;padding:9px 11px;border:1px solid #e8e1d7;border-radius:9px;background:#faf8f4;color:var(--ink);text-align:left;cursor:pointer}.client-link-place-choice:hover,.client-link-place-choice:focus-visible{border-color:#c99a45;background:#fff9ea;outline:none}.client-link-place-choice.is-selected{border-color:#bd8730;background:#fff6df;box-shadow:inset 0 0 0 1px rgba(189,135,48,.12)}.client-link-place-choice b{font-size:11.5px;line-height:1.25}.client-link-place-choice small{color:var(--muted);font-size:9px;line-height:1.35}
+        .client-link-place-confirm,.client-link-place-confirmed{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:8px;padding:10px 11px;border-radius:11px}.client-link-place-confirm[hidden],.client-link-place-confirmed[hidden]{display:none!important}.client-link-place-confirm{border:1px solid #d9bd7e;background:#fff8e7}.client-link-place-confirmed{border:1px solid #cfd9c5;background:#f5f9ef}.client-link-place-confirm>div,.client-link-place-confirmed>div{display:grid;gap:2px;min-width:0}.client-link-place-confirm span,.client-link-place-confirmed span{color:var(--muted);font-size:8.5px;font-weight:800;text-transform:uppercase;letter-spacing:.35px}.client-link-place-confirm strong,.client-link-place-confirmed strong{font-size:11px;line-height:1.3}.client-link-place-confirm small{color:var(--muted);font-size:9px;line-height:1.3}.client-link-place-confirm button{flex:0 0 auto;min-width:58px;height:40px;border:0;border-radius:9px;background:#c9953b;color:#17120a;font-size:12px;font-weight:900;cursor:pointer}.client-link-place-confirmed button{flex:0 0 auto;height:34px;padding:0 10px;border:1px solid #cfd9c5;border-radius:8px;background:#fff;color:#566249;font-size:9px;font-weight:800;cursor:pointer}
         .client-link-posts{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:0;padding:0;border:0}.client-link-posts legend{grid-column:1/-1;margin-bottom:0;color:var(--muted);font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.45px}.client-link-posts label{display:flex;align-items:center;gap:8px;min-height:54px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:#faf8f4;cursor:pointer}.client-link-posts input{accent-color:#a97d31}.client-link-posts span{display:grid;gap:2px}.client-link-posts b{font-size:11px;color:var(--ink)}.client-link-posts small{font-size:8.5px;color:var(--muted)}
         .client-link-checkbox{display:flex!important;align-items:center;gap:8px;align-self:end;min-height:44px;padding:0 10px;border:1px solid var(--line);border-radius:10px;background:#faf8f4}.client-link-checkbox input{width:18px;height:18px;accent-color:#a97d31}.client-link-checkbox span{color:var(--ink);font-size:10px;text-transform:none;letter-spacing:0}
         .client-link-sizes{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-top:12px}.client-link-sizes[hidden]{display:none!important}
         .client-link-result{margin-top:14px;padding:13px;border:1px solid #e3dccf;border-radius:13px;background:#faf8f4}.client-link-result input{font-size:11px;background:#fff}.client-link-result p{margin:8px 0 0;color:var(--muted);font-size:9.5px;line-height:1.45}.client-link-actions{display:flex;gap:8px;margin-top:11px}.client-link-actions button{min-height:42px}.client-link-actions button:disabled{opacity:.4;cursor:not-allowed}
-        @media(max-width:620px){.client-link-card .panel-heading .price-help{display:none}.client-link-intro{font-size:10px}.client-link-grid{grid-template-columns:1fr}.client-link-wide{grid-column:auto}.client-link-sizes{grid-template-columns:1fr 1fr}.client-link-grid input[type="text"],.client-link-grid input[type="number"],.client-link-sizes input,.client-link-result input{font-size:16px}.client-link-posts label{min-height:58px}.client-link-actions{display:grid;grid-template-columns:1fr}.client-link-actions button{width:100%}}
+        @media(max-width:620px){.client-link-card .panel-heading .price-help{display:none}.client-link-intro{font-size:10px}.client-link-grid{grid-template-columns:1fr}.client-link-wide{grid-column:auto}.client-link-sizes{grid-template-columns:1fr 1fr}.client-link-grid input[type="text"],.client-link-grid input[type="number"],.client-link-sizes input,.client-link-result input{font-size:16px}.client-link-place-choice{min-height:58px;padding:10px 11px}.client-link-place-choice b{font-size:12px}.client-link-place-choice small{font-size:10px}.client-link-place-confirm,.client-link-place-confirmed{align-items:stretch}.client-link-place-confirm button{min-width:64px;height:auto;min-height:44px}.client-link-posts label{min-height:58px}.client-link-actions{display:grid;grid-template-columns:1fr}.client-link-actions button{width:100%}}
       `;
       document.head.append(style);
 
       const articleValue = () => String(article?.value || '').trim().replace(/^арт\.?\s*/i,'');
       const selectedPosts = () => document.querySelector('input[name="clientLinkPosts"]:checked')?.value || 'own';
+      const normalize = value => String(value || '').toLocaleLowerCase('ru-RU').replace(/ё/g,'е').replace(/[^а-яa-z0-9]/gi,'');
+      let pendingChoice = null;
+      let confirmedChoice = null;
+      let searchTimer = 0;
+      let searchSequence = 0;
+
+      function resetPlaceSelection({message='Выберите населённый пункт из найденных вариантов и подтвердите кнопкой «ОК».'} = {}) {
+        pendingChoice = null;
+        confirmedChoice = null;
+        placeChoices.hidden = true;
+        placeChoices.replaceChildren();
+        placeConfirm.hidden = true;
+        placeConfirmed.hidden = true;
+        placeStatus.className = 'client-link-place-status';
+        placeStatus.textContent = message;
+        updateLink();
+      }
+
+      function selectChoice(choice, button) {
+        pendingChoice = choice;
+        confirmedChoice = null;
+        placeChoices.querySelectorAll('.client-link-place-choice').forEach(item => item.classList.toggle('is-selected', item === button));
+        pendingPlace.textContent = String(choice.label || choice.name || '').trim();
+        pendingArea.textContent = String(choice.secondary || '').trim();
+        placeConfirm.hidden = false;
+        placeConfirmed.hidden = true;
+        output.value = '';
+        copy.disabled = true;
+        whatsapp.disabled = true;
+        hint.textContent = 'Проверьте район и нажмите «ОК». После подтверждения ссылка будет готова.';
+      }
+
+      function renderChoices(choices) {
+        placeChoices.replaceChildren();
+        placeConfirm.hidden = true;
+        pendingChoice = null;
+        if (!choices.length) {
+          placeChoices.hidden = true;
+          placeStatus.className = 'client-link-place-status is-error';
+          placeStatus.textContent = 'Населённый пункт не найден. Уточните название или добавьте район.';
+          updateLink();
+          return;
+        }
+
+        choices.forEach(choice => {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'client-link-place-choice';
+          const name = document.createElement('b');
+          name.textContent = String(choice.name || choice.label || '').trim();
+          const area = document.createElement('small');
+          area.textContent = String(choice.secondary || 'Район не указан').trim();
+          button.append(name, area);
+          button.addEventListener('click', () => selectChoice(choice, button));
+          placeChoices.append(button);
+        });
+        placeChoices.hidden = false;
+        placeStatus.className = 'client-link-place-status';
+        placeStatus.textContent = choices.length > 1
+          ? 'Нашли несколько вариантов. Выберите нужный район.'
+          : 'Проверьте найденный населённый пункт.';
+      }
+
+      async function searchPlaces(value, sequence) {
+        try {
+          const response = await fetch(`/api/delivery-search?place=${encodeURIComponent(value)}`, {cache:'no-store', headers:{accept:'application/json'}});
+          const data = await response.json().catch(() => null);
+          if (sequence !== searchSequence || city.value.trim() !== value) return;
+          if (!response.ok || !Array.isArray(data?.choices)) {
+            throw new Error(data?.error || 'Не удалось найти населённый пункт');
+          }
+          renderChoices(data.choices);
+        } catch (error) {
+          if (sequence !== searchSequence) return;
+          placeChoices.hidden = true;
+          placeConfirm.hidden = true;
+          placeStatus.className = 'client-link-place-status is-error';
+          placeStatus.textContent = String(error?.message || 'Не удалось выполнить поиск. Попробуйте ещё раз.');
+          updateLink();
+        }
+      }
+
+      function schedulePlaceSearch() {
+        window.clearTimeout(searchTimer);
+        searchSequence += 1;
+        const sequence = searchSequence;
+        pendingChoice = null;
+        confirmedChoice = null;
+        placeConfirm.hidden = true;
+        placeConfirmed.hidden = true;
+        placeChoices.hidden = true;
+        placeChoices.replaceChildren();
+        output.value = '';
+        copy.disabled = true;
+        whatsapp.disabled = true;
+
+        const value = city.value.trim();
+        if (value.length < 2) {
+          placeStatus.className = 'client-link-place-status';
+          placeStatus.textContent = 'Введите минимум 2 буквы — покажем населённые пункты и районы.';
+          updateLink();
+          return;
+        }
+
+        placeStatus.className = 'client-link-place-status is-loading';
+        placeStatus.textContent = 'Ищем населённые пункты и районы…';
+        searchTimer = window.setTimeout(() => searchPlaces(value, sequence), 320);
+        updateLink();
+      }
 
       function updateLink() {
         sizes.hidden = !customSize.checked;
-        const place = city.value.trim();
+        const place = confirmedChoice;
         const params = new URLSearchParams();
         params.set('share','1');
-        if (place) params.set('city',place);
+        if (place) {
+          params.set('city',String(place.label || place.name || '').trim());
+          params.set('name',String(place.name || '').trim());
+          params.set('place',String(place.query || place.label || place.name || '').trim());
+        }
         params.set('posts',selectedPosts());
 
         if (customSize.checked) {
@@ -429,8 +560,8 @@
           : 'стандартный размер 3,4×1,8 м + калитка 1×1,8 м';
         const postsText = selectedPosts() === 'new' ? 'новые столбы' : 'свои столбы';
         hint.textContent = place
-          ? `${sizeText} · ${postsText}. Цена не записана в ссылку — при каждом открытии берутся актуальные цены сайта.`
-          : 'Укажите населённый пункт. Цена не будет записана в ссылку — сайт рассчитает её при открытии.';
+          ? `${sizeText} · ${postsText}. Выбран: ${place.label || place.name}. Цена не хранится в ссылке — при открытии берутся актуальные цены сайта.`
+          : 'Сначала найдите населённый пункт, выберите нужный район и подтвердите кнопкой «ОК».';
       }
 
       async function copyLink() {
@@ -445,20 +576,51 @@
         if (typeof showToast === 'function') showToast('Ссылка для клиента скопирована');
       }
 
-      city.addEventListener('input',updateLink);
+      city.addEventListener('input', schedulePlaceSearch);
+      city.addEventListener('focus', () => {
+        if (confirmedChoice) return;
+        const value = city.value.trim();
+        if (value.length >= 2 && placeChoices.childElementCount) placeChoices.hidden = false;
+      });
+      placeOk.addEventListener('click', () => {
+        if (!pendingChoice) return;
+        confirmedChoice = {...pendingChoice};
+        city.value = String(confirmedChoice.label || confirmedChoice.name || '').trim();
+        placeChoices.hidden = true;
+        placeConfirm.hidden = true;
+        placeConfirmed.hidden = false;
+        confirmedPlaceText.textContent = [
+          String(confirmedChoice.label || confirmedChoice.name || '').trim(),
+          String(confirmedChoice.secondary || '').trim()
+        ].filter((value,index,array) => value && (index === 0 || !normalize(array[0]).includes(normalize(value)))).join(' · ');
+        placeStatus.className = 'client-link-place-status';
+        placeStatus.textContent = 'Готово. Этот точный населённый пункт будет записан в ссылку.';
+        updateLink();
+      });
+      placeChange.addEventListener('click', () => {
+        const value = String(confirmedChoice?.name || city.value || '').trim();
+        confirmedChoice = null;
+        pendingChoice = null;
+        placeConfirmed.hidden = true;
+        city.value = value;
+        city.focus();
+        city.select?.();
+        schedulePlaceSearch();
+      });
+
       article?.addEventListener('input',updateLink);
       customSize.addEventListener('change',updateLink);
       document.querySelectorAll('input[name="clientLinkPosts"]').forEach(input=>input.addEventListener('change',updateLink));
       Object.values(dimensionInputs).forEach(input=>input?.addEventListener('input',updateLink));
       copy.addEventListener('click',copyLink);
       whatsapp.addEventListener('click',()=>{
-        if (!output.value) return;
-        const place=city.value.trim();
+        if (!output.value || !confirmedChoice) return;
+        const place=String(confirmedChoice.label || confirmedChoice.name || '').trim();
         const message=`Посмотрите актуальные цены на ворота с калиткой для ${place}. Я уже указал ваши условия — ничего выбирать не нужно:\n${output.value}`;
         window.open(`https://wa.me/?text=${encodeURIComponent(message)}`,'_blank','noopener');
       });
       output.addEventListener('click',()=>output.select());
-      updateLink();
+      resetPlaceSelection({message:'Введите название — покажем найденные населённые пункты и районы.'});
     })();
   </script>
 </body>
