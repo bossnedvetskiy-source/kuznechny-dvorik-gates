@@ -27,7 +27,7 @@ test('fresh visitor sees no confirmed city and a clean mobile catalog CTA', asyn
   await expect(more).toBeVisible();
   await expect(page.locator('#catalogProgress')).toHaveText(/Ещё 32 модели в каталоге/);
   await expect(showMore).toHaveText(/Показать ещё 6 моделей ↓$/);
-  await expect.poll(async () => showMore.evaluate(node => getComputedStyle(node).backgroundColor)).not.toBe('rgba(0, 0, 0, 0)');
+  await expect.poll(async () => showMore.evaluate(node => getComputedStyle(node).backgroundImage)).not.toBe('none');
   await expect.poll(async () => showMore.evaluate(node => getComputedStyle(node).color)).toMatch(/rgb\(23,\s*18,\s*11\)/);
   await expect.poll(async () => showMore.evaluate(node => Math.round(node.getBoundingClientRect().height))).toBeGreaterThanOrEqual(48);
   await expect.poll(async () => page.evaluate(() => {
