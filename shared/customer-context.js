@@ -95,6 +95,12 @@
       .catalog-order-config .delivery-help{margin-top:8px}.catalog-order-config .delivery-input-help{color:rgba(255,255,255,.54)!important}.catalog-order-config .delivery-choice-buttons button{min-height:42px}.catalog-order-config .delivery-selected-summary{margin:0}.catalog-order-config .city-label input{min-height:44px}.catalog-order-config .route-button{min-height:42px}
       .catalog-order-config__actions{display:flex;align-items:center;gap:12px;margin-top:14px}.catalog-order-config__apply{min-height:46px;padding:10px 20px;border:0;border-radius:11px;background:#d2a143;color:#17130d;font:900 11px/1.2 Manrope,Arial,sans-serif;cursor:pointer}.catalog-order-config__actions small{color:rgba(255,255,255,.53);font-size:9.5px;line-height:1.4}
       .catalog-order-summary{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 14px;padding:11px 13px;border:1px solid rgba(17,18,20,.11);border-radius:13px;background:#fff}.catalog-order-summary[hidden]{display:none!important}.catalog-order-summary__copy{display:grid;gap:2px;min-width:0}.catalog-order-summary__copy span{color:#8d857a;font-size:8.5px;font-weight:900;letter-spacing:.06em;text-transform:uppercase}.catalog-order-summary__copy strong{font-size:11px;line-height:1.35}.catalog-order-summary button{flex:0 0 auto;min-height:34px;padding:7px 10px;border:1px solid rgba(210,161,67,.46);border-radius:9px;background:transparent;color:#8a6320;font:800 9.5px/1.2 Manrope,Arial,sans-serif;cursor:pointer}
+      .catalog-section-head{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;align-items:end!important;gap:7px 14px!important;margin-bottom:18px!important}
+      .catalog-section-head>div:first-child{grid-column:1/-1!important}
+      .catalog-section-head .catalog-section-subtitle{grid-column:1!important;display:block!important;max-width:none!important;margin:0!important;color:#776f64!important;font-size:11px!important;line-height:1.35!important}
+      .catalog-section-head .catalog-section-subtitle strong{color:#28241f!important;font-weight:900!important}
+      .catalog-section-head>.catalog-summary{grid-column:2!important;display:flex!important;justify-content:flex-end!important;margin:0!important;color:inherit!important}
+      .catalog-section-head>.catalog-summary[hidden]{display:none!important}
       .catalog-color-global{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 14px;padding:10px 12px;border-radius:12px;background:#f0eadf;color:#3c372f}.catalog-color-global strong{font-size:10px}.catalog-color-global span{color:#7c7368;font-size:9.5px;line-height:1.35}.catalog-color-swatches{display:flex;gap:5px;flex:0 0 auto}.catalog-color-swatches i{width:17px;height:17px;border:2px solid #fff;border-radius:50%;box-shadow:0 0 0 1px rgba(17,18,20,.13)}.catalog-color-swatches i:nth-child(1){background:#3a302b}.catalog-color-swatches i:nth-child(2){background:#4b4c4e}.catalog-color-swatches i:nth-child(3){background:#31513c}.catalog-color-swatches i:nth-child(4){background:#1d7b4a}.catalog-color-swatches i:nth-child(5){background:#6d3036}
       .product-card .price-stack,.product-card>.price-delivery-note,.product-card .product-meta,.product-card .profile-color-picker{display:none!important}.product-card .product-info>p{display:none!important}.catalog-primary-quote{display:grid;gap:3px;margin:10px 0 11px;padding:10px 11px;border-radius:11px;background:#f6f1e8}.catalog-primary-quote strong{font-size:20px;line-height:1.1;color:#171717}.catalog-primary-quote small{color:#766e64;font-size:9.5px;line-height:1.35}.catalog-primary-quote.is-manual strong{font-size:15px}.product-card .select-product{min-height:44px}
       .selected-order-summary{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 12px;align-items:center;margin:0 0 11px;padding:11px 12px;border:1px solid rgba(230,189,105,.22);border-radius:11px;background:rgba(200,152,60,.07);color:#fff}.selected-order-summary span{display:block;color:rgba(255,255,255,.55);font-size:8.5px;font-weight:900;letter-spacing:.06em;text-transform:uppercase}.selected-order-summary strong{display:block;margin-top:3px;font-size:10.5px;line-height:1.4}.selected-order-summary button{grid-row:1/3;grid-column:2;min-height:34px;padding:7px 9px;border:1px solid rgba(230,189,105,.35);border-radius:9px;background:transparent;color:#e6bd69;font:800 9px/1.2 Manrope,Arial,sans-serif;cursor:pointer}
@@ -134,6 +140,10 @@
         .catalog-order-summary__copy span{color:#8a6320;font-size:8px}
         .catalog-order-summary__copy strong{font-size:10.5px;line-height:1.35;color:#27221b}
         .catalog-order-summary button{min-height:36px;padding:7px 10px;background:#fff8e8}
+        .catalog-section-head{gap:5px 10px!important;margin-bottom:13px!important}
+        .catalog-section-head h2{font-size:32px!important}
+        .catalog-section-head .catalog-section-subtitle{font-size:10.5px!important}
+        .catalog-section-head>.catalog-summary{align-self:center!important}
         .catalog-color-global{margin-bottom:10px;padding:9px 10px}.catalog-color-global span{font-size:9px}.catalog-color-swatches i{width:15px;height:15px}
         .catalog-primary-quote{margin:7px 0 9px;padding:9px 10px}.catalog-primary-quote strong{font-size:18px}.catalog-primary-quote small{font-size:9px}
       }
@@ -156,17 +166,15 @@
     summary.hidden = true;
     summary.innerHTML = `<div class="catalog-order-summary__copy"><span>✓ Цены рассчитаны по вашим параметрам</span><strong></strong></div><button type="button">Изменить</button>`;
 
-    const colors = document.createElement('div');
-    colors.className = 'catalog-color-global';
-    colors.innerHTML = `<div><strong>Любой цвет профнастила</strong><br><span>Цвет не меняет предварительную стоимость. Выбрать оттенок можно после выбора модели.</span></div><div class="catalog-color-swatches" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>`;
-
     const sectionHead = catalog.querySelector('.section-head');
-    sectionHead?.after(config, summary, colors);
+    sectionHead?.after(config, summary);
     const fields = config.querySelector('#catalogOrderFields');
     fields.append(sizeBlock, postsBlock, deliveryBlock);
 
-    const catalogIntro = sectionHead?.querySelector('p');
-    if (catalogIntro) catalogIntro.textContent = 'Сравнивайте дизайн и уже пересчитанную стоимость. Параметры выше действуют сразу для всех 38 моделей.';
+    const catalogIntro = sectionHead?.querySelector('.catalog-section-subtitle');
+    if (catalogIntro && !catalogIntro.querySelector('#catalogCount')) {
+      catalogIntro.innerHTML = '<strong id="catalogCount">38 моделей</strong><span> · цены по вашим параметрам</span>';
+    }
 
     const sizeStep = sizeBlock.querySelector('.step-label');
     if (sizeStep) sizeStep.textContent = 'Размеры';
