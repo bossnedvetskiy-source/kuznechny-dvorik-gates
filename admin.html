@@ -215,6 +215,48 @@
             <p>Можно временно скрывать модели с сайта и менять порядок, в котором карточки показываются клиенту.</p>
           </div>
 
+          <section class="settings-card client-link-card">
+            <div class="panel-heading">
+              <div><span>Для переписки с клиентом</span><h2>Персональная ссылка с актуальными ценами</h2></div>
+              <span class="price-help">цена в ссылке не хранится</span>
+            </div>
+            <p class="client-link-intro">Укажите условия клиента. При открытии ссылки сайт сам возьмёт текущие цены ворот и доставки, применит параметры и сразу покажет готовый каталог.</p>
+            <div class="client-link-grid">
+              <label class="client-link-wide">Населённый пункт
+                <input id="clientLinkCity" type="text" list="clientLinkCities" autocomplete="off" placeholder="Например: Салават" maxlength="120">
+                <datalist id="clientLinkCities">
+                  <option value="Мелеуз"></option><option value="Салават"></option><option value="Стерлитамак"></option>
+                  <option value="Ишимбай"></option><option value="Кумертау"></option><option value="Мраково"></option>
+                  <option value="Стерлибашево"></option><option value="Ермолаево"></option><option value="Зирган"></option>
+                  <option value="Юмагузино"></option><option value="Исянгулово"></option>
+                </datalist>
+              </label>
+              <fieldset class="client-link-posts">
+                <legend>Столбы</legend>
+                <label><input type="radio" name="clientLinkPosts" value="own" checked><span><b>Свои столбы</b><small>установка на готовые</small></span></label>
+                <label><input type="radio" name="clientLinkPosts" value="new"><span><b>Нужны новые</b><small>добавятся к цене</small></span></label>
+              </fieldset>
+              <label>Артикул, необязательно
+                <input id="clientLinkArticle" type="text" inputmode="text" placeholder="Например: 18 или 17С" maxlength="20">
+              </label>
+              <label class="client-link-checkbox"><input id="clientLinkCustomSize" type="checkbox"><span>Задать известные размеры клиента</span></label>
+            </div>
+            <div class="client-link-sizes" id="clientLinkSizes" hidden>
+              <label>Ворота, ширина м<input id="clientLinkGateWidth" type="number" min=".8" max="8" step=".01" value="3.4"></label>
+              <label>Высота м<input id="clientLinkGateHeight" type="number" min="1" max="3" step=".01" value="1.8"></label>
+              <label>Калитка, ширина м<input id="clientLinkWicketWidth" type="number" min=".7" max="2.5" step=".01" value="1"></label>
+              <label>Высота калитки м<input id="clientLinkWicketHeight" type="number" min="1" max="3" step=".01" value="1.8"></label>
+            </div>
+            <div class="client-link-result">
+              <label>Готовая ссылка<input id="clientLinkOutput" type="text" readonly placeholder="Сначала укажите населённый пункт"></label>
+              <p id="clientLinkHint">Стандартный размер · свои столбы. Клиент сможет изменить параметры на сайте.</p>
+              <div class="client-link-actions">
+                <button class="primary-button" id="copyClientLink" type="button" disabled>Скопировать ссылку</button>
+                <button class="reset-button" id="whatsappClientLink" type="button" disabled>Отправить в WhatsApp</button>
+              </div>
+            </div>
+          </section>
+
           <section class="settings-card">
             <div class="panel-heading">
               <div><span>Карточки каталога</span><h2>Видимость и порядок</h2></div>
@@ -322,6 +364,101 @@
         coverPreview.hidden = false;
         cardPreview?.classList.remove('photo-preview-error');
       });
+    })();
+  </script>
+  <script>
+    (() => {
+      const city = document.getElementById('clientLinkCity');
+      const article = document.getElementById('clientLinkArticle');
+      const customSize = document.getElementById('clientLinkCustomSize');
+      const sizes = document.getElementById('clientLinkSizes');
+      const output = document.getElementById('clientLinkOutput');
+      const hint = document.getElementById('clientLinkHint');
+      const copy = document.getElementById('copyClientLink');
+      const whatsapp = document.getElementById('whatsappClientLink');
+      if (!city || !output) return;
+
+      const dimensionInputs = {
+        gw:document.getElementById('clientLinkGateWidth'),
+        gh:document.getElementById('clientLinkGateHeight'),
+        ww:document.getElementById('clientLinkWicketWidth'),
+        wh:document.getElementById('clientLinkWicketHeight')
+      };
+
+      const style = document.createElement('style');
+      style.textContent = `
+        .client-link-card{border-color:#d9c28f;background:linear-gradient(180deg,#fffdf8,#fff)}
+        .client-link-intro{margin:-4px 0 16px;color:var(--muted);font-size:11px;line-height:1.55}
+        .client-link-grid{display:grid;grid-template-columns:1.2fr 1fr;gap:12px}.client-link-grid>label,.client-link-sizes label,.client-link-result>label{display:grid;gap:6px;color:var(--muted);font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.45px}.client-link-wide{grid-column:1/-1}
+        .client-link-grid input[type="text"],.client-link-grid input[type="number"],.client-link-sizes input,.client-link-result input{width:100%;height:44px;padding:0 11px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);font:700 14px Manrope,Arial,sans-serif;text-transform:none;letter-spacing:0;outline:none}.client-link-grid input:focus,.client-link-sizes input:focus,.client-link-result input:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(198,147,63,.13)}
+        .client-link-posts{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:0;padding:0;border:0}.client-link-posts legend{grid-column:1/-1;margin-bottom:0;color:var(--muted);font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.45px}.client-link-posts label{display:flex;align-items:center;gap:8px;min-height:54px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:#faf8f4;cursor:pointer}.client-link-posts input{accent-color:#a97d31}.client-link-posts span{display:grid;gap:2px}.client-link-posts b{font-size:11px;color:var(--ink)}.client-link-posts small{font-size:8.5px;color:var(--muted)}
+        .client-link-checkbox{display:flex!important;align-items:center;gap:8px;align-self:end;min-height:44px;padding:0 10px;border:1px solid var(--line);border-radius:10px;background:#faf8f4}.client-link-checkbox input{width:18px;height:18px;accent-color:#a97d31}.client-link-checkbox span{color:var(--ink);font-size:10px;text-transform:none;letter-spacing:0}
+        .client-link-sizes{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-top:12px}.client-link-sizes[hidden]{display:none!important}
+        .client-link-result{margin-top:14px;padding:13px;border:1px solid #e3dccf;border-radius:13px;background:#faf8f4}.client-link-result input{font-size:11px;background:#fff}.client-link-result p{margin:8px 0 0;color:var(--muted);font-size:9.5px;line-height:1.45}.client-link-actions{display:flex;gap:8px;margin-top:11px}.client-link-actions button{min-height:42px}.client-link-actions button:disabled{opacity:.4;cursor:not-allowed}
+        @media(max-width:620px){.client-link-card .panel-heading .price-help{display:none}.client-link-intro{font-size:10px}.client-link-grid{grid-template-columns:1fr}.client-link-wide{grid-column:auto}.client-link-sizes{grid-template-columns:1fr 1fr}.client-link-grid input[type="text"],.client-link-grid input[type="number"],.client-link-sizes input,.client-link-result input{font-size:16px}.client-link-posts label{min-height:58px}.client-link-actions{display:grid;grid-template-columns:1fr}.client-link-actions button{width:100%}}
+      `;
+      document.head.append(style);
+
+      const articleValue = () => String(article?.value || '').trim().replace(/^арт\.?\s*/i,'');
+      const selectedPosts = () => document.querySelector('input[name="clientLinkPosts"]:checked')?.value || 'own';
+
+      function updateLink() {
+        sizes.hidden = !customSize.checked;
+        const place = city.value.trim();
+        const params = new URLSearchParams();
+        params.set('share','1');
+        if (place) params.set('city',place);
+        params.set('posts',selectedPosts());
+
+        if (customSize.checked) {
+          for (const [key,input] of Object.entries(dimensionInputs)) {
+            const value = Number(input?.value);
+            if (Number.isFinite(value) && value > 0) params.set(key,String(value));
+          }
+        }
+        const art = articleValue();
+        if (art) params.set('art',art);
+
+        const url = place ? `https://kuzdvor.tw1.ru/?${params.toString()}` : '';
+        output.value = url;
+        copy.disabled = !url;
+        whatsapp.disabled = !url;
+
+        const sizeText = customSize.checked
+          ? `ворота ${dimensionInputs.gw.value}×${dimensionInputs.gh.value} м · калитка ${dimensionInputs.ww.value}×${dimensionInputs.wh.value} м`
+          : 'стандартный размер 3,4×1,8 м + калитка 1×1,8 м';
+        const postsText = selectedPosts() === 'new' ? 'новые столбы' : 'свои столбы';
+        hint.textContent = place
+          ? `${sizeText} · ${postsText}. Цена не записана в ссылку — при каждом открытии берутся актуальные цены сайта.`
+          : 'Укажите населённый пункт. Цена не будет записана в ссылку — сайт рассчитает её при открытии.';
+      }
+
+      async function copyLink() {
+        if (!output.value) return;
+        try {
+          await navigator.clipboard.writeText(output.value);
+        } catch {
+          output.focus();
+          output.select();
+          document.execCommand('copy');
+        }
+        if (typeof showToast === 'function') showToast('Ссылка для клиента скопирована');
+      }
+
+      city.addEventListener('input',updateLink);
+      article?.addEventListener('input',updateLink);
+      customSize.addEventListener('change',updateLink);
+      document.querySelectorAll('input[name="clientLinkPosts"]').forEach(input=>input.addEventListener('change',updateLink));
+      Object.values(dimensionInputs).forEach(input=>input?.addEventListener('input',updateLink));
+      copy.addEventListener('click',copyLink);
+      whatsapp.addEventListener('click',()=>{
+        if (!output.value) return;
+        const place=city.value.trim();
+        const message=`Посмотрите актуальные цены на ворота с калиткой для ${place}. Я уже указал ваши условия — ничего выбирать не нужно:\n${output.value}`;
+        window.open(`https://wa.me/?text=${encodeURIComponent(message)}`,'_blank','noopener');
+      });
+      output.addEventListener('click',()=>output.select());
+      updateLink();
     })();
   </script>
 </body>
