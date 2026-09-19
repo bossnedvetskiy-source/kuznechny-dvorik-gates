@@ -54,6 +54,7 @@
     if (datalist) datalist.innerHTML = destinations.map(item => `<option value="${escapeHTML(item.name)}"></option>`).join('');
 
     let placeChoices = null;
+    let searchShell = null;
     if (input) {
       input.placeholder = 'Начните вводить населённый пункт';
       input.setAttribute('enterkeyhint','search');
@@ -67,11 +68,17 @@
         input.setAttribute('aria-describedby', help.id);
       }
       if (label) {
+        searchShell = document.createElement('div');
+        searchShell.className = 'delivery-search-shell';
+        label.parentNode?.insertBefore(searchShell, label);
+        searchShell.append(label);
+
         placeChoices = document.createElement('div');
         placeChoices.className = 'delivery-place-choices';
         placeChoices.hidden = true;
         placeChoices.setAttribute('aria-live','polite');
-        label.insertAdjacentElement('afterend', placeChoices);
+        placeChoices.setAttribute('role','listbox');
+        searchShell.append(placeChoices);
       }
       if (!document.getElementById('deliveryUxStyles')) {
         const style = document.createElement('style');
@@ -79,11 +86,13 @@
         style.textContent = `
           #cityInput::-webkit-calendar-picker-indicator,#installationLocationInput::-webkit-calendar-picker-indicator{display:none!important;opacity:0!important;pointer-events:none!important;width:0!important;height:0!important}
           #cityInput::-webkit-list-button,#installationLocationInput::-webkit-list-button{display:none!important;opacity:0!important;pointer-events:none!important;width:0!important;height:0!important}
+          .delivery-search-shell{position:relative;display:grid;min-width:0}
           .calc-form .city-label:not(.is-visible){display:none!important}
           .calc-form .city-label.is-visible{display:grid!important}
-          .calc-form .city-label.is-visible.is-place-results,.calc-form .city-label.is-visible.is-place-confirming{display:none!important}
+          .calc-form .city-label.is-visible.is-place-confirming{display:none!important}
           .delivery-input-help{display:block;color:rgba(255,255,255,.58);font-size:10px;line-height:1.45;margin-top:-1px}
-          .delivery-place-choices{display:grid;gap:8px;margin:8px 0 2px;padding:12px;border:1px solid rgba(212,175,55,.42);border-radius:14px;background:rgba(16,16,16,.96)}
+          .delivery-place-choices{display:grid;gap:8px;margin:8px 0 2px;padding:12px;border:1px solid rgba(212,175,55,.42);border-radius:14px;background:rgba(16,16,16,.98)}
+          .delivery-place-choices.is-dropdown{position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:80;max-height:min(52vh,340px);overflow-y:auto;overscroll-behavior:contain;box-shadow:0 18px 38px rgba(0,0,0,.34)}
           .delivery-place-choices[hidden]{display:none!important}
           .delivery-place-choices__title{font-size:14px;font-weight:800;line-height:1.25;color:#fff}
           .delivery-place-choices__hint{font-size:12px;line-height:1.35;color:rgba(255,255,255,.68);margin-top:-3px}
@@ -91,7 +100,7 @@
           .delivery-place-choices__button:hover,.delivery-place-choices__button:focus-visible{border-color:rgba(212,175,55,.8);background:rgba(212,175,55,.10);outline:none}
           .delivery-place-choices__button.is-selected{border-color:#d4af37;background:rgba(212,175,55,.16);box-shadow:inset 0 0 0 1px rgba(212,175,55,.18)}
           .delivery-place-choices.is-confirming{grid-template-columns:minmax(0,1fr) auto;align-items:stretch}
-          .delivery-place-choices.is-single,.delivery-place-choices.is-confirming{padding:0;border:0;border-radius:0;background:transparent;box-shadow:none}
+          .delivery-place-choices.is-confirming{position:static;max-height:none;overflow:visible;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none}
           .delivery-place-choices.is-confirming .delivery-place-choices__title,.delivery-place-choices.is-confirming .delivery-place-choices__hint,.delivery-place-choices.is-confirming .delivery-place-choices__button:not(.is-selected){display:none!important}
           .delivery-place-choices__confirm-actions{display:grid;align-content:stretch;gap:4px;min-width:68px}
           .delivery-place-choices__confirm{min-width:68px;border:0;border-radius:10px;background:#d2a143;color:#17130d;font-size:13px;font-weight:900;cursor:pointer}
@@ -105,7 +114,8 @@
           .calc-form .city-label.is-visible.is-place-confirming{display:none!important}
           @media(max-width:620px){
             .delivery-input-help{font-size:9.5px;line-height:1.35}
-            .delivery-place-choices{margin:6px 0 1px;padding:8px;gap:6px;border-radius:11px;background:rgba(12,13,15,.86)}
+            .delivery-place-choices{margin:6px 0 1px;padding:8px;gap:6px;border-radius:11px;background:rgba(12,13,15,.98)}
+            .delivery-place-choices.is-dropdown{top:calc(100% + 4px);max-height:min(46vh,300px);box-shadow:0 16px 34px rgba(0,0,0,.38)}
             .delivery-place-choices__title{font-size:11px}
             .delivery-place-choices__hint{font-size:9.5px;margin-top:-1px}
             .delivery-place-choices__button{min-height:46px;padding:7px 9px;border-radius:9px;column-gap:8px}
@@ -113,7 +123,7 @@
             .delivery-place-choices__area{font-size:9.5px}
             .delivery-place-choices__action{font-size:10.5px}
             .delivery-place-choices.is-single .delivery-place-choices__title,.delivery-place-choices.is-single .delivery-place-choices__hint{display:none!important}
-            .delivery-place-choices.is-single,.delivery-place-choices.is-confirming{margin:4px 0 0;padding:0;gap:6px}
+            .delivery-place-choices.is-confirming{margin:4px 0 0;padding:0;gap:6px}
             .delivery-place-choices.is-confirming .delivery-place-choices__button.is-selected{min-height:44px;padding:6px 8px}
             .delivery-place-choices__confirm-actions{min-width:62px}
             .delivery-place-choices__confirm{min-width:62px;border-radius:9px;font-size:12px}
@@ -141,7 +151,7 @@
     const clearPlaceChoices = () => {
       if (!placeChoices) return;
       placeChoices.hidden = true;
-      placeChoices.classList.remove('is-confirming','is-single');
+      placeChoices.classList.remove('is-dropdown','is-confirming','is-single');
       input?.closest('.city-label')?.classList.remove('is-place-confirming','is-place-results');
       placeChoices.replaceChildren();
     };
@@ -239,9 +249,29 @@
 
     const requestPlaceChoices = async place => {
       const response = await fetch(`/api/delivery-search?place=${encodeURIComponent(place)}`, {headers:{accept:'application/json'}});
-      if (!response.ok) return [];
-      const payload = await response.json().catch(() => null);
-      return Array.isArray(payload?.choices) ? payload.choices : [];
+      const payload = response.ok ? await response.json().catch(() => null) : null;
+      const remoteChoices = Array.isArray(payload?.choices) ? payload.choices : [];
+
+      const queryKey = normalize(place);
+      const originName = String(data.origin || 'Мелеуз').trim();
+      const originKey = normalize(originName);
+      const localChoices = [];
+      if (queryKey && originKey.startsWith(queryKey)) {
+        localChoices.push({
+          name:originName,
+          label:originName,
+          secondary:'Республика Башкортостан',
+          query:`${originName}, Республика Башкортостан, Россия`
+        });
+      }
+
+      const seen = new Set();
+      return [...localChoices, ...remoteChoices].filter(choice => {
+        const key = `${normalize(choice.name)}|${normalize(choice.secondary)}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      }).slice(0, 6);
     };
 
     const resolveFixed = known => {
@@ -264,6 +294,7 @@
       input?.closest('.city-label')?.classList.remove('is-place-confirming');
       input?.closest('.city-label')?.classList.add('is-place-results');
       placeChoices.classList.remove('is-confirming');
+      placeChoices.classList.add('is-dropdown');
       placeChoices.classList.toggle('is-single', choices.length === 1);
       placeChoices.replaceChildren();
 
@@ -314,6 +345,7 @@
           };
           if (input) input.value = label;
           placeChoices.querySelectorAll('.delivery-place-choices__button').forEach(item => item.classList.toggle('is-selected', item === button));
+          placeChoices.classList.remove('is-dropdown');
           placeChoices.classList.add('is-confirming');
           input?.closest('.city-label')?.classList.add('is-place-confirming');
           placeChoices.querySelector('.delivery-place-choices__confirm-actions')?.remove();
