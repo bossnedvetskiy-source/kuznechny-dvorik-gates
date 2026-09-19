@@ -40,7 +40,7 @@ test('fresh visitor sees no confirmed city and a clean mobile catalog CTA', asyn
   await expect(colorDescription).toBeHidden();
   await expect(page.locator('#catalogOrderConfigurator .mobile-size-summary small')).toBeHidden();
   await expect(page.locator('#catalogOrderConfigurator .catalog-posts-choice small').first()).toBeHidden();
-  await expect.poll(async () => page.locator('#catalogOrderConfigurator .catalog-posts-choice button').first().evaluate(node => Math.round(node.getBoundingClientRect().height))).toBeLessThanOrEqual(46);
+  await expect.poll(async () => page.locator('#catalogOrderConfigurator .catalog-posts-choice button').first().evaluate(node => Math.round(node.getBoundingClientRect().height))).toBeLessThanOrEqual(42);
 });
 
 test('applied parameters stay compact after reload and nonstandard prices do not hang', async ({page}) => {
