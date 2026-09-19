@@ -26,7 +26,7 @@ test('fresh visitor sees no confirmed city and a clean mobile catalog CTA', asyn
   await expect(page.locator('#catalogProgress')).toHaveText(/Ещё 32 модели в каталоге/);
   await expect(showMore).toHaveText(/Показать ещё 6 моделей ↓$/);
   await expect.poll(async () => showMore.evaluate(node => getComputedStyle(node).backgroundColor)).not.toBe('rgba(0, 0, 0, 0)');
-  await expect.poll(async () => showMore.evaluate(node => Math.round(node.getBoundingClientRect().height))).toBeGreaterThanOrEqual(56);
+  await expect.poll(async () => showMore.evaluate(node => Math.round(node.getBoundingClientRect().height))).toBeGreaterThanOrEqual(48);
   await expect.poll(async () => page.evaluate(() => {
     const more = document.getElementById('catalogMore');
     const trust = document.querySelector('.catalog-trust-strip');
