@@ -55,6 +55,7 @@ test('main site requires district selection and OK before delivery is accepted',
   const choices = page.locator('.delivery-place-choices__button');
   await expect(choices).toHaveCount(2, {timeout:8000});
   await expect(page.locator('.delivery-place-choices')).toContainText('район');
+  await expect(page.locator('#routeButton')).toBeHidden();
 
   await choices.nth(1).click();
   await expect(page.locator('#deliverySummary')).toBeHidden();
@@ -66,6 +67,7 @@ test('main site requires district selection and OK before delivery is accepted',
 
   await expect.poll(() => routedPlace, {timeout:8000}).toContain('Ишимбайский район');
   await expect(page.locator('#deliverySummary')).toBeVisible({timeout:8000});
+  await expect(page.locator('#routeButton')).toBeHidden();
   await expect(page.locator('#deliverySummaryValue')).toContainText('Ишеево, Ишимбайский район');
 });
 
@@ -102,6 +104,7 @@ test('main site does not auto-confirm even a single search result', async ({page
 
   await expect(page.locator('.delivery-place-choices__button')).toHaveCount(1, {timeout:8000});
   await expect(page.locator('#deliverySummary')).toBeHidden();
+  await expect(page.locator('#routeButton')).toBeHidden();
 
   await page.locator('.delivery-place-choices__button').click();
   await expect(page.locator('#routeButton')).toHaveText('ОК');
@@ -109,6 +112,7 @@ test('main site does not auto-confirm even a single search result', async ({page
 
   await page.locator('#routeButton').click();
   await expect(page.locator('#deliverySummary')).toBeVisible({timeout:8000});
+  await expect(page.locator('#routeButton')).toBeHidden();
 });
 
 
@@ -124,12 +128,14 @@ test('typed fixed city also requires selection and keeps its published tariff', 
   await expect(choice).toBeVisible({timeout:8000});
   await expect(choice).toContainText('Салават');
   await expect(page.locator('#deliverySummary')).toBeHidden();
+  await expect(page.locator('#routeButton')).toBeHidden();
 
   await choice.click();
   await expect(page.locator('#routeButton')).toHaveText('ОК');
   await page.locator('#routeButton').click();
 
   await expect(page.locator('#deliverySummaryValue')).toContainText('Салават');
+  await expect(page.locator('#routeButton')).toBeHidden();
   const quote = page.locator('#catalogGrid .product-card').first().locator('.catalog-primary-quote');
   await expect(quote.locator('strong')).toHaveText('69 100 ₽');
   await expect(quote).toContainText(/доставкой в Салават/i);
