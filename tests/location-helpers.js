@@ -55,10 +55,6 @@ export async function selectInstallationPlace(page, place='Мелеуз') {
   const choice = page.locator('.delivery-place-choices__button').first();
   if (await choice.isVisible().catch(() => false)) {
     await choice.click();
-    const inlineConfirm = page.locator('.delivery-place-choices__confirm');
-    await expect(inlineConfirm).toBeVisible({timeout:5000});
-    await expect(inlineConfirm).toHaveText('ОК');
-    await inlineConfirm.click();
   } else if (await ui.action.isVisible().catch(() => false)) {
     const text = String(await ui.action.textContent() || '');
     if (/ОК|Да, это нужный пункт/.test(text)) await ui.action.click();
