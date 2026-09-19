@@ -88,6 +88,7 @@
           .delivery-place-choices__hint{font-size:12px;line-height:1.35;color:rgba(255,255,255,.68);margin-top:-3px}
           .delivery-place-choices__button{display:grid;width:100%;gap:3px;text-align:left;padding:12px 13px;border:1px solid rgba(255,255,255,.16);border-radius:12px;background:rgba(255,255,255,.055);color:#fff;cursor:pointer;touch-action:manipulation}
           .delivery-place-choices__button:hover,.delivery-place-choices__button:focus-visible{border-color:rgba(212,175,55,.8);background:rgba(212,175,55,.10);outline:none}
+          .delivery-place-choices__button.is-selected{border-color:#d4af37;background:rgba(212,175,55,.16);box-shadow:inset 0 0 0 1px rgba(212,175,55,.18)}
           .delivery-place-choices__button:active{transform:translateY(1px)}
           .delivery-place-choices__name{font-size:14px;font-weight:800;line-height:1.25}
           .delivery-place-choices__area{font-size:12px;line-height:1.35;color:rgba(255,255,255,.68)}
@@ -103,6 +104,7 @@
     let editingOther = false;
     let searchTimer = null;
     let searchSequence = 0;
+    let pendingPlaceChoice = null;
 
     const setResult = (message, kind='') => {
       if (!result) return;
@@ -120,6 +122,7 @@
       searchSequence += 1;
       if (searchTimer) clearTimeout(searchTimer);
       searchTimer = null;
+      pendingPlaceChoice = null;
       clearPlaceChoices();
     };
 
@@ -150,6 +153,7 @@
       const resolved = ['fixed','calculated'].includes(state.kind);
       const selected = resolved || state.kind === 'out-of-area';
       const choosing = state.kind === 'choosing';
+      const confirmingPlace = state.kind === 'place-confirm';
       const city = selectedCityName();
       if (chooser) chooser.hidden = selected || editingOther;
       if (summary) summary.hidden = !selected;
@@ -163,7 +167,7 @@
       input?.closest('.city-label')?.classList.toggle('is-visible', editingOther && !selected);
       if (result) result.hidden = selected || state.kind === 'empty' || choosing;
       if (routeButton) routeButton.hidden = selected || state.kind === 'empty' || choosing;
-      if (placeChoices && !choosing) placeChoices.hidden = true;
+      if (placeChoices && !choosing && !confirmingPlace) placeChoices.hidden = true;
     };
 
     const emit = () => {
@@ -262,9 +266,21 @@
         button.addEventListener('click', () => {
           const label = String(choice.label || choice.name || entered).trim();
           const query = String(choice.query || label).trim();
-          cancelPlaceSearch();
+          searchSequence += 1;
+          if (searchTimer) clearTimeout(searchTimer);
+          searchTimer = null;
+          pendingPlaceChoice = {...choice, label, query};
           if (input) input.value = label;
-          calculateRoute(query, {preferredLabel:label, skipConfirm:true});
+          placeChoices.querySelectorAll('.delivery-place-choices__button').forEach(item => item.classList.toggle('is-selected', item === button));
+          state = {kind:'place-confirm', name:label, resolvedName:label, shortName:label, price:null};
+          setResult(`Выбрано: ${label}. Проверьте район и нажмите «ОК».`, 'pending');
+          if (routeButton) {
+            routeButton.hidden = false;
+            routeButton.disabled = false;
+            routeButton.textContent = 'ОК';
+          }
+          emit();
+          placeChoices.hidden = false;
         });
         placeChoices.append(button);
       });
@@ -289,15 +305,7 @@
           if (!choices.length) return;
 
           const exact = choices.filter(choice => normalize(choice.name) === normalize(entered));
-          if (exact.length === 1 && choices.length === 1) {
-            const choice = exact[0];
-            const label = String(choice.label || choice.name || entered).trim();
-            const query = String(choice.query || label).trim();
-            if (input) input.value = label;
-            calculateRoute(query, {preferredLabel:label, skipConfirm:true});
-            return;
-          }
-          renderPlaceChoices(entered, exact.length > 1 ? exact : choices);
+          renderPlaceChoices(entered, exact.length ? exact : choices);
         } catch {
           // Search suggestions are an enhancement. The normal delivery button
           // remains available if the lookup service is temporarily unavailable.
@@ -341,6 +349,15 @@
         updateFromInput();
         input?.focus();
         return;
+      }
+      if (!requestedPlace && state.kind === 'place-confirm' && pendingPlaceChoice) {
+        const choice = pendingPlaceChoice;
+        const label = String(choice.label || choice.name || displayAtStart || place).trim();
+        const query = String(choice.query || label).trim();
+        pendingPlaceChoice = null;
+        clearPlaceChoices();
+        if (input) input.value = label;
+        return calculateRoute(query, {preferredLabel:label, skipConfirm:true});
       }
       cancelPlaceSearch();
       if (!requestedPlace && state.kind === 'confirm') {
@@ -387,7 +404,7 @@
           return;
         }
         state = {kind:'confirm', name:displayAtStart || place, resolvedName:payload.resolvedName || shortName, shortName, price:Number(payload.price)||0, distanceKm:Number(payload.distanceKm)||null, serviceAreaKm:Number(payload.serviceAreaKm)||data.serviceAreaKm};
-        if (routeButton) { routeButton.hidden = false; routeButton.disabled = false; routeButton.textContent = 'Да, это нужный пункт'; }
+        if (routeButton) { routeButton.hidden = false; routeButton.disabled = false; routeButton.textContent = 'ОК'; }
         setResult(`Найдено: ${shortName}. Подтвердите населённый пункт.`, 'pending');
       } catch (error) {
         if (String(input?.value || '').trim() !== displayAtStart) return;
@@ -432,7 +449,27 @@
     changeButton?.addEventListener('click', edit);
     input?.addEventListener('input', updateFromInput);
     input?.addEventListener('change', updateFromInput);
-    routeButton?.addEventListener('click', () => calculateRoute());
+    routeButton?.addEventListener('click', async () => {
+      if (state.kind === 'pending') {
+        const entered = String(input?.value || '').trim();
+        if (entered.length >= 2) {
+          routeButton.disabled = true;
+          routeButton.textContent = 'Ищем…';
+          try {
+            const choices = await requestPlaceChoices(entered);
+            if (String(input?.value || '').trim() !== entered) return;
+            if (choices.length) {
+              const exact = choices.filter(choice => normalize(choice.name) === normalize(entered));
+              renderPlaceChoices(entered, exact.length ? exact : choices);
+              return;
+            }
+          } catch {}
+          routeButton.disabled = false;
+          routeButton.textContent = 'Рассчитать доставку';
+        }
+      }
+      calculateRoute();
+    });
 
     const restore = () => {
       const customerCity = window.KUZDVOR_CUSTOMER?.read()?.city || '';
