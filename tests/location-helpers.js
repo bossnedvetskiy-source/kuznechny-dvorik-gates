@@ -38,9 +38,15 @@ export async function selectInstallationPlace(page, place='Мелеуз') {
   const summary = page.locator('#deliverySummary');
   if (await summary.isVisible().catch(() => false)) return ui.firstCard;
 
-  if (await ui.action.isVisible().catch(() => false)) {
+  const choice = page.locator('.delivery-place-choices__button').first();
+  if (await choice.isVisible().catch(() => false)) {
+    await choice.click();
+    await expect(ui.action).toBeVisible({timeout:5000});
+    await expect(ui.action).toHaveText('ОК');
+    await ui.action.click();
+  } else if (await ui.action.isVisible().catch(() => false)) {
     const text = String(await ui.action.textContent() || '');
-    if (/Да, это нужный пункт/.test(text)) await ui.action.click();
+    if (/ОК|Да, это нужный пункт/.test(text)) await ui.action.click();
   }
 
   await expect(ui.firstCard).toBeVisible({timeout:10000});
