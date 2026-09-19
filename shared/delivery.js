@@ -81,6 +81,7 @@
           #cityInput::-webkit-list-button,#installationLocationInput::-webkit-list-button{display:none!important;opacity:0!important;pointer-events:none!important;width:0!important;height:0!important}
           .calc-form .city-label:not(.is-visible){display:none!important}
           .calc-form .city-label.is-visible{display:grid!important}
+          .calc-form .city-label.is-visible.is-place-results,.calc-form .city-label.is-visible.is-place-confirming{display:none!important}
           .delivery-input-help{display:block;color:rgba(255,255,255,.58);font-size:10px;line-height:1.45;margin-top:-1px}
           .delivery-place-choices{display:grid;gap:8px;margin:8px 0 2px;padding:12px;border:1px solid rgba(212,175,55,.42);border-radius:14px;background:rgba(16,16,16,.96)}
           .delivery-place-choices[hidden]{display:none!important}
@@ -92,6 +93,8 @@
           .delivery-place-choices.is-confirming{grid-template-columns:minmax(0,1fr) auto;align-items:stretch}
           .delivery-place-choices.is-confirming .delivery-place-choices__title,.delivery-place-choices.is-confirming .delivery-place-choices__hint,.delivery-place-choices.is-confirming .delivery-place-choices__button:not(.is-selected){display:none!important}
           .delivery-place-choices__confirm{min-width:68px;border:0;border-radius:11px;background:#d2a143;color:#17130d;font-size:13px;font-weight:900;cursor:pointer}
+          .delivery-place-choices__change{justify-self:end;padding:2px 1px;border:0;background:transparent;color:#d9ad57;font:800 10px/1.2 Manrope,Arial,sans-serif;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+          .delivery-place-choices.is-confirming .delivery-place-choices__change{display:none!important}
           .delivery-place-choices__button:active{transform:translateY(1px)}
           .delivery-place-choices__name{grid-column:1;font-size:14px;font-weight:800;line-height:1.25}
           .delivery-place-choices__area{grid-column:1;font-size:12px;line-height:1.35;color:rgba(255,255,255,.68)}
@@ -112,6 +115,7 @@
             .delivery-place-choices.is-confirming{padding:6px;gap:6px}
             .delivery-place-choices.is-confirming .delivery-place-choices__button.is-selected{min-height:44px;padding:6px 8px}
             .delivery-place-choices__confirm{min-width:62px;border-radius:9px;font-size:12px}
+            .delivery-place-choices__change{font-size:9.5px;margin-top:-1px}
           }
         `;
         document.head.append(style);
@@ -136,7 +140,7 @@
       if (!placeChoices) return;
       placeChoices.hidden = true;
       placeChoices.classList.remove('is-confirming','is-single');
-      input?.closest('.city-label')?.classList.remove('is-place-confirming');
+      input?.closest('.city-label')?.classList.remove('is-place-confirming','is-place-results');
       placeChoices.replaceChildren();
     };
 
@@ -256,6 +260,7 @@
       if (!placeChoices || !choices.length) return false;
       const sameName = choices.length > 1 && choices.every(choice => normalize(choice.name) === normalize(choices[0]?.name));
       input?.closest('.city-label')?.classList.remove('is-place-confirming');
+      input?.closest('.city-label')?.classList.add('is-place-results');
       placeChoices.classList.remove('is-confirming');
       placeChoices.classList.toggle('is-single', choices.length === 1);
       placeChoices.replaceChildren();
@@ -269,6 +274,29 @@
       hint.className = 'delivery-place-choices__hint';
       hint.textContent = sameName ? 'Выберите нужный район:' : 'Нажмите на подходящий вариант:';
       placeChoices.append(hint);
+
+      const changePlaceButton = document.createElement('button');
+      changePlaceButton.type = 'button';
+      changePlaceButton.className = 'delivery-place-choices__change';
+      changePlaceButton.textContent = 'Изменить населённый пункт';
+      changePlaceButton.addEventListener('click', event => {
+        event.preventDefault();
+        event.stopPropagation();
+        searchSequence += 1;
+        if (searchTimer) clearTimeout(searchTimer);
+        searchTimer = null;
+        pendingPlaceChoice = null;
+        clearPlaceChoices();
+        const entered = String(input?.value || '').trim();
+        state = {kind:'pending', name:entered, resolvedName:'', shortName:'', price:null};
+        if (routeButton) routeButton.hidden = true;
+        emit();
+        window.setTimeout(() => {
+          input?.focus();
+          input?.select?.();
+        }, 0);
+      });
+      placeChoices.append(changePlaceButton);
 
       choices.forEach(choice => {
         const button = document.createElement('button');
