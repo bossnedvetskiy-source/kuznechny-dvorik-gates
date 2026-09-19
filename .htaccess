@@ -1,0 +1,89 @@
+Options -Indexes
+DirectoryIndex index.html index.htm
+
+# Timeweb web PHP is restricted to the site directory. Point HOME at the
+# site root so the backend can keep secrets outside public_html while staying
+# readable by the hosting PHP runtime.
+<IfModule mod_env.c>
+  SetEnv HOME /home/c/cp59598/kuznechny-dvorik-gates
+</IfModule>
+
+RewriteEngine On
+
+# Always keep customer and admin traffic on HTTPS. X-Forwarded-Proto is
+# checked as Timeweb may terminate TLS before Apache/PHP.
+RewriteCond %{HTTPS} !=on
+RewriteCond %{HTTP:X-Forwarded-Proto} !https [NC]
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L,NE]
+
+# Never expose repository metadata or PHP backend internals.
+RewriteRule (^|/)\.git(?:/|$) - [F,L]
+RewriteRule ^backend(?:/|$) - [F,L]
+
+# Local PHP/MySQL backend. Production traffic must never proxy to Cloudflare.
+# Delivery has its own resolver so routed villages keep district information
+# (for example: Ишеево, Ишимбайский район). END prevents the internal target
+# from being reprocessed by the public backend protection rule above.
+RewriteRule ^api(?:-local)?/delivery-search/?$ backend/delivery-search.php [END]
+RewriteRule ^api(?:-local)?/delivery/?$ backend/delivery-resolver.php [END]
+RewriteRule ^api-local/(.*)$ local-api.php?__route=$1 [QSA,L]
+RewriteRule ^catalog-media-local/(.*)$ local-api.php?__route=catalog-media/$1 [QSA,L]
+RewriteRule ^api/(.*)$ local-api.php?__route=$1 [QSA,L]
+RewriteRule ^catalog-media/(.*)$ local-api.php?__route=catalog-media/$1 [QSA,L]
+
+# Friendly routes used by the current site. /vorota used to render the same
+# page as /; redirect it so search engines and shared links have one canonical URL.
+RewriteRule ^vorota/?$ / [R=301,L]
+RewriteRule ^admin/?$ admin.html [L]
+RewriteRule ^manager/?$ manager.html [L]
+RewriteRule ^napravleniya/?$ napravleniya/index.html [L]
+
+# Compress text assets when the hosting Apache module is available. Image files
+# are already compressed and are intentionally not passed through DEFLATE.
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/plain text/css text/javascript application/javascript application/json application/xml text/xml image/svg+xml
+</IfModule>
+
+# JS/CSS contain live prices and customer-facing calculation rules. Their names
+# are stable, so browsers must revalidate them on every page load to avoid serving
+# a previous deployment from cache. Images can stay cached for a day.
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType text/css "access plus 0 seconds"
+  ExpiresByType text/javascript "access plus 0 seconds"
+  ExpiresByType application/javascript "access plus 0 seconds"
+  ExpiresByType image/webp "access plus 1 day"
+  ExpiresByType image/jpeg "access plus 1 day"
+  ExpiresByType image/png "access plus 1 day"
+  ExpiresByType image/svg+xml "access plus 1 day"
+</IfModule>
+
+<IfModule mod_headers.c>
+  Header always set Strict-Transport-Security "max-age=31536000"
+  Header set X-Content-Type-Options "nosniff"
+  Header set Referrer-Policy "strict-origin-when-cross-origin"
+
+  <FilesMatch "\.(?:html?|php)$">
+    Header set Cache-Control "no-cache, must-revalidate"
+  </FilesMatch>
+  <FilesMatch "\.(?:css|js)$">
+    Header set Cache-Control "no-cache, must-revalidate"
+  </FilesMatch>
+  <FilesMatch "\.(?:webp|jpe?g|png|svg)$">
+    Header set Cache-Control "public, max-age=86400"
+  </FilesMatch>
+  <FilesMatch "^(?:deployment-version\.json|robots\.txt|sitemap\.xml)$">
+    Header set Cache-Control "no-cache, must-revalidate"
+  </FilesMatch>
+</IfModule>
+
+# Deployment/setup/migration helpers and any legacy proxy must never be public.
+<FilesMatch "^(?:api-proxy\.php|deploy-timeweb\.sh|install-autodeploy\.sh|health-check\.sh|setup-timeweb\.php|migrate-from-cloudflare\.php|migrate-public-catalog\.php|timeweb-build\.txt|\.timeweb-health)$">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+  </IfModule>
+</FilesMatch>

@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#111214">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Кузнечный Дворик · Менеджер</title>
+  <link rel="manifest" href="/manager-manifest.webmanifest">
+  <link rel="icon" href="/manager-icon.svg" type="image/svg+xml">
+  <style>
+    :root{color-scheme:light;--ink:#111214;--gold:#c9953b;--gold2:#e7bd6e;--paper:#f4f1eb;--card:#fff;--muted:#766f65;--line:#e2ddd4;--ok:#567a43;--danger:#a6433e}
+    *{box-sizing:border-box}html{background:var(--paper)}body{margin:0;background:var(--paper);color:var(--ink);font-family:Inter,Manrope,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+    button,input,select,textarea{font:inherit}.hidden,[hidden]{display:none!important}
+    .shell{min-height:100dvh;padding:env(safe-area-inset-top) 0 calc(76px + env(safe-area-inset-bottom))}
+    .topbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:64px;padding:10px 14px;background:rgba(17,18,20,.96);color:#fff;backdrop-filter:blur(12px);box-shadow:0 6px 24px rgba(0,0,0,.16)}
+    .brand{display:grid;gap:1px}.brand b{font-size:15px}.brand span{color:var(--gold2);font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+    .top-actions{display:flex;align-items:center;gap:6px}.icon-button{display:grid;place-items:center;min-width:40px;height:40px;padding:0 10px;border:1px solid rgba(255,255,255,.16);border-radius:11px;background:rgba(255,255,255,.06);color:#fff;font-size:17px;font-weight:800}
+    .main{width:min(760px,100%);margin:0 auto;padding:14px}.login-card,.panel{border:1px solid var(--line);border-radius:18px;background:#fff;box-shadow:0 12px 36px rgba(25,20,13,.07)}
+    .login-card{margin:9vh auto 0;padding:22px;max-width:440px}.login-card h1{margin:0 0 6px;font-size:24px}.login-card p{margin:0 0 18px;color:var(--muted);font-size:12px;line-height:1.5}
+    .field{display:grid;gap:6px;margin:0 0 11px}.field span{color:var(--muted);font-size:10px;font-weight:800}.field input,.field select{width:100%;min-height:48px;padding:0 12px;border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--ink);font-size:16px;outline:none}.field input:focus,.field select:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,149,59,.14)}
+    .primary{width:100%;min-height:48px;border:0;border-radius:12px;background:var(--ink);color:#fff;font-weight:900}.primary:disabled{opacity:.5}.error{margin:10px 0 0;color:var(--danger);font-size:11px;font-weight:700}
+    .summary{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;margin-bottom:12px}.summary h1{margin:0;font-size:24px}.summary p{margin:3px 0 0;color:var(--muted);font-size:11px}.push-button{min-height:42px;padding:0 12px;border:1px solid #d8bd85;border-radius:11px;background:#fff7e7;color:#70521e;font-size:11px;font-weight:900}.push-button.is-on{border-color:#bfd0b4;background:#f1f7ed;color:#49663b}
+    .tabs{display:flex;gap:7px;overflow:auto;margin:0 -14px 12px;padding:0 14px 2px;scrollbar-width:none}.tabs::-webkit-scrollbar{display:none}.tab{flex:0 0 auto;min-height:40px;padding:0 13px;border:1px solid var(--line);border-radius:999px;background:#fff;color:#6c655c;font-size:11px;font-weight:900}.tab.active{border-color:var(--ink);background:var(--ink);color:#fff}.tab b{display:inline-grid;min-width:18px;height:18px;margin-left:4px;place-items:center;border-radius:999px;background:#efe8dc;color:#655947;font-size:9px}.tab.active b{background:#c9953b;color:#17120a}
+    .lead-list{display:grid;gap:10px}.lead-card{overflow:hidden;border:1px solid var(--line);border-radius:16px;background:#fff;box-shadow:0 8px 24px rgba(18,16,13,.05)}.lead-card.is-new{border-color:#d1a353;box-shadow:0 0 0 1px rgba(201,149,59,.12),0 8px 24px rgba(18,16,13,.05)}
+    .lead-head{display:flex;justify-content:space-between;gap:12px;padding:14px 14px 10px}.lead-title{min-width:0}.lead-title b{display:block;font-size:15px;line-height:1.3}.lead-title span{display:block;margin-top:3px;color:var(--muted);font-size:10px}.lead-total{flex:0 0 auto;color:#8b6525;font-size:17px;font-weight:900;white-space:nowrap}
+    .lead-info{display:grid;grid-template-columns:1fr 1fr;gap:7px;padding:0 14px 12px}.info{min-width:0;padding:9px 10px;border-radius:10px;background:#f7f4ee}.info span{display:block;color:#8a8277;font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.04em}.info b{display:block;overflow:hidden;margin-top:3px;font-size:11px;line-height:1.35;text-overflow:ellipsis}
+    .contact-row{display:grid;grid-template-columns:1fr 1fr;gap:7px;padding:0 14px 12px}.contact-row a{display:grid;min-height:44px;place-items:center;border:1px solid var(--line);border-radius:11px;background:#fff;color:var(--ink);text-decoration:none;font-size:12px;font-weight:900}.contact-row a:first-child{border-color:var(--ink);background:var(--ink);color:#fff}
+    .workflow{padding:12px 14px 14px;border-top:1px solid #eee8df;background:#fbfaf7}.workflow-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.workflow .field{margin:0}.workflow .field input,.workflow .field select{min-height:44px;font-size:13px}.save-row{display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:9px}.measurement-button{min-height:42px;border:1px solid #d6bc85;border-radius:10px;background:#fff8e8;color:#70521e;font-size:11px;font-weight:900}.save-button{min-width:92px;min-height:42px;border:0;border-radius:10px;background:var(--gold);color:#18130b;font-size:11px;font-weight:900}
+    .empty{padding:34px 18px;text-align:center;color:var(--muted);font-size:12px}.offline{position:fixed;z-index:50;left:50%;bottom:calc(14px + env(safe-area-inset-bottom));transform:translateX(-50%);padding:8px 12px;border-radius:999px;background:#211f1c;color:#fff;font-size:10px;font-weight:800;box-shadow:0 8px 24px rgba(0,0,0,.2)}
+    .toast{position:fixed;z-index:60;left:14px;right:14px;bottom:calc(14px + env(safe-area-inset-bottom));max-width:520px;margin:auto;padding:11px 13px;border-radius:12px;background:#171819;color:#fff;font-size:11px;font-weight:800;box-shadow:0 10px 30px rgba(0,0,0,.25)}.toast.error{background:#8f3833}
+    .install-card{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;padding:10px 11px;border:1px dashed #d2ba89;border-radius:12px;background:#fff9ec;color:#675331;font-size:10px;line-height:1.4}.install-card button{flex:0 0 auto;min-height:36px;padding:0 10px;border:0;border-radius:9px;background:#c9953b;color:#17120a;font-size:10px;font-weight:900}
+    @media(max-width:440px){.main{padding:11px}.summary h1{font-size:22px}.lead-info{grid-template-columns:1fr 1fr}.workflow-grid{grid-template-columns:1fr}.save-row{grid-template-columns:1fr}.save-button{width:100%}}
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <div class="brand"><b>Кузнечный Дворик</b><span>Менеджер</span></div>
+      <div class="top-actions">
+        <button class="icon-button" id="refreshButton" type="button" aria-label="Обновить">↻</button>
+        <button class="icon-button" id="logoutButton" type="button" aria-label="Выйти" hidden>⇥</button>
+      </div>
+    </header>
+
+    <main class="main">
+      <section class="login-card" id="loginView">
+        <h1>Вход для менеджера</h1>
+        <p>Используйте учётную запись админки. После входа приложение покажет заявки с сайта и сможет получать уведомления.</p>
+        <form id="loginForm">
+          <label class="field"><span>Логин</span><input id="username" autocomplete="username" required></label>
+          <label class="field"><span>Пароль</span><input id="password" type="password" autocomplete="current-password" required></label>
+          <button class="primary" id="loginButton" type="submit">Войти</button>
+          <p class="error" id="loginError" hidden></p>
+        </form>
+      </section>
+
+      <section id="appView" hidden>
+        <div class="summary">
+          <div><h1>Заявки</h1><p id="syncText">Загрузка…</p></div>
+          <button class="push-button" id="pushButton" type="button">🔔 Включить уведомления</button>
+        </div>
+        <div class="install-card" id="installCard" hidden><span>Добавьте приложение на главный экран Android — будет открываться как обычная программа.</span><button id="installButton" type="button">Установить</button></div>
+        <nav class="tabs" id="tabs">
+          <button class="tab active" data-filter="new" type="button">Новые <b id="countNew">0</b></button>
+          <button class="tab" data-filter="work" type="button">В работе <b id="countWork">0</b></button>
+          <button class="tab" data-filter="measurement" type="button">Замеры <b id="countMeasurement">0</b></button>
+          <button class="tab" data-filter="all" type="button">Все</button>
+        </nav>
+        <div class="lead-list" id="leadList"></div>
+        <div class="empty" id="emptyView" hidden>Заявок в этом разделе пока нет.</div>
+      </section>
+    </main>
+  </div>
+  <div class="offline" id="offlineBadge" hidden>Нет сети · показываем последние данные</div>
+  <div class="toast" id="toast" hidden></div>
+
+  <script>
+  (() => {
+    const loginView=document.getElementById('loginView');
+    const appView=document.getElementById('appView');
+    const loginForm=document.getElementById('loginForm');
+    const loginButton=document.getElementById('loginButton');
+    const loginError=document.getElementById('loginError');
+    const logoutButton=document.getElementById('logoutButton');
+    const refreshButton=document.getElementById('refreshButton');
+    const pushButton=document.getElementById('pushButton');
+    const leadList=document.getElementById('leadList');
+    const emptyView=document.getElementById('emptyView');
+    const syncText=document.getElementById('syncText');
+    const offlineBadge=document.getElementById('offlineBadge');
+    const toast=document.getElementById('toast');
+    const installCard=document.getElementById('installCard');
+    const installButton=document.getElementById('installButton');
+    const tabs=[...document.querySelectorAll('.tab[data-filter]')];
+    const CACHE_KEY='kuzdvor-manager-leads-v1';
+    let leads=[];
+    let workflows={};
+    let activeFilter='new';
+    let latestId=0;
+    let pollTimer=0;
+    let installPrompt=null;
+
+    const escape=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+    const money=value=>new Intl.NumberFormat('ru-RU').format(Number(value)||0)+' ₽';
+    const phoneDigits=value=>String(value||'').replace(/\D/g,'');
+    const fmt=value=>{const d=new Date(String(value||'').replace(' ','T')+'Z');return Number.isNaN(d.getTime())?String(value||''):d.toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})};
+    const stageOf=lead=>String(workflows[String(lead.id)]?.stage || (lead.status==='done'?'completed':lead.status==='contacted'?'contacted':'new'));
+    const stageLabel=stage=>({new:'Новая',contacted:'В работе',measurement_scheduled:'Замер назначен',measurement_done:'Замер выполнен',contract:'Договор',production:'Производство',installation:'Монтаж',completed:'Закрыта',lost:'Отказ'})[stage]||stage;
+    const categoryLabel=value=>({gates:'Ворота с калиткой',canopy:'Навес','forged-fence':'Кованый забор','profsheet-fence':'Забор из профнастила','picket-fence':'Евроштакетник'})[value]||'Изделие';
+
+    function showToast(message,error=false){toast.textContent=message;toast.className='toast'+(error?' error':'');toast.hidden=false;clearTimeout(showToast.t);showToast.t=setTimeout(()=>toast.hidden=true,2800)}
+    async function api(url,options={}){const response=await fetch(url,{credentials:'same-origin',cache:'no-store',...options,headers:{accept:'application/json',...(options.body?{'content-type':'application/json'}:{}),...(options.headers||{})}});const data=await response.json().catch(()=>({}));if(response.status===401){showLogin();throw Object.assign(new Error('Требуется вход'),{auth:true})}if(!response.ok)throw new Error(data.error||'Ошибка сервера');return data}
+    function showLogin(){loginView.hidden=false;appView.hidden=true;logoutButton.hidden=true;clearInterval(pollTimer)}
+    function showApp(){loginView.hidden=true;appView.hidden=false;logoutButton.hidden=false;startPolling()}
+
+    function saveCache(){try{localStorage.setItem(CACHE_KEY,JSON.stringify({leads,workflows,savedAt:Date.now()}))}catch{}}
+    function loadCache(){try{const v=JSON.parse(localStorage.getItem(CACHE_KEY)||'null');if(v&&Array.isArray(v.leads)){leads=v.leads;workflows=v.workflows||{};latestId=Math.max(0,...leads.map(x=>Number(x.id)||0));render();syncText.textContent='Последние сохранённые данные';return true}}catch{}return false}
+
+    function matches(lead){
+      const stage=stageOf(lead);
+      if(activeFilter==='new') return stage==='new';
+      if(activeFilter==='work') return ['contacted','measurement_done','contract','production','installation'].includes(stage);
+      if(activeFilter==='measurement') return stage==='measurement_scheduled';
+      return true;
+    }
+
+    function updateCounts(){
+      const stages=leads.map(stageOf);
+      document.getElementById('countNew').textContent=stages.filter(x=>x==='new').length;
+      document.getElementById('countWork').textContent=stages.filter(x=>['contacted','measurement_done','contract','production','installation'].includes(x)).length;
+      document.getElementById('countMeasurement').textContent=stages.filter(x=>x==='measurement_scheduled').length;
+    }
+
+    function render(){
+      updateCounts();
+      const items=leads.filter(matches);
+      emptyView.hidden=items.length>0;
+      leadList.innerHTML=items.map(lead=>{
+        const wf=workflows[String(lead.id)]||{};
+        const stage=stageOf(lead);
+        const digits=phoneDigits(lead.phone);
+        const wa=digits?('https://wa.me/'+(digits.startsWith('8')?'7'+digits.slice(1):digits)):'#';
+        const title=[categoryLabel(lead.category),lead.article].filter(Boolean).join(' · ');
+        const size=lead.width&&lead.height?lead.width+'×'+lead.height+' м':'—';
+        const wicket=lead.wicket_width?lead.wicket_width+' м':'—';
+        const when=String(wf.nextActionAt||'').slice(0,16);
+        return `<article class="lead-card ${stage==='new'?'is-new':''}" data-lead-id="${lead.id}">
+          <div class="lead-head"><div class="lead-title"><b>${escape(lead.name||'Клиент')} · ${escape(lead.city||'')}</b><span>№${lead.id} · ${escape(fmt(lead.created_at))} · ${escape(title)}</span></div><div class="lead-total">${money(lead.client_total||lead.total)}</div></div>
+          <div class="lead-info">
+            <div class="info"><span>Телефон</span><b>${escape(lead.phone||'—')}</b></div>
+            <div class="info"><span>Размер ворот</span><b>${escape(size)}</b></div>
+            <div class="info"><span>Калитка</span><b>${escape(wicket)}</b></div>
+            <div class="info"><span>Столбы</span><b>${lead.posts?'Нужны новые':'Свои'}</b></div>
+          </div>
+          <div class="contact-row"><a href="tel:+${digits}">☎ Позвонить</a><a href="${wa}" target="_blank" rel="noopener">WhatsApp</a></div>
+          <div class="workflow">
+            <div class="workflow-grid">
+              <label class="field"><span>Статус</span><select data-stage>
+                ${['new','contacted','measurement_scheduled','measurement_done','contract','completed','lost'].map(value=>`<option value="${value}" ${value===stage?'selected':''}>${stageLabel(value)}</option>`).join('')}
+              </select></label>
+              <label class="field"><span>Дата и время замера</span><input data-measurement type="datetime-local" value="${escape(when)}"></label>
+            </div>
+            <div class="save-row"><button class="measurement-button" data-schedule type="button">📅 Назначить замер</button><button class="save-button" data-save type="button">Сохранить</button></div>
+          </div>
+        </article>`;
+      }).join('');
+    }
+
+    async function loadLeads({silent=false}={}){
+      if(!navigator.onLine){offlineBadge.hidden=false;loadCache();return}
+      offlineBadge.hidden=true;
+      if(!silent) syncText.textContent='Обновляем заявки…';
+      try{
+        const data=await api('/api/admin/leads?limit=100');
+        const next=Array.isArray(data.leads)?data.leads:[];
+        const ids=next.map(x=>Number(x.id)).filter(Boolean);
+        const wfData=ids.length?await api('/api/admin/lead-workflows?ids='+encodeURIComponent(ids.join(','))):{workflows:{}};
+        const oldLatest=latestId;
+        leads=next;
+        workflows=wfData.workflows||{};
+        latestId=Math.max(0,...leads.map(x=>Number(x.id)||0));
+        saveCache();render();
+        syncText.textContent='Обновлено · '+new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
+        if(oldLatest&&latestId>oldLatest&&document.visibilityState==='visible'){
+          const newest=leads.find(x=>Number(x.id)===latestId);
+          showToast('Новая заявка · '+(newest?.city||''));
+          if(Notification.permission==='granted'&&newest){try{new Notification('Новая заявка с сайта',{body:(newest.city||'')+' · '+money(newest.client_total||newest.total),tag:'lead-'+newest.id})}catch{}}
+        }
+      }catch(error){if(!error.auth){offlineBadge.hidden=false;loadCache();if(!silent)showToast(error.message,true)}}
+    }
+
+    async function saveWorkflow(card){
+      const id=Number(card.dataset.leadId);
+      const stage=card.querySelector('[data-stage]').value;
+      const nextActionAt=card.querySelector('[data-measurement]').value;
+      const button=card.querySelector('[data-save]');
+      button.disabled=true;button.textContent='Сохраняем…';
+      try{
+        await api('/api/admin/lead-workflows/'+id,{method:'POST',body:JSON.stringify({stage,note:'',nextActionAt,lossReason:''})});
+        workflows[String(id)]={...(workflows[String(id)]||{}),stage,nextActionAt};
+        saveCache();render();showToast('Сохранено');
+      }catch(error){if(!error.auth)showToast(error.message,true)}
+      finally{button.disabled=false}
+    }
+
+    leadList.addEventListener('click',event=>{
+      const card=event.target.closest('.lead-card');if(!card)return;
+      if(event.target.closest('[data-save]')){saveWorkflow(card);return}
+      if(event.target.closest('[data-schedule]')){
+        card.querySelector('[data-stage]').value='measurement_scheduled';
+        const input=card.querySelector('[data-measurement]');
+        input.focus();
+        if(!input.value){const d=new Date(Date.now()+24*60*60*1000);d.setMinutes(Math.ceil(d.getMinutes()/15)*15,0,0);input.value=new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16)}
+      }
+    });
+
+    tabs.forEach(tab=>tab.addEventListener('click',()=>{tabs.forEach(x=>x.classList.toggle('active',x===tab));activeFilter=tab.dataset.filter;render()}));
+
+    loginForm.addEventListener('submit',async event=>{
+      event.preventDefault();loginError.hidden=true;loginButton.disabled=true;loginButton.textContent='Входим…';
+      try{
+        await api('/api/admin/login',{method:'POST',body:JSON.stringify({username:document.getElementById('username').value.trim(),password:document.getElementById('password').value})});
+        showApp();await loadLeads();await syncPushButton();
+      }catch(error){if(!error.auth){loginError.textContent=error.message;loginError.hidden=false}}
+      finally{loginButton.disabled=false;loginButton.textContent='Войти'}
+    });
+
+    logoutButton.addEventListener('click',async()=>{try{await api('/api/admin/logout',{method:'POST',body:'{}'})}catch{}showLogin()});
+    refreshButton.addEventListener('click',()=>loadLeads());
+    window.addEventListener('online',()=>{offlineBadge.hidden=true;loadLeads()});
+    window.addEventListener('offline',()=>{offlineBadge.hidden=false});
+
+    function startPolling(){clearInterval(pollTimer);pollTimer=setInterval(()=>{if(document.visibilityState==='visible')loadLeads({silent:true})},15000)}
+    document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&!loginView.hidden){}else if(document.visibilityState==='visible'&&!appView.hidden)loadLeads({silent:true})});
+
+    function b64ToUint8(value){const pad='='.repeat((4-value.length%4)%4);const base64=(value+pad).replace(/-/g,'+').replace(/_/g,'/');const raw=atob(base64);return Uint8Array.from([...raw].map(ch=>ch.charCodeAt(0)))}
+    async function getRegistration(){if(!('serviceWorker'in navigator))throw new Error('Этот браузер не поддерживает фоновые уведомления');return navigator.serviceWorker.register('/manager-sw.js',{scope:'/manager'}).then(()=>navigator.serviceWorker.ready)}
+    async function currentSubscription(){const reg=await getRegistration();return reg.pushManager.getSubscription()}
+    async function syncPushButton(){
+      if(!('Notification'in window)||!('PushManager'in window)){pushButton.hidden=true;return}
+      try{const sub=await currentSubscription();const on=Notification.permission==='granted'&&Boolean(sub);pushButton.classList.toggle('is-on',on);pushButton.textContent=on?'🔔 Уведомления включены':'🔔 Включить уведомления'}catch{pushButton.textContent='🔔 Включить уведомления'}
+    }
+    pushButton.addEventListener('click',async()=>{
+      pushButton.disabled=true;
+      try{
+        const permission=await Notification.requestPermission();
+        if(permission!=='granted')throw new Error('Разрешите уведомления для этого сайта в настройках браузера');
+        const reg=await getRegistration();
+        let sub=await reg.pushManager.getSubscription();
+        if(!sub){
+          const key=await api('/api/admin/manager-push-key');
+          sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64ToUint8(key.publicKey)});
+        }
+        await api('/api/admin/manager-push-subscriptions',{method:'POST',body:JSON.stringify({subscription:sub.toJSON(),userAgent:navigator.userAgent})});
+        await syncPushButton();showToast('Уведомления включены');
+      }catch(error){showToast(error.message,true)}
+      finally{pushButton.disabled=false}
+    });
+
+    window.addEventListener('beforeinstallprompt',event=>{event.preventDefault();installPrompt=event;installCard.hidden=false});
+    installButton.addEventListener('click',async()=>{if(!installPrompt)return;installPrompt.prompt();await installPrompt.userChoice;installPrompt=null;installCard.hidden=true});
+    window.addEventListener('appinstalled',()=>installCard.hidden=true);
+
+    async function boot(){
+      if('serviceWorker'in navigator){navigator.serviceWorker.register('/manager-sw.js',{scope:'/manager'}).catch(()=>{})}
+      loadCache();
+      try{await api('/api/admin/leads?limit=1');showApp();await loadLeads();await syncPushButton()}catch(error){if(!error.auth)showLogin()}
+    }
+    boot();
+  })();
+  </script>
+</body>
+</html>

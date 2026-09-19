@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /manager
+Disallow: /api/
+Sitemap: https://kuzdvor.tw1.ru/sitemap.xml
