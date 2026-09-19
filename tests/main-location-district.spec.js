@@ -110,3 +110,27 @@ test('main site does not auto-confirm even a single search result', async ({page
   await page.locator('#routeButton').click();
   await expect(page.locator('#deliverySummary')).toBeVisible({timeout:8000});
 });
+
+
+test('typed fixed city also requires selection and keeps its published tariff', async ({page}) => {
+  await page.setViewportSize({width:390,height:844});
+  await page.goto('/', {waitUntil:'domcontentloaded'});
+  await expect(page.locator('#catalogOrderConfigurator')).toBeVisible({timeout:8000});
+
+  await page.locator('#deliveryChooser [data-delivery-choice="other"]').click();
+  await page.locator('#cityInput').fill('Салават');
+
+  const choice = page.locator('.delivery-place-choices__button').first();
+  await expect(choice).toBeVisible({timeout:8000});
+  await expect(choice).toContainText('Салават');
+  await expect(page.locator('#deliverySummary')).toBeHidden();
+
+  await choice.click();
+  await expect(page.locator('#routeButton')).toHaveText('ОК');
+  await page.locator('#routeButton').click();
+
+  await expect(page.locator('#deliverySummaryValue')).toContainText('Салават');
+  const quote = page.locator('#catalogGrid .product-card').first().locator('.catalog-primary-quote');
+  await expect(quote.locator('strong')).toHaveText('69 100 ₽');
+  await expect(quote).toContainText(/доставкой в Салават/i);
+});
