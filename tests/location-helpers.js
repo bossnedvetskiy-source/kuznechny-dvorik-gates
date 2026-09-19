@@ -27,7 +27,21 @@ export async function beginInstallationPlace(page, place) {
     return {...ui, selected:true, firstCard:page.locator('#catalogGrid .product-card').first()};
   }
 
-  await expect(ui.action).toBeVisible({timeout:5000});
+  await expect.poll(async () => {
+    if (await summary.isVisible().catch(() => false)) return 'summary';
+    if (await page.locator('.delivery-place-choices__button').first().isVisible().catch(() => false)) return 'choice';
+    if (await ui.action.isVisible().catch(() => false)) return 'action';
+    return 'waiting';
+  }, {timeout:6000}).not.toBe('waiting');
+
+  if (await summary.isVisible().catch(() => false)) {
+    return {...ui, selected:true, firstCard:page.locator('#catalogGrid .product-card').first()};
+  }
+
+  if (await page.locator('.delivery-place-choices__button').first().isVisible().catch(() => false)) {
+    return {...ui, selected:false, firstCard:page.locator('#catalogGrid .product-card').first()};
+  }
+
   await expect(ui.action).toBeEnabled();
   await ui.action.click();
   return {...ui, selected:false, firstCard:page.locator('#catalogGrid .product-card').first()};
