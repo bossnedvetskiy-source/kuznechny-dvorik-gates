@@ -665,23 +665,31 @@ function productByArticle(article) {
   return catalogProducts.find(product=>normalizeArticleLookup(product.art)===wanted)||null;
 }
 
-async function setDeliveryPlace(place) {
-  const value=String(place||'').trim();
+async function setDeliveryPlace(place, options = {}) {
+  const routeQuery=String(place||'').trim();
+  const label=String(options?.label||routeQuery).trim();
+  const lookupName=String(options?.lookupName||label).trim();
   if(!deliveryController)return {kind:'empty'};
-  if(!value){
+  if(!routeQuery && !lookupName){
     deliveryController.chooseOther?.();
     return deliveryController.getState?.()||{kind:'empty'};
   }
   const normalize=window.KUZDVOR_DELIVERY?.normalize||((input)=>String(input||'').toLocaleLowerCase('ru-RU').replace(/ё/g,'е').replace(/[^а-яa-z0-9]/gi,''));
-  if(normalize(value)===normalize('Мелеуз')){
+  if(normalize(lookupName)===normalize('Мелеуз')){
     deliveryController.chooseMeleuz?.();
     return deliveryController.getState?.()||{kind:'fixed',name:'Мелеуз',price:0};
   }
-  if(cityInput)cityInput.value=value;
+
+  // Preserve configured fixed tariffs when the selected locality is already
+  // in the delivery table. For ambiguous villages the exact district query
+  // below is used instead.
+  if(cityInput)cityInput.value=lookupName;
   deliveryController.updateFromInput?.();
   const immediate=deliveryController.getState?.()||{kind:'empty'};
   if(immediate.kind==='fixed')return immediate;
-  await deliveryController.calculateRoute?.(value,{preferredLabel:value,skipConfirm:true});
+
+  if(cityInput)cityInput.value=label||lookupName||routeQuery;
+  await deliveryController.calculateRoute?.(routeQuery||lookupName,{preferredLabel:label||lookupName,skipConfirm:true});
   return deliveryController.getState?.()||{kind:'empty'};
 }
 
