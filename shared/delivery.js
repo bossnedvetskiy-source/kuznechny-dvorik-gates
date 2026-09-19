@@ -387,9 +387,11 @@
           placeChoices.hidden = false;
 
           const selectedChoice = pendingPlaceChoice;
-          window.setTimeout(() => {
+          const selectionSequence = searchSequence;
+          window.setTimeout(async () => {
             if (state.kind !== 'place-confirm' || normalize(state.name) !== normalize(label)) return;
             pendingPlaceChoice = null;
+
             if (selectedChoice?.fixedName) {
               const known = byKey.get(normalize(selectedChoice.fixedName));
               if (known) {
@@ -397,7 +399,46 @@
                 return;
               }
             }
-            calculateRoute(query, {preferredLabel:label, skipConfirm:true});
+
+            try {
+              const payload = await requestDelivery(query, label);
+              if (selectionSequence !== searchSequence || state.kind !== 'place-confirm' || normalize(state.name) !== normalize(label)) return;
+
+              const shortName = label || payload.shortName || payload.resolvedName || query;
+              if (payload.outOfArea) {
+                state = {
+                  kind:'out-of-area', name:shortName, resolvedName:label || payload.resolvedName || shortName, shortName,
+                  price:null, distanceKm:Number(payload.distanceKm)||null,
+                  serviceAreaKm:Number(payload.serviceAreaKm)||data.serviceAreaKm, outOfArea:true
+                };
+                editingOther = false;
+                setResult(`Расстояние около ${state.distanceKm || '—'} км — доставка рассчитывается индивидуально.`, 'pending');
+              } else {
+                state = {
+                  kind:'calculated', name:shortName, resolvedName:label || payload.resolvedName || shortName, shortName,
+                  price:Number(payload.price)||0, distanceKm:Number(payload.distanceKm)||null,
+                  serviceAreaKm:Number(payload.serviceAreaKm)||data.serviceAreaKm
+                };
+                editingOther = false;
+                setResult(`${shortName} · доставка учтена в итоговой сумме`, 'success');
+              }
+              saveSelected(state);
+              emit();
+            } catch (error) {
+              if (selectionSequence !== searchSequence || state.kind !== 'place-confirm') return;
+              clearPlaceChoices();
+              state = {kind:'error', name:label, resolvedName:'', shortName:'', price:null};
+              const message = error?.technical === true
+                ? 'Не удалось автоматически рассчитать доставку.'
+                : String(error?.message || 'Не удалось рассчитать доставку.');
+              setResult(`${message} Оставьте заявку — стоимость уточним вручную.`, 'pending');
+              if (routeButton) {
+                routeButton.hidden = false;
+                routeButton.disabled = false;
+                routeButton.textContent = 'Повторить расчёт';
+              }
+              emit();
+            }
           }, 0);
         });
         placeChoices.append(button);
