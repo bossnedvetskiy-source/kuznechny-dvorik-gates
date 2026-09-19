@@ -57,7 +57,7 @@ test('main site requires district selection and OK before delivery is accepted',
   await expect(page.locator('.delivery-place-choices')).toContainText('район');
   await expect(page.locator('.delivery-place-choices__action')).toHaveCount(2);
   await expect(page.locator('.delivery-place-choices__action').first()).toHaveText('Выбрать →');
-  await expect(page.locator('.delivery-place-choices__change')).toHaveText('Изменить населённый пункт');
+  await expect(page.locator('.delivery-place-choices__change')).toHaveCount(0);
   await expect(page.locator('.city-label')).toHaveClass(/is-place-results/);
   await expect(page.locator('#cityInput')).toBeHidden();
   await expect(page.locator('#routeButton')).toBeHidden();
@@ -74,6 +74,8 @@ test('main site requires district selection and OK before delivery is accepted',
   const inlineOk = page.locator('.delivery-place-choices__confirm');
   await expect(inlineOk).toBeVisible();
   await expect(inlineOk).toHaveText('ОК');
+  await expect(page.locator('.delivery-place-choices__edit')).toBeVisible();
+  await expect(page.locator('.delivery-place-choices__edit')).toHaveText('Изменить');
 
   await inlineOk.click();
 
@@ -125,7 +127,7 @@ test('main site does not auto-confirm even a single search result', async ({page
   await expect(page.locator('.delivery-place-choices__button')).toHaveCount(1, {timeout:8000});
   await expect(page.locator('.delivery-place-choices')).toHaveClass(/is-single/);
   await expect(page.locator('.delivery-place-choices__action')).toHaveText('Выбрать →');
-  await expect(page.locator('.delivery-place-choices__change')).toBeVisible();
+  await expect(page.locator('.delivery-place-choices__change')).toHaveCount(0);
   await expect(page.locator('#cityInput')).toBeHidden();
   await expect(page.locator('.delivery-place-choices__title')).toBeHidden();
   await expect(page.locator('.delivery-place-choices__hint')).toBeHidden();
@@ -135,6 +137,7 @@ test('main site does not auto-confirm even a single search result', async ({page
   await page.locator('.delivery-place-choices__button').click();
   await expect(page.locator('#routeButton')).toBeHidden();
   await expect(page.locator('.delivery-place-choices__confirm')).toHaveText('ОК');
+  await expect(page.locator('.delivery-place-choices__edit')).toHaveText('Изменить');
   await expect(page.locator('#deliverySummary')).toBeHidden();
 
   await page.locator('.delivery-place-choices__confirm').click();
