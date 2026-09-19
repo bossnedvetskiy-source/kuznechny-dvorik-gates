@@ -87,13 +87,21 @@ const selectInstallationPlace = async page => {
     }, null, { timeout: 10000 });
     await action.click();
 
-    await page.waitForFunction(() => {
-      const state = window.GATE_PAGE_API?.deliveryState?.();
-      return ['fixed','calculated','confirm','out-of-area','error'].includes(String(state?.kind || ''));
-    }, null, { timeout: 10000 });
+    const choice = page.locator('.delivery-place-choices__button').filter({hasText:city}).first();
+    if (await choice.isVisible().catch(() => false)) {
+      await choice.click();
+      await action.waitFor({state:'visible',timeout:10000});
+      await page.waitForFunction(() => String(document.querySelector('#routeButton')?.textContent || '').trim() === 'ОК', null, {timeout:10000});
+      await action.click();
+    } else {
+      await page.waitForFunction(() => {
+        const state = window.GATE_PAGE_API?.deliveryState?.();
+        return ['fixed','calculated','confirm','place-confirm','out-of-area','error'].includes(String(state?.kind || ''));
+      }, null, { timeout: 10000 });
 
-    const actionText = String(await action.textContent().catch(() => '') || '');
-    if (/Да, это нужный пункт/.test(actionText)) await action.click();
+      const actionText = String(await action.textContent().catch(() => '') || '');
+      if (/ОК|Да, это нужный пункт/.test(actionText)) await action.click();
+    }
   }
 
   await page.waitForFunction(({ expectedCity, delta }) => {
