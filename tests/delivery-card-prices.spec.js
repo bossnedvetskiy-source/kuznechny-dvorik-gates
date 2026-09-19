@@ -30,7 +30,7 @@ test('routed village stays browseable before confirmation and enters price only 
   const ui = await beginInstallationPlace(page, 'Ишеево');
 
   await expect(ui.status).toContainText('Найдено: Ишеево, Ишимбайский район');
-  await expect(ui.action).toHaveText('Да, это нужный пункт');
+  await expect(ui.action).toHaveText('ОК');
   await expect(card).toBeVisible();
   await expect(card.locator('.catalog-primary-quote small')).toContainText('доставка пока не учтена');
 
@@ -57,6 +57,6 @@ test('mobile installation place input uses search keyboard and route action work
   await ui.action.click();
 
   await expect(ui.status).toContainText('Найдено: Ишеево, Ишимбайский район');
-  await expect(ui.action).toHaveText('Да, это нужный пункт');
+  await expect(ui.action).toHaveText('ОК');
   await expect(page.locator('#catalogGrid .product-card').first()).toBeVisible();
 });
