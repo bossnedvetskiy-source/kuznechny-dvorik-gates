@@ -368,13 +368,23 @@
       if (!calculator.hidden) syncSelectedColor();
     };
 
+    const CONFIG_APPLIED_KEY = 'kuzdvor:catalog-config-applied-v2';
+    const rememberConfigState = applied => {
+      try {
+        if (applied) sessionStorage.setItem(CONFIG_APPLIED_KEY, '1');
+        else sessionStorage.removeItem(CONFIG_APPLIED_KEY);
+      } catch {}
+    };
+
     const openConfigurator = () => {
+      rememberConfigState(false);
       config.hidden = false;
       summary.hidden = true;
       config.scrollIntoView({behavior:'smooth', block:'start'});
     };
 
     const collapseConfigurator = ({scroll=true} = {}) => {
+      rememberConfigState(true);
       config.hidden = true;
       summary.hidden = false;
       syncAll();
