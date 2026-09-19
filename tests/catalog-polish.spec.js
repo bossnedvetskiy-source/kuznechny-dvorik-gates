@@ -51,10 +51,12 @@ test('applied parameters stay compact after reload and nonstandard prices do not
   await expect.poll(async () => String(await firstQuote.textContent()), {timeout:8000})
     .not.toContain('Пересчитываем');
 
-  await page.locator('#applyCatalogParams').click();
+  await expect(page.locator('#applyCatalogParams')).toBeHidden();
+  await page.locator('#deliveryChooser [data-delivery-choice="meleuz"]').click();
   await expect(page.locator('#catalogOrderConfigurator')).toBeHidden();
   await expect(page.locator('#catalogOrderSummary')).toBeVisible();
   await expect(page.locator('#catalogOrderSummary')).toContainText('3,8');
+  await expect(page.locator('#catalogOrderSummary')).toContainText('Мелеуз');
 
   await page.reload({waitUntil:'domcontentloaded'});
   await expect(page.locator('#catalogGrid .product-card').first()).toBeVisible({timeout:7000});
