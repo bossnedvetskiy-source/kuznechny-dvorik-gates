@@ -59,11 +59,14 @@ test('main site requires district selection and OK before delivery is accepted',
 
   await choices.nth(1).click();
   await expect(page.locator('#deliverySummary')).toBeHidden();
-  await expect(page.locator('#routeButton')).toBeVisible();
-  await expect(page.locator('#routeButton')).toHaveText('ОК');
-  await expect(page.locator('#deliveryResult')).toContainText('Проверьте район');
+  await expect(page.locator('#routeButton')).toBeHidden();
+  await expect(page.locator('.delivery-place-choices')).toHaveClass(/is-confirming/);
+  await expect(page.locator('.delivery-place-choices__button:visible')).toHaveCount(1);
+  const inlineOk = page.locator('.delivery-place-choices__confirm');
+  await expect(inlineOk).toBeVisible();
+  await expect(inlineOk).toHaveText('ОК');
 
-  await page.locator('#routeButton').click();
+  await inlineOk.click();
 
   await expect.poll(() => routedPlace, {timeout:8000}).toContain('Ишимбайский район');
   await expect(page.locator('#deliverySummary')).toBeVisible({timeout:8000});
@@ -115,10 +118,11 @@ test('main site does not auto-confirm even a single search result', async ({page
   await expect(page.locator('#routeButton')).toBeHidden();
 
   await page.locator('.delivery-place-choices__button').click();
-  await expect(page.locator('#routeButton')).toHaveText('ОК');
+  await expect(page.locator('#routeButton')).toBeHidden();
+  await expect(page.locator('.delivery-place-choices__confirm')).toHaveText('ОК');
   await expect(page.locator('#deliverySummary')).toBeHidden();
 
-  await page.locator('#routeButton').click();
+  await page.locator('.delivery-place-choices__confirm').click();
   await expect(page.locator('#deliverySummary')).toBeVisible({timeout:8000});
   await expect(page.locator('#routeButton')).toBeHidden();
 });
@@ -139,8 +143,9 @@ test('typed fixed city also requires selection and keeps its published tariff', 
   await expect(page.locator('#routeButton')).toBeHidden();
 
   await choice.click();
-  await expect(page.locator('#routeButton')).toHaveText('ОК');
-  await page.locator('#routeButton').click();
+  await expect(page.locator('#routeButton')).toBeHidden();
+  await expect(page.locator('.delivery-place-choices__confirm')).toHaveText('ОК');
+  await page.locator('.delivery-place-choices__confirm').click();
 
   await expect(page.locator('#deliverySummaryValue')).toContainText('Салават');
   await expect(page.locator('#routeButton')).toBeHidden();
