@@ -58,7 +58,8 @@
           .catalog-color-swatches i{width:14px!important;height:14px!important}
           .product-card .product-art{left:8px!important;top:8px!important;min-height:26px!important;padding:5px 8px!important;font-size:9.5px!important}
           #mobilePrimaryCta{white-space:nowrap!important;font-size:11.5px!important;line-height:1.1!important}
-          #showMoreButton{min-height:44px!important}
+          #mobilePrimaryCta::after{content:none!important;display:none!important}
+          #showMoreButton{min-height:56px!important}
         }
       `;
       document.head.append(style);
