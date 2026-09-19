@@ -101,7 +101,43 @@
       .selected-color-panel{margin:0 0 11px;padding:11px 12px;border:1px solid rgba(255,255,255,.10);border-radius:11px;background:rgba(255,255,255,.035);color:#fff}.selected-color-panel__head{display:flex;align-items:center;justify-content:space-between;gap:10px}.selected-color-panel__head strong{font-size:10.5px}.selected-color-panel__head button{border:0;background:transparent;color:#e6bd69;font:800 9px/1.2 Manrope,Arial,sans-serif;cursor:pointer}.selected-color-panel__options{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}.selected-color-panel__options[hidden]{display:none!important}.selected-color-panel__options button{min-height:31px;padding:6px 8px;border:1px solid rgba(255,255,255,.13);border-radius:8px;background:rgba(255,255,255,.05);color:#fff;font:700 8.5px/1.1 Manrope,Arial,sans-serif;cursor:pointer}.selected-color-panel__options button.is-active{border-color:#d2a143;color:#e6bd69;background:rgba(210,161,67,.12)}
       #calculator .size-notice,#calculator .size-memory-note{display:none!important}#calculator .mobile-payment-note{padding:7px 0 0!important;border:0!important;background:transparent!important;font-size:9.5px!important}#calculator .mobile-payment-note strong{display:inline!important;margin:0!important;font-size:9.5px!important}.order-process{display:none!important}
       @media(max-width:900px){.catalog-order-config__fields.calc-form{grid-template-columns:1fr}.catalog-order-config__head{display:block}.catalog-order-config h3{font-size:22px}}
-      @media(max-width:620px){.catalog-order-config{margin:0 0 13px;padding:13px;border-radius:15px}.catalog-order-config h3{font-size:19px}.catalog-order-config__head p{font-size:10.5px}.catalog-order-config__fields.calc-form{gap:8px}.catalog-order-config .form-block{padding:11px!important}.catalog-order-config__actions{display:grid;gap:7px}.catalog-order-config__apply{width:100%;min-height:48px}.catalog-order-summary{margin-bottom:10px;padding:9px 10px}.catalog-order-summary__copy strong{font-size:10px}.catalog-color-global{margin-bottom:10px;padding:9px 10px}.catalog-color-global span{font-size:9px}.catalog-color-swatches i{width:15px;height:15px}.catalog-posts-choice button{min-height:58px}.catalog-primary-quote{margin:7px 0 9px;padding:9px 10px}.catalog-primary-quote strong{font-size:18px}.catalog-primary-quote small{font-size:9px}}
+      @media(max-width:620px){
+        .catalog-order-config{margin:0 0 11px;padding:11px 12px 12px;border-radius:14px;box-shadow:0 8px 22px rgba(17,18,20,.09)}
+        .catalog-order-config__head{margin-bottom:7px!important}
+        .catalog-order-config__eyebrow{margin-bottom:3px;font-size:8px}
+        .catalog-order-config h3{font-size:18px;line-height:1.12}
+        .catalog-order-config__head p{display:none!important}
+        .catalog-order-config__fields.calc-form{gap:0!important}
+        .catalog-order-config .form-block{padding:10px 0!important;border:0!important;border-bottom:1px solid rgba(255,255,255,.10)!important;border-radius:0!important;background:transparent!important}
+        .catalog-order-config .form-block:first-child{padding-top:7px!important}
+        .catalog-order-config .form-block:last-child{padding-bottom:5px!important;border-bottom:0!important}
+        .catalog-order-config .step-label{margin-bottom:7px!important;font-size:9px!important}
+        .catalog-order-config .mobile-size-summary{margin-bottom:4px!important;padding:9px 10px!important;border-radius:10px!important}
+        .catalog-order-config .mobile-size-summary small{font-size:8.5px!important}
+        .catalog-order-config .mobile-size-summary strong{font-size:12px!important}
+        .catalog-order-config .mobile-size-summary button{min-height:34px!important;padding:0 10px!important}
+        .catalog-order-config .dimension-help{margin-top:5px!important;font-size:9px!important;line-height:1.35!important}
+        .catalog-posts-choice{gap:6px}
+        .catalog-posts-choice button{min-height:50px;padding:7px 9px}
+        .catalog-posts-choice button b{font-size:10.5px}
+        .catalog-posts-choice button small{font-size:8px}
+        .catalog-order-config .posts-reassurance{display:none!important}
+        .catalog-order-config .city-label input{min-height:46px!important}
+        .catalog-order-config .delivery-input-help{font-size:9.5px!important;line-height:1.35!important}
+        .catalog-order-config .delivery-result{margin-top:6px!important;padding:7px 8px!important;font-size:10px!important}
+        .catalog-order-config .delivery-help{margin-top:5px!important}
+        .catalog-order-config .delivery-help summary{font-size:9.5px!important}
+        .catalog-order-config__actions{display:grid;gap:5px;margin-top:9px!important}
+        .catalog-order-config__apply{width:100%;min-height:42px}
+        .catalog-order-config__actions small{display:none!important}
+        .catalog-order-summary{margin-bottom:10px;padding:10px 11px;border-color:rgba(210,161,67,.42);background:linear-gradient(135deg,#fffaf0,#f5ead3);box-shadow:0 7px 20px rgba(133,94,26,.08)}
+        .catalog-order-summary__copy{gap:3px}
+        .catalog-order-summary__copy span{color:#8a6320;font-size:8px}
+        .catalog-order-summary__copy strong{font-size:10.5px;line-height:1.35;color:#27221b}
+        .catalog-order-summary button{min-height:36px;padding:7px 10px;background:#fff8e8}
+        .catalog-color-global{margin-bottom:10px;padding:9px 10px}.catalog-color-global span{font-size:9px}.catalog-color-swatches i{width:15px;height:15px}
+        .catalog-primary-quote{margin:7px 0 9px;padding:9px 10px}.catalog-primary-quote strong{font-size:18px}.catalog-primary-quote small{font-size:9px}
+      }
     `;
     document.head.append(style);
 
@@ -119,7 +155,7 @@
     summary.id = 'catalogOrderSummary';
     summary.className = 'catalog-order-summary';
     summary.hidden = true;
-    summary.innerHTML = `<div class="catalog-order-summary__copy"><span>Ваш расчёт</span><strong></strong></div><button type="button">Изменить</button>`;
+    summary.innerHTML = `<div class="catalog-order-summary__copy"><span>✓ Цены рассчитаны по вашим параметрам</span><strong></strong></div><button type="button">Изменить</button>`;
 
     const colors = document.createElement('div');
     colors.className = 'catalog-color-global';
@@ -336,12 +372,14 @@
       config.scrollIntoView({behavior:'smooth', block:'start'});
     };
 
-    const collapseConfigurator = () => {
+    const collapseConfigurator = ({scroll=true} = {}) => {
       config.hidden = true;
       summary.hidden = false;
       syncAll();
-      const firstCard = grid.querySelector('.product-card');
-      firstCard?.scrollIntoView({behavior:'smooth', block:'start'});
+      if (scroll) {
+        const firstCard = grid.querySelector('.product-card');
+        firstCard?.scrollIntoView({behavior:'smooth', block:'start'});
+      }
     };
 
     postsSegment.addEventListener('click', event => {
@@ -400,6 +438,21 @@
     document.addEventListener('gate:calculated', () => {
       syncAll();
       setTimeout(syncAll, 80);
+    });
+
+    let lastConfirmedDeliveryKey = '';
+    document.addEventListener('delivery:changed', event => {
+      const state = event.detail?.state || {};
+      const kind = String(state.kind || '');
+      syncAll();
+      if (config.hidden || !['fixed','calculated','out-of-area'].includes(kind)) return;
+      const city = String(state.shortName || state.resolvedName || state.name || cityInput?.value || '').trim();
+      const key = `${kind}:${city}`;
+      if (!city || key === lastConfirmedDeliveryKey) return;
+      lastConfirmedDeliveryKey = key;
+      window.setTimeout(() => {
+        if (!config.hidden) collapseConfigurator({scroll:true});
+      }, 120);
     });
 
     const gridObserver = new MutationObserver(records => {
