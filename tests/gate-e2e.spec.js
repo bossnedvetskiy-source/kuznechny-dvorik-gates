@@ -35,11 +35,9 @@ test('catalog is visible immediately and common order parameters sit before it',
   await expect(page.locator('.catalog-color-global')).toContainText('Любой цвет профнастила');
   await expect(page.locator('#catalog')).not.toHaveClass(/location-locked/);
 
-  await page.locator('#applyCatalogParams').click();
-  await expect(configurator).toBeHidden();
-  await expect(page.locator('#catalogOrderSummary')).toBeVisible();
-  await expect(page.locator('#catalogOrderSummary')).toContainText('место не указано');
-  await expect(page.locator('#catalogOrderSummary')).toContainText('на ваши столбы');
+  await expect(page.locator('#applyCatalogParams')).toBeHidden();
+  await expect(configurator).toBeVisible();
+  await expect(page.locator('#catalogOrderSummary')).toBeHidden();
 });
 
 test('mobile customer can choose Meleuz, select gates and submit a lead', async ({page}) => {
@@ -86,9 +84,6 @@ test('common dimensions recalculate visible models and persist between designs',
   expect(firstAfter).toBeGreaterThan(0);
   expect(firstAfter).not.toBe(firstBefore);
 
-  await page.locator('#applyCatalogParams').click();
-  await expect(page.locator('#catalogOrderSummary')).toContainText('3,8');
-
   await cards.nth(1).locator('.select-product').click();
   await expect(page.locator('#calculator')).toBeVisible();
   await expect(page.locator('#widthInput')).toHaveValue('3.8');
@@ -104,8 +99,7 @@ test('new posts are chosen once and included in every catalog quote', async ({pa
   await expect(page.locator('[data-posts-choice="1"]')).toHaveClass(/is-active/);
   await expect.poll(async () => rubles(await firstPrice.textContent())).toBe(before + 25000);
 
-  await page.locator('#applyCatalogParams').click();
-  await expect(page.locator('#catalogOrderSummary')).toContainText('новые столбы');
+  await expect(page.locator('#applyCatalogParams')).toBeHidden();
 });
 
 test('known delivery is included in the single catalog price', async ({page}) => {
