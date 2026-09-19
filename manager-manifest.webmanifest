@@ -1,0 +1,19 @@
+{
+  "name": "Кузнечный Дворик · Менеджер",
+  "short_name": "КД Менеджер",
+  "description": "Заявки с сайта Кузнечного Дворика",
+  "start_url": "/manager",
+  "scope": "/manager",
+  "display": "standalone",
+  "background_color": "#f4f1eb",
+  "theme_color": "#111214",
+  "lang": "ru",
+  "icons": [
+    {
+      "src": "/manager-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
