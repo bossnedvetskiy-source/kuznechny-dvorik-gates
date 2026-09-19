@@ -80,6 +80,8 @@ function kd_delivery_search_places(string $place): array
             'label' => $label,
             'secondary' => $secondary,
             'query' => mb_substr($exactQuery, 0, 100, 'UTF-8'),
+            'lat' => $lat,
+            'lon' => $lon,
             '_distance' => kd_delivery_search_haversine($originLat, $originLon, $lat, $lon),
         ];
     }
