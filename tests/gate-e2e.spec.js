@@ -32,7 +32,9 @@ test('catalog is visible immediately and common order parameters sit before it',
   await expect(firstCard.locator('.catalog-primary-quote')).toBeVisible();
   await expect(firstCard.locator('.price-stack')).toBeHidden();
   await expect(firstCard.locator('.select-product')).toHaveText('Выбрать эту модель');
-  await expect(page.locator('.catalog-color-global')).toContainText('Любой цвет профнастила');
+  await expect(page.locator('.catalog-color-global')).toHaveCount(0);
+  await expect(page.locator('.catalog-section-subtitle')).toContainText('38 моделей');
+  await expect(page.locator('.favorites-open-button:visible')).toHaveCount(0);
   await expect(page.locator('#catalog')).not.toHaveClass(/location-locked/);
 
   await expect(page.locator('#applyCatalogParams')).toBeHidden();
