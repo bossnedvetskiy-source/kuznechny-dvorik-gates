@@ -92,7 +92,15 @@
           .delivery-place-choices__button:active{transform:translateY(1px)}
           .delivery-place-choices__name{font-size:14px;font-weight:800;line-height:1.25}
           .delivery-place-choices__area{font-size:12px;line-height:1.35;color:rgba(255,255,255,.68)}
-          @media(max-width:620px){.delivery-input-help{font-size:11px;line-height:1.45}.delivery-place-choices{padding:10px;gap:8px}.delivery-place-choices__button{min-height:58px;padding:11px 12px}.delivery-place-choices__name{font-size:15px}.delivery-place-choices__area{font-size:12px}}
+          @media(max-width:620px){
+            .delivery-input-help{font-size:9.5px;line-height:1.35}
+            .delivery-place-choices{margin:6px 0 1px;padding:8px;gap:6px;border-radius:11px;background:rgba(12,13,15,.86)}
+            .delivery-place-choices__title{font-size:11px}
+            .delivery-place-choices__hint{font-size:9.5px;margin-top:-1px}
+            .delivery-place-choices__button{min-height:48px;padding:8px 10px;border-radius:10px}
+            .delivery-place-choices__name{font-size:12.5px}
+            .delivery-place-choices__area{font-size:10px}
+          }
         `;
         document.head.append(style);
       }
