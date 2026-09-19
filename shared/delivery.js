@@ -298,6 +298,17 @@
       return true;
     };
 
+    const showSearchFallback = entered => {
+      if (String(input?.value || '').trim() !== entered || state.kind !== 'pending') return;
+      setResult('Не нашли точный вариант в списке. Можно рассчитать маршрут по введённому названию.', 'pending');
+      if (routeButton) {
+        routeButton.hidden = false;
+        routeButton.disabled = false;
+        routeButton.textContent = 'Рассчитать доставку';
+      }
+      emit();
+    };
+
     const searchPlaces = entered => {
       if (!input || entered.length < 2) return;
       const sequence = ++searchSequence;
@@ -307,13 +318,16 @@
         try {
           const choices = await requestPlaceChoices(entered);
           if (sequence !== searchSequence || String(input.value || '').trim() !== entered) return;
-          if (!choices.length) return;
+          if (!choices.length) {
+            showSearchFallback(entered);
+            return;
+          }
 
           const exact = choices.filter(choice => normalize(choice.name) === normalize(entered));
           renderPlaceChoices(entered, exact.length ? exact : choices);
         } catch {
-          // Search suggestions are an enhancement. The normal delivery button
-          // remains available if the lookup service is temporarily unavailable.
+          if (sequence !== searchSequence || String(input?.value || '').trim() !== entered) return;
+          showSearchFallback(entered);
         }
       }, 420);
     };
@@ -330,11 +344,11 @@
       if (entered.length >= 2) {
         state = {kind:'pending', name:entered, resolvedName:'', shortName:'', price:null};
         if (routeButton) {
-          routeButton.hidden = false;
+          routeButton.hidden = true;
           routeButton.disabled = false;
           routeButton.textContent = 'Рассчитать доставку';
         }
-        setResult('Ищем подходящий населённый пункт. Если названий несколько — выберите нужный район.', 'pending');
+        setResult('Ищем населённый пункт. Затем выберите нужный вариант и подтвердите один раз кнопкой «ОК».', 'pending');
         emit();
         searchPlaces(entered);
       } else {
