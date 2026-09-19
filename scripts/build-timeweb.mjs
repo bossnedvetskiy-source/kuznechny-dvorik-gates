@@ -112,6 +112,10 @@ await writeFile(path.join(output, 'index.html'), indexHtml, 'utf8');
 const adminHtml = noindex(await render('/admin'));
 await writeFile(path.join(output, 'admin.html'), adminHtml, 'utf8');
 
+for (const managerFile of ['manager.html','manager-sw.js','manager-manifest.webmanifest','manager-icon.svg']) {
+  await cp(path.join(root, managerFile), path.join(output, managerFile));
+}
+
 const hubHtml = await render('/napravleniya');
 await mkdir(path.join(output, 'napravleniya'), { recursive: true });
 await writeFile(path.join(output, 'napravleniya/index.html'), hubHtml, 'utf8');
@@ -120,6 +124,7 @@ const robotsTxt = [
   'User-agent: *',
   'Allow: /',
   'Disallow: /admin',
+  'Disallow: /manager',
   'Disallow: /api/',
   `Sitemap: ${publicOrigin}/sitemap.xml`,
   ''
