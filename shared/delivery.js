@@ -461,7 +461,12 @@
     chooser?.querySelector('[data-delivery-choice="other"]')?.addEventListener('click', chooseOther);
     changeButton?.addEventListener('click', edit);
     input?.addEventListener('input', updateFromInput);
-    input?.addEventListener('change', updateFromInput);
+    input?.addEventListener('change', () => {
+      // Tapping a search result blurs the input before the result's click fires.
+      // Do not clear the visible choices during that blur/change sequence.
+      if (state.kind === 'choosing' || state.kind === 'place-confirm') return;
+      updateFromInput();
+    });
     routeButton?.addEventListener('click', async () => {
       if (state.kind === 'pending') {
         const entered = String(input?.value || '').trim();
