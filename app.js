@@ -684,7 +684,7 @@ async function setDeliveryPlace(place, options = {}) {
   // in the delivery table. For ambiguous villages the exact district query
   // below is used instead.
   if(cityInput)cityInput.value=lookupName;
-  deliveryController.updateFromInput?.();
+  deliveryController.updateFromInput?.({directKnown:true});
   const immediate=deliveryController.getState?.()||{kind:'empty'};
   if(immediate.kind==='fixed')return immediate;
 
