@@ -69,6 +69,19 @@ const selectInstallationPlace = async page => {
   }, { expectedCity: city, delta: expectedDelivery });
   if (stateAlreadyMatches) return firstCard;
 
+  // This smoke also runs against the static Timeweb bundle where PHP APIs are
+  // intentionally unavailable. Use the public page API to apply a configured
+  // fixed destination; the full settlement search/OK flow is covered by E2E.
+  const appliedByPageApi = await page.evaluate(async expectedCity => {
+    const api = window.GATE_PAGE_API;
+    if (typeof api?.setDeliveryPlace !== 'function') return false;
+    await api.setDeliveryPlace(expectedCity, {label:expectedCity, lookupName:expectedCity});
+    const state = api.deliveryState?.();
+    const selected = String(state?.shortName || state?.resolvedName || state?.name || '');
+    return ['fixed','calculated'].includes(String(state?.kind || '')) && selected.includes(expectedCity);
+  }, city).catch(() => false);
+  if (appliedByPageApi) return firstCard;
+
   const other = page.locator('#deliveryChooser [data-delivery-choice="other"]');
   if (await other.isVisible().catch(() => false)) await other.click();
 
