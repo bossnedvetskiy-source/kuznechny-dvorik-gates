@@ -59,7 +59,9 @@ test('main site requires district selection and OK before delivery is accepted',
   await expect(page.locator('.delivery-place-choices__action').first()).toHaveText('Выбрать →');
   await expect(page.locator('.delivery-place-choices__change')).toHaveCount(0);
   await expect(page.locator('.city-label')).toHaveClass(/is-place-results/);
-  await expect(page.locator('#cityInput')).toBeHidden();
+  await expect(page.locator('#cityInput')).toBeVisible();
+  await expect(page.locator('.delivery-place-choices')).toHaveClass(/is-dropdown/);
+  await expect.poll(async () => page.locator('.delivery-place-choices').evaluate(node => getComputedStyle(node).position)).toBe('absolute');
   await expect(page.locator('#routeButton')).toBeHidden();
 
   await choices.nth(1).click();
@@ -128,7 +130,8 @@ test('main site does not auto-confirm even a single search result', async ({page
   await expect(page.locator('.delivery-place-choices')).toHaveClass(/is-single/);
   await expect(page.locator('.delivery-place-choices__action')).toHaveText('Выбрать →');
   await expect(page.locator('.delivery-place-choices__change')).toHaveCount(0);
-  await expect(page.locator('#cityInput')).toBeHidden();
+  await expect(page.locator('#cityInput')).toBeVisible();
+  await expect(page.locator('.delivery-place-choices')).toHaveClass(/is-dropdown/);
   await expect(page.locator('.delivery-place-choices__title')).toBeHidden();
   await expect(page.locator('.delivery-place-choices__hint')).toBeHidden();
   await expect(page.locator('#deliverySummary')).toBeHidden();
@@ -170,4 +173,48 @@ test('typed fixed city also requires selection and keeps its published tariff', 
   const quote = page.locator('#catalogGrid .product-card').first().locator('.catalog-primary-quote');
   await expect(quote.locator('strong')).toHaveText('69 100 ₽');
   await expect(quote).toContainText(/доставкой в Салават/i);
+});
+
+
+test('typing a Meleuz prefix keeps input visible and prioritizes Meleuz in dropdown', async ({page}) => {
+  await page.route('**/api/delivery-search?place=*', async route => {
+    await route.fulfill({
+      status:200,
+      contentType:'application/json',
+      body:JSON.stringify({
+        query:'меле',
+        choices:[
+          {
+            name:'Мельниково',
+            label:'Мельниково, Чебаркульский муниципальный округ',
+            secondary:'Чебаркульский муниципальный округ, Челябинская область',
+            query:'Мельниково, Челябинская область, Россия'
+          },
+          {
+            name:'Мельничная',
+            label:'Мельничная, Частинский муниципальный округ',
+            secondary:'Частинский муниципальный округ, Пермский край',
+            query:'Мельничная, Пермский край, Россия'
+          }
+        ]
+      })
+    });
+  });
+
+  await page.setViewportSize({width:390,height:844});
+  await page.goto('/', {waitUntil:'domcontentloaded'});
+  await page.locator('#deliveryChooser [data-delivery-choice="other"]').click();
+
+  const input = page.locator('#cityInput');
+  await input.fill('меле');
+
+  const dropdown = page.locator('.delivery-place-choices');
+  await expect(dropdown).toBeVisible({timeout:8000});
+  await expect(dropdown).toHaveClass(/is-dropdown/);
+  await expect(input).toBeVisible();
+  await expect(input).toHaveValue('меле');
+
+  const choices = dropdown.locator('.delivery-place-choices__button');
+  await expect(choices.first()).toContainText('Мелеуз');
+  await expect(choices.nth(1)).toContainText('Мельниково');
 });
