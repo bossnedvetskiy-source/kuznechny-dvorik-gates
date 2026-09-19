@@ -214,11 +214,18 @@
 
     const makeRequestError = (message, technical = false) => Object.assign(new Error(message), {technical});
 
-    const requestDelivery = async (place, expectedInputValue = String(input?.value || '').trim()) => {
+    const requestDelivery = async (place, expectedInputValue = String(input?.value || '').trim(), options = {}) => {
       let lastError = null;
+      const params = new URLSearchParams({place});
+      const lat = Number(options?.lat);
+      const lon = Number(options?.lon);
+      if (Number.isFinite(lat) && Number.isFinite(lon)) {
+        params.set('lat', String(lat));
+        params.set('lon', String(lon));
+      }
       for (let attempt = 0; attempt < 2; attempt += 1) {
         try {
-          const response = await fetch(`/api/delivery?place=${encodeURIComponent(place)}`, {headers:{accept:'application/json'}});
+          const response = await fetch(`/api/delivery?${params.toString()}`, {headers:{accept:'application/json'}});
           const raw = await response.text();
           let payload = null;
           try { payload = raw ? JSON.parse(raw) : null; } catch {}
@@ -401,7 +408,10 @@
             }
 
             try {
-              const payload = await requestDelivery(query, label);
+              const payload = await requestDelivery(query, label, {
+                lat:selectedChoice?.lat,
+                lon:selectedChoice?.lon
+              });
               if (selectionSequence !== searchSequence || state.kind !== 'place-confirm' || normalize(state.name) !== normalize(label)) return;
 
               const shortName = label || payload.shortName || payload.resolvedName || query;
