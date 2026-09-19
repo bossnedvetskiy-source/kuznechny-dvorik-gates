@@ -55,6 +55,8 @@ test('main site requires district selection and OK before delivery is accepted',
   const choices = page.locator('.delivery-place-choices__button');
   await expect(choices).toHaveCount(2, {timeout:8000});
   await expect(page.locator('.delivery-place-choices')).toContainText('район');
+  await expect(page.locator('.delivery-place-choices__action')).toHaveCount(2);
+  await expect(page.locator('.delivery-place-choices__action').first()).toHaveText('Выбрать →');
   await expect(page.locator('#routeButton')).toBeHidden();
 
   await choices.nth(1).click();
@@ -62,6 +64,10 @@ test('main site requires district selection and OK before delivery is accepted',
   await expect(page.locator('#routeButton')).toBeHidden();
   await expect(page.locator('.delivery-place-choices')).toHaveClass(/is-confirming/);
   await expect(page.locator('.delivery-place-choices__button:visible')).toHaveCount(1);
+  await expect(page.locator('.city-label')).toHaveClass(/is-place-confirming/);
+  await expect(page.locator('#cityInput')).toBeHidden();
+  await expect(page.locator('.delivery-place-choices__button.is-selected')).toContainText('Ишеево');
+  await expect(page.locator('.delivery-place-choices__button.is-selected')).toContainText('Ишимбайский район');
   const inlineOk = page.locator('.delivery-place-choices__confirm');
   await expect(inlineOk).toBeVisible();
   await expect(inlineOk).toHaveText('ОК');
@@ -114,6 +120,10 @@ test('main site does not auto-confirm even a single search result', async ({page
   await page.locator('#cityInput').fill('Покровка');
 
   await expect(page.locator('.delivery-place-choices__button')).toHaveCount(1, {timeout:8000});
+  await expect(page.locator('.delivery-place-choices')).toHaveClass(/is-single/);
+  await expect(page.locator('.delivery-place-choices__action')).toHaveText('Выбрать →');
+  await expect(page.locator('.delivery-place-choices__title')).toBeHidden();
+  await expect(page.locator('.delivery-place-choices__hint')).toBeHidden();
   await expect(page.locator('#deliverySummary')).toBeHidden();
   await expect(page.locator('#routeButton')).toBeHidden();
 
