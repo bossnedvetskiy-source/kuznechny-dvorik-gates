@@ -477,7 +477,73 @@
     const catalogProgress = document.getElementById('catalogProgress');
     if (catalogProgress) catalogProgress.setAttribute('aria-live','polite');
 
+    const sharedParams = new URLSearchParams(window.location.search);
+    const sharedMode = sharedParams.get('share') === '1' ||
+      ['city','loc','posts','gw','gh','ww','wh','art'].some(name => sharedParams.has(name));
+
+    const numberParam = (name, fallback, min, max) => {
+      const raw = sharedParams.get(name);
+      if (raw === null || raw === '') return fallback;
+      const value = Number(String(raw).replace(',', '.'));
+      return Number.isFinite(value) && value >= min && value <= max ? value : fallback;
+    };
+
+    const applySharedOrder = async () => {
+      if (!sharedMode) return;
+      const city = String(sharedParams.get('city') || sharedParams.get('loc') || '').trim();
+      if (!city) return;
+
+      const sharedDimensions = {
+        gateWidth:numberParam('gw',3.4,.8,8),
+        gateHeight:numberParam('gh',1.8,1,3),
+        wicketWidth:numberParam('ww',1,.7,2.5),
+        wicketHeight:numberParam('wh',1.8,1,3)
+      };
+      const pairs = [
+        [widthInput,sharedDimensions.gateWidth],
+        [heightInput,sharedDimensions.gateHeight],
+        [wicketWidthInput,sharedDimensions.wicketWidth],
+        [wicketHeightInput,sharedDimensions.wicketHeight]
+      ];
+      pairs.forEach(([input,value]) => {
+        if (!input) return;
+        input.value = String(value);
+        input.dispatchEvent(new Event('input',{bubbles:true}));
+        input.dispatchEvent(new Event('change',{bubbles:true}));
+      });
+
+      const postsValue = String(sharedParams.get('posts') || 'own').trim().toLowerCase();
+      const wantsPosts = ['new','1','yes','true','новые'].includes(postsValue);
+      if (postsCheck) {
+        postsCheck.checked = wantsPosts;
+        postsCheck.dispatchEvent(new Event('change',{bubbles:true}));
+      }
+
+      config.hidden = true;
+      summary.hidden = false;
+      const summaryStrong = summary.querySelector('strong');
+      if (summaryStrong) summaryStrong.textContent = `Считаем актуальные цены · ${city}`;
+      syncAll();
+
+      try {
+        await api.setDeliveryPlace?.(city);
+      } catch {
+        // Delivery controller already exposes a safe manual state on failure.
+      }
+
+      syncAll();
+      config.hidden = true;
+      summary.hidden = false;
+
+      const article = String(sharedParams.get('art') || '').trim();
+      window.setTimeout(() => {
+        if (article && api.showProductByArticle?.(article)) return;
+        grid.scrollIntoView({behavior:'smooth',block:'start'});
+      }, 140);
+    };
+
     syncAll();
+    applySharedOrder();
     return true;
   }
 
