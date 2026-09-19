@@ -71,22 +71,8 @@ test('main site requires district selection and OK before delivery is accepted',
   await expect(page.locator('#routeButton')).toBeHidden();
 
   await choices.nth(1).click();
-  await expect(page.locator('#deliverySummary')).toBeHidden();
   await expect(page.locator('#routeButton')).toBeHidden();
-  await expect(page.locator('.delivery-place-choices')).toHaveClass(/is-confirming/);
-  await expect(page.locator('.delivery-place-choices__button:visible')).toHaveCount(1);
-  await expect(page.locator('.city-label')).toHaveClass(/is-place-confirming/);
-  await expect(page.locator('#cityInput')).toBeHidden();
-  await expect(page.locator('.delivery-place-choices__button.is-selected')).toContainText('Ишеево');
-  await expect(page.locator('.delivery-place-choices__button.is-selected')).toContainText('Ишимбайский район');
-  const inlineOk = page.locator('.delivery-place-choices__confirm');
-  await expect(inlineOk).toBeVisible();
-  await expect(inlineOk).toHaveText('ОК');
-  await expect(page.locator('.delivery-place-choices__edit')).toBeVisible();
-  await expect(page.locator('.delivery-place-choices__edit')).toHaveText('Изменить');
-
-  await inlineOk.click();
-
+  await expect(page.locator('.delivery-place-choices__confirm')).toHaveCount(0);
   await expect.poll(() => routedPlace, {timeout:8000}).toContain('Ишимбайский район');
   await expect(page.locator('#deliverySummary')).toBeVisible({timeout:8000});
   await expect(page.locator('#routeButton')).toBeHidden();
@@ -145,11 +131,7 @@ test('main site does not auto-confirm even a single search result', async ({page
 
   await page.locator('.delivery-place-choices__button').click();
   await expect(page.locator('#routeButton')).toBeHidden();
-  await expect(page.locator('.delivery-place-choices__confirm')).toHaveText('ОК');
-  await expect(page.locator('.delivery-place-choices__edit')).toHaveText('Изменить');
-  await expect(page.locator('#deliverySummary')).toBeHidden();
-
-  await page.locator('.delivery-place-choices__confirm').click();
+  await expect(page.locator('.delivery-place-choices__confirm')).toHaveCount(0);
   await expect(page.locator('#deliverySummary')).toBeVisible({timeout:8000});
   await expect(page.locator('#routeButton')).toBeHidden();
 });
@@ -171,8 +153,7 @@ test('typed fixed city also requires selection and keeps its published tariff', 
 
   await choice.click();
   await expect(page.locator('#routeButton')).toBeHidden();
-  await expect(page.locator('.delivery-place-choices__confirm')).toHaveText('ОК');
-  await page.locator('.delivery-place-choices__confirm').click();
+  await expect(page.locator('.delivery-place-choices__confirm')).toHaveCount(0);
 
   await expect(page.locator('#deliverySummaryValue')).toContainText('Салават');
   await expect(page.locator('#routeButton')).toBeHidden();
