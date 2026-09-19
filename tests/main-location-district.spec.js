@@ -68,6 +68,14 @@ test('main site requires district selection and OK before delivery is accepted',
   await expect.poll(() => routedPlace, {timeout:8000}).toContain('Ишимбайский район');
   await expect(page.locator('#deliverySummary')).toBeVisible({timeout:8000});
   await expect(page.locator('#routeButton')).toBeHidden();
+  await expect(page.locator('#catalogOrderConfigurator')).toBeHidden({timeout:5000});
+  await expect(page.locator('#catalogOrderSummary')).toBeVisible();
+  await expect(page.locator('#catalogOrderSummary')).toContainText('Цены рассчитаны по вашим параметрам');
+  await expect(page.locator('#catalogOrderSummary')).toContainText('Ишеево, Ишимбайский район');
+
+  await page.locator('#catalogOrderSummary button').click();
+  await expect(page.locator('#catalogOrderConfigurator')).toBeVisible();
+  await expect(page.locator('#catalogOrderSummary')).toBeHidden();
   await expect(page.locator('#deliverySummaryValue')).toContainText('Ишеево, Ишимбайский район');
 });
 
