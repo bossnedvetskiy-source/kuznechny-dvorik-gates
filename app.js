@@ -166,12 +166,12 @@ function syncCatalogControls() {
   const shown = Math.min(visibleCount,catalogProducts.length);
   catalogCount.textContent = `${catalogProducts.length} ${pluralModels(catalogProducts.length)}`;
   emptyState.hidden = catalogProducts.length > 0;
-  catalogMore.hidden = catalogProducts.length === 0;
   const remaining = Math.max(0,catalogProducts.length-shown);
   const nextCount = Math.min(pageSize(),remaining);
-  catalogProgress.textContent = `Показано ${shown} из ${catalogProducts.length}`;
-  showMoreButton.hidden = shown >= catalogProducts.length;
-  showMoreButton.textContent = nextCount ? `Показать ещё ${nextCount} ${pluralModels(nextCount)}` : '';
+  catalogMore.hidden = catalogProducts.length === 0 || remaining === 0;
+  catalogProgress.textContent = remaining ? `Ещё ${remaining} ${pluralModels(remaining)} в каталоге` : '';
+  showMoreButton.hidden = remaining === 0;
+  showMoreButton.textContent = nextCount ? `Показать ещё ${nextCount} ${pluralModels(nextCount)} ↓` : '';
 }
 
 function restoreOpenCalculator(openProductId) {
