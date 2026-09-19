@@ -92,7 +92,7 @@
           .calc-form .city-label.is-visible.is-place-confirming{display:none!important}
           .delivery-input-help{display:block;color:rgba(255,255,255,.58);font-size:10px;line-height:1.45;margin-top:-1px}
           .delivery-place-choices{display:grid;gap:8px;margin:8px 0 2px;padding:12px;border:1px solid rgba(212,175,55,.42);border-radius:14px;background:rgba(16,16,16,.98)}
-          .delivery-place-choices.is-dropdown{position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:80;max-height:min(52vh,340px);overflow-y:auto;overscroll-behavior:contain;box-shadow:0 18px 38px rgba(0,0,0,.34)}
+          .delivery-place-choices.is-dropdown{position:static;max-height:196px;overflow-y:auto;overscroll-behavior:contain;box-shadow:none;border-color:rgba(255,255,255,.13);background:rgba(14,15,17,.96)}
           .delivery-place-choices[hidden]{display:none!important}
           .delivery-place-choices__title{font-size:14px;font-weight:800;line-height:1.25;color:#fff}
           .delivery-place-choices__hint{font-size:12px;line-height:1.35;color:rgba(255,255,255,.68);margin-top:-3px}
@@ -115,7 +115,7 @@
           @media(max-width:620px){
             .delivery-input-help{font-size:9.5px;line-height:1.35}
             .delivery-place-choices{margin:6px 0 1px;padding:8px;gap:6px;border-radius:11px;background:rgba(12,13,15,.98)}
-            .delivery-place-choices.is-dropdown{top:calc(100% + 4px);max-height:min(46vh,300px);box-shadow:0 16px 34px rgba(0,0,0,.38)}
+            .delivery-place-choices.is-dropdown{position:static;max-height:184px;box-shadow:none}
             .delivery-place-choices__title{font-size:11px}
             .delivery-place-choices__hint{font-size:9.5px;margin-top:-1px}
             .delivery-place-choices__button{min-height:46px;padding:7px 9px;border-radius:9px;column-gap:8px}
@@ -305,13 +305,13 @@
 
       const title = document.createElement('div');
       title.className = 'delivery-place-choices__title';
-      title.textContent = sameName ? 'Нашли несколько населённых пунктов' : 'Выберите населённый пункт';
+      title.textContent = sameName ? 'Выберите район' : 'Выберите населённый пункт';
       placeChoices.append(title);
 
       const hint = document.createElement('div');
       hint.className = 'delivery-place-choices__hint';
-      hint.textContent = sameName ? 'Выберите нужный район:' : 'Нажмите на подходящий вариант:';
-      placeChoices.append(hint);
+      hint.textContent = sameName ? '' : 'Нажмите на подходящий вариант:';
+      if (hint.textContent) placeChoices.append(hint);
 
       choices.forEach(choice => {
         const button = document.createElement('button');
