@@ -109,17 +109,17 @@
         .catalog-order-config h3{font:15px/1.15 Manrope,Arial,sans-serif;font-weight:900}
         .catalog-order-config__head p{display:none!important}
         .catalog-order-config__fields.calc-form{gap:0!important}
-        .catalog-order-config .form-block{padding:8px 0!important;border:0!important;border-bottom:1px solid rgba(255,255,255,.09)!important;border-radius:0!important;background:transparent!important}
-        .catalog-order-config .form-block:first-child{padding-top:5px!important}
-        .catalog-order-config .form-block:last-child{padding-bottom:3px!important;border-bottom:0!important}
-        .catalog-order-config .step-label{margin-bottom:5px!important;font-size:8.5px!important}
+        .catalog-order-config .form-block{padding:6px 0!important;border:0!important;border-bottom:1px solid rgba(255,255,255,.09)!important;border-radius:0!important;background:transparent!important}
+        .catalog-order-config .form-block:first-child{padding-top:4px!important}
+        .catalog-order-config .form-block:last-child{padding-bottom:2px!important;border-bottom:0!important}
+        .catalog-order-config .step-label{margin-bottom:4px!important;font-size:8.5px!important}
         .catalog-order-config .mobile-size-summary{margin-bottom:0!important;padding:7px 8px!important;border-radius:9px!important}
         .catalog-order-config .mobile-size-summary small{display:none!important}
         .catalog-order-config .mobile-size-summary strong{font-size:11.5px!important;line-height:1.25!important}
         .catalog-order-config .mobile-size-summary button{min-height:30px!important;padding:0 9px!important;font-size:9px!important}
         .catalog-order-config .dimension-help{display:none!important}
         .catalog-posts-choice{gap:5px}
-        .catalog-posts-choice button{display:flex;align-items:center;min-height:42px;padding:7px 9px}
+        .catalog-posts-choice button{display:flex;align-items:center;min-height:39px;padding:6px 9px}
         .catalog-posts-choice button b{font-size:10.5px}
         .catalog-posts-choice button small{display:none!important}
         .catalog-order-config .posts-reassurance{display:none!important}
