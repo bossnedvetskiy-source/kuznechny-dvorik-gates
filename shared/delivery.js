@@ -89,6 +89,9 @@
           .delivery-place-choices__button{display:grid;width:100%;gap:3px;text-align:left;padding:12px 13px;border:1px solid rgba(255,255,255,.16);border-radius:12px;background:rgba(255,255,255,.055);color:#fff;cursor:pointer;touch-action:manipulation}
           .delivery-place-choices__button:hover,.delivery-place-choices__button:focus-visible{border-color:rgba(212,175,55,.8);background:rgba(212,175,55,.10);outline:none}
           .delivery-place-choices__button.is-selected{border-color:#d4af37;background:rgba(212,175,55,.16);box-shadow:inset 0 0 0 1px rgba(212,175,55,.18)}
+          .delivery-place-choices.is-confirming{grid-template-columns:minmax(0,1fr) auto;align-items:stretch}
+          .delivery-place-choices.is-confirming .delivery-place-choices__title,.delivery-place-choices.is-confirming .delivery-place-choices__hint,.delivery-place-choices.is-confirming .delivery-place-choices__button:not(.is-selected){display:none!important}
+          .delivery-place-choices__confirm{min-width:68px;border:0;border-radius:11px;background:#d2a143;color:#17130d;font-size:13px;font-weight:900;cursor:pointer}
           .delivery-place-choices__button:active{transform:translateY(1px)}
           .delivery-place-choices__name{font-size:14px;font-weight:800;line-height:1.25}
           .delivery-place-choices__area{font-size:12px;line-height:1.35;color:rgba(255,255,255,.68)}
@@ -97,9 +100,12 @@
             .delivery-place-choices{margin:6px 0 1px;padding:8px;gap:6px;border-radius:11px;background:rgba(12,13,15,.86)}
             .delivery-place-choices__title{font-size:11px}
             .delivery-place-choices__hint{font-size:9.5px;margin-top:-1px}
-            .delivery-place-choices__button{min-height:48px;padding:8px 10px;border-radius:10px}
-            .delivery-place-choices__name{font-size:12.5px}
-            .delivery-place-choices__area{font-size:10px}
+            .delivery-place-choices__button{min-height:46px;padding:7px 9px;border-radius:9px}
+            .delivery-place-choices__name{font-size:12px}
+            .delivery-place-choices__area{font-size:9.5px}
+            .delivery-place-choices.is-confirming{padding:6px;gap:6px}
+            .delivery-place-choices.is-confirming .delivery-place-choices__button.is-selected{min-height:44px;padding:6px 8px}
+            .delivery-place-choices__confirm{min-width:62px;border-radius:9px;font-size:12px}
           }
         `;
         document.head.append(style);
@@ -123,6 +129,8 @@
     const clearPlaceChoices = () => {
       if (!placeChoices) return;
       placeChoices.hidden = true;
+      placeChoices.classList.remove('is-confirming');
+      placeChoices.classList.remove('is-confirming');
       placeChoices.replaceChildren();
     };
 
@@ -173,8 +181,8 @@
             : `${city} · доставка учтена`;
       }
       input?.closest('.city-label')?.classList.toggle('is-visible', editingOther && !selected);
-      if (result) result.hidden = selected || state.kind === 'empty' || choosing;
-      if (routeButton) routeButton.hidden = selected || state.kind === 'empty' || choosing;
+      if (result) result.hidden = selected || state.kind === 'empty' || choosing || confirmingPlace;
+      if (routeButton) routeButton.hidden = selected || state.kind === 'empty' || choosing || confirmingPlace;
       if (placeChoices && !choosing && !confirmingPlace) placeChoices.hidden = true;
     };
 
@@ -285,10 +293,19 @@
           };
           if (input) input.value = label;
           placeChoices.querySelectorAll('.delivery-place-choices__button').forEach(item => item.classList.toggle('is-selected', item === button));
+          placeChoices.classList.add('is-confirming');
+          placeChoices.querySelector('.delivery-place-choices__confirm')?.remove();
+          const confirmButton = document.createElement('button');
+          confirmButton.type = 'button';
+          confirmButton.className = 'delivery-place-choices__confirm';
+          confirmButton.textContent = 'ОК';
+          confirmButton.setAttribute('aria-label', `Подтвердить ${label}`);
+          confirmButton.addEventListener('click', () => calculateRoute());
+          placeChoices.append(confirmButton);
           state = {kind:'place-confirm', name:label, resolvedName:label, shortName:label, price:null};
-          setResult(`Выбрано: ${label}. Проверьте район и нажмите «ОК».`, 'pending');
+          setResult('', 'pending');
           if (routeButton) {
-            routeButton.hidden = false;
+            routeButton.hidden = true;
             routeButton.disabled = false;
             routeButton.textContent = 'ОК';
           }
