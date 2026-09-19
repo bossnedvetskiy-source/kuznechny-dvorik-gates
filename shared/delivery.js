@@ -253,7 +253,12 @@
       const remoteChoices = Array.isArray(payload?.choices) ? payload.choices : [];
 
       const queryKey = normalize(place);
-      const originName = String(data.origin || 'Мелеуз').trim();
+      const rawOrigin = data.origin;
+      const originName = String(
+        rawOrigin && typeof rawOrigin === 'object'
+          ? rawOrigin.name || 'Мелеуз'
+          : rawOrigin || 'Мелеуз'
+      ).trim();
       const originKey = normalize(originName);
       const localChoices = [];
       if (queryKey && originKey.startsWith(queryKey)) {
