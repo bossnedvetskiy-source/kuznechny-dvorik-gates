@@ -61,7 +61,13 @@ test('main site requires district selection and OK before delivery is accepted',
   await expect(page.locator('.city-label')).toHaveClass(/is-place-results/);
   await expect(page.locator('#cityInput')).toBeVisible();
   await expect(page.locator('.delivery-place-choices')).toHaveClass(/is-dropdown/);
-  await expect.poll(async () => page.locator('.delivery-place-choices').evaluate(node => getComputedStyle(node).position)).toBe('absolute');
+  await expect.poll(async () => page.locator('.delivery-place-choices').evaluate(node => getComputedStyle(node).position)).toBe('static');
+  await expect.poll(async () => page.evaluate(() => {
+    const dropdown = document.querySelector('.delivery-place-choices');
+    const config = document.getElementById('catalogOrderConfigurator');
+    if (!dropdown || !config) return false;
+    return dropdown.getBoundingClientRect().bottom <= config.getBoundingClientRect().bottom + 1;
+  })).toBe(true);
   await expect(page.locator('#routeButton')).toBeHidden();
 
   await choices.nth(1).click();
