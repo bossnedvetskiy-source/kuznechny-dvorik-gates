@@ -269,7 +269,12 @@
           searchSequence += 1;
           if (searchTimer) clearTimeout(searchTimer);
           searchTimer = null;
-          pendingPlaceChoice = {...choice, label, query};
+          const sameLocalityCount = choices.filter(item => normalize(item.name) === normalize(choice.name)).length;
+          const knownDestination = byKey.get(normalize(choice.name));
+          pendingPlaceChoice = {
+            ...choice, label, query,
+            fixedName: knownDestination && sameLocalityCount === 1 ? String(knownDestination.name || choice.name || '').trim() : ''
+          };
           if (input) input.value = label;
           placeChoices.querySelectorAll('.delivery-place-choices__button').forEach(item => item.classList.toggle('is-selected', item === button));
           state = {kind:'place-confirm', name:label, resolvedName:label, shortName:label, price:null};
@@ -313,11 +318,12 @@
       }, 420);
     };
 
-    const updateFromInput = () => {
+    const updateFromInput = (options = {}) => {
       const entered = String(input?.value || '').trim();
       cancelPlaceSearch();
       const known = byKey.get(normalize(entered));
-      if (known) {
+      const directKnown = options?.directKnown === true;
+      if (known && (directKnown || normalize(entered) === normalize('Мелеуз'))) {
         resolveFixed(known);
         return;
       }
@@ -356,6 +362,13 @@
         const query = String(choice.query || label).trim();
         pendingPlaceChoice = null;
         clearPlaceChoices();
+        if (choice.fixedName) {
+          const known = byKey.get(normalize(choice.fixedName));
+          if (known) {
+            resolveFixed(known);
+            return;
+          }
+        }
         if (input) input.value = label;
         return calculateRoute(query, {preferredLabel:label, skipConfirm:true});
       }
