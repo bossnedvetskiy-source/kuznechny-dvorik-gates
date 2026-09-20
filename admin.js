@@ -167,10 +167,11 @@ function render() {
   previewPhotoBadge.textContent = 'Обложка';
   coverPreview.src = coverUrl;
   coverPreview.alt = `Обложка ворот ${activeArticle}`;
-  coverPreview.style.width = 'auto';
+  // Use the image's own aspect ratio. With height:auto there is no viewport to crop against.
+  coverPreview.style.width = '100%';
   coverPreview.style.height = 'auto';
   coverPreview.style.maxWidth = '100%';
-  coverPreview.style.maxHeight = '520px';
+  coverPreview.style.maxHeight = 'none';
   coverPreview.style.objectPosition = 'center';
   coverPreview.style.objectFit = 'contain';
   coverPreview.style.transformOrigin = 'center';
