@@ -191,3 +191,48 @@
   }
   .package-note b{display:block;margin-bottom:2px}
 }
+
+
+/* Mobile measurement CTA inside calculation card 2026-09-20 */
+@media(max-width:620px){
+  /* В расчёте CTA находится рядом с итоговой ценой, а не отдельно у края экрана. */
+  .calculator-open .mobile-cta{display:none!important}
+  body.calculator-open{padding-bottom:18px!important}
+
+  .mobile-measure-button{
+    display:flex;
+    width:100%;
+    min-height:52px;
+    align-items:center;
+    justify-content:center;
+    margin:12px 0 0;
+    padding:12px 15px;
+    border:0;
+    border-radius:12px;
+    background:linear-gradient(135deg,var(--gold-light),var(--gold));
+    color:#17120b;
+    box-shadow:0 8px 20px rgba(200,152,60,.18);
+    font:900 13px/1.25 Manrope,Arial,sans-serif;
+    text-align:center;
+    cursor:pointer;
+  }
+  .mobile-measure-button:active{transform:translateY(1px)}
+
+  /* После нажатия форма открывается как отдельная карточка и имеет собственную кнопку отправки. */
+  .estimate-card{
+    bottom:10px!important;
+    max-height:calc(100dvh - 20px)!important;
+  }
+  .mobile-lead-open .estimate-card>#sendButton{
+    display:flex!important;
+    width:100%!important;
+    min-height:50px!important;
+    margin:12px 0 0!important;
+    border-radius:12px!important;
+    font-size:13px!important;
+    font-weight:900!important;
+  }
+}
+@media(min-width:621px){
+  .mobile-measure-button{display:none!important}
+}
