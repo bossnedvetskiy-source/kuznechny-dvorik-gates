@@ -34,6 +34,10 @@ try {
         kd_json(kd_delivery_quote((string)($_GET['place'] ?? '')));
     }
 
+    if ($route === 'share-link' && $method === 'GET') {
+        kd_public_share_link((string)($_GET['code'] ?? ''));
+    }
+
     if ($route === 'leads') {
         if ($method !== 'POST') kd_json(['error' => 'Метод не поддерживается'], 405);
         kd_require_same_origin();
@@ -249,6 +253,51 @@ function kd_nullable_number(mixed $value): ?float
     return $number === false ? null : (float)$number;
 }
 
+function kd_share_link_payload(array $body): array
+{
+    $city = preg_replace('/\s+/u', ' ', trim((string)($body['city'] ?? ''))) ?? '';
+    if ($city === '' || mb_strlen($city, 'UTF-8') > 160) kd_json(['error' => 'Не указан населённый пункт'], 400);
+
+    $payload = [
+        'city' => mb_substr($city, 0, 160),
+        'name' => mb_substr(trim((string)($body['name'] ?? $city)), 0, 120),
+        'place' => mb_substr(trim((string)($body['place'] ?? $city)), 0, 220),
+        'posts' => ((string)($body['posts'] ?? 'own')) === 'new' ? 'new' : 'own',
+    ];
+
+    foreach ([['gw',.8,8],['gh',1,3],['ww',.7,2.5],['wh',1,3]] as [$key,$min,$max]) {
+        if (!array_key_exists($key, $body) || $body[$key] === '' || $body[$key] === null) continue;
+        $value = filter_var($body[$key], FILTER_VALIDATE_FLOAT);
+        if ($value === false || $value < $min || $value > $max) kd_json(['error' => 'Некорректные размеры в ссылке'], 400);
+        $payload[$key] = (float)$value;
+    }
+
+    $art = trim((string)($body['art'] ?? ''));
+    if ($art !== '') $payload['art'] = mb_substr(preg_replace('/^арт\.?\s*/iu', '', $art) ?? $art, 0, 20);
+    return $payload;
+}
+
+function kd_admin_share_link_create(): never
+{
+    $body = kd_json_body(16384);
+    $payload = kd_share_link_payload($body);
+    $canonical = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    if ($canonical === false) throw new RuntimeException('Не удалось подготовить короткую ссылку');
+    $code = substr(hash('sha256', $canonical), 0, 12);
+    kd_setting_set('client_share_' . $code, ['payload' => $payload, 'createdAt' => gmdate('c')], 'admin-share');
+    kd_json(['ok' => true, 'code' => $code, 'url' => kd_current_origin() . '/?s=' . $code], 201);
+}
+
+function kd_public_share_link(string $code): never
+{
+    $code = strtolower(trim($code));
+    if (!preg_match('/^[a-f0-9]{12}$/', $code)) kd_json(['error' => 'Ссылка некорректна'], 400);
+    $stored = kd_setting_get('client_share_' . $code, null);
+    $payload = is_array($stored) && is_array($stored['payload'] ?? null) ? $stored['payload'] : null;
+    if (!$payload) kd_json(['error' => 'Ссылка не найдена'], 404);
+    kd_json(['ok' => true, 'payload' => $payload]);
+}
+
 function kd_handle_admin(string $route, string $method): never
 {
     if ($route === 'admin/site-settings') {
@@ -319,6 +368,8 @@ function kd_handle_admin(string $route, string $method): never
 
     if ($route === 'admin/history' && $method === 'GET') kd_admin_history();
     if ($route === 'admin/history/restore' && $method === 'POST') kd_admin_history_restore();
+
+    if ($route === 'admin/share-link' && $method === 'POST') kd_admin_share_link_create();
 
     if ($route === 'admin/gate-excel') kd_admin_gate_excel($method);
     if ($route === 'admin/gate-excel/file') kd_admin_gate_excel_file($method);
