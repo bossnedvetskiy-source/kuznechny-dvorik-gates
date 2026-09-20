@@ -236,3 +236,20 @@
 @media(min-width:621px){
   .mobile-measure-button{display:none!important}
 }
+
+
+/* Seamless automatic catalog loading 2026-09-20 */
+.catalog-more.is-auto-loader{
+  display:block!important;
+  width:100%!important;
+  min-height:2px!important;
+  margin:0!important;
+  padding:0!important;
+  border:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+.catalog-more.is-auto-loader>span,
+.catalog-more.is-auto-loader>.show-more{
+  display:none!important;
+}
