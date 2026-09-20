@@ -167,8 +167,10 @@ function render() {
   previewPhotoBadge.textContent = 'Обложка';
   coverPreview.src = coverUrl;
   coverPreview.alt = `Обложка ворот ${activeArticle}`;
-  coverPreview.style.width = '100%';
-  coverPreview.style.height = '100%';
+  coverPreview.style.width = 'auto';
+  coverPreview.style.height = 'auto';
+  coverPreview.style.maxWidth = '100%';
+  coverPreview.style.maxHeight = '520px';
   coverPreview.style.objectPosition = 'center';
   coverPreview.style.objectFit = 'contain';
   coverPreview.style.transformOrigin = 'center';
