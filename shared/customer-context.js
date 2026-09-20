@@ -551,8 +551,27 @@
     if (catalogProgress) catalogProgress.setAttribute('aria-live','polite');
 
     const sharedParams = new URLSearchParams(window.location.search);
-    const sharedMode = sharedParams.get('share') === '1' ||
+    const shortShareCode = String(sharedParams.get('s') || '').trim().toLowerCase();
+    const sharedMode = Boolean(shortShareCode) || sharedParams.get('share') === '1' ||
       ['city','loc','place','name','posts','gw','gh','ww','wh','art'].some(name => sharedParams.has(name));
+
+    const resolveShortShare = async () => {
+      if (!shortShareCode) return true;
+      try {
+        const response = await fetch(`/api/share-link?code=${encodeURIComponent(shortShareCode)}`, {cache:'no-store', headers:{accept:'application/json'}});
+        const data = await response.json().catch(() => null);
+        if (!response.ok || !data?.payload) throw new Error(data?.error || 'Короткая ссылка не найдена');
+        for (const key of ['city','name','place','posts','gw','gh','ww','wh','art']) {
+          const value = data.payload[key];
+          if (value !== undefined && value !== null && String(value) !== '') sharedParams.set(key,String(value));
+        }
+        sharedParams.set('share','1');
+        return true;
+      } catch (error) {
+        console.error('Short share link failed', error);
+        return false;
+      }
+    };
 
     const numberParam = (name, fallback, min, max) => {
       const raw = sharedParams.get(name);
@@ -618,7 +637,7 @@
     };
 
     syncAll();
-    applySharedOrder();
+    resolveShortShare().then(ok => { if (ok) applySharedOrder(); });
     return true;
   }
 
