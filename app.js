@@ -169,8 +169,13 @@ function syncCatalogControls() {
   const remaining = Math.max(0,catalogProducts.length-shown);
   const nextCount = Math.min(pageSize(),remaining);
   catalogMore.hidden = catalogProducts.length === 0 || remaining === 0;
-  catalogProgress.textContent = remaining ? `Ещё ${remaining} ${pluralModels(remaining)} в каталоге` : '';
-  showMoreButton.hidden = remaining === 0;
+  catalogProgress.textContent = remaining ? `Загружаем ещё ${nextCount} ${pluralModels(nextCount)}…` : '';
+
+  // Modern browsers load the next catalog page automatically as the visitor approaches the end.
+  // The old button remains only as a graceful fallback for browsers without IntersectionObserver.
+  const automatic = 'IntersectionObserver' in window;
+  showMoreButton.hidden = automatic || remaining === 0;
+  showMoreButton.setAttribute('aria-hidden', automatic ? 'true' : 'false');
   showMoreButton.textContent = nextCount ? `Показать ещё ${nextCount} ${pluralModels(nextCount)} ↓` : '';
 }
 
@@ -283,12 +288,34 @@ function syncProductCardMedia(product) {
   rebuildDesktopThumbnails(card,product);
 }
 
-showMoreButton.addEventListener('click',()=>{
-  const previousVisible=Math.min(visibleCount,catalogProducts.length);
-  visibleCount=Math.min(catalogProducts.length,visibleCount+pageSize());
-  reachGoal('catalog_show_more',{visible:visibleCount,total:catalogProducts.length});
+let catalogAutoLoading = false;
+
+function loadNextCatalogPage(source='auto') {
+  if (catalogAutoLoading || visibleCount >= catalogProducts.length) return;
+  catalogAutoLoading = true;
+  const previousVisible = Math.min(visibleCount,catalogProducts.length);
+  visibleCount = Math.min(catalogProducts.length,visibleCount + pageSize());
   appendProducts(previousVisible,visibleCount);
-});
+  reachGoal(source === 'auto' ? 'catalog_auto_load' : 'catalog_show_more',{visible:visibleCount,total:catalogProducts.length});
+  requestAnimationFrame(() => { catalogAutoLoading = false; });
+}
+
+showMoreButton.addEventListener('click',()=>loadNextCatalogPage('button'));
+
+let catalogAutoObserver = null;
+if ('IntersectionObserver' in window) {
+  catalogMore.classList.add('is-auto-loader');
+  catalogAutoObserver = new IntersectionObserver(entries => {
+    if (!entries.some(entry => entry.isIntersecting)) return;
+    loadNextCatalogPage('auto');
+  }, {
+    root:null,
+    // Start loading before the visitor reaches the final visible row so scrolling stays seamless.
+    rootMargin:'700px 0px 700px 0px',
+    threshold:0
+  });
+  catalogAutoObserver.observe(catalogMore);
+}
 mobileCatalogMedia.addEventListener('change',()=>{
   const previousVisible=Math.min(visibleCount,catalogProducts.length);
   visibleCount=Math.min(catalogProducts.length,Math.max(visibleCount,pageSize()));
