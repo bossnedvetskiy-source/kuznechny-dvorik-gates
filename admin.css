@@ -11,3 +11,9 @@
 
 /* Фотографии в редакторе всегда показываются целиком, без обрезки и искажения. */
 .card-preview img,.photo-thumb img{object-fit:contain!important;object-position:center!important;transform:none!important}
+
+/* В фоторедакторе изображения должны быть видны целиком, а панель сохранения не должна перекрывать нижний ряд. */
+#photosTab .photo-item{grid-template-rows:auto minmax(48px,auto)}
+#photosTab .photo-thumb{height:auto;aspect-ratio:13/8}
+#photosTab > .action-bar{position:static;bottom:auto;z-index:1}
+#photosTab{padding-bottom:24px}
