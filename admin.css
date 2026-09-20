@@ -17,3 +17,13 @@
 #photosTab .photo-thumb{height:auto;aspect-ratio:13/8}
 #photosTab > .action-bar{position:static;bottom:auto;z-index:1}
 #photosTab{padding-bottom:24px}
+
+/* Компактная галерея на широком экране: миниатюры для порядка, крупный просмотр слева. */
+@media(min-width:1101px){
+  #photosTab .photo-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+  #photosTab .photo-item{grid-template-rows:88px 38px;border-radius:11px}
+  #photosTab .photo-thumb{height:88px;aspect-ratio:auto}
+  #photosTab .photo-actions{grid-template-columns:minmax(0,1fr) 30px 30px 30px;gap:3px;min-height:38px;padding:3px}
+  #photosTab .photo-actions button{min-height:30px;padding:0 4px;font-size:8.5px}
+  #photosTab .photo-number{left:6px;top:6px;padding:4px 6px;font-size:8px}
+}
