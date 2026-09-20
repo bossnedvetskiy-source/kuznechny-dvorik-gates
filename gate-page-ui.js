@@ -116,6 +116,7 @@
   const leadBackdrop = document.getElementById('leadBackdrop');
   const leadClose = document.getElementById('leadSheetClose');
   const sendButton = document.getElementById('sendButton');
+  const mobileMeasureButton = document.getElementById('mobileMeasureButton');
   const mobilePriceTotal = document.getElementById('mobilePriceTotal');
   const mobilePriceNote = document.getElementById('mobilePriceNote');
   const estimateNote = document.getElementById('estimateNote');
@@ -252,13 +253,19 @@
   });
 
   function syncMobileCta() {
-    if (!cta) return;
     const price = mobilePriceTotal?.textContent?.trim() || '';
-    if (!calculator || calculator.hidden) cta.textContent = 'Выбрать ворота';
-    else if (leadOpen) cta.textContent = `Отправить заявку${price ? ` · ${price}` : ''}`;
-    else if (!dimensionsValid) cta.textContent = `Проверьте размеры${price ? ` · ${price}` : ''}`;
-    else if (!deliveryCanProceed) cta.textContent = `Указать место установки${price ? ` · ${price}` : ''}`;
-    else cta.textContent = `Заказать бесплатный замер${price ? ` · расчёт ${price}` : ''}`;
+    if (cta) {
+      if (!calculator || calculator.hidden) cta.textContent = 'Выбрать ворота';
+      else if (leadOpen) cta.textContent = `Отправить заявку${price ? ` · ${price}` : ''}`;
+      else if (!dimensionsValid) cta.textContent = `Проверьте размеры${price ? ` · ${price}` : ''}`;
+      else if (!deliveryCanProceed) cta.textContent = `Указать место установки${price ? ` · ${price}` : ''}`;
+      else cta.textContent = `Заказать бесплатный замер${price ? ` · расчёт ${price}` : ''}`;
+    }
+    if (mobileMeasureButton) {
+      if (!dimensionsValid) mobileMeasureButton.textContent = 'Проверьте размеры';
+      else if (!deliveryCanProceed) mobileMeasureButton.textContent = 'Указать место установки';
+      else mobileMeasureButton.textContent = price ? `Заказать бесплатный замер · ${price}` : 'Заказать бесплатный замер';
+    }
   }
 
   function openLead() {
@@ -282,9 +289,9 @@
   leadBackdrop?.addEventListener('click', closeLead);
   leadClose?.addEventListener('click', closeLead);
 
-  cta?.addEventListener('click', event => {
+  const handleMeasureAction = event => {
     if (!mobile.matches) return;
-    event.preventDefault();
+    event?.preventDefault?.();
     if (!calculator || calculator.hidden) {
       catalog?.scrollIntoView({behavior:'smooth', block:'start'});
       return;
@@ -302,7 +309,10 @@
     }
     if (!leadOpen) openLead();
     else sendButton?.click();
-  });
+  };
+
+  cta?.addEventListener('click', handleMeasureAction);
+  mobileMeasureButton?.addEventListener('click', handleMeasureAction);
 
   const policyBackdrop = document.getElementById('policyBackdrop');
   const policyModal = document.getElementById('policyModal');
