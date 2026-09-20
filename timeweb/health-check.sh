@@ -114,6 +114,7 @@ fetch "$BASE_URL/site.bundle.js?deploy_health=$TARGET_SOURCE_SHA" "$TMP_DIR/site
 fetch "$BASE_URL/admin?deploy_health=$TARGET_SOURCE_SHA" "$TMP_DIR/admin.html"
 grep -q 'Админ-панель' "$TMP_DIR/admin.html" || fail 'admin page marker missing'
 grep -q 'noindex,nofollow,noarchive' "$TMP_DIR/admin.html" || fail 'admin page must be noindexed'
+grep -q '#photosTab #cardPreview > #coverPreview' "$TMP_DIR/admin.html" || fail 'admin full-photo preview fix missing'
 grep -q '<script src="/xlsx.bundle.js"></script>' "$TMP_DIR/admin.html" || fail 'external XLSX bundle reference missing from admin page'
 if grep -q 'unsupported format' "$TMP_DIR/admin.html"; then
   fail 'XLSX source leaked into visible admin HTML'
