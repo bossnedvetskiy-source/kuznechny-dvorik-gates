@@ -128,7 +128,7 @@ function renderPhotos() {
     thumb.setAttribute('aria-label', thumb.title);
     thumb.addEventListener('click', () => {
       selectedPhotoIndex = index;
-      render();
+      renderPhotos();
     });
     const image = document.createElement('img');
     image.src = url;
@@ -158,17 +158,22 @@ function renderPhotos() {
 
 function render() {
   selectedPhotoIndex = Math.max(0, Math.min(selectedPhotoIndex, draft.photos.length - 1));
-  const selectedUrl = draft.photos[selectedPhotoIndex] || '';
+  const coverUrl = draft.photos[0] || '';
   previewArticle.textContent = activeArticle;
   articleBadge.textContent = activeArticle;
   photoCounter.textContent = `${draft.photos.length} ${pluralPhotos(draft.photos.length)}`;
-  previewPhotoBadge.textContent = selectedPhotoIndex === 0 ? 'Обложка' : `Фото ${selectedPhotoIndex + 1}`;
-  coverPreview.src = selectedUrl;
-  coverPreview.alt = `Фотография ${selectedPhotoIndex + 1} ворот ${activeArticle}`;
+
+  // The large preview represents the actual card cover, not the currently selected thumbnail.
+  previewPhotoBadge.textContent = 'Обложка';
+  coverPreview.src = coverUrl;
+  coverPreview.alt = `Обложка ворот ${activeArticle}`;
+  coverPreview.style.width = '100%';
+  coverPreview.style.height = '100%';
   coverPreview.style.objectPosition = 'center';
   coverPreview.style.objectFit = 'contain';
   coverPreview.style.transformOrigin = 'center';
   coverPreview.style.transform = 'none';
+
   cardPreview.className = 'card-preview fit-contain';
   cardPreview.classList.remove('can-drag');
   resetButton.disabled = !draft.customized && !dirty;
@@ -186,10 +191,12 @@ function movePhoto(index, direction) {
 }
 
 function moveToCover(index) {
-  const selectedUrl = draft.photos[selectedPhotoIndex];
+  if (index <= 0 || index >= draft.photos.length) return;
   const [photo] = draft.photos.splice(index, 1);
   draft.photos.unshift(photo);
-  selectedPhotoIndex = draft.photos.indexOf(selectedUrl);
+
+  // As soon as a new cover is chosen, show it immediately in the large preview.
+  selectedPhotoIndex = 0;
   setDirty();
   render();
 }
