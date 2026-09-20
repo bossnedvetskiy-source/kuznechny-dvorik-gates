@@ -27,3 +27,29 @@
   #photosTab .photo-actions button{min-height:30px;padding:0 4px;font-size:8.5px}
   #photosTab .photo-number{left:6px;top:6px;padding:4px 6px;font-size:8px}
 }
+
+/* Большой предпросмотр: показывать исходное фото целиком в его реальных пропорциях. */
+#photosTab .card-preview{
+  aspect-ratio:auto!important;
+  min-height:260px;
+  padding:10px;
+  overflow:hidden;
+  background:#17191c;
+}
+#photosTab .card-preview>img{
+  width:auto!important;
+  height:auto!important;
+  max-width:100%!important;
+  max-height:520px!important;
+  object-fit:contain!important;
+  object-position:center!important;
+  transform:none!important;
+}
+@media(max-width:850px){
+  #photosTab .card-preview{min-height:220px}
+  #photosTab .card-preview>img{max-height:460px!important}
+}
+@media(max-width:620px){
+  #photosTab .card-preview{min-height:200px;padding:7px}
+  #photosTab .card-preview>img{max-height:400px!important}
+}
