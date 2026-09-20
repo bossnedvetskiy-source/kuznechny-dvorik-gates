@@ -206,6 +206,11 @@
     if (checked.length < 38) throw new Error('Excel не содержит сохранённых итоговых значений для всех 38 используемых моделей. Откройте файл в Excel, пересчитайте и сохраните его, затем загрузите снова.');
 
     const materialChanges = Object.entries(prices).filter(([ref,item]) => Number(item.value) !== Number(currentState.prices?.[ref]?.value)).map(([ref,item]) => ({ref,label:item.label,old:Number(currentState.prices[ref].value),next:Number(item.value)}));
+    // Safe bootstrap case: the first upload may only seed the downloadable master file.
+    // If all 38 sheets are present and material inputs are unchanged, stale cached formula
+    // results inside a programmatically prepared .xlsx must not prevent saving the source file.
+    // The site keeps using its already verified formula model and recalculates standardPrices itself.
+    const firstSourcePublication = !currentState?.fileAvailable && !materialChanges.length && checked.length === 38;
     const modelChanges = Object.entries(afterStandards).filter(([article,value]) => Number(value) !== Number(beforeStandards[article])).map(([article,value]) => ({article,old:Number(beforeStandards[article]),next:Number(value)}));
     const abruptModelChanges = modelChanges
       .map(change => ({...change, ratio: change.old > 0 ? Math.abs(change.next - change.old) / change.old : (change.next > 0 ? 1 : 0)}))
@@ -216,10 +221,11 @@
     document.getElementById('excelModelCount').textContent=String(modelChanges.length);
     document.getElementById('excelCheckedCount').textContent=String(checked.length);
     if (mismatches.length) {
-      modelCheck.className = 'excel-model-warning';
-      if (mismatches.length === checked.length && !materialChanges.length) {
-        modelCheck.textContent = `Не совпали контрольные итоги всех ${checked.length} моделей. Цены материалов при этом не менялись. Обычно это означает, что файл был создан или пересохранён без полного пересчёта формул Excel. Публикация заблокирована. Используйте исходный мастер-Excel, откройте его в Microsoft Excel, выполните полный пересчёт и сохраните .xlsx перед загрузкой.`;
+      if (firstSourcePublication) {
+        modelCheck.className = 'excel-model-caution';
+        modelCheck.textContent = `Первичная загрузка разрешена: цены материалов не менялись, все ${checked.length} расчётных листов найдены. В сохранённых итогах Excel есть расхождения, вероятно из-за отсутствия полного пересчёта кэша формул. Сейчас файл будет сохранён только как исходный Excel для скачивания; действующие цены и расчётная модель сайта не изменятся. После этого скачивайте файл из админки, при изменении цен обязательно пересчитывайте книгу в Microsoft Excel и сохраняйте перед загрузкой.`;
       } else {
+        modelCheck.className = 'excel-model-warning';
         modelCheck.textContent = `Файл отличается от внедрённой формулы у ${mismatches.length} моделей (${mismatches.slice(0,8).map(a=>'Арт.'+a).join(', ')}${mismatches.length>8?'…':''}). Публикация заблокирована: сайт и Excel будут считать по-разному.`;
       }
     } else if (abruptModelChanges.length) {
@@ -233,9 +239,10 @@
     const rows = [...materialChanges.slice(0,18).map(change => `<div class="excel-change"><b>${escape(change.label)} <small>${escape(change.ref)}</small></b><span>${money(change.old)}</span><span class="excel-arrow">→</span><span>${money(change.next)}</span></div>`), ...modelChanges.slice(0,22).map(change => `<div class="excel-change"><b>Арт.${escape(change.article)}</b><span>${money(change.old)}</span><span class="excel-arrow">→</span><span>${money(change.next)}</span></div>`)];
     changesBox.innerHTML = rows.length ? rows.join('') : '<div class="excel-change"><b>Изменений цен не найдено</b><span></span><span></span><span></span></div>';
     preview.classList.remove('excel-hidden');
-    pending = {prices, standardPrices:afterStandards, meta:{fileName:file.name,fileSize:file.size,sha256:hash}, mismatches, materialChanges, modelChanges, abruptModelChanges, buffer};
-    // First publication may only be needed to save the source .xlsx for future downloads.
-    publishButton.disabled = Boolean(mismatches.length) || (!materialChanges.length && Boolean(currentState?.fileAvailable));
+    pending = {prices, standardPrices:afterStandards, meta:{fileName:file.name,fileSize:file.size,sha256:hash}, mismatches, materialChanges, modelChanges, abruptModelChanges, firstSourcePublication, buffer};
+    // Formula drift remains blocking for every normal update. The only exception is
+    // the one-time source-file bootstrap above, where no material price can change.
+    publishButton.disabled = Boolean(mismatches.length && !firstSourcePublication) || (!materialChanges.length && Boolean(currentState?.fileAvailable));
     if (!materialChanges.length && !currentState?.fileAvailable && !mismatches.length) {
       modelCheck.textContent += ' Цены не изменились, но файл можно опубликовать один раз, чтобы затем всегда скачивать его из админки.';
     }
@@ -248,9 +255,12 @@
     currentMeta.textContent = 'Сверяем материалы и все стандартные расчёты…';
     try {
       await inspectFile(file);
-      if (pending?.mismatches?.length) {
+      if (pending?.mismatches?.length && !pending?.firstSourcePublication) {
         currentTitle.textContent='Публикация заблокирована';
         currentMeta.textContent='Excel не совпадает с расчётной моделью сайта.';
+      } else if (pending?.firstSourcePublication) {
+        currentTitle.textContent=`Можно сохранить исходный Excel: ${file.name}`;
+        currentMeta.textContent='Цены и формулы сайта не изменятся — файл сохранится для последующего скачивания из админки.';
       } else {
         currentTitle.textContent=`Готов к публикации: ${file.name}`;
         currentMeta.textContent='Проверьте изменения ниже. На сайт они попадут только после подтверждения.';
@@ -263,10 +273,10 @@
   downloadButton.addEventListener('click', downloadCurrentExcel);
 
   publishButton.addEventListener('click', async () => {
-    if (!pending || pending.mismatches?.length) return;
-    const firstSaveOnly = !pending.materialChanges?.length && !currentState?.fileAvailable;
+    if (!pending || (pending.mismatches?.length && !pending.firstSourcePublication)) return;
+    const firstSaveOnly = Boolean(pending.firstSourcePublication) || (!pending.materialChanges?.length && !currentState?.fileAvailable);
     const confirmation = firstSaveOnly
-      ? `Файл «${pending.meta.fileName}» прошёл проверку всех 38 моделей. Цены не изменятся. Сохранить этот Excel как исходный файл сайта?`
+      ? `Сохранить файл «${pending.meta.fileName}» как исходный Excel сайта? Цены материалов не менялись, поэтому действующие цены и формулы сайта останутся без изменений. После сохранения этот файл можно будет скачивать из админки, редактировать цены и загружать обратно.`
       : [
           `Файл: ${pending.meta.fileName}`,
           `Изменено материалов: ${pending.materialChanges?.length || 0}`,
