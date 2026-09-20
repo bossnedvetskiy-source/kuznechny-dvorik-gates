@@ -248,10 +248,10 @@
 
           <section class="settings-card client-link-card">
             <div class="panel-heading">
-              <div><span>Для переписки с клиентом</span><h2>Персональная ссылка с актуальными ценами</h2></div>
-              <span class="price-help">цена в ссылке не хранится</span>
+              <div><span>Для переписки с клиентом</span><h2>Короткая ссылка с актуальными ценами</h2></div>
+              <span class="price-help">короткая ссылка · цены всегда актуальные</span>
             </div>
-            <p class="client-link-intro">Укажите условия клиента. При открытии ссылки сайт сам возьмёт текущие цены ворот и доставки, применит параметры и сразу покажет готовый каталог.</p>
+            <p class="client-link-intro">Укажите условия клиента. Админка создаст короткую ссылку на вашем домене; при открытии сайт возьмёт актуальные цены и сразу применит выбранные параметры.</p>
             <div class="client-link-grid">
               <div class="client-link-city-field client-link-wide">
                 <label>Населённый пункт
@@ -285,7 +285,7 @@
               <label>Высота калитки м<input id="clientLinkWicketHeight" type="number" min="1" max="3" step=".01" value="1.8"></label>
             </div>
             <div class="client-link-result">
-              <label>Готовая ссылка<input id="clientLinkOutput" type="text" readonly placeholder="Сначала укажите населённый пункт"></label>
+              <label>Готовая короткая ссылка<input id="clientLinkOutput" type="text" readonly placeholder="Сначала укажите населённый пункт"></label>
               <p id="clientLinkHint">Стандартный размер · свои столбы. Клиент сможет изменить параметры на сайте.</p>
               <div class="client-link-actions">
                 <button class="primary-button" id="copyClientLink" type="button" disabled>Скопировать ссылку</button>
@@ -455,6 +455,8 @@
       let confirmedChoice = null;
       let searchTimer = 0;
       let searchSequence = 0;
+      let shortLinkTimer = 0;
+      let shortLinkSequence = 0;
 
       function resetPlaceSelection({message='Выберите населённый пункт из найденных вариантов и подтвердите кнопкой «ОК».'} = {}) {
         pendingChoice = null;
@@ -560,38 +562,92 @@
         updateLink();
       }
 
-      function updateLink() {
-        sizes.hidden = !customSize.checked;
+      function currentSharePayload() {
         const place = confirmedChoice;
-        const params = new URLSearchParams();
-        params.set('share','1');
-        if (place) {
-          params.set('city',String(place.label || place.name || '').trim());
-          params.set('name',String(place.name || '').trim());
-          params.set('place',String(place.query || place.label || place.name || '').trim());
-        }
-        params.set('posts',selectedPosts());
-
+        if (!place) return null;
+        const payload = {
+          city:String(place.label || place.name || '').trim(),
+          name:String(place.name || '').trim(),
+          place:String(place.query || place.label || place.name || '').trim(),
+          posts:selectedPosts()
+        };
         if (customSize.checked) {
           for (const [key,input] of Object.entries(dimensionInputs)) {
             const value = Number(input?.value);
-            if (Number.isFinite(value) && value > 0) params.set(key,String(value));
+            if (Number.isFinite(value) && value > 0) payload[key] = value;
           }
         }
         const art = articleValue();
-        if (art) params.set('art',art);
+        if (art) payload.art = art;
+        return payload;
+      }
 
-        const url = place ? `https://kuzdvor.tw1.ru/?${params.toString()}` : '';
-        output.value = url;
-        copy.disabled = !url;
-        whatsapp.disabled = !url;
+      function fallbackClientUrl(payload) {
+        if (!payload?.city) return '';
+        const params = new URLSearchParams();
+        params.set('share','1');
+        params.set('city',payload.city);
+        // Keep exact routing context only once when it differs from the visible city label.
+        if (payload.place && payload.place !== payload.city) params.set('place',payload.place);
+        if (payload.posts === 'new') params.set('posts','new');
+        for (const key of ['gw','gh','ww','wh','art']) {
+          if (payload[key] !== undefined && payload[key] !== null && String(payload[key]) !== '') params.set(key,String(payload[key]));
+        }
+        return `https://kuzdvor.tw1.ru/?${params.toString()}`;
+      }
+
+      async function generateShortClientLink(payload, sequence) {
+        try {
+          const response = await fetch('/api/admin/share-link', {
+            method:'POST',
+            headers:{'content-type':'application/json','accept':'application/json'},
+            body:JSON.stringify(payload)
+          });
+          const data = await response.json().catch(() => null);
+          if (sequence !== shortLinkSequence) return;
+          if (!response.ok || !data?.url) throw new Error(data?.error || 'Не удалось создать короткую ссылку');
+          output.value = String(data.url);
+          output.placeholder = 'Короткая ссылка готова';
+          copy.disabled = false;
+          whatsapp.disabled = false;
+        } catch (error) {
+          if (sequence !== shortLinkSequence) return;
+          // Safe fallback: still much shorter than the previous URL because duplicate location fields are removed.
+          const fallback = fallbackClientUrl(payload);
+          output.value = fallback;
+          output.placeholder = 'Ссылка готова';
+          copy.disabled = !fallback;
+          whatsapp.disabled = !fallback;
+          if (fallback) placeStatus.textContent = 'Короткий адрес временно недоступен — создана обычная ссылка.';
+        }
+      }
+
+      function updateLink() {
+        sizes.hidden = !customSize.checked;
+        const payload = currentSharePayload();
+        window.clearTimeout(shortLinkTimer);
+        shortLinkSequence += 1;
+        const sequence = shortLinkSequence;
+
+        if (!payload) {
+          output.value = '';
+          output.placeholder = 'Сначала укажите населённый пункт';
+          copy.disabled = true;
+          whatsapp.disabled = true;
+        } else {
+          output.value = '';
+          output.placeholder = 'Создаём короткую ссылку…';
+          copy.disabled = true;
+          whatsapp.disabled = true;
+          shortLinkTimer = window.setTimeout(() => generateShortClientLink(payload, sequence), 220);
+        }
 
         const sizeText = customSize.checked
           ? `ворота ${dimensionInputs.gw.value}×${dimensionInputs.gh.value} м · калитка ${dimensionInputs.ww.value}×${dimensionInputs.wh.value} м`
           : 'стандартный размер 3,4×1,8 м + калитка 1×1,8 м';
         const postsText = selectedPosts() === 'new' ? 'новые столбы' : 'свои столбы';
-        hint.textContent = place
-          ? `${sizeText} · ${postsText}. Выбран: ${place.label || place.name}. Цена не хранится в ссылке — при открытии берутся актуальные цены сайта.`
+        hint.textContent = payload
+          ? `${sizeText} · ${postsText}. Выбран: ${payload.city}. Ссылка будет короткой, а при открытии сайт возьмёт актуальные цены.`
           : 'Сначала найдите населённый пункт, выберите нужный район и подтвердите кнопкой «ОК».';
       }
 
