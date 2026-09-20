@@ -217,7 +217,11 @@
     document.getElementById('excelCheckedCount').textContent=String(checked.length);
     if (mismatches.length) {
       modelCheck.className = 'excel-model-warning';
-      modelCheck.textContent = `Файл отличается от внедрённой формулы у ${mismatches.length} моделей (${mismatches.slice(0,8).map(a=>'Арт.'+a).join(', ')}${mismatches.length>8?'…':''}). Публикация заблокирована: сайт и Excel будут считать по-разному.`;
+      if (mismatches.length === checked.length && !materialChanges.length) {
+        modelCheck.textContent = `Не совпали контрольные итоги всех ${checked.length} моделей. Цены материалов при этом не менялись. Обычно это означает, что файл был создан или пересохранён без полного пересчёта формул Excel. Публикация заблокирована. Используйте исходный мастер-Excel, откройте его в Microsoft Excel, выполните полный пересчёт и сохраните .xlsx перед загрузкой.`;
+      } else {
+        modelCheck.textContent = `Файл отличается от внедрённой формулы у ${mismatches.length} моделей (${mismatches.slice(0,8).map(a=>'Арт.'+a).join(', ')}${mismatches.length>8?'…':''}). Публикация заблокирована: сайт и Excel будут считать по-разному.`;
+      }
     } else if (abruptModelChanges.length) {
       modelCheck.className = 'excel-model-caution';
       modelCheck.textContent = `Проверка 38 моделей пройдена. Внимание: у ${abruptModelChanges.length} моделей цена меняется на 50% или больше (${abruptModelChanges.slice(0,5).map(change => `Арт.${change.article}: ${Math.round(change.ratio*100)}%`).join(', ')}${abruptModelChanges.length>5?'…':''}). Перед публикацией внимательно проверьте изменения ниже.`;
