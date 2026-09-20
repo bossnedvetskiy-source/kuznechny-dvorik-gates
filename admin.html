@@ -87,6 +87,37 @@
       .catalog-manage-row{grid-template-columns:36px 1fr 82px;gap:8px}.catalog-visibility{grid-column:2/3}.catalog-order-actions{grid-column:3/4;grid-row:1/3}.catalog-manage-name small{font-size:9px}
     }
   </style>
+
+  <style>
+    /* FINAL: предпросмотр обложки повторяет реальные пропорции файла и физически не может кадрировать изображение. */
+    #photosTab #cardPreview{
+      display:block!important;
+      width:100%!important;
+      height:auto!important;
+      min-height:0!important;
+      max-height:none!important;
+      aspect-ratio:auto!important;
+      padding:0!important;
+      overflow:hidden!important;
+      background:#17191c!important;
+    }
+    #photosTab #cardPreview > #coverPreview{
+      position:relative!important;
+      inset:auto!important;
+      display:block!important;
+      width:100%!important;
+      height:auto!important;
+      min-width:0!important;
+      min-height:0!important;
+      max-width:100%!important;
+      max-height:none!important;
+      margin:0!important;
+      padding:0!important;
+      object-fit:fill!important;
+      object-position:center!important;
+      transform:none!important;
+    }
+  </style>
 </head>
 <body>
   <main>
