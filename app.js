@@ -174,6 +174,27 @@ function bindZoomButton(button) {
   });
 }
 
+function bindCardImageRecovery(card) {
+  const image=card?.querySelector('.product-image-open img');
+  if(!image || image.dataset.catalogErrorBound==='1')return;
+  image.dataset.catalogErrorBound='1';
+  image.addEventListener('error',()=>{
+    const visual=card.querySelector('[data-gallery-card]');
+    const product=productById(visual?.dataset.galleryCard);
+    if(!product)return;
+    let failed='';
+    try{failed=new URL(image.currentSrc||image.src,location.href).pathname}catch{}
+    if(failed)product.gallery=product.gallery.filter(url=>url!==failed);
+    if(!product.gallery.length){
+      const defaults=Array.isArray(catalogImageData[product.art])?catalogImageData[product.art].filter(Boolean):[];
+      product.gallery=defaults.length?defaults:['/hero-gates.jpg'];
+    }
+    product.image=product.gallery[0];
+    visual.dataset.imageIndex='0';
+    syncProductCardMedia(product);
+  });
+}
+
 function bindCardInteractions(cards) {
   for (const card of cards) {
     bindSelectButton(card.querySelector('.select-product'));
@@ -181,6 +202,7 @@ function bindCardInteractions(cards) {
     const visual=card.querySelector('[data-gallery-card]');
     bindGallerySwipe(visual);
     bindZoomButton(card.querySelector('[data-zoom]'));
+    bindCardImageRecovery(card);
   }
 }
 
@@ -723,12 +745,29 @@ function showLightboxImage(){
   lightboxPrevious.hidden=count<2;lightboxNext.hidden=count<2;
 }
 function openGallery(gallery,title,caption,alt,initialIndex=0){
-  lightboxGallery=gallery.length?gallery:['/hero-gates.jpg'];lightboxIndex=Math.max(0,Math.min(initialIndex,lightboxGallery.length-1));lightboxAlt=alt;
+  lightboxGallery=gallery.length?[...gallery]:['/hero-gates.jpg'];lightboxIndex=Math.max(0,Math.min(initialIndex,lightboxGallery.length-1));lightboxAlt=alt;
   document.getElementById('lightboxTitle').textContent=title;document.getElementById('lightboxPrice').textContent=caption;showLightboxImage();
   lightbox.hidden=false;document.body.style.overflow='hidden';
 }
 function openLightbox(id,initialIndex=0){const product=productById(id);if(product)openGallery(product.gallery,product.art,`с установкой, без доставки · ${money(product.price+product.install)}`,`Ворота с калиткой ${product.art}`,initialIndex)}
 function closeLightbox(){lightbox.hidden=true;document.body.style.overflow=''}
+
+lightboxImage.addEventListener('error',()=>{
+  if(!lightboxGallery.length)return;
+  const failed=lightboxGallery[lightboxIndex];
+  lightboxGallery=lightboxGallery.filter((url,index)=>index!==lightboxIndex && url!==failed);
+  if(lightboxGallery.length){
+    lightboxIndex=Math.min(lightboxIndex,lightboxGallery.length-1);
+    showLightboxImage();
+    return;
+  }
+  if(failed!=='/hero-gates.jpg'){
+    lightboxGallery=['/hero-gates.jpg'];
+    lightboxIndex=0;
+    showLightboxImage();
+  }
+});
+
 document.getElementById('lightboxClose').addEventListener('click',closeLightbox);
 lightboxPrevious.addEventListener('click',()=>{lightboxIndex-=1;showLightboxImage()});
 lightboxNext.addEventListener('click',()=>{lightboxIndex+=1;showLightboxImage()});
