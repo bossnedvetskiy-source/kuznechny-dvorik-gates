@@ -161,6 +161,8 @@ for (const linkAppFile of ['link-app.html','link-app-sw.js','link-app.webmanifes
   await cp(path.join(root, 'timeweb', linkAppFile), path.join(output, linkAppFile));
 }
 
+await cp(path.join(root, 'timeweb/work-app.html'), path.join(output, 'work-app.html'));
+
 for (const sitePwaFile of ['site-sw.js','site-manifest.webmanifest','site-icon.svg']) {
   await cp(path.join(root, 'dist/client', sitePwaFile), path.join(output, sitePwaFile));
 }
@@ -175,6 +177,7 @@ const robotsTxt = [
   'Disallow: /admin',
   'Disallow: /manager',
   'Disallow: /links',
+  'Disallow: /app',
   'Disallow: /api/',
   `Sitemap: ${publicOrigin}/sitemap.xml`,
   ''
