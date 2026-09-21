@@ -64,6 +64,8 @@ RewriteRule ^napravleniya/?$ napravleniya/index.html [L]
   Header always set Strict-Transport-Security "max-age=31536000"
   Header set X-Content-Type-Options "nosniff"
   Header set Referrer-Policy "strict-origin-when-cross-origin"
+  Header always set X-Frame-Options "DENY"
+  Header set Permissions-Policy "geolocation=(), camera=(), microphone=()"
 
   <FilesMatch "\.(?:html?|php)$">
     Header set Cache-Control "no-cache, must-revalidate"
