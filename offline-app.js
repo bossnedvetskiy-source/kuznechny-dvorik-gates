@@ -23,7 +23,7 @@
     badge=document.createElement('div');
     badge.id='offlineAppStatus';
     badge.style.cssText='position:fixed;z-index:500;left:50%;top:max(8px,env(safe-area-inset-top));transform:translateX(-50%);display:flex;align-items:center;gap:8px;max-width:calc(100vw - 24px);padding:7px 11px;border:1px solid rgba(230,189,105,.32);border-radius:999px;background:rgba(12,13,15,.92);color:#fff;box-shadow:0 8px 24px rgba(0,0,0,.22);backdrop-filter:blur(8px);font:800 10px/1.2 Manrope,Arial,sans-serif;transition:.2s';
-    badge.innerHTML='<span data-text>Готовим офлайн-режим…</span><button data-install hidden style="border:0;border-radius:999px;background:#d3a044;color:#17120b;padding:6px 9px;font:900 10px Manrope,Arial,sans-serif">Установить</button>';
+    badge.innerHTML='<span data-text>Проверяем офлайн-базу…</span><button data-install hidden style="border:0;border-radius:999px;background:#d3a044;color:#17120b;padding:6px 9px;font:900 10px Manrope,Arial,sans-serif">Установить</button>';
     document.body.append(badge);
     return badge;
   }
@@ -43,23 +43,29 @@
   }
   ensureAppMenuButton();
   navigator.serviceWorker.register('/site-sw.js',{scope:'/'}).then(()=>{
-    setStatus(navigator.onLine?'Готовим сайт для работы без сети…':'Офлайн-режим');
-    post('WARM_OFFLINE');
+    setStatus(navigator.onLine?'Проверяем офлайн-базу…':'Проверяем сохранённую базу…');
+    post('GET_OFFLINE_STATUS');
     post('FLUSH_LEADS');
   }).catch(()=>{});
   navigator.serviceWorker.addEventListener('message',event=>{
     const data=event.data||{};
-    if(data.type==='OFFLINE_WARM_START')setStatus('Готовим сайт для работы без сети…');
+    if(data.type==='OFFLINE_STATUS'){
+      if(data.ready&&data.current)setStatus(navigator.onLine?'Офлайн-база готова ✓':'Офлайн · база готова ✓',true);
+      else if(data.ready)setStatus('Сохранённая база работает · обновление через меню',true);
+      else setStatus(navigator.onLine?'Офлайн-база не скачана · откройте меню':'Офлайн-база не скачана',true);
+    }
+    if(data.type==='OFFLINE_WARM_START')setStatus('Обновляем офлайн-базу…');
     if(data.type==='OFFLINE_WARM_PROGRESS'){
       const pct=data.total?Math.round(data.current/data.total*100):0;
-      setStatus((data.stage==='media'?'Сохраняем фотографии · ':'Подготавливаем приложение · ')+pct+'%');
+      setStatus((data.stage==='media'?'Сохраняем фотографии · ':'Обновляем приложение · ')+pct+'%');
     }
-    if(data.type==='OFFLINE_READY')setStatus('Офлайн готов ✓',true);
+    if(data.type==='OFFLINE_READY')setStatus('Офлайн-база обновлена ✓',true);
+    if(data.type==='OFFLINE_PARTIAL')setStatus('Офлайн-база скачана не полностью',true);
     if(data.type==='LEAD_QUEUED')setStatus('Нет сети · заявка сохранена на телефоне');
     if(data.type==='LEAD_QUEUE_FLUSHED')setStatus('Отправлено заявок: '+data.sent,true);
   });
   window.addEventListener('offline',()=>setStatus('Офлайн-режим · сайт работает без сети'));
-  window.addEventListener('online',()=>{setStatus('Связь появилась · обновляем данные');post('WARM_OFFLINE');post('FLUSH_LEADS')});
+  window.addEventListener('online',()=>{setStatus('Связь появилась');post('GET_OFFLINE_STATUS');post('FLUSH_LEADS')});
   window.addEventListener('beforeinstallprompt',event=>{
     if(params.get('app')!=='1')return;
     event.preventDefault();
@@ -76,5 +82,5 @@
     installPrompt=null;
     button.hidden=true;
   });
-  window.addEventListener('appinstalled',()=>setStatus('Приложение установлено · готовим офлайн',true));
+  window.addEventListener('appinstalled',()=>{setStatus('Приложение установлено · скачайте офлайн-базу в меню',true);post('GET_OFFLINE_STATUS')});
 })();
