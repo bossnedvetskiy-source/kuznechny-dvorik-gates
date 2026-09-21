@@ -133,23 +133,43 @@ function bindGalleryShiftButton(button) {
   });
 }
 
+function bindGallerySwipe(visual) {
+  if (!visual || visual.dataset.catalogSwipeBound === '1') return;
+  visual.dataset.catalogSwipeBound = '1';
+  let startX=0;
+  let startY=0;
+  let tracking=false;
+
+  visual.addEventListener('touchstart',event=>{
+    if(event.touches.length!==1)return;
+    const touch=event.touches[0];
+    startX=touch?.clientX||0;
+    startY=touch?.clientY||0;
+    tracking=true;
+  },{passive:true});
+
+  visual.addEventListener('touchend',event=>{
+    if(!tracking)return;
+    tracking=false;
+    const touch=event.changedTouches[0];
+    const deltaX=(touch?.clientX||0)-startX;
+    const deltaY=(touch?.clientY||0)-startY;
+    if(Math.abs(deltaX)<35 || Math.abs(deltaX)<=Math.abs(deltaY)*1.15)return;
+    const product=productById(visual.dataset.galleryCard);
+    if(!product || product.gallery.length<2)return;
+    visual.dataset.gallerySwiped='1';
+    const current=Number(visual.dataset.imageIndex)||0;
+    showCardImage(visual,current+(deltaX<0?1:-1));
+    window.setTimeout(()=>delete visual.dataset.gallerySwiped,450);
+  },{passive:true});
+}
+
 function bindZoomButton(button) {
   if (!button || button.dataset.catalogZoomBound === '1') return;
   button.dataset.catalogZoomBound = '1';
-  let startX=0;
-  let swiped=false;
-  button.addEventListener('touchstart',event=>{startX=event.touches[0]?.clientX||0;swiped=false},{passive:true});
-  button.addEventListener('touchend',event=>{
-    const visual=button.closest('[data-gallery-card]');
-    const delta=(event.changedTouches[0]?.clientX||0)-startX;
-    if(Math.abs(delta)<45)return;
-    swiped=true;
-    const current=Number(visual?.dataset.imageIndex)||0;
-    showCardImage(visual,current+(delta<0?1:-1));
-  },{passive:true});
   button.addEventListener('click',()=>{
-    if(swiped){swiped=false;return;}
     const visual=button.closest('[data-gallery-card]');
+    if(visual?.dataset.gallerySwiped==='1')return;
     openLightbox(button.dataset.zoom,Number(visual?.dataset.imageIndex)||0);
   });
 }
@@ -158,6 +178,8 @@ function bindCardInteractions(cards) {
   for (const card of cards) {
     bindSelectButton(card.querySelector('.select-product'));
     card.querySelectorAll('[data-gallery-shift]').forEach(bindGalleryShiftButton);
+    const visual=card.querySelector('[data-gallery-card]');
+    bindGallerySwipe(visual);
     bindZoomButton(card.querySelector('[data-zoom]'));
   }
 }
@@ -710,6 +732,29 @@ function closeLightbox(){lightbox.hidden=true;document.body.style.overflow=''}
 document.getElementById('lightboxClose').addEventListener('click',closeLightbox);
 lightboxPrevious.addEventListener('click',()=>{lightboxIndex-=1;showLightboxImage()});
 lightboxNext.addEventListener('click',()=>{lightboxIndex+=1;showLightboxImage()});
+
+const lightboxStage=lightbox.querySelector('.lightbox-stage');
+let lightboxTouchX=0;
+let lightboxTouchY=0;
+let lightboxTouching=false;
+lightboxStage?.addEventListener('touchstart',event=>{
+  if(event.touches.length!==1)return;
+  const touch=event.touches[0];
+  lightboxTouchX=touch?.clientX||0;
+  lightboxTouchY=touch?.clientY||0;
+  lightboxTouching=true;
+},{passive:true});
+lightboxStage?.addEventListener('touchend',event=>{
+  if(!lightboxTouching || lightboxGallery.length<2)return;
+  lightboxTouching=false;
+  const touch=event.changedTouches[0];
+  const deltaX=(touch?.clientX||0)-lightboxTouchX;
+  const deltaY=(touch?.clientY||0)-lightboxTouchY;
+  if(Math.abs(deltaX)<35 || Math.abs(deltaX)<=Math.abs(deltaY)*1.15)return;
+  lightboxIndex+=deltaX<0?1:-1;
+  showLightboxImage();
+},{passive:true});
+
 lightbox.addEventListener('click',event=>{if(event.target===lightbox)closeLightbox()});
 document.addEventListener('keydown',event=>{
   if(lightbox.hidden)return;
