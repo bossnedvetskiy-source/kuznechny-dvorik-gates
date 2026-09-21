@@ -273,19 +273,23 @@
       const localChoices = [];
 
       // The fixed delivery table is embedded in the page, so known settlements
-      // stay searchable even with no mobile signal.
-      destinations
-        .filter(item => {
-          const key = normalize(item?.name);
-          return queryKey && (key.startsWith(queryKey) || key.includes(queryKey));
-        })
-        .slice(0, 8)
-        .forEach(item => localChoices.push({
-          name:String(item.name || '').trim(),
-          label:String(item.name || '').trim(),
-          secondary:navigator.onLine ? 'Из списка доставки' : 'Доступно офлайн',
-          query:String(item.name || '').trim()
-        }));
+      // stay searchable and selectable even with no mobile signal. When several
+      // settlements have the same name, keep every exact match and show district/km.
+      const matchingLocal = destinations.filter(item => {
+        const key = normalize(item?.name);
+        return queryKey && (key.startsWith(queryKey) || key.includes(queryKey));
+      });
+      const exactLocal = matchingLocal.filter(item => normalize(item?.name) === queryKey);
+      const visibleLocal = exactLocal.length ? exactLocal.slice(0, 24) : matchingLocal.slice(0, 10);
+      visibleLocal.forEach(item => localChoices.push({
+        name:String(item.name || '').trim(),
+        label:String(item.label || item.name || '').trim(),
+        secondary:String(item.secondary || (navigator.onLine ? 'Из списка доставки' : 'Доступно офлайн')).trim(),
+        query:String(item.query || item.label || item.name || '').trim(),
+        fixedItem:item,
+        lat:Number(item.lat) || undefined,
+        lon:Number(item.lon) || undefined
+      }));
 
       if (queryKey && originKey.startsWith(queryKey) && !localChoices.some(item => normalize(item.name) === originKey)) {
         localChoices.unshift({
@@ -297,12 +301,13 @@
       }
 
       const seen = new Set();
-      return [...localChoices, ...remoteChoices].filter(choice => {
+      const merged = [...localChoices, ...remoteChoices].filter(choice => {
         const key = `${normalize(choice.name)}|${normalize(choice.secondary)}`;
         if (seen.has(key)) return false;
         seen.add(key);
         return true;
-      }).slice(0, 8);
+      });
+      return merged.slice(0, exactLocal.length > 8 ? Math.min(24, exactLocal.length) : 8);
     };
 
     const resolveFixed = known => {
@@ -372,7 +377,8 @@
           const knownDestination = byKey.get(normalize(choice.name));
           pendingPlaceChoice = {
             ...choice, label, query,
-            fixedName: knownDestination && sameLocalityCount === 1 ? String(knownDestination.name || choice.name || '').trim() : ''
+            fixedItem: choice.fixedItem || null,
+            fixedName: !choice.fixedItem && knownDestination && sameLocalityCount === 1 ? String(knownDestination.name || choice.name || '').trim() : ''
           };
           if (input) input.value = label;
           placeChoices.querySelectorAll('.delivery-place-choices__button').forEach(item => item.classList.toggle('is-selected', item === button));
@@ -420,6 +426,10 @@
             if (state.kind !== 'place-confirm' || normalize(state.name) !== normalize(label)) return;
             pendingPlaceChoice = null;
 
+            if (selectedChoice?.fixedItem) {
+              resolveFixed(selectedChoice.fixedItem);
+              return;
+            }
             if (selectedChoice?.fixedName) {
               const known = byKey.get(normalize(selectedChoice.fixedName));
               if (known) {
@@ -561,6 +571,10 @@
         const query = String(choice.query || label).trim();
         pendingPlaceChoice = null;
         clearPlaceChoices();
+        if (choice.fixedItem) {
+          resolveFixed(choice.fixedItem);
+          return;
+        }
         if (choice.fixedName) {
           const known = byKey.get(normalize(choice.fixedName));
           if (known) {
