@@ -87,7 +87,7 @@ const localBusinessSchema = {
   url: `${publicOrigin}/`,
   telephone: '+79373296750',
   image: `${publicOrigin}/hero-gates.jpg`,
-  description: 'Изготовление ворот с калиткой и других металлоконструкций по индивидуальным размерам в Мелеузе и ближайших районах.',
+  description: 'Изготовление ворот с калиткой и других металлоконструкций по индивидуальным размерам в Мелеузе и в зоне выезда до 200 км.',
   address: {
     '@type': 'PostalAddress',
     addressLocality: 'Мелеуз',
@@ -101,8 +101,13 @@ const localBusinessSchema = {
     closes: '18:00'
   }],
   areaServed: {
-    '@type': 'City',
-    name: 'Мелеуз'
+    '@type': 'GeoCircle',
+    geoMidpoint: {
+      '@type': 'GeoCoordinates',
+      latitude: 52.96328,
+      longitude: 55.928612
+    },
+    geoRadius: 200000
   }
 };
 
