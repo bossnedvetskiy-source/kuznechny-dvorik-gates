@@ -1,9 +1,10 @@
-const VERSION='kuzdvor-offline-2026-09-21-v2';
+const VERSION='kuzdvor-offline-2026-09-21-v3';
 const SHELL_CACHE=VERSION+'-shell';
 const MEDIA_CACHE=VERSION+'-media';
 const API_CACHE=VERSION+'-api';
 const DB_NAME='kuzdvor-offline-v1';
 const STORE='leadQueue';
+const META_URL='/__kuzdvor_offline_meta__';
 
 const CORE=['/','/app','/links','/offline-delivery-200km.json','/site.css','/site.bundle.js','/calculator.bundle.js','/catalog-enhancements.bundle.js','/hero-gates.jpg','/site-manifest.webmanifest','/site-icon.svg'];
 const STATIC_MEDIA=["/catalog/art-6-1.webp","/catalog/art-6-2.webp","/catalog/art-6-3.webp","/catalog/art-18-2.webp","/catalog/art-18-1.webp","/catalog/art-18-3.webp","/catalog/art-31-1.webp","/catalog/art-31-2.webp","/catalog/art-31-3.webp","/catalog/art-28-1.webp","/catalog/art-28-2.webp","/catalog/art-28-3.webp","/catalog/art-15-2.webp","/catalog/art-15-1.webp","/catalog/art-15-3.webp","/catalog/art-30-1.webp","/catalog/art-30-2.webp","/catalog/art-30-3.webp","/catalog/art-38-2.webp","/catalog/art-38-3.webp","/catalog/art-9-1.webp","/catalog/art-9-2.webp","/catalog/art-9-3.webp","/catalog/art-22-2-3.webp","/catalog/art-22-2-2.webp","/catalog/art-21-2.webp","/catalog/art-21-3.webp","/catalog/art-21-1.webp","/catalog/art-29-1.webp","/catalog/art-29-2.webp","/catalog/art-14-2.webp","/catalog/art-14-1.webp","/catalog/art-14-3.webp","/catalog/art-36-1.webp","/catalog/art-36-2.webp","/catalog/art-36-3.webp","/catalog/art-24-1.webp","/catalog/art-24-2.webp","/catalog/art-24-3.webp","/catalog/art-1-3.webp","/catalog/art-1-1.webp","/catalog/art-1-2.webp","/catalog/art-12-2.webp","/catalog/art-12-1.webp","/catalog/art-12-3.webp","/catalog/art-32-2.webp","/catalog/art-32-1.webp","/catalog/art-32-3.webp","/catalog/art-17s-3.webp","/catalog/art-17s-1.webp","/catalog/art-17s-2.webp","/catalog/art-4-1.webp","/catalog/art-33-1.webp","/catalog/art-33-2.webp","/catalog/art-33-3.webp","/catalog/art-46-3.webp","/catalog/art-46-1.webp","/catalog/art-46-2.webp","/catalog/art-27-3.webp","/catalog/art-27-1.webp","/catalog/art-27-2.webp","/catalog/art-8-3.webp","/catalog/art-8-1.webp","/catalog/art-8-2.webp","/catalog/art-16-1.webp","/catalog/art-16-2.webp","/catalog/art-16-3.webp","/catalog/art-7-1.webp","/catalog/art-34-1.webp","/catalog/art-23s-1.webp","/catalog/art-23s-2.webp","/catalog/art-23s-3.webp","/catalog/art-25-1.webp","/catalog/art-25-2.webp","/catalog/art-10-2.webp","/catalog/art-10-1.webp","/catalog/art-10-3.webp","/catalog/art-35-3.webp","/catalog/art-35-1.webp","/catalog/art-35-2.webp","/catalog/art-37-1.webp","/catalog/art-9-3-1.webp","/catalog/art-9-3-2.webp","/catalog/art-9-3-3.webp","/catalog/art-13-1.webp","/catalog/art-13-2.webp","/catalog/art-11-1.webp","/catalog/art-20-1.webp","/catalog/art-20-2.webp","/catalog/art-20-3.webp","/catalog/art-2-1.webp","/catalog/art-2-2.webp","/catalog/art-2-3.webp","/catalog/art-3-1.webp","/catalog/art-3-2.webp","/catalog/art-3-3.webp","/catalog/art-5-3.webp","/catalog/art-5-2.webp","/catalog/art-5-1.webp"];
@@ -24,22 +25,66 @@ async function fetchAndCache(cache,url){
 async function cacheBatch(urls,cacheName,onProgress){
   const cache=await caches.open(cacheName);
   let done=0,total=urls.length;
+  const failed=[];
   for(let i=0;i<urls.length;i+=6){
     const chunk=urls.slice(i,i+6);
     const results=await Promise.all(chunk.map(url=>fetchAndCache(cache,url)));
+    results.forEach((ok,index)=>{if(!ok)failed.push(chunk[index])});
     done+=results.filter(Boolean).length;
     onProgress?.(Math.min(i+chunk.length,total),total,done);
     await sleep(0);
   }
+  return {done,total,failed};
 }
 function collectMedia(value,set){
   if(typeof value==='string'){
-    if(/^\/catalog\/.*\.(?:webp|jpe?g|png)$/i.test(value))set.add(value);
+    if(/^\/(?:catalog|catalog-media)\/.*\.(?:webp|jpe?g|png)$/i.test(value))set.add(value);
     return;
   }
   if(Array.isArray(value)){value.forEach(item=>collectMedia(item,set));return}
   if(value && typeof value==='object')Object.values(value).forEach(item=>collectMedia(item,set));
 }
+async function writeOfflineMeta(meta){
+  const cache=await caches.open(SHELL_CACHE);
+  await cache.put(META_URL,new Response(JSON.stringify(meta),{headers:{'content-type':'application/json'}}));
+}
+
+async function readOfflineMeta(){
+  const keys=await caches.keys();
+  const candidates=[SHELL_CACHE,...keys.filter(key=>key.startsWith('kuzdvor-offline-')&&key.endsWith('-shell')&&key!==SHELL_CACHE)];
+  for(const key of candidates){
+    try{
+      const response=await caches.open(key).then(cache=>cache.match(META_URL));
+      if(!response)continue;
+      const meta=await response.json();
+      return {...meta,current:key===SHELL_CACHE,cacheName:key};
+    }catch{}
+  }
+  return null;
+}
+
+async function cleanupOldOfflineCaches(){
+  const keep=new Set([SHELL_CACHE,MEDIA_CACHE,API_CACHE]);
+  const keys=await caches.keys();
+  await Promise.all(keys.filter(key=>key.startsWith('kuzdvor-offline-')&&!keep.has(key)).map(key=>caches.delete(key)));
+}
+
+async function offlineStatus(){
+  const meta=await readOfflineMeta();
+  const coreCache=await caches.open(SHELL_CACHE);
+  const currentCore=await Promise.all(CORE.map(url=>coreCache.match(url,{ignoreSearch:true})));
+  const currentReady=currentCore.every(Boolean) && Boolean(meta?.current && meta?.complete);
+  return {
+    type:'OFFLINE_STATUS',
+    ready:Boolean(meta?.complete),
+    current:currentReady,
+    stale:Boolean(meta?.complete && !currentReady),
+    updatedAt:meta?.updatedAt||null,
+    mediaCount:Number(meta?.mediaCount)||0,
+    failedCount:Number(meta?.failedCount)||0
+  };
+}
+
 async function broadcast(message){
   const clientsList=await self.clients.matchAll({type:'window',includeUncontrolled:true});
   clientsList.forEach(client=>client.postMessage(message));
@@ -49,8 +94,9 @@ async function warmOffline(){
   if(warmPromise)return warmPromise;
   warmPromise=(async()=>{
     await broadcast({type:'OFFLINE_WARM_START'});
-    await cacheBatch(CORE,SHELL_CACHE,(current,total)=>broadcast({type:'OFFLINE_WARM_PROGRESS',current,total,stage:'shell'}));
+    const shellResult=await cacheBatch(CORE,SHELL_CACHE,(current,total)=>broadcast({type:'OFFLINE_WARM_PROGRESS',current,total,stage:'shell'}));
     const all=new Set(STATIC_MEDIA);
+    let catalogApiOk=false;
     try{
       const response=await fetch('/api/catalog-images',{cache:'no-store',headers:{accept:'application/json'}});
       if(response.ok){
@@ -58,11 +104,30 @@ async function warmOffline(){
         await apiCache.put('/api/catalog-images',response.clone());
         const data=await response.json().catch(()=>null);
         collectMedia(data,all);
+        catalogApiOk=true;
       }
     }catch{}
     const media=[...all];
-    await cacheBatch(media,MEDIA_CACHE,(current,total)=>broadcast({type:'OFFLINE_WARM_PROGRESS',current,total,stage:'media'}));
-    await broadcast({type:'OFFLINE_READY',count:media.length});
+    const mediaResult=await cacheBatch(media,MEDIA_CACHE,(current,total)=>broadcast({type:'OFFLINE_WARM_PROGRESS',current,total,stage:'media'}));
+    const complete=shellResult.failed.length===0 && mediaResult.failed.length===0;
+    const meta={
+      complete,
+      updatedAt:new Date().toISOString(),
+      mediaCount:mediaResult.done,
+      mediaTotal:mediaResult.total,
+      failedCount:shellResult.failed.length+mediaResult.failed.length,
+      catalogApiOk
+    };
+    await writeOfflineMeta(meta);
+    if(complete)await cleanupOldOfflineCaches();
+    await broadcast({
+      type:complete?'OFFLINE_READY':'OFFLINE_PARTIAL',
+      count:mediaResult.done,
+      total:mediaResult.total,
+      failedCount:meta.failedCount,
+      updatedAt:meta.updatedAt
+    });
+    return meta;
   })().finally(()=>{warmPromise=null});
   return warmPromise;
 }
@@ -78,12 +143,10 @@ self.addEventListener('install',event=>{
 });
 self.addEventListener('activate',event=>{
   event.waitUntil((async()=>{
-    const keep=new Set([SHELL_CACHE,MEDIA_CACHE,API_CACHE]);
-    const keys=await caches.keys();
-    await Promise.all(keys.filter(key=>key.startsWith('kuzdvor-offline-')&&!keep.has(key)).map(key=>caches.delete(key)));
     await self.clients.claim();
-    warmOffline().catch(()=>{});
     flushLeadQueue().catch(()=>{});
+    const status=await offlineStatus();
+    await broadcast(status);
   })());
 });
 async function matchAny(request){return (await caches.match(request,{ignoreSearch:true}))||null}
@@ -101,7 +164,7 @@ async function networkFirst(request,cacheName,fallbackUrl=''){
 }
 async function cacheFirst(request,cacheName){
   const cache=await caches.open(cacheName);
-  const cached=await cache.match(request,{ignoreSearch:true});
+  const cached=await cache.match(request,{ignoreSearch:true}) || await matchAny(request);
   if(cached){
     fetch(request).then(response=>safePut(cache,request,response)).catch(()=>{});
     return cached;
@@ -164,6 +227,7 @@ self.addEventListener('sync',event=>{if(event.tag==='kuzdvor-leads-sync')event.w
 self.addEventListener('message',event=>{
   if(event.data?.type==='WARM_OFFLINE')event.waitUntil(warmOffline());
   if(event.data?.type==='FLUSH_LEADS')event.waitUntil(flushLeadQueue());
+  if(event.data?.type==='GET_OFFLINE_STATUS')event.waitUntil(offlineStatus().then(status=>broadcast(status)));
 });
 self.addEventListener('fetch',event=>{
   const request=event.request;
@@ -181,8 +245,7 @@ self.addEventListener('fetch',event=>{
   }
   if(request.method!=='GET')return;
   if(request.mode==='navigate'){
-    event.respondWith(networkFirst(request,SHELL_CACHE,'/').catch(()=>caches.match('/')));
-    event.waitUntil(warmOffline().catch(()=>{}));
+    event.respondWith(networkFirst(request,SHELL_CACHE,'/').catch(()=>caches.match('/')||matchAny(request)));
     return;
   }
   if(url.pathname==='/api/catalog-images'||url.pathname==='/api/share-link'){
