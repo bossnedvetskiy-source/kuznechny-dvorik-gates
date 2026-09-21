@@ -90,7 +90,8 @@ assert(html.includes('id="catalogWarranty"') && runtime.includes('catalogWarrant
 
 const colorPhotoSite = await readFile('color-photo-site.js','utf8');
 const stylesCss = await readFile('styles.css','utf8');
-assert(stylesCss.includes(':focus-visible'), 'Public site must expose keyboard focus states');
+const gatePageCssSource = await readFile('gate-page.css','utf8');
+assert(gatePageCssSource.includes(':focus-visible'), 'Public site must expose keyboard focus states');
 assert(!app.includes('class=\"product-image-backdrop\"'), 'Catalog cards must not request duplicate decorative backdrop images');
 assert(app.includes('KUZDVOR_CATALOG_IMAGES_PROMISE'), 'Catalog image API must be shared instead of fetched independently');
 assert(colorPhotoSite.includes('KUZDVOR_CATALOG_IMAGES_PROMISE'), 'Color photos must reuse the shared catalog image request');
