@@ -138,7 +138,7 @@
         set('Офлайн-база обновлена ✓','ready');
         updateButton.disabled=false;
         updateButton.textContent='Обновить офлайн-базу';
-        meta.textContent='Обновлено: '+fmt(data.updatedAt)+(data.count?' · Фотографий: '+data.count:'');
+        meta.textContent='Обновлено: '+fmt(data.updatedAt)+(data.count?' · Фотографий: '+data.count:'')+(storageProtected?' · хранилище защищено':'');
       }
       if(data.type==='OFFLINE_PARTIAL'){
         updating=false;
@@ -150,12 +150,13 @@
     });
   }
 
-  updateButton.addEventListener('click',()=>{
+  updateButton.addEventListener('click',async()=>{
     if(!navigator.onLine){
       set(knownReady?'Офлайн · используется сохранённая база':'Для загрузки базы нужен интернет','offline');
       return;
     }
     if(updating)return;
+    await protectOfflineStorage();
     updating=true;
     updateButton.disabled=true;
     post('WARM_OFFLINE');
