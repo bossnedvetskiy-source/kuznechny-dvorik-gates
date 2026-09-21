@@ -36,6 +36,7 @@ RewriteRule ^catalog-media/(.*)$ local-api.php?__route=catalog-media/$1 [QSA,L]
 RewriteRule ^vorota/?$ / [R=301,L]
 RewriteRule ^admin/?$ admin.html [L]
 RewriteRule ^links/?$ link-app.html [L]
+RewriteRule ^app/?$ work-app.html [L]
 RewriteRule ^manager/?$ manager.html [L]
 RewriteRule ^napravleniya/?$ napravleniya/index.html [L]
 
