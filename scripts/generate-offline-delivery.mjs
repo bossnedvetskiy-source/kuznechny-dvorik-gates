@@ -24,6 +24,10 @@ function pointOf(element) {
   return Number.isFinite(lat) && Number.isFinite(lon) ? {lat,lon} : null;
 }
 
+function isJunkSettlementName(name) {
+  return /^\s*\d+(?:[.,]\d+)?\s*(?:км|km)\s*$/iu.test(String(name || ''));
+}
+
 function kindLabel(place) {
   return ({city:'город',town:'город / посёлок',village:'село / деревня',hamlet:'деревня / хутор'})[place] || 'населённый пункт';
 }
@@ -75,7 +79,7 @@ function dedupePlaces(elements) {
   for (const element of elements) {
     const point = pointOf(element);
     const name = String(element?.tags?.name || '').trim();
-    if (!point || !name) continue;
+    if (!point || !name || isJunkSettlementName(name)) continue;
     const key = normalize(name);
     const sameName = byName.get(key) || [];
 
