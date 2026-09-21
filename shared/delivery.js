@@ -253,9 +253,14 @@
     };
 
     const requestPlaceChoices = async place => {
-      const response = await fetch(`/api/delivery-search?place=${encodeURIComponent(place)}`, {headers:{accept:'application/json'}});
-      const payload = response.ok ? await response.json().catch(() => null) : null;
-      const remoteChoices = Array.isArray(payload?.choices) ? payload.choices : [];
+      let remoteChoices = [];
+      try {
+        const response = await fetch(`/api/delivery-search?place=${encodeURIComponent(place)}`, {headers:{accept:'application/json'}});
+        const payload = response.ok ? await response.json().catch(() => null) : null;
+        remoteChoices = Array.isArray(payload?.choices) ? payload.choices : [];
+      } catch {
+        remoteChoices = [];
+      }
 
       const queryKey = normalize(place);
       const rawOrigin = data.origin;
@@ -266,8 +271,24 @@
       ).trim();
       const originKey = normalize(originName);
       const localChoices = [];
-      if (queryKey && originKey.startsWith(queryKey)) {
-        localChoices.push({
+
+      // The fixed delivery table is embedded in the page, so known settlements
+      // stay searchable even with no mobile signal.
+      destinations
+        .filter(item => {
+          const key = normalize(item?.name);
+          return queryKey && (key.startsWith(queryKey) || key.includes(queryKey));
+        })
+        .slice(0, 8)
+        .forEach(item => localChoices.push({
+          name:String(item.name || '').trim(),
+          label:String(item.name || '').trim(),
+          secondary:navigator.onLine ? 'Из списка доставки' : 'Доступно офлайн',
+          query:String(item.name || '').trim()
+        }));
+
+      if (queryKey && originKey.startsWith(queryKey) && !localChoices.some(item => normalize(item.name) === originKey)) {
+        localChoices.unshift({
           name:originName,
           label:originName,
           secondary:'Республика Башкортостан',
@@ -281,7 +302,7 @@
         if (seen.has(key)) return false;
         seen.add(key);
         return true;
-      }).slice(0, 6);
+      }).slice(0, 8);
     };
 
     const resolveFixed = known => {
