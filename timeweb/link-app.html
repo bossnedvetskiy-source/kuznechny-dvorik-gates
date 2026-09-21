@@ -6,13 +6,13 @@
   <meta name="theme-color" content="#111214">
   <meta name="robots" content="noindex,nofollow,noarchive">
   <title>Ссылки клиентам — Кузнечный ДворикЪ</title>
-  <link rel="manifest" href="/link-app.webmanifest">
-  <link rel="icon" href="/link-app-icon.svg" type="image/svg+xml">
+  <link rel="manifest" href="/site-manifest.webmanifest">
+  <link rel="icon" href="/site-icon.svg" type="image/svg+xml">
   <style>
     :root{--bg:#0d0e10;--card:#151619;--card2:#1b1c20;--line:rgba(255,255,255,.10);--text:#f7f2e8;--muted:#a9a39a;--gold:#d3a044;--gold2:#f0c96f;--danger:#e88172}
     *{box-sizing:border-box}html{background:var(--bg)}body{margin:0;min-height:100dvh;background:linear-gradient(180deg,#0d0e10,#141518);color:var(--text);font-family:Arial,Helvetica,sans-serif}
     button,input{font:inherit}.app{width:min(100%,620px);margin:0 auto;padding:max(14px,env(safe-area-inset-top)) 14px calc(24px + env(safe-area-inset-bottom))}
-    .top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:4px 0 18px}.brand{display:grid;gap:2px}.brand small{color:var(--gold2);font-weight:800;font-size:11px;letter-spacing:.07em;text-transform:uppercase}.brand strong{font:28px/1.05 Georgia,serif}.icon-btn{width:42px;height:42px;border:1px solid var(--line);border-radius:13px;background:var(--card);color:var(--text);font-size:18px}
+    .top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:4px 0 18px}.brand{display:grid;gap:2px}.brand small{color:var(--gold2);font-weight:800;font-size:11px;letter-spacing:.07em;text-transform:uppercase}.brand strong{font:28px/1.05 Georgia,serif}.top-actions{display:flex;gap:7px}.icon-btn{width:42px;height:42px;border:1px solid var(--line);border-radius:13px;background:var(--card);color:var(--text);font-size:18px;text-decoration:none;display:grid;place-items:center}
     .card{padding:17px;border:1px solid var(--line);border-radius:20px;background:var(--card);box-shadow:0 18px 38px rgba(0,0,0,.22)}.card+.card{margin-top:12px}
     h1{margin:0 0 7px;font:32px/1.05 Georgia,serif}p{margin:0;color:var(--muted);font-size:13px;line-height:1.5}
     .login{display:grid;gap:12px;margin-top:18px}.login label,.field{display:grid;gap:7px;color:#d7d0c5;font-size:12px;font-weight:700}.input{width:100%;height:52px;border:1px solid var(--line);border-radius:13px;background:#0d0e10;color:#fff;padding:0 14px;font-size:16px;outline:none}.input:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(211,160,68,.14)}
@@ -32,8 +32,11 @@
 <body>
   <main class="app">
     <header class="top">
-      <div class="brand"><small>Кузнечный ДворикЪ</small><strong>Ссылки клиентам</strong></div>
-      <button id="logoutButton" class="icon-btn hidden" type="button" aria-label="Выйти">↪</button>
+      <div class="brand"><small>Кузнечный ДворикЪ</small><strong>Создать ссылку</strong></div>
+      <div class="top-actions">
+        <a class="icon-btn" href="/app" aria-label="Рабочее меню">⌂</a>
+        <button id="logoutButton" class="icon-btn hidden" type="button" aria-label="Выйти">↪</button>
+      </div>
     </header>
 
     <section id="loginCard" class="card hidden">
@@ -87,7 +90,6 @@
         <div id="resultHint" class="hint">Цены в ссылке не хранятся — клиент увидит актуальные цены сайта.</div>
       </div>
 
-      <button id="installButton" class="secondary install hidden" type="button">Установить приложение на телефон</button>
     </section>
   </main>
   <div id="toast" class="toast"></div>
@@ -98,16 +100,27 @@
   const loginForm=$('loginForm'), loginStatus=$('loginStatus');
   const city=$('cityInput'), cityStatus=$('cityStatus'), choices=$('choices'), selectedPlace=$('selectedPlace'), selectedPlaceText=$('selectedPlaceText');
   const article=$('articleInput'), sizeDetails=$('sizeDetails'), output=$('output'), copyButton=$('copyButton'), whatsappButton=$('whatsappButton');
-  const resultHint=$('resultHint'), installButton=$('installButton');
+  const resultHint=$('resultHint');
   const dims={gw:$('gw'),gh:$('gh'),ww:$('ww'),wh:$('wh')};
-  let place=null, searchTimer=0, searchSeq=0, linkTimer=0, linkSeq=0, installPrompt=null;
+  let place=null, searchTimer=0, searchSeq=0, linkTimer=0, linkSeq=0, offlinePlaces=[];
 
   const toast=message=>{const t=$('toast');t.textContent=message;t.classList.add('show');clearTimeout(window.__toast);window.__toast=setTimeout(()=>t.classList.remove('show'),1800)};
   const showLogin=(message='')=>{loginCard.classList.remove('hidden');generatorCard.classList.add('hidden');logoutButton.classList.add('hidden');loginStatus.textContent=message};
-  const showApp=()=>{loginCard.classList.add('hidden');generatorCard.classList.remove('hidden');logoutButton.classList.remove('hidden');setTimeout(()=>city.focus({preventScroll:true}),80)};
+  const showApp=()=>{loginCard.classList.add('hidden');generatorCard.classList.remove('hidden');logoutButton.classList.remove('hidden');setTimeout(()=>city.focus({preventScroll:true}),80);loadOfflinePlaces()};
 
   async function authCheck(){
-    try{const r=await fetch('/api/admin/site-settings',{cache:'no-store'});if(r.ok){showApp();return}showLogin()}catch{showLogin('Не удалось проверить вход. Проверьте интернет.')}
+    try{
+      const r=await fetch('/api/admin/site-settings',{cache:'no-store'});
+      if(r.ok){localStorage.setItem('kuzdvor-link-authorized','1');showApp();return}
+      showLogin();
+    }catch{
+      if(localStorage.getItem('kuzdvor-link-authorized')==='1'){
+        showApp();
+        cityStatus.textContent='Офлайн-режим. Населённые пункты доступны из сохранённой базы.';
+      }else{
+        showLogin('Для первого входа нужен интернет.');
+      }
+    }
   }
 
   loginForm.addEventListener('submit',async e=>{
@@ -117,12 +130,12 @@
       const r=await fetch('/api/admin/login',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({username:$('username').value,password:$('password').value})});
       const data=await r.json().catch(()=>({}));
       if(!r.ok)throw new Error(data.error||'Не удалось войти');
-      $('password').value='';showApp();
+      $('password').value='';localStorage.setItem('kuzdvor-link-authorized','1');showApp();
     }catch(error){loginStatus.textContent=error.message||'Ошибка входа';loginStatus.className='status error'}
     finally{button.disabled=false}
   });
 
-  logoutButton.addEventListener('click',async()=>{try{await fetch('/api/admin/logout',{method:'POST'})}catch{}showLogin()});
+  logoutButton.addEventListener('click',async()=>{localStorage.removeItem('kuzdvor-link-authorized');try{await fetch('/api/admin/logout',{method:'POST'})}catch{}showLogin()});
 
   const selectedPosts=()=>document.querySelector('input[name="posts"]:checked')?.value||'own';
   const articleValue=()=>String(article.value||'').trim().replace(/^арт\.?\s*/i,'');
@@ -139,6 +152,32 @@
     scheduleLink();
   }
 
+  const normalize=value=>String(value||'').toLocaleLowerCase('ru-RU').replace(/ё/g,'е').replace(/[^а-яa-z0-9]/gi,'');
+  const cleanSecondary=value=>String(value||'').replace(/\s*·\s*\d+\s*км\s*от\s*Мелеуза\s*$/iu,'').trim();
+
+  async function loadOfflinePlaces(){
+    if(offlinePlaces.length)return offlinePlaces;
+    try{
+      const r=await fetch('/offline-delivery-200km.json',{cache:'force-cache'});
+      const data=await r.json();
+      offlinePlaces=Array.isArray(data?.destinations)?data.destinations:[];
+    }catch{}
+    return offlinePlaces;
+  }
+
+  function localChoices(value){
+    const q=normalize(value);
+    if(!q)return [];
+    const matches=offlinePlaces.filter(item=>normalize(item?.name).includes(q));
+    const exact=matches.filter(item=>normalize(item?.name)===q);
+    return (exact.length?exact:matches).slice(0,exact.length?24:10).map(item=>({
+      name:String(item.name||''),
+      label:String(item.label||item.name||''),
+      secondary:cleanSecondary(item.secondary||'Доступно офлайн'),
+      query:String(item.query||item.label||item.name||'')
+    }));
+  }
+
   function renderChoices(items){
     choices.replaceChildren();
     if(!items.length){cityStatus.textContent='Не нашли. Уточните название или район.';cityStatus.className='status error';return}
@@ -152,13 +191,30 @@
   }
 
   async function searchPlaces(value,seq){
+    await loadOfflinePlaces();
+    const local=localChoices(value);
     try{
       const r=await fetch('/api/delivery-search?place='+encodeURIComponent(value),{cache:'no-store'});
       const data=await r.json().catch(()=>null);
       if(seq!==searchSeq||city.value.trim()!==value)return;
-      if(!r.ok||!Array.isArray(data?.choices))throw new Error(data?.error||'Ошибка поиска');
-      renderChoices(data.choices);
-    }catch(error){if(seq!==searchSeq)return;cityStatus.className='status error';cityStatus.textContent=error.message||'Ошибка поиска'}
+      const remote=r.ok&&Array.isArray(data?.choices)?data.choices:[];
+      const seen=new Set();
+      const merged=[...local,...remote].filter(item=>{
+        const key=normalize(item.name)+'|'+normalize(cleanSecondary(item.secondary));
+        if(seen.has(key))return false;seen.add(key);return true;
+      });
+      renderChoices(merged);
+    }catch{
+      if(seq!==searchSeq)return;
+      if(local.length){
+        cityStatus.className='status';
+        cityStatus.textContent='Офлайн: выберите населённый пункт из сохранённой базы.';
+        renderChoices(local);
+      }else{
+        cityStatus.className='status error';
+        cityStatus.textContent='Нет связи и пункт не найден в офлайн-базе.';
+      }
+    }
   }
 
   city.addEventListener('input',()=>{
@@ -178,16 +234,29 @@
     return p;
   }
 
+  function fallbackUrl(p){
+    const params=new URLSearchParams({share:'1',city:p.city,posts:p.posts||'own'});
+    if(p.place&&p.place!==p.city)params.set('place',p.place);
+    for(const key of ['gw','gh','ww','wh','art'])if(p[key]!==undefined&&p[key]!==null&&String(p[key])!=='')params.set(key,String(p[key]));
+    return location.origin+'/?'+params.toString();
+  }
+
   async function generate(seq){
     const p=payload();if(!p)return;
-    output.value='';output.placeholder='Создаём короткую ссылку…';copyButton.disabled=true;whatsappButton.disabled=true;
+    output.value='';output.placeholder=navigator.onLine?'Создаём короткую ссылку…':'Создаём офлайн-ссылку…';copyButton.disabled=true;whatsappButton.disabled=true;
     try{
+      if(!navigator.onLine)throw new Error('offline');
       const r=await fetch('/api/admin/share-link',{method:'POST',headers:{'content-type':'application/json','accept':'application/json'},body:JSON.stringify(p)});
-      if(r.status===401){showLogin('Сессия закончилась. Войдите ещё раз.');return}
+      if(r.status===401){localStorage.removeItem('kuzdvor-link-authorized');showLogin('Сессия закончилась. Войдите ещё раз.');return}
       const data=await r.json().catch(()=>null);if(seq!==linkSeq)return;
       if(!r.ok||!data?.url)throw new Error(data?.error||'Не удалось создать ссылку');
       output.value=data.url;copyButton.disabled=false;whatsappButton.disabled=false;resultHint.textContent='Готово. Клиент увидит актуальные цены и выбранные условия.';
-    }catch(error){if(seq!==linkSeq)return;output.placeholder='Не удалось создать ссылку';resultHint.textContent=error.message||'Ошибка';}
+    }catch{
+      if(seq!==linkSeq)return;
+      output.value=fallbackUrl(p);
+      copyButton.disabled=false;whatsappButton.disabled=false;
+      resultHint.textContent='Нет сети — создана обычная ссылка. Когда связь появится, короткая ссылка снова будет создаваться автоматически.';
+    }
   }
 
   function scheduleLink(){
@@ -204,11 +273,7 @@
   whatsappButton.addEventListener('click',()=>{if(!output.value||!place)return;const cityName=place.label||place.name||'';const text='Посмотрите актуальные цены на ворота с калиткой для '+cityName+'. Я уже указал ваши условия:\n'+output.value;window.open('https://wa.me/?text='+encodeURIComponent(text),'_blank','noopener')});
   output.addEventListener('click',()=>output.select());
 
-  window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installPrompt=e;installButton.classList.remove('hidden')});
-  installButton.addEventListener('click',async()=>{if(!installPrompt)return;installPrompt.prompt();await installPrompt.userChoice;installPrompt=null;installButton.classList.add('hidden')});
-  window.addEventListener('appinstalled',()=>toast('Приложение установлено'));
-
-  if('serviceWorker' in navigator)navigator.serviceWorker.register('/link-app-sw.js',{scope:'/'}).catch(()=>{});
+  if('serviceWorker' in navigator)navigator.serviceWorker.register('/site-sw.js',{scope:'/'}).catch(()=>{});
   authCheck();
 })();
 </script>
