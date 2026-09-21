@@ -106,10 +106,33 @@ const localBusinessSchema = {
   }
 };
 
-// Build a comprehensive offline delivery table once during production packaging.
-// Existing hand-maintained prices remain authoritative; new settlements use OSRM road distance × 90 ₽.
+// Use the verified 200 km snapshot for normal deploys so production does not
+// depend on Overpass/OSRM availability. Set DELIVERY_GRID_REBUILD=1 to regenerate it.
 const baseDelivery = JSON.parse(await readFile(path.join(root, 'delivery-prices.json'), 'utf8'));
-const offlineDeliveryBuild = await generateOfflineDeliveryGrid(baseDelivery, {log: message => console.log(message)});
+let offlineDeliveryBuild = null;
+if (process.env.DELIVERY_GRID_REBUILD === '1') {
+  offlineDeliveryBuild = await generateOfflineDeliveryGrid(baseDelivery, {log: message => console.log(message)});
+} else {
+  try {
+    const snapshot = JSON.parse(await readFile(path.join(root, 'offline-delivery-200km.json'), 'utf8'));
+    const rows = Array.isArray(snapshot?.destinations) ? snapshot.destinations : [];
+    if (!snapshot?.meta?.ok || rows.length < 1000) throw new Error('snapshot is incomplete');
+    offlineDeliveryBuild = {
+      delivery:{
+        ...baseDelivery,
+        updatedAt:String(snapshot?.meta?.generatedAt || new Date().toISOString()).slice(0,10),
+        fallbackRatePerKm:Number(snapshot?.meta?.ratePerKm) || Number(baseDelivery.fallbackRatePerKm) || 90,
+        origin:baseDelivery.origin || {name:'Мелеуз',lat:52.96328,lon:55.928612},
+        destinations:rows
+      },
+      meta:{...snapshot.meta,fromSnapshot:true}
+    };
+    console.log(`Offline delivery: using verified snapshot with ${rows.length} rows`);
+  } catch (error) {
+    console.log(`Offline delivery: snapshot unavailable (${error?.message || error}), rebuilding…`);
+    offlineDeliveryBuild = await generateOfflineDeliveryGrid(baseDelivery, {log: message => console.log(message)});
+  }
+}
 const delivery = offlineDeliveryBuild.delivery;
 const offlineDeliveryJson = JSON.stringify({
   meta:offlineDeliveryBuild.meta,
