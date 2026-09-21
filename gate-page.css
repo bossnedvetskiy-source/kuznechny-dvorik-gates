@@ -326,3 +326,13 @@
 .lightbox-stage{
   touch-action:pan-y pinch-zoom;
 }
+
+
+/* Keyboard focus accessibility 2026-09-21 */
+:where(a,button,input,select,textarea,summary):focus-visible{
+  outline:3px solid #e6bd69!important;
+  outline-offset:3px!important;
+}
+:where(input,select,textarea):focus-visible{
+  border-color:#e6bd69!important;
+}
