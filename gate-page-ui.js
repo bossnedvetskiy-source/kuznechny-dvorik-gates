@@ -275,6 +275,8 @@
     document.body.classList.add('mobile-lead-open');
     leadBackdrop?.removeAttribute('hidden');
     syncMobileCta();
+    // The mobile form has a single input, so place the cursor there immediately.
+    window.setTimeout(() => document.getElementById('phoneInput')?.focus({preventScroll:true}), 120);
   }
 
   function closeLead() {
