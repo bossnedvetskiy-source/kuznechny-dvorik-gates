@@ -245,7 +245,7 @@ self.addEventListener('fetch',event=>{
   }
   if(request.method!=='GET')return;
   if(request.mode==='navigate'){
-    event.respondWith(networkFirst(request,SHELL_CACHE,'/').catch(()=>caches.match('/')||matchAny(request)));
+    event.respondWith(networkFirst(request,SHELL_CACHE,'/').catch(async()=>await matchAny(request) || await caches.match('/')));
     return;
   }
   if(url.pathname==='/api/catalog-images'||url.pathname==='/api/share-link'){
