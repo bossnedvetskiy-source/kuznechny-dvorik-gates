@@ -350,10 +350,23 @@
     successModal?.setAttribute('hidden','');
     document.body.classList.remove('modal-open');
   };
-  const openSuccess = payload => {
+  const openSuccess = (payload, queued=false) => {
     closeLead();
+    const title = successModal?.querySelector('h2');
+    const copy = successModal?.querySelector('p');
     const digits = String((window.SITE_SETTINGS || {}).whatsappDigits || '79373296750').replace(/\D/g,'');
-    if (successWhatsApp) successWhatsApp.href = `https://wa.me/${digits}?text=${encodeURIComponent(payload?.message || '')}`;
+    if (queued) {
+      if (title) title.textContent = 'Заявка сохранена на телефоне';
+      if (copy) copy.innerHTML = '<b>Сейчас нет связи.</b> Заявка отправится автоматически, когда интернет появится.';
+      if (successWhatsApp) successWhatsApp.hidden = true;
+    } else {
+      if (title) title.textContent = 'Спасибо! Заявка получена';
+      if (copy) copy.innerHTML = '<b>Мы свяжемся с вами в рабочее время</b>, чтобы согласовать бесплатный замер и окончательную стоимость.';
+      if (successWhatsApp) {
+        successWhatsApp.hidden = false;
+        successWhatsApp.href = `https://wa.me/${digits}?text=${encodeURIComponent(payload?.message || '')}`;
+      }
+    }
     successBackdrop?.removeAttribute('hidden');
     successModal?.removeAttribute('hidden');
     document.body.classList.add('modal-open');
@@ -364,7 +377,7 @@
   successWhatsApp?.addEventListener('click', () => {
     if (window.ym) ym(107269914,'reachGoal','whatsapp_after_lead');
   });
-  document.addEventListener('lead-sent', event => openSuccess(event.detail?.payload));
+  document.addEventListener('lead-sent', event => openSuccess(event.detail?.payload, Boolean(event.detail?.queued)));
 
   document.addEventListener('keydown', event => {
     if (event.key !== 'Escape') return;
