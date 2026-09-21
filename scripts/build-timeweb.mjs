@@ -116,6 +116,10 @@ for (const managerFile of ['manager.html','manager-sw.js','manager-manifest.webm
   await cp(path.join(root, managerFile), path.join(output, managerFile));
 }
 
+for (const linkAppFile of ['link-app.html','link-app-sw.js','link-app.webmanifest','link-app-icon.svg']) {
+  await cp(path.join(root, 'timeweb', linkAppFile), path.join(output, linkAppFile));
+}
+
 const hubHtml = await render('/napravleniya');
 await mkdir(path.join(output, 'napravleniya'), { recursive: true });
 await writeFile(path.join(output, 'napravleniya/index.html'), hubHtml, 'utf8');
@@ -125,6 +129,7 @@ const robotsTxt = [
   'Allow: /',
   'Disallow: /admin',
   'Disallow: /manager',
+  'Disallow: /links',
   'Disallow: /api/',
   `Sitemap: ${publicOrigin}/sitemap.xml`,
   ''
