@@ -1,0 +1,14 @@
+{
+  "name":"Ссылки клиентам — Кузнечный ДворикЪ",
+  "short_name":"Ссылки КД",
+  "id":"/links",
+  "start_url":"/links",
+  "scope":"/",
+  "display":"standalone",
+  "background_color":"#0d0e10",
+  "theme_color":"#111214",
+  "description":"Быстрое создание коротких ссылок клиентам Кузнечного Дворика",
+  "icons":[
+    {"src":"/link-app-icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}
+  ]
+}
