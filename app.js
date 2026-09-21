@@ -129,7 +129,8 @@ function bindGalleryShiftButton(button) {
     event.stopPropagation();
     const visual = button.closest('[data-gallery-card]');
     const current = Number(visual?.dataset.imageIndex)||0;
-    showCardImage(visual,current + Number(button.dataset.galleryShift));
+    const shift=Number(button.dataset.galleryShift)||0;
+    showCardImage(visual,current+shift,{direction:Math.sign(shift)});
   });
 }
 
@@ -138,30 +139,67 @@ function bindGallerySwipe(visual) {
   visual.dataset.catalogSwipeBound = '1';
   let startX=0;
   let startY=0;
+  let lastX=0;
+  let lastY=0;
   let tracking=false;
+  let horizontal=false;
+
+  const image=()=>visual.querySelector('.product-image-open img');
 
   visual.addEventListener('touchstart',event=>{
-    if(event.touches.length!==1)return;
+    if(event.touches.length!==1 || visual.dataset.galleryAnimating==='1')return;
     const touch=event.touches[0];
-    startX=touch?.clientX||0;
-    startY=touch?.clientY||0;
+    startX=lastX=touch?.clientX||0;
+    startY=lastY=touch?.clientY||0;
     tracking=true;
+    horizontal=false;
+    const img=image();
+    if(img){
+      img.getAnimations?.().forEach(animation=>animation.cancel());
+      img.style.transition='';
+      img.style.willChange='transform,opacity';
+    }
   },{passive:true});
 
-  visual.addEventListener('touchend',event=>{
+  visual.addEventListener('touchmove',event=>{
+    if(!tracking || event.touches.length!==1)return;
+    const touch=event.touches[0];
+    lastX=touch?.clientX||0;
+    lastY=touch?.clientY||0;
+    const deltaX=lastX-startX;
+    const deltaY=lastY-startY;
+    if(!horizontal && Math.abs(deltaX)>8 && Math.abs(deltaX)>Math.abs(deltaY)*1.05)horizontal=true;
+    if(!horizontal)return;
+    const img=image();
+    if(!img)return;
+    const width=Math.max(visual.clientWidth,1);
+    const eased=Math.max(-width*.34,Math.min(width*.34,deltaX*.58));
+    img.style.transform=`translate3d(${eased}px,0,0)`;
+    img.style.opacity=String(Math.max(.72,1-Math.abs(eased)/(width*1.25)));
+  },{passive:true});
+
+  const finish=(event,cancelled=false)=>{
     if(!tracking)return;
     tracking=false;
-    const touch=event.changedTouches[0];
-    const deltaX=(touch?.clientX||0)-startX;
-    const deltaY=(touch?.clientY||0)-startY;
-    if(Math.abs(deltaX)<35 || Math.abs(deltaX)<=Math.abs(deltaY)*1.15)return;
+    const touch=event?.changedTouches?.[0];
+    if(touch){lastX=touch.clientX||lastX;lastY=touch.clientY||lastY;}
+    const deltaX=lastX-startX;
+    const deltaY=lastY-startY;
     const product=productById(visual.dataset.galleryCard);
-    if(!product || product.gallery.length<2)return;
+    const img=image();
+    if(cancelled || !horizontal || !product || product.gallery.length<2 || Math.abs(deltaX)<42 || Math.abs(deltaX)<=Math.abs(deltaY)*1.1){
+      resetDraggedImage(img);
+      return;
+    }
     visual.dataset.gallerySwiped='1';
+    const direction=deltaX<0?1:-1;
     const current=Number(visual.dataset.imageIndex)||0;
-    showCardImage(visual,current+(deltaX<0?1:-1));
-    window.setTimeout(()=>delete visual.dataset.gallerySwiped,450);
-  },{passive:true});
+    showCardImage(visual,current+direction,{direction,fromDrag:true});
+    window.setTimeout(()=>delete visual.dataset.gallerySwiped,500);
+  };
+
+  visual.addEventListener('touchend',event=>finish(event,false),{passive:true});
+  visual.addEventListener('touchcancel',event=>finish(event,true),{passive:true});
 }
 
 function bindZoomButton(button) {
@@ -260,18 +298,79 @@ function appendProducts(fromIndex,toIndex) {
   return cards;
 }
 
-function showCardImage(visual,index) {
-  const product = productById(visual?.dataset.galleryCard);
-  if (!product || !visual || !product.gallery.length) return;
+function applyCardImage(visual,product,next) {
   const count=product.gallery.length;
-  const next=(Number(index)+count)%count;
   visual.dataset.imageIndex=String(next);
   const image=visual.querySelector('.product-image-open img');
   const backdrop=visual.querySelector('.product-image-backdrop');
-  if(image){image.src=product.gallery[next];image.alt=`Фотография ворот с калиткой ${product.art}, ${next+1} из ${count}`;}
+  if(image){
+    image.src=product.gallery[next];
+    image.alt=`Фотография ворот с калиткой ${product.art}, ${next+1} из ${count}`;
+  }
   if(backdrop) backdrop.src=product.gallery[next];
   const counter=visual.querySelector('[data-photo-count]');
   if(counter) counter.textContent=product.media==='sketch'?'Эскиз':count>1?`${next+1} из ${count}`:'1 фото';
+}
+
+function resetDraggedImage(image) {
+  if(!image)return;
+  image.getAnimations?.().forEach(animation=>animation.cancel());
+  image.style.transition='transform 180ms cubic-bezier(.22,.72,.28,1), opacity 180ms ease';
+  image.style.transform='translate3d(0,0,0)';
+  image.style.opacity='1';
+  window.setTimeout(()=>{
+    image.style.transition='';
+    image.style.transform='';
+    image.style.opacity='';
+    image.style.willChange='';
+  },190);
+}
+
+function showCardImage(visual,index,options={}) {
+  const product = productById(visual?.dataset.galleryCard);
+  if (!product || !visual || !product.gallery.length) return;
+  const count=product.gallery.length;
+  const current=Number(visual.dataset.imageIndex)||0;
+  const next=(Number(index)+count)%count;
+  const direction=Number(options.direction)||0;
+  const image=visual.querySelector('.product-image-open img');
+  const reduced=window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+
+  if(!image || !direction || current===next || reduced || typeof image.animate!=='function'){
+    applyCardImage(visual,product,next);
+    resetDraggedImage(image);
+    return;
+  }
+  if(visual.dataset.galleryAnimating==='1')return;
+  visual.dataset.galleryAnimating='1';
+
+  const startTransform=options.fromDrag && image.style.transform ? image.style.transform : 'translate3d(0,0,0)';
+  const startOpacity=options.fromDrag && image.style.opacity ? Number(image.style.opacity)||1 : 1;
+  image.style.willChange='transform,opacity';
+  image.style.transition='';
+  const outX=direction>0?'-16%':'16%';
+  const inX=direction>0?'12%':'-12%';
+
+  const out=image.animate([
+    {transform:startTransform,opacity:startOpacity},
+    {transform:`translate3d(${outX},0,0)`,opacity:.42}
+  ],{duration:125,easing:'cubic-bezier(.4,0,.7,1)',fill:'forwards'});
+
+  out.finished.catch(()=>{}).then(()=>{
+    applyCardImage(visual,product,next);
+    image.style.transform='';
+    image.style.opacity='';
+    out.cancel();
+    const incoming=image.animate([
+      {transform:`translate3d(${inX},0,0)`,opacity:.48},
+      {transform:'translate3d(0,0,0)',opacity:1}
+    ],{duration:235,easing:'cubic-bezier(.18,.72,.22,1)',fill:'both'});
+    return incoming.finished.catch(()=>{}).then(()=>{
+      incoming.cancel();
+      image.style.willChange='';
+      delete visual.dataset.galleryAnimating;
+    });
+  });
 }
 
 function rebuildDesktopThumbnails(card,product) {
@@ -736,13 +835,52 @@ let lightboxGallery=[];
 let lightboxIndex=0;
 let lightboxAlt='';
 
-function showLightboxImage(){
+function applyLightboxImage(){
   const count=lightboxGallery.length;
   lightboxIndex=(lightboxIndex+count)%count;
   lightboxImage.src=lightboxGallery[lightboxIndex];
   lightboxImage.alt=`${lightboxAlt}, фото ${lightboxIndex+1}`;
   lightboxCounter.textContent=count>1?`${lightboxIndex+1} из ${count}`:'';
   lightboxPrevious.hidden=count<2;lightboxNext.hidden=count<2;
+}
+
+function showLightboxImage(options={}){
+  const direction=Number(options.direction)||0;
+  const reduced=window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+  if(!direction || reduced || typeof lightboxImage.animate!=='function'){
+    applyLightboxImage();
+    resetDraggedImage(lightboxImage);
+    return;
+  }
+  if(lightbox.dataset.animating==='1')return;
+  lightbox.dataset.animating='1';
+  const startTransform=options.fromDrag && lightboxImage.style.transform ? lightboxImage.style.transform : 'translate3d(0,0,0)';
+  const startOpacity=options.fromDrag && lightboxImage.style.opacity ? Number(lightboxImage.style.opacity)||1 : 1;
+  const outX=direction>0?'-18%':'18%';
+  const inX=direction>0?'14%':'-14%';
+  lightboxImage.style.transition='';
+  lightboxImage.style.willChange='transform,opacity';
+
+  const out=lightboxImage.animate([
+    {transform:startTransform,opacity:startOpacity},
+    {transform:`translate3d(${outX},0,0)`,opacity:.35}
+  ],{duration:135,easing:'cubic-bezier(.4,0,.7,1)',fill:'forwards'});
+
+  out.finished.catch(()=>{}).then(()=>{
+    applyLightboxImage();
+    lightboxImage.style.transform='';
+    lightboxImage.style.opacity='';
+    out.cancel();
+    const incoming=lightboxImage.animate([
+      {transform:`translate3d(${inX},0,0)`,opacity:.42},
+      {transform:'translate3d(0,0,0)',opacity:1}
+    ],{duration:260,easing:'cubic-bezier(.16,.76,.22,1)',fill:'both'});
+    return incoming.finished.catch(()=>{}).then(()=>{
+      incoming.cancel();
+      lightboxImage.style.willChange='';
+      delete lightbox.dataset.animating;
+    });
+  });
 }
 function openGallery(gallery,title,caption,alt,initialIndex=0){
   lightboxGallery=gallery.length?[...gallery]:['/hero-gates.jpg'];lightboxIndex=Math.max(0,Math.min(initialIndex,lightboxGallery.length-1));lightboxAlt=alt;
@@ -769,37 +907,68 @@ lightboxImage.addEventListener('error',()=>{
 });
 
 document.getElementById('lightboxClose').addEventListener('click',closeLightbox);
-lightboxPrevious.addEventListener('click',()=>{lightboxIndex-=1;showLightboxImage()});
-lightboxNext.addEventListener('click',()=>{lightboxIndex+=1;showLightboxImage()});
+lightboxPrevious.addEventListener('click',()=>{lightboxIndex-=1;showLightboxImage({direction:-1})});
+lightboxNext.addEventListener('click',()=>{lightboxIndex+=1;showLightboxImage({direction:1})});
 
 const lightboxStage=lightbox.querySelector('.lightbox-stage');
 let lightboxTouchX=0;
 let lightboxTouchY=0;
+let lightboxLastX=0;
+let lightboxLastY=0;
 let lightboxTouching=false;
+let lightboxHorizontal=false;
+
 lightboxStage?.addEventListener('touchstart',event=>{
-  if(event.touches.length!==1)return;
+  if(event.touches.length!==1 || lightbox.dataset.animating==='1')return;
   const touch=event.touches[0];
-  lightboxTouchX=touch?.clientX||0;
-  lightboxTouchY=touch?.clientY||0;
+  lightboxTouchX=lightboxLastX=touch?.clientX||0;
+  lightboxTouchY=lightboxLastY=touch?.clientY||0;
   lightboxTouching=true;
+  lightboxHorizontal=false;
+  lightboxImage.getAnimations?.().forEach(animation=>animation.cancel());
+  lightboxImage.style.transition='';
+  lightboxImage.style.willChange='transform,opacity';
 },{passive:true});
-lightboxStage?.addEventListener('touchend',event=>{
-  if(!lightboxTouching || lightboxGallery.length<2)return;
+
+lightboxStage?.addEventListener('touchmove',event=>{
+  if(!lightboxTouching || event.touches.length!==1)return;
+  const touch=event.touches[0];
+  lightboxLastX=touch?.clientX||0;
+  lightboxLastY=touch?.clientY||0;
+  const deltaX=lightboxLastX-lightboxTouchX;
+  const deltaY=lightboxLastY-lightboxTouchY;
+  if(!lightboxHorizontal && Math.abs(deltaX)>8 && Math.abs(deltaX)>Math.abs(deltaY)*1.05)lightboxHorizontal=true;
+  if(!lightboxHorizontal)return;
+  const width=Math.max(lightboxStage.clientWidth,1);
+  const eased=Math.max(-width*.38,Math.min(width*.38,deltaX*.62));
+  lightboxImage.style.transform=`translate3d(${eased}px,0,0)`;
+  lightboxImage.style.opacity=String(Math.max(.68,1-Math.abs(eased)/(width*1.15)));
+},{passive:true});
+
+const finishLightboxSwipe=(event,cancelled=false)=>{
+  if(!lightboxTouching)return;
   lightboxTouching=false;
-  const touch=event.changedTouches[0];
-  const deltaX=(touch?.clientX||0)-lightboxTouchX;
-  const deltaY=(touch?.clientY||0)-lightboxTouchY;
-  if(Math.abs(deltaX)<35 || Math.abs(deltaX)<=Math.abs(deltaY)*1.15)return;
-  lightboxIndex+=deltaX<0?1:-1;
-  showLightboxImage();
-},{passive:true});
+  const touch=event?.changedTouches?.[0];
+  if(touch){lightboxLastX=touch.clientX||lightboxLastX;lightboxLastY=touch.clientY||lightboxLastY;}
+  const deltaX=lightboxLastX-lightboxTouchX;
+  const deltaY=lightboxLastY-lightboxTouchY;
+  if(cancelled || !lightboxHorizontal || lightboxGallery.length<2 || Math.abs(deltaX)<44 || Math.abs(deltaX)<=Math.abs(deltaY)*1.1){
+    resetDraggedImage(lightboxImage);
+    return;
+  }
+  const direction=deltaX<0?1:-1;
+  lightboxIndex+=direction;
+  showLightboxImage({direction,fromDrag:true});
+};
+lightboxStage?.addEventListener('touchend',event=>finishLightboxSwipe(event,false),{passive:true});
+lightboxStage?.addEventListener('touchcancel',event=>finishLightboxSwipe(event,true),{passive:true});
 
 lightbox.addEventListener('click',event=>{if(event.target===lightbox)closeLightbox()});
 document.addEventListener('keydown',event=>{
   if(lightbox.hidden)return;
   if(event.key==='Escape')closeLightbox();
-  if(event.key==='ArrowLeft'&&lightboxGallery.length>1){lightboxIndex-=1;showLightboxImage()}
-  if(event.key==='ArrowRight'&&lightboxGallery.length>1){lightboxIndex+=1;showLightboxImage()}
+  if(event.key==='ArrowLeft'&&lightboxGallery.length>1){lightboxIndex-=1;showLightboxImage({direction:-1})}
+  if(event.key==='ArrowRight'&&lightboxGallery.length>1){lightboxIndex+=1;showLightboxImage({direction:1})}
 });
 document.querySelectorAll('[data-proof-image]').forEach(button=>button.addEventListener('click',()=>openGallery([button.dataset.proofImage],'Выполненная работа','Мелеуз и ближайшие районы','Выполненная работа Кузнечного Дворика')));
 
