@@ -124,10 +124,18 @@ fetch "$BASE_URL/xlsx.bundle.js?deploy_health=$TARGET_SOURCE_SHA" "$TMP_DIR/xlsx
 grep -q 'xlsx.js' "$TMP_DIR/xlsx.bundle.js" || fail 'XLSX bundle invalid'
 fetch "$BASE_URL/site-manifest.webmanifest?deploy_health=$TARGET_SOURCE_SHA" "$TMP_DIR/site-manifest.webmanifest"
 grep -q '"display":"standalone"' "$TMP_DIR/site-manifest.webmanifest" || grep -q '"display": "standalone"' "$TMP_DIR/site-manifest.webmanifest" || fail 'full-site PWA manifest invalid'
+grep -q '"start_url": "/app"' "$TMP_DIR/site-manifest.webmanifest" || fail 'unified PWA start page is invalid'
 fetch "$BASE_URL/site-sw.js?deploy_health=$TARGET_SOURCE_SHA" "$TMP_DIR/site-sw.js"
 grep -q 'OFFLINE_READY' "$TMP_DIR/site-sw.js" || fail 'full-site offline service worker invalid'
+grep -q "'/app'" "$TMP_DIR/site-sw.js" || fail 'unified app home is not cached offline'
+grep -q "'/links'" "$TMP_DIR/site-sw.js" || fail 'client links page is not cached offline'
+fetch "$BASE_URL/app?deploy_health=$TARGET_SOURCE_SHA" "$TMP_DIR/work-app.html"
+grep -q 'Рабочее приложение' "$TMP_DIR/work-app.html" || fail 'unified work app home missing'
+grep -q 'Каталог и расчёт' "$TMP_DIR/work-app.html" || fail 'catalog entry missing from work app'
+grep -q 'Создать ссылку клиенту' "$TMP_DIR/work-app.html" || fail 'client-link entry missing from work app'
 fetch "$BASE_URL/links?deploy_health=$TARGET_SOURCE_SHA" "$TMP_DIR/link-app.html"
-grep -q 'Ссылки клиентам' "$TMP_DIR/link-app.html" || fail 'client link app missing'
+grep -q 'Создать ссылку' "$TMP_DIR/link-app.html" || fail 'client link app missing'
+grep -q '/site-manifest.webmanifest' "$TMP_DIR/link-app.html" || fail 'client links page is not part of unified PWA'
 fetch "$BASE_URL/napravleniya?deploy_health=$TARGET_SOURCE_SHA" "$TMP_DIR/napravleniya.html"
 if grep -qi 'noindex' "$TMP_DIR/napravleniya.html"; then
   fail 'directions page is accidentally noindexed'
