@@ -3,6 +3,7 @@ import { gunzipSync } from 'node:zlib';
 import { pathToFileURL } from 'node:url';
 import path from 'node:path';
 import vm from 'node:vm';
+import { generateOfflineDeliveryGrid } from './generate-offline-delivery.mjs';
 
 const root = process.cwd();
 const output = path.join(root, 'timeweb-dist');
@@ -105,8 +106,25 @@ const localBusinessSchema = {
   }
 };
 
+// Build a comprehensive offline delivery table once during production packaging.
+// Existing hand-maintained prices remain authoritative; new settlements use OSRM road distance × 90 ₽.
+const baseDelivery = JSON.parse(await readFile(path.join(root, 'delivery-prices.json'), 'utf8'));
+const offlineDeliveryBuild = await generateOfflineDeliveryGrid(baseDelivery, {log: message => console.log(message)});
+const delivery = offlineDeliveryBuild.delivery;
+const offlineDeliveryJson = JSON.stringify({
+  meta:offlineDeliveryBuild.meta,
+  destinations:delivery.destinations || []
+});
+await writeFile(path.join(output, 'offline-delivery-200km.json'), offlineDeliveryJson, 'utf8');
+
 // Public pages must stay indexable. Only the private admin page is noindexed.
-const indexHtml = addJsonLd(await render('/'), localBusinessSchema);
+const renderedIndex = await render('/');
+const embeddedDelivery = JSON.stringify(delivery).replace(/</g, '\\u003c');
+const indexWithOfflineDelivery = renderedIndex.replace(
+  /<script id="deliveryData" type="application\/json">[\s\S]*?<\/script>/,
+  `<script id="deliveryData" type="application/json">${embeddedDelivery}</script>`
+);
+const indexHtml = addJsonLd(indexWithOfflineDelivery, localBusinessSchema);
 await writeFile(path.join(output, 'index.html'), indexHtml, 'utf8');
 
 const adminHtml = noindex(await render('/admin'));
@@ -174,13 +192,12 @@ const [prices, catalogImages, gateCalcPrices, gateCalcModels] = await Promise.al
   windowValue('gate-calc-prices.js', 'GATE_CALC_PRICES'),
   gateModelPack()
 ]);
-const delivery = JSON.parse(await readFile(path.join(root, 'delivery-prices.json'), 'utf8'));
 const siteProfile = {
   phoneDisplay: '8 937 329-67-50',
   phoneDigits: '79373296750',
   whatsappDigits: '79373296750',
   businessHours: 'Пн–Пт, 9:00–18:00',
-  serviceAreaKm: 150,
+  serviceAreaKm: 200,
   warrantyYears: 3,
   productionDays: 30,
   deliveryRate: 90,
