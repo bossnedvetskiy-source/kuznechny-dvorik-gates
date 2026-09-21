@@ -120,6 +120,10 @@ for (const linkAppFile of ['link-app.html','link-app-sw.js','link-app.webmanifes
   await cp(path.join(root, 'timeweb', linkAppFile), path.join(output, linkAppFile));
 }
 
+for (const sitePwaFile of ['site-sw.js','site-manifest.webmanifest','site-icon.svg']) {
+  await cp(path.join(root, 'dist/client', sitePwaFile), path.join(output, sitePwaFile));
+}
+
 const hubHtml = await render('/napravleniya');
 await mkdir(path.join(output, 'napravleniya'), { recursive: true });
 await writeFile(path.join(output, 'napravleniya/index.html'), hubHtml, 'utf8');
