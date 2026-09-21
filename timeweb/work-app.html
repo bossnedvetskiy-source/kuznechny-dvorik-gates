@@ -64,6 +64,7 @@
   let prompt=null;
   let updating=false;
   let knownReady=false;
+  let storageProtected=false;
 
   const set=(message,mode='')=>{text.textContent=message;status.className='status '+mode};
   const fmt=value=>{
@@ -83,7 +84,7 @@
     if(data?.ready && data?.current){
       set(navigator.onLine?'Офлайн-база готова ✓':'Офлайн · база готова ✓',navigator.onLine?'ready':'offline');
       updateButton.textContent='Обновить офлайн-базу';
-      meta.textContent=[data.updatedAt?'Последнее обновление: '+fmt(data.updatedAt):'',data.mediaCount?'Фотографий сохранено: '+data.mediaCount:''].filter(Boolean).join(' · ');
+      meta.textContent=[data.updatedAt?'Последнее обновление: '+fmt(data.updatedAt):'',data.mediaCount?'Фотографий сохранено: '+data.mediaCount:'',storageProtected?'хранилище защищено':''].filter(Boolean).join(' · ');
     }else if(data?.ready){
       set('Сохранённая база работает · доступно обновление','ready');
       updateButton.textContent='Обновить офлайн-базу';
@@ -96,6 +97,14 @@
     updateButton.disabled=false;
   }
 
+  async function protectOfflineStorage(){
+    if(!navigator.storage?.persist)return false;
+    try{
+      storageProtected = await navigator.storage.persisted?.() || await navigator.storage.persist();
+      return storageProtected;
+    }catch{return false}
+  }
+
   async function refreshStatus(){
     if(!('serviceWorker' in navigator))return;
     await post('GET_OFFLINE_STATUS');
@@ -104,7 +113,8 @@
   if(!navigator.onLine)set('Проверяем сохранённую базу…','offline');
 
   if('serviceWorker' in navigator){
-    navigator.serviceWorker.register('/site-sw.js',{scope:'/'}).then(()=>navigator.serviceWorker.ready).then(()=>{
+    navigator.serviceWorker.register('/site-sw.js',{scope:'/'}).then(()=>navigator.serviceWorker.ready).then(async()=>{
+      await protectOfflineStorage();
       post('GET_OFFLINE_STATUS');
       post('FLUSH_LEADS');
     }).catch(()=>set('Не удалось включить офлайн-режим'));
@@ -160,7 +170,7 @@
 
   addEventListener('beforeinstallprompt',event=>{event.preventDefault();prompt=event;install.classList.add('show')});
   install.addEventListener('click',async()=>{if(!prompt)return;prompt.prompt();try{await prompt.userChoice}catch{}prompt=null;install.classList.remove('show')});
-  addEventListener('appinstalled',()=>{install.classList.remove('show');refreshStatus()});
+  addEventListener('appinstalled',async()=>{install.classList.remove('show');await protectOfflineStorage();refreshStatus()});
 })();
 </script>
 </body>
