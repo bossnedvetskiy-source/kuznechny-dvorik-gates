@@ -668,11 +668,12 @@ sendButton.addEventListener('click',async()=>{
   const original=sendButton.textContent;
   sendButton.disabled=true;sendButton.textContent='Отправляем…';
   try{
-    await window.KUZDVOR_LEADS.submit(payload);
+    const submitResult=await window.KUZDVOR_LEADS.submit(payload);
+    const queued=Boolean(submitResult?.queued || submitResult?.offline);
     window.KUZDVOR_CUSTOMER.set({name:nameInput.value,phone:phoneInput.value,city:selectedCityName()});
-    reachGoal('lead_saved',{article:selectedProduct().art,city:selectedCityName()});
-    document.dispatchEvent(new CustomEvent('lead-sent',{detail:{payload}}));
-    showToast('Заявка отправлена');
+    reachGoal(queued?'lead_saved_offline':'lead_saved',{article:selectedProduct().art,city:selectedCityName()});
+    document.dispatchEvent(new CustomEvent('lead-sent',{detail:{payload,queued}}));
+    showToast(queued?'Нет сети — заявка сохранена на телефоне':'Заявка отправлена');
   }catch(error){showToast(error?.message||'Не удалось отправить заявку')}
   finally{sendButton.disabled=false;sendButton.textContent=original||'Отправить заявку';}
 });
