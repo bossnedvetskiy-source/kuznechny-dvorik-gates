@@ -122,11 +122,11 @@
 
 
 /* Автоматическая галерея: любое изображение показывается целиком, без обрезки и растягивания. */
-.product-card.photo .product-visual img,.product-card.photo.fit-cover .product-visual img{object-fit:contain!important;object-position:center!important;transform:none!important}
+.product-card.photo .product-visual img,.product-card.photo.fit-cover .product-visual img{object-fit:contain!important;object-position:center!important}
 .product-card.photo.fit-cover .product-visual{padding:10px!important;background:#131518!important}
 .product-card.photo.fit-cover .product-image-open{inset:10px!important;width:calc(100% - 20px)!important;height:calc(100% - 20px)!important}
 .product-image-backdrop{display:none!important}
-.hero-photo img,.work-gallery img,.selected-product-preview img,.lightbox-stage img{object-fit:contain!important;object-position:center!important;transform:none!important}
+.hero-photo img,.work-gallery img,.selected-product-preview img,.lightbox-stage img{object-fit:contain!important;object-position:center!important}
 
 
 /* Mobile catalog performance guard: cards keep natural height and never stretch into blank rows. */
@@ -135,4 +135,13 @@
   .product-card{height:auto!important;min-height:0!important;align-self:start!important}
   .product-card .product-info{flex:0 0 auto!important;min-height:0!important}
   .product-image-backdrop{display:none!important}
+}
+
+
+/* Smooth swipe motion support 2026-09-21 */
+.product-image-open img,
+.lightbox-stage img{
+  will-change:transform,opacity;
+  backface-visibility:hidden;
+  -webkit-backface-visibility:hidden;
 }
