@@ -1,14 +1,14 @@
 {
-  "name":"Ссылки клиентам — Кузнечный ДворикЪ",
-  "short_name":"Ссылки КД",
+  "name":"Кузнечный Дворик — рабочее приложение",
+  "short_name":"Кузнечный Дворик",
   "id":"/links",
-  "start_url":"/links",
+  "start_url":"/app",
   "scope":"/",
   "display":"standalone",
-  "background_color":"#0d0e10",
-  "theme_color":"#111214",
-  "description":"Быстрое создание коротких ссылок клиентам Кузнечного Дворика",
+  "background_color":"#0c0d0f",
+  "theme_color":"#0c0d0f",
+  "description":"Каталог, расчёт и ссылки клиентам в одном приложении",
   "icons":[
-    {"src":"/link-app-icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}
+    {"src":"/site-icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}
   ]
 }
