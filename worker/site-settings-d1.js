@@ -14,7 +14,7 @@ const DEFAULT_SITE_PROFILE = Object.freeze({
   phoneDigits: '79373296750',
   whatsappDigits: '79373296750',
   businessHours: 'Пн–Пт, 9:00–18:00',
-  serviceAreaKm: 150,
+  serviceAreaKm: 200,
   warrantyYears: 3,
   productionDays: 30,
   deliveryRate: 90,
