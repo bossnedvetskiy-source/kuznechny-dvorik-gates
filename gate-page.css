@@ -253,3 +253,51 @@
 .catalog-more.is-auto-loader>.show-more{
   display:none!important;
 }
+
+
+/* Phone-only mobile lead form 2026-09-21 */
+@media(max-width:620px){
+  /* На мобильном клиент вводит только номер телефона. Имя и комментарий остаются доступными на десктопе. */
+  .estimate-card .lead-optional-field,
+  .estimate-card .mobile-comment-toggle,
+  .estimate-card .lead-comment{
+    display:none!important;
+  }
+  .mobile-lead-open .mobile-payment-note{
+    display:none!important;
+  }
+  .mobile-lead-heading{
+    margin:4px 38px 16px 0!important;
+  }
+  .mobile-lead-heading h3{
+    font-size:27px!important;
+    line-height:1.08!important;
+  }
+  .mobile-lead-heading p{
+    max-width:330px;
+    font-size:12px!important;
+    line-height:1.45!important;
+  }
+  .estimate-card{
+    max-height:calc(100dvh - 20px)!important;
+    padding:18px 15px 15px!important;
+  }
+  .estimate-card .lead-fields{
+    margin-bottom:12px!important;
+  }
+  .estimate-card .consent-row{
+    margin:2px 0 0!important;
+    font-size:10.5px!important;
+    line-height:1.4!important;
+  }
+  .estimate-card .consent-row input{
+    flex:0 0 22px;
+    width:22px!important;
+    height:22px!important;
+  }
+  .mobile-lead-open .estimate-card>#sendButton{
+    margin-top:13px!important;
+    min-height:54px!important;
+    font-size:14px!important;
+  }
+}
