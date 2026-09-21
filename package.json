@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "build": "node scripts/build.mjs",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:integrity": "node scripts/test-gate-page.mjs && node scripts/test-admin-integrity.mjs && node scripts/test-offline-integrity.mjs"
   },
   "devDependencies": {
     "@playwright/test": "1.55.0",
