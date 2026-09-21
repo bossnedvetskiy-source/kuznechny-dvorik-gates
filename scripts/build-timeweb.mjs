@@ -147,7 +147,20 @@ await writeFile(path.join(output, 'offline-delivery-200km.json'), offlineDeliver
 
 // Public pages must stay indexable. Only the private admin page is noindexed.
 const renderedIndex = await render('/');
-const embeddedDelivery = JSON.stringify(delivery).replace(/</g, '\\u003c');
+// Keep only the fields the public calculator actually needs. The full 200 km
+// database remains available separately for the offline app, while the main
+// customer page avoids carrying duplicate routing metadata in its HTML.
+const deliveryForPage = {
+  updatedAt: delivery.updatedAt,
+  fallbackRatePerKm: delivery.fallbackRatePerKm,
+  origin: delivery.origin,
+  destinations: (delivery.destinations || []).map(item => ({
+    name:String(item?.name || '').trim(),
+    secondary:String(item?.secondary || '').replace(/\s*·\s*\d+\s*км\s*от\s*Мелеуза\s*$/iu,'').trim(),
+    price:Number(item?.price) || 0
+  })).filter(item => item.name)
+};
+const embeddedDelivery = JSON.stringify(deliveryForPage).replace(/</g, '\\u003c');
 const indexWithOfflineDelivery = renderedIndex.replace(
   /<script id="deliveryData" type="application\/json">[\s\S]*?<\/script>/,
   `<script id="deliveryData" type="application/json">${embeddedDelivery}</script>`
