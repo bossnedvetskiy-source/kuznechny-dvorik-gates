@@ -598,7 +598,46 @@ function showToast(message){
   clearTimeout(window.toastTimer);window.toastTimer=setTimeout(()=>toast.classList.remove('show'),2200);
 }
 
-phoneInput.addEventListener('input',()=>phoneInput.removeAttribute('aria-invalid'));
+function formatRussianPhone(value) {
+  let digits = String(value || '').replace(/\D/g,'');
+  if (digits.startsWith('8')) digits = '7' + digits.slice(1);
+  else if (!digits.startsWith('7')) digits = '7' + digits;
+  digits = digits.slice(0,11);
+  const local = digits.slice(1);
+  let result = '+7';
+  if (local.length) result += ' ' + local.slice(0,3);
+  if (local.length > 3) result += ' ' + local.slice(3,6);
+  if (local.length > 6) result += '-' + local.slice(6,8);
+  if (local.length > 8) result += '-' + local.slice(8,10);
+  return result;
+}
+
+function normalizePhoneInput() {
+  const formatted = formatRussianPhone(phoneInput.value);
+  if (phoneInput.value !== formatted) phoneInput.value = formatted;
+  phoneInput.removeAttribute('aria-invalid');
+}
+
+phoneInput.addEventListener('focus',()=>{
+  if (!String(phoneInput.value || '').trim()) {
+    phoneInput.value = '+7 ';
+    requestAnimationFrame(()=>phoneInput.setSelectionRange?.(phoneInput.value.length,phoneInput.value.length));
+  }
+});
+phoneInput.addEventListener('beforeinput',event=>{
+  // If a client starts the Russian number with 8 after the automatic +7,
+  // treat that 8 as the country prefix instead of as the first local digit.
+  if (event.inputType === 'insertText' && event.data === '8' && String(phoneInput.value || '').replace(/\D/g,'') === '7') {
+    event.preventDefault();
+    phoneInput.value = '+7 ';
+    requestAnimationFrame(()=>phoneInput.setSelectionRange?.(phoneInput.value.length,phoneInput.value.length));
+  }
+});
+phoneInput.addEventListener('input',normalizePhoneInput);
+phoneInput.addEventListener('paste',()=>setTimeout(normalizePhoneInput,0));
+phoneInput.addEventListener('blur',()=>{
+  if (String(phoneInput.value || '').replace(/\D/g,'') === '7') phoneInput.value = '';
+});
 consentInput.addEventListener('change',()=>consentInput.removeAttribute('aria-invalid'));
 sendButton.addEventListener('click',async()=>{
   const dimensions=dimensionState();
