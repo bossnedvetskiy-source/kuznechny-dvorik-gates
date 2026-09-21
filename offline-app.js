@@ -4,6 +4,19 @@
   const appMode=(window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches)||params.get('app')==='1';
   let installPrompt=null;
   let badge=null;
+  let appMenuButton=null;
+  function ensureAppMenuButton(){
+    if(!appMode)return null;
+    if(appMenuButton)return appMenuButton;
+    appMenuButton=document.createElement('a');
+    appMenuButton.href='/app';
+    appMenuButton.textContent='☰ Меню';
+    appMenuButton.setAttribute('aria-label','Открыть рабочее меню');
+    appMenuButton.style.cssText='position:fixed;z-index:501;left:10px;top:max(8px,env(safe-area-inset-top));display:flex;align-items:center;justify-content:center;min-height:34px;padding:0 10px;border:1px solid rgba(230,189,105,.30);border-radius:999px;background:rgba(12,13,15,.92);color:#f3e6c5;text-decoration:none;box-shadow:0 8px 22px rgba(0,0,0,.22);backdrop-filter:blur(8px);font:900 10px/1 Manrope,Arial,sans-serif';
+    document.body.append(appMenuButton);
+    return appMenuButton;
+  }
+
   function ensureBadge(){
     if(!appMode)return null;
     if(badge)return badge;
@@ -28,6 +41,7 @@
       if(worker)worker.postMessage({type:type});
     }).catch(()=>{});
   }
+  ensureAppMenuButton();
   navigator.serviceWorker.register('/site-sw.js',{scope:'/'}).then(()=>{
     setStatus(navigator.onLine?'Готовим сайт для работы без сети…':'Офлайн-режим');
     post('WARM_OFFLINE');
