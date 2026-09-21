@@ -834,6 +834,7 @@ const lightboxCounter=document.getElementById('lightboxCounter');
 let lightboxGallery=[];
 let lightboxIndex=0;
 let lightboxAlt='';
+let lightboxReturnFocus=null;
 
 function applyLightboxImage(){
   const count=lightboxGallery.length;
@@ -884,11 +885,19 @@ function showLightboxImage(options={}){
 }
 function openGallery(gallery,title,caption,alt,initialIndex=0){
   lightboxGallery=gallery.length?[...gallery]:['/hero-gates.jpg'];lightboxIndex=Math.max(0,Math.min(initialIndex,lightboxGallery.length-1));lightboxAlt=alt;
+  lightboxReturnFocus=document.activeElement instanceof HTMLElement?document.activeElement:null;
   document.getElementById('lightboxTitle').textContent=title;document.getElementById('lightboxPrice').textContent=caption;showLightboxImage();
   lightbox.hidden=false;document.body.style.overflow='hidden';
+  window.setTimeout(()=>document.getElementById('lightboxClose')?.focus?.({preventScroll:true}),0);
 }
 function openLightbox(id,initialIndex=0){const product=productById(id);if(product)openGallery(product.gallery,product.art,`с установкой, без доставки · ${money(product.price+product.install)}`,`Ворота с калиткой ${product.art}`,initialIndex)}
-function closeLightbox(){lightbox.hidden=true;document.body.style.overflow=''}
+function closeLightbox(){
+  lightbox.hidden=true;
+  document.body.style.overflow='';
+  const target=lightboxReturnFocus;
+  lightboxReturnFocus=null;
+  target?.focus?.({preventScroll:true});
+}
 
 lightboxImage.addEventListener('error',()=>{
   if(!lightboxGallery.length)return;
@@ -966,6 +975,14 @@ lightboxStage?.addEventListener('touchcancel',event=>finishLightboxSwipe(event,t
 lightbox.addEventListener('click',event=>{if(event.target===lightbox)closeLightbox()});
 document.addEventListener('keydown',event=>{
   if(lightbox.hidden)return;
+  if(event.key==='Tab'){
+    const items=[...lightbox.querySelectorAll('button:not([disabled]):not([hidden]),a[href]:not([hidden])')].filter(node=>node.offsetParent!==null);
+    if(items.length){
+      const first=items[0],last=items[items.length-1];
+      if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus();return}
+      if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();return}
+    }
+  }
   if(event.key==='Escape')closeLightbox();
   if(event.key==='ArrowLeft'&&lightboxGallery.length>1){lightboxIndex-=1;showLightboxImage({direction:-1})}
   if(event.key==='ArrowRight'&&lightboxGallery.length>1){lightboxIndex+=1;showLightboxImage({direction:1})}
