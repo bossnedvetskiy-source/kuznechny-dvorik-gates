@@ -62,6 +62,7 @@ curl --fail --silent --show-error --location --max-time 25 -D "$TMP_DIR/index.he
 grep -q 'Кузнечный Дворик' "$TMP_DIR/index.html" || fail 'main page marker missing'
 grep -q 'site.bundle.js' "$TMP_DIR/index.html" || fail 'site.bundle.js reference missing'
 grep -q 'site.css' "$TMP_DIR/index.html" || fail 'site.css reference missing'
+grep -q 'site-manifest.webmanifest' "$TMP_DIR/index.html" || fail 'full-site PWA manifest missing from main page'
 grep -q 'content="index,follow,max-image-preview:large"' "$TMP_DIR/index.html" || fail 'main page is not indexable'
 grep -q '<link rel="canonical" href="https://kuzdvor.tw1.ru/">' "$TMP_DIR/index.html" || fail 'main page canonical is invalid'
 grep -q '<meta property="og:url" content="https://kuzdvor.tw1.ru/">' "$TMP_DIR/index.html" || fail 'main page og:url is invalid'
@@ -121,6 +122,10 @@ if grep -q 'unsupported format' "$TMP_DIR/admin.html"; then
 fi
 fetch "$BASE_URL/xlsx.bundle.js?deploy_health=$TARGET_SOURCE_SHA" "$TMP_DIR/xlsx.bundle.js"
 grep -q 'xlsx.js' "$TMP_DIR/xlsx.bundle.js" || fail 'XLSX bundle invalid'
+fetch "$BASE_URL/site-manifest.webmanifest?deploy_health=$TARGET_SOURCE_SHA" "$TMP_DIR/site-manifest.webmanifest"
+grep -q '"display":"standalone"' "$TMP_DIR/site-manifest.webmanifest" || grep -q '"display": "standalone"' "$TMP_DIR/site-manifest.webmanifest" || fail 'full-site PWA manifest invalid'
+fetch "$BASE_URL/site-sw.js?deploy_health=$TARGET_SOURCE_SHA" "$TMP_DIR/site-sw.js"
+grep -q 'OFFLINE_READY' "$TMP_DIR/site-sw.js" || fail 'full-site offline service worker invalid'
 fetch "$BASE_URL/links?deploy_health=$TARGET_SOURCE_SHA" "$TMP_DIR/link-app.html"
 grep -q 'Ссылки клиентам' "$TMP_DIR/link-app.html" || fail 'client link app missing'
 fetch "$BASE_URL/napravleniya?deploy_health=$TARGET_SOURCE_SHA" "$TMP_DIR/napravleniya.html"
