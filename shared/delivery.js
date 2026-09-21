@@ -284,7 +284,9 @@
       visibleLocal.forEach(item => localChoices.push({
         name:String(item.name || '').trim(),
         label:String(item.label || item.name || '').trim(),
-        secondary:String(item.secondary || (navigator.onLine ? 'Из списка доставки' : 'Доступно офлайн')).trim(),
+        secondary:String(item.secondary || (navigator.onLine ? 'Из списка доставки' : 'Доступно офлайн'))
+          .replace(/\s*·\s*\d+\s*км\s*от\s*Мелеуза\s*$/iu,'')
+          .trim(),
         query:String(item.query || item.label || item.name || '').trim(),
         fixedItem:item,
         lat:Number(item.lat) || undefined,
