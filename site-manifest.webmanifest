@@ -1,14 +1,14 @@
 {
-  "name": "Кузнечный Дворик — каталог и замеры",
+  "name": "Кузнечный Дворик — рабочее приложение",
   "short_name": "Кузнечный Дворик",
   "id": "/?app=1",
-  "start_url": "/?app=1",
+  "start_url": "/app",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
   "background_color": "#0c0d0f",
   "theme_color": "#0c0d0f",
-  "description": "Офлайн-каталог ворот, расчёт стоимости и оформление заявки.",
+  "description": "Каталог ворот, расчёт стоимости, замеры и создание ссылок клиентам в одном приложении.",
   "icons": [
     {
       "src": "/site-icon.svg",
