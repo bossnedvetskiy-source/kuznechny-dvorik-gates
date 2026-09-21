@@ -1,4 +1,4 @@
-const VERSION='kuzdvor-offline-2026-09-21-v3';
+const VERSION='kuzdvor-offline-2026-09-21-v4';
 const SHELL_CACHE=VERSION+'-shell';
 const MEDIA_CACHE=VERSION+'-media';
 const API_CACHE=VERSION+'-api';
@@ -18,6 +18,8 @@ async function safePut(cache,url,response){
 async function fetchAndCache(cache,url){
   try{
     const response=await fetch(new Request(url,{cache:'reload'}));
+    const ok=Boolean(response && (response.ok || response.type==='opaque'));
+    if(!ok)return false;
     await safePut(cache,url,response);
     return true;
   }catch{return false}
@@ -69,19 +71,42 @@ async function cleanupOldOfflineCaches(){
   await Promise.all(keys.filter(key=>key.startsWith('kuzdvor-offline-')&&!keep.has(key)).map(key=>caches.delete(key)));
 }
 
+async function verifyOfflineSnapshot(){
+  const corePresent=await Promise.all(CORE.map(url=>caches.match(url,{ignoreSearch:true})));
+  if(!corePresent.every(Boolean))return {ok:false,missingCore:true,missingMedia:0,mediaTotal:0};
+
+  let catalogResponse=null;
+  try{
+    catalogResponse=await caches.open(API_CACHE).then(cache=>cache.match('/api/catalog-images'));
+    if(!catalogResponse)catalogResponse=await matchAny(new Request('/api/catalog-images'));
+  }catch{}
+  if(!catalogResponse)return {ok:false,missingCatalog:true,missingMedia:0,mediaTotal:0};
+
+  const all=new Set(STATIC_MEDIA);
+  try{
+    const data=await catalogResponse.clone().json();
+    collectMedia(data,all);
+  }catch{return {ok:false,missingCatalog:true,missingMedia:0,mediaTotal:0}}
+
+  const urls=[...all];
+  const present=await Promise.all(urls.map(url=>caches.match(url,{ignoreSearch:true})));
+  const missingMedia=present.filter(item=>!item).length;
+  return {ok:missingMedia===0,missingMedia,mediaTotal:urls.length};
+}
+
 async function offlineStatus(){
   const meta=await readOfflineMeta();
-  const coreCache=await caches.open(SHELL_CACHE);
-  const currentCore=await Promise.all(CORE.map(url=>coreCache.match(url,{ignoreSearch:true})));
-  const currentReady=currentCore.every(Boolean) && Boolean(meta?.current && meta?.complete);
+  const verification=meta?.complete ? await verifyOfflineSnapshot() : {ok:false,missingMedia:0,mediaTotal:0};
+  const currentReady=Boolean(meta?.current && meta?.complete && verification.ok);
+  const ready=Boolean(meta?.complete && verification.ok);
   return {
     type:'OFFLINE_STATUS',
-    ready:Boolean(meta?.complete),
+    ready,
     current:currentReady,
-    stale:Boolean(meta?.complete && !currentReady),
+    stale:Boolean(ready && !currentReady),
     updatedAt:meta?.updatedAt||null,
-    mediaCount:Number(meta?.mediaCount)||0,
-    failedCount:Number(meta?.failedCount)||0
+    mediaCount:verification.mediaTotal || Number(meta?.mediaCount)||0,
+    failedCount:verification.missingMedia || Number(meta?.failedCount)||0
   };
 }
 
@@ -97,19 +122,25 @@ async function warmOffline(){
     const shellResult=await cacheBatch(CORE,SHELL_CACHE,(current,total)=>broadcast({type:'OFFLINE_WARM_PROGRESS',current,total,stage:'shell'}));
     const all=new Set(STATIC_MEDIA);
     let catalogApiOk=false;
+    let catalogSnapshotResponse=null;
     try{
       const response=await fetch('/api/catalog-images',{cache:'no-store',headers:{accept:'application/json'}});
       if(response.ok){
-        const apiCache=await caches.open(API_CACHE);
-        await apiCache.put('/api/catalog-images',response.clone());
+        catalogSnapshotResponse=response.clone();
         const data=await response.json().catch(()=>null);
-        collectMedia(data,all);
-        catalogApiOk=true;
+        if(data){
+          collectMedia(data,all);
+          catalogApiOk=true;
+        }
       }
     }catch{}
     const media=[...all];
     const mediaResult=await cacheBatch(media,MEDIA_CACHE,(current,total)=>broadcast({type:'OFFLINE_WARM_PROGRESS',current,total,stage:'media'}));
     const complete=shellResult.failed.length===0 && mediaResult.failed.length===0 && catalogApiOk;
+    if(complete && catalogSnapshotResponse){
+      const apiCache=await caches.open(API_CACHE);
+      await apiCache.put('/api/catalog-images',catalogSnapshotResponse);
+    }
     const meta={
       complete,
       updatedAt:new Date().toISOString(),
@@ -248,7 +279,19 @@ self.addEventListener('fetch',event=>{
     event.respondWith(networkFirst(request,SHELL_CACHE,'/').catch(async()=>await matchAny(request) || await caches.match('/')));
     return;
   }
-  if(url.pathname==='/api/catalog-images'||url.pathname==='/api/share-link'){
+  if(url.pathname==='/api/catalog-images'){
+    event.respondWith((async()=>{
+      try{
+        // Return live data while online, but do not mutate the saved offline snapshot.
+        return await fetch(request);
+      }catch{
+        const cached=await caches.open(API_CACHE).then(cache=>cache.match('/api/catalog-images')) || await matchAny(request);
+        return cached||new Response(JSON.stringify({error:'Нет сохранённого каталога'}),{status:503,headers:{'content-type':'application/json'}});
+      }
+    })());
+    return;
+  }
+  if(url.pathname==='/api/share-link'){
     event.respondWith(networkFirst(request,API_CACHE).catch(async()=>{
       const cached=await caches.open(API_CACHE).then(cache=>cache.match(request,{ignoreSearch:false})) || await matchAny(request);
       return cached||new Response(JSON.stringify({error:'Нет сети'}),{status:503,headers:{'content-type':'application/json'}});
