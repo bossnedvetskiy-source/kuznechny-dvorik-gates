@@ -264,6 +264,13 @@ await writeFile(path.join(output, 'timeweb-build.txt'), `${new Date().toISOStrin
 await import(`./cache-bust-timeweb.mjs?build=${Date.now()}`);
 
 const publicIndex = await readFile(path.join(output, 'index.html'), 'utf8');
+const publicIndexBytes = Buffer.byteLength(publicIndex, 'utf8');
+if (publicIndexBytes > 250000) {
+  throw new Error(`Главная Timeweb снова перегружена: ${publicIndexBytes} байт. Проверьте, не встроены ли повторно большие справочники.`);
+}
+if ((publicIndex.match(/data-proof-image=/g)||[]).length !== (publicIndex.match(/data-proof-image=[^>]+aria-label=/g)||[]).length) {
+  throw new Error('Public proof gallery buttons lost aria-labels');
+}
 if (!publicIndex.includes('/site.bundle.js') || !publicIndex.includes('/site.css')) {
   throw new Error('Timeweb index.html собран неполностью');
 }
