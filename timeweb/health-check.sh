@@ -121,6 +121,8 @@ if grep -q 'unsupported format' "$TMP_DIR/admin.html"; then
 fi
 fetch "$BASE_URL/xlsx.bundle.js?deploy_health=$TARGET_SOURCE_SHA" "$TMP_DIR/xlsx.bundle.js"
 grep -q 'xlsx.js' "$TMP_DIR/xlsx.bundle.js" || fail 'XLSX bundle invalid'
+fetch "$BASE_URL/links?deploy_health=$TARGET_SOURCE_SHA" "$TMP_DIR/link-app.html"
+grep -q 'Ссылки клиентам' "$TMP_DIR/link-app.html" || fail 'client link app missing'
 fetch "$BASE_URL/napravleniya?deploy_health=$TARGET_SOURCE_SHA" "$TMP_DIR/napravleniya.html"
 if grep -qi 'noindex' "$TMP_DIR/napravleniya.html"; then
   fail 'directions page is accidentally noindexed'
