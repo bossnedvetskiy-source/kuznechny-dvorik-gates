@@ -198,7 +198,34 @@ function kd_delivery_settings(): array
 {
     $defaults = kd_defaults()['delivery'] ?? [];
     $saved = kd_setting_get('delivery_prices', []);
-    return is_array($saved) && $saved ? array_replace($defaults, $saved) : $defaults;
+    if (!is_array($saved) || !$saved) return $defaults;
+
+    $result = array_replace($defaults, $saved);
+    $defaultRows = is_array($defaults['destinations'] ?? null) ? $defaults['destinations'] : [];
+    $savedRows = is_array($saved['destinations'] ?? null) ? $saved['destinations'] : [];
+    if (!$defaultRows) return $result;
+
+    // Production defaults contain the generated 200 km offline grid. Saved admin
+    // rows stay authoritative for matching names, but no longer hide newly generated
+    // settlements when an older delivery table is stored in MySQL.
+    $rows = [];
+    $order = [];
+    foreach ($defaultRows as $item) {
+        if (!is_array($item)) continue;
+        $key = kd_normalize_name((string)($item['name'] ?? ''));
+        if ($key === '') continue;
+        if (!array_key_exists($key, $rows)) $order[] = $key;
+        $rows[$key] = $item;
+    }
+    foreach ($savedRows as $item) {
+        if (!is_array($item)) continue;
+        $key = kd_normalize_name((string)($item['name'] ?? ''));
+        if ($key === '') continue;
+        if (!array_key_exists($key, $rows)) $order[] = $key;
+        $rows[$key] = array_replace($rows[$key] ?? [], $item);
+    }
+    $result['destinations'] = array_values(array_map(static fn(string $key): array => $rows[$key], $order));
+    return $result;
 }
 
 function kd_article_slug(string $article): string
