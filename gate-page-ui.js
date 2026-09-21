@@ -316,6 +316,32 @@
   cta?.addEventListener('click', handleMeasureAction);
   mobileMeasureButton?.addEventListener('click', handleMeasureAction);
 
+  const focusableIn = modal => [...(modal?.querySelectorAll?.('a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])') || [])]
+    .filter(node => !node.hidden && node.offsetParent !== null);
+  let modalReturnFocus = null;
+  const focusModal = modal => {
+    modalReturnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    window.setTimeout(() => focusableIn(modal)[0]?.focus?.({preventScroll:true}), 0);
+  };
+  const restoreModalFocus = () => {
+    const target = modalReturnFocus;
+    modalReturnFocus = null;
+    target?.focus?.({preventScroll:true});
+  };
+  const trapModalTab = (event, modal) => {
+    if (event.key !== 'Tab' || !modal || modal.hasAttribute('hidden')) return false;
+    const items = focusableIn(modal);
+    if (!items.length) return false;
+    const first = items[0], last = items[items.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault(); last.focus(); return true;
+    }
+    if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault(); first.focus(); return true;
+    }
+    return false;
+  };
+
   const policyBackdrop = document.getElementById('policyBackdrop');
   const policyModal = document.getElementById('policyModal');
   const openPolicy = () => {
@@ -328,11 +354,13 @@
     policyBackdrop?.removeAttribute('hidden');
     policyModal?.removeAttribute('hidden');
     document.body.classList.add('modal-open');
+    focusModal(policyModal);
   };
   const closePolicy = () => {
     policyBackdrop?.setAttribute('hidden','');
     policyModal?.setAttribute('hidden','');
     document.body.classList.remove('modal-open');
+    restoreModalFocus();
   };
   document.querySelectorAll('a[href="#privacyPolicy"]').forEach(link => link.addEventListener('click', event => {
     event.preventDefault();
@@ -349,6 +377,7 @@
     successBackdrop?.setAttribute('hidden','');
     successModal?.setAttribute('hidden','');
     document.body.classList.remove('modal-open');
+    restoreModalFocus();
   };
   const openSuccess = (payload, queued=false) => {
     closeLead();
@@ -370,6 +399,7 @@
     successBackdrop?.removeAttribute('hidden');
     successModal?.removeAttribute('hidden');
     document.body.classList.add('modal-open');
+    focusModal(successModal);
   };
   successBackdrop?.addEventListener('click', closeSuccess);
   document.getElementById('successClose')?.addEventListener('click', closeSuccess);
@@ -380,6 +410,8 @@
   document.addEventListener('lead-sent', event => openSuccess(event.detail?.payload, Boolean(event.detail?.queued)));
 
   document.addEventListener('keydown', event => {
+    if (!policyModal?.hasAttribute('hidden') && trapModalTab(event, policyModal)) return;
+    if (!successModal?.hasAttribute('hidden') && trapModalTab(event, successModal)) return;
     if (event.key !== 'Escape') return;
     if (!policyModal?.hasAttribute('hidden')) closePolicy();
     else if (!successModal?.hasAttribute('hidden')) closeSuccess();
