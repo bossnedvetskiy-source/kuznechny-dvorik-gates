@@ -60,19 +60,36 @@ out center tags;`;
   throw lastError || new Error('Overpass unavailable');
 }
 
+function haversineKm(a,b) {
+  const toRad=value=>value*Math.PI/180;
+  const dLat=toRad(b.lat-a.lat);
+  const dLon=toRad(b.lon-a.lon);
+  const s1=Math.sin(dLat/2);
+  const s2=Math.sin(dLon/2);
+  const h=s1*s1+Math.cos(toRad(a.lat))*Math.cos(toRad(b.lat))*s2*s2;
+  return 6371*2*Math.atan2(Math.sqrt(h),Math.sqrt(1-h));
+}
+
 function dedupePlaces(elements) {
   const places = [];
-  const byIdentity = new Map();
+  const byName = new Map();
   for (const element of elements) {
     const point = pointOf(element);
     const name = String(element?.tags?.name || '').trim();
     if (!point || !name) continue;
-    const key = [
-      normalize(name),
-      Math.round(point.lat * 1000),
-      Math.round(point.lon * 1000)
-    ].join('|');
-    if (byIdentity.has(key)) continue;
+    const key = normalize(name);
+    const sameName = byName.get(key) || [];
+
+    // OSM often contains both a place node and a boundary relation for the same
+    // settlement. Treat same-name objects within 2 km as one settlement.
+    const duplicate = sameName.find(existing => haversineKm(existing,point) < 2);
+    if (duplicate) {
+      const existingDistrict = String(duplicate.tags?.['addr:district'] || duplicate.tags?.['is_in:district'] || '').trim();
+      const nextDistrict = String(element?.tags?.['addr:district'] || element?.tags?.['is_in:district'] || '').trim();
+      if (!existingDistrict && nextDistrict) duplicate.tags = {...duplicate.tags,...element.tags};
+      continue;
+    }
+
     const row = {
       osmType:String(element.type || ''),
       osmId:Number(element.id) || 0,
@@ -82,7 +99,8 @@ function dedupePlaces(elements) {
       lon:point.lon,
       tags:element.tags || {}
     };
-    byIdentity.set(key,row);
+    sameName.push(row);
+    byName.set(key,sameName);
     places.push(row);
   }
   return places;
@@ -184,10 +202,20 @@ function mergeManual(routed, baseDelivery) {
     if (matches.length === 1) {
       const [id,generated] = matches[0];
       map.set(id,{...generated,...item,name,label:item.label || name,source:'manual'});
-    } else if (matches.length > 1) {
-      // A manual ambiguous name cannot safely override several villages. Keep it as an
-      // extra exact choice rather than guessing which settlement was intended.
-      map.set(`manual:${key}`,{...item,name,label:item.label || name,source:'manual'});
+    } else if (matches.length > 1 && Number(item?.price) >= 0) {
+      // Old manual rows did not store coordinates. Their price was also based on
+      // distance × 90, so use it to identify the most likely same-name settlement.
+      const targetKm = Number(item.price) / RATE;
+      const ranked = matches
+        .map(([id,generated]) => ({id,generated,diff:Math.abs((Number(generated.distanceKm)||0)-targetKm)}))
+        .sort((a,b)=>a.diff-b.diff);
+      const best = ranked[0];
+      const tolerance = Math.max(15,targetKm*.5);
+      if (best && best.diff <= tolerance) {
+        map.set(best.id,{...best.generated,...item,name,label:item.label || name,source:'manual'});
+      } else {
+        map.set(`manual:${key}`,{...item,name,label:item.label || name,source:'manual'});
+      }
     } else {
       map.set(`manual:${key}`,{...item,name,label:item.label || name,source:'manual'});
     }
