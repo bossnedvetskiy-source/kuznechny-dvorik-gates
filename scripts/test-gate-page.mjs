@@ -64,7 +64,6 @@ assert(html.includes('связка между столбами под землё
 assert(html.includes('свяжемся с вами в рабочее время'), 'Lead confirmation must set a realistic contact expectation');
 assert(html.includes('class="skip-link"'), 'Gate page must include a keyboard skip link');
 assert((html.match(/data-proof-image=/g)||[]).length === (html.match(/data-proof-image=[^>]+aria-label=/g)||[]).length, 'All proof gallery controls must be labelled');
-assert(stylesCss.includes(':focus-visible'), 'Public site must expose keyboard focus states');
 assert(adminJs.includes("path !== '/api/admin/login'"), 'Admin source must handle login 401 without production patching');
 assert(adminJs.includes('targetBytes = 1350000') && adminJs.includes('photoUploadEnabled'), 'Admin source must contain production photo handling');
 assert(adminJs.includes("new CustomEvent('admin:ready')"), 'Admin source must emit readiness event itself');
@@ -91,6 +90,7 @@ assert(html.includes('id="catalogWarranty"') && runtime.includes('catalogWarrant
 
 const colorPhotoSite = await readFile('color-photo-site.js','utf8');
 const stylesCss = await readFile('styles.css','utf8');
+assert(stylesCss.includes(':focus-visible'), 'Public site must expose keyboard focus states');
 assert(!app.includes('class=\"product-image-backdrop\"'), 'Catalog cards must not request duplicate decorative backdrop images');
 assert(app.includes('KUZDVOR_CATALOG_IMAGES_PROMISE'), 'Catalog image API must be shared instead of fetched independently');
 assert(colorPhotoSite.includes('KUZDVOR_CATALOG_IMAGES_PROMISE'), 'Color photos must reuse the shared catalog image request');
