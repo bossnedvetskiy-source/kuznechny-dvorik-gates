@@ -56,13 +56,15 @@ for (const ambiguous of ['Под ключ с новыми столбами','<b>
 assert(!app.includes('Под ключ с новыми столбами') && !app.includes('Расчёт под ключ'), 'Ambiguous turnkey wording returned to gate runtime');
 assert(!/прайс/i.test(delivery), 'Delivery copy must avoid internal price-list jargon');
 assert(html.includes('Если подходящие столбы уже есть') && html.includes('без доставки'), 'Initial prices must clearly state posts condition and delivery exclusion');
-assert(html.includes('Даю согласие на обработку персональных данных.'), 'Consent wording must explicitly mention personal data');
+assert(html.includes('Согласен на обработку персональных данных.'), 'Consent wording must explicitly mention personal data');
 assert(ui.includes('Указать место установки'), 'Mobile CTA must work for cities, villages and settlements');
 assert(!adminHtml.includes('cropHelp') && !adminHtml.includes('name="fitMode"'), 'Admin must not contain hidden crop UI');
 assert(!adminJs.includes('setSelectedZoom') && !adminJs.includes('dragState'), 'Admin must not contain inactive crop/drag logic');
 assert(html.includes('связка между столбами под землёй'), 'Posts wording must explain what the linkage means');
 assert(html.includes('свяжемся с вами в рабочее время'), 'Lead confirmation must set a realistic contact expectation');
 assert(html.includes('class="skip-link"'), 'Gate page must include a keyboard skip link');
+assert((html.match(/data-proof-image=/g)||[]).length === (html.match(/data-proof-image=[^>]+aria-label=/g)||[]).length, 'All proof gallery controls must be labelled');
+assert(stylesCss.includes(':focus-visible'), 'Public site must expose keyboard focus states');
 assert(adminJs.includes("path !== '/api/admin/login'"), 'Admin source must handle login 401 without production patching');
 assert(adminJs.includes('targetBytes = 1350000') && adminJs.includes('photoUploadEnabled'), 'Admin source must contain production photo handling');
 assert(adminJs.includes("new CustomEvent('admin:ready')"), 'Admin source must emit readiness event itself');
