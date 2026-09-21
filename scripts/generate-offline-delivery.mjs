@@ -28,11 +28,10 @@ function kindLabel(place) {
   return ({city:'город',town:'город / посёлок',village:'село / деревня',hamlet:'деревня / хутор'})[place] || 'населённый пункт';
 }
 
-function secondaryFor(tags, distanceKm) {
+function secondaryFor(tags) {
   const district = String(tags?.['addr:district'] || tags?.['is_in:district'] || tags?.['addr:county'] || '').trim();
   const base = kindLabel(String(tags?.place || ''));
-  const distance = Number.isFinite(distanceKm) ? `${distanceKm} км от Мелеуза` : '';
-  return [district, base, distance].filter(Boolean).join(' · ');
+  return [district, base].filter(Boolean).join(' · ');
 }
 
 async function fetchOverpass() {
@@ -155,7 +154,7 @@ async function routeAll(places, onProgress = () => {}) {
       routed.push({
         name:item.name,
         label:item.name,
-        secondary:secondaryFor(item.tags,distanceKm),
+        secondary:secondaryFor(item.tags),
         price:distanceKm * RATE,
         distanceKm,
         lat:+item.lat.toFixed(6),
