@@ -51,7 +51,10 @@
     const destinations = [...data.destinations].sort((a,b)=>String(a.name).localeCompare(String(b.name),'ru'));
     const byKey = new Map(destinations.map(item => [normalize(item.name), item]));
     if (!byKey.has(normalize('Мелеуз'))) byKey.set(normalize('Мелеуз'), {name:'Мелеуз', price:0});
-    if (datalist) datalist.innerHTML = destinations.map(item => `<option value="${escapeHTML(item.name)}"></option>`).join('');
+    // The custom searchable list below replaces the native datalist. Avoid creating
+    // ~1800 hidden <option> nodes on every page load; this noticeably reduces mobile DOM work.
+    if (datalist) datalist.replaceChildren();
+    input?.removeAttribute?.('list');
 
     let placeChoices = null;
     let searchShell = null;
