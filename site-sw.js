@@ -109,13 +109,13 @@ async function warmOffline(){
     }catch{}
     const media=[...all];
     const mediaResult=await cacheBatch(media,MEDIA_CACHE,(current,total)=>broadcast({type:'OFFLINE_WARM_PROGRESS',current,total,stage:'media'}));
-    const complete=shellResult.failed.length===0 && mediaResult.failed.length===0;
+    const complete=shellResult.failed.length===0 && mediaResult.failed.length===0 && catalogApiOk;
     const meta={
       complete,
       updatedAt:new Date().toISOString(),
       mediaCount:mediaResult.done,
       mediaTotal:mediaResult.total,
-      failedCount:shellResult.failed.length+mediaResult.failed.length,
+      failedCount:shellResult.failed.length+mediaResult.failed.length+(catalogApiOk?0:1),
       catalogApiOk
     };
     await writeOfflineMeta(meta);
@@ -250,7 +250,7 @@ self.addEventListener('fetch',event=>{
   }
   if(url.pathname==='/api/catalog-images'||url.pathname==='/api/share-link'){
     event.respondWith(networkFirst(request,API_CACHE).catch(async()=>{
-      const cached=await caches.open(API_CACHE).then(cache=>cache.match(request,{ignoreSearch:false}));
+      const cached=await caches.open(API_CACHE).then(cache=>cache.match(request,{ignoreSearch:false})) || await matchAny(request);
       return cached||new Response(JSON.stringify({error:'Нет сети'}),{status:503,headers:{'content-type':'application/json'}});
     }));
     return;
