@@ -6,7 +6,7 @@ await mkdir('dist/server', { recursive: true });
 await mkdir('dist/client', { recursive: true });
 await mkdir('dist/.openai', { recursive: true });
 
-const [htmlSource, homeHtmlSource, homeCss, productCategoriesSource, css, storefrontCss, gatePageCss, catalogImages, pricesSource, deliveryPricesSource, customerContextSource, deliverySharedSource, leadsSharedSource, favoritesSharedSource, lazyRuntimeSource, js, publicSiteJsSource, gatePageUiSource, colorPhotoSiteSource, gateFormulaPricesSiteSource, adminHtmlSource, adminCss, adminJsSource, adminColorsJsSource, adminPricesJsSource, adminSiteJsSource, adminLeadsJsSource, adminEnhancementsJsSource, adminExcelImportSource, workerSource, adminAuthSource, siteSettingsSource, excelPricingSource, catalogMediaSource, catalogColorsSource, gateQuoteSource, publicPricesRuntimeSource, leadAntispamSource, leadsSource, xlsxBrowserSource] = await Promise.all([
+const [htmlSource, homeHtmlSource, homeCss, productCategoriesSource, css, storefrontCss, gatePageCss, catalogImages, pricesSource, deliveryPricesSource, customerContextSource, deliverySharedSource, leadsSharedSource, favoritesSharedSource, lazyRuntimeSource, offlineAppSource, js, publicSiteJsSource, gatePageUiSource, colorPhotoSiteSource, gateFormulaPricesSiteSource, adminHtmlSource, adminCss, adminJsSource, adminColorsJsSource, adminPricesJsSource, adminSiteJsSource, adminLeadsJsSource, adminEnhancementsJsSource, adminExcelImportSource, workerSource, adminAuthSource, siteSettingsSource, excelPricingSource, catalogMediaSource, catalogColorsSource, gateQuoteSource, publicPricesRuntimeSource, leadAntispamSource, leadsSource, xlsxBrowserSource] = await Promise.all([
   readFile('index.html', 'utf8'),
   readFile('home.html', 'utf8'),
   readFile('home.css', 'utf8'),
@@ -22,6 +22,7 @@ const [htmlSource, homeHtmlSource, homeCss, productCategoriesSource, css, storef
   readFile('shared/leads.js', 'utf8'),
   readFile('shared/favorites.js', 'utf8'),
   readFile('public-lazy-runtime.js', 'utf8'),
+  readFile('offline-app.js', 'utf8'),
   readFile('app.js', 'utf8'),
   readFile('public-site-settings.js', 'utf8'),
   readFile('gate-page-ui.js', 'utf8'),
@@ -119,6 +120,7 @@ const publicSiteBundle = [
   deliverySharedSource,
   leadsSharedSource,
   lazyRuntimeSource,
+  offlineAppSource,
   optimizedAppSource,
   publicSiteJsSource,
   gatePageUiSource,
@@ -240,6 +242,9 @@ await writeFile('dist/client/site.bundle.js', publicSiteBundle, 'utf8');
 await writeFile('dist/client/calculator.bundle.js', calculatorBundle, 'utf8');
 await writeFile('dist/client/catalog-enhancements.bundle.js', catalogEnhancementsBundle, 'utf8');
 await writeFile('dist/client/xlsx.bundle.js', xlsxBrowserSource, 'utf8');
+await copyFile('site-sw.js', 'dist/client/site-sw.js');
+await copyFile('site-manifest.webmanifest', 'dist/client/site-manifest.webmanifest');
+await copyFile('site-icon.svg', 'dist/client/site-icon.svg');
 await writeFile('dist/client/.keep', '', 'utf8');
 await copyFile('assets/hero-gates.jpg', 'dist/client/hero-gates.jpg');
 await copyFile('storefront.css', 'dist/client/storefront.css');
