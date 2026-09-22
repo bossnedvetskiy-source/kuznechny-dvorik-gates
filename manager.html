@@ -113,7 +113,7 @@
     const categoryLabel=value=>({gates:'Ворота с калиткой',canopy:'Навес','forged-fence':'Кованый забор','profsheet-fence':'Забор из профнастила','picket-fence':'Евроштакетник'})[value]||'Изделие';
 
     function showToast(message,error=false){toast.textContent=message;toast.className='toast'+(error?' error':'');toast.hidden=false;clearTimeout(showToast.t);showToast.t=setTimeout(()=>toast.hidden=true,2800)}
-    async function api(url,options={}){const response=await fetch(url,{credentials:'same-origin',cache:'no-store',...options,headers:{accept:'application/json',...(options.body?{'content-type':'application/json'}:{}),...(options.headers||{})}});const data=await response.json().catch(()=>({}));if(response.status===401){showLogin();throw Object.assign(new Error('Требуется вход'),{auth:true})}if(!response.ok)throw new Error(data.error||'Ошибка сервера');return data}
+    async function api(url,options={}){const response=await fetch(url,{credentials:'same-origin',cache:'no-store',...options,headers:{accept:'application/json',...(options.body?{'content-type':'application/json'}:{}),...(options.headers||{})}});const data=await response.json().catch(()=>({}));if(response.status===401){showLogin();throw Object.assign(new Error('Требуется вход'),{auth:true})}if(!response.ok){const message=[data.error,data.detail].filter(Boolean).join(': ');throw new Error(message||'Ошибка сервера')}return data}
     function showLogin(){loginView.hidden=false;appView.hidden=true;logoutButton.hidden=true;clearInterval(pollTimer)}
     function showApp(){loginView.hidden=true;appView.hidden=false;logoutButton.hidden=false;startPolling()}
 
