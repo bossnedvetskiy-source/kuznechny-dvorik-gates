@@ -144,6 +144,11 @@ fetch "$BASE_URL/links?deploy_health=$TARGET_SOURCE_SHA" "$TMP_DIR/link-app.html
 grep -q 'Создать ссылку' "$TMP_DIR/link-app.html" || fail 'client link app missing'
 grep -q '/site-manifest.webmanifest' "$TMP_DIR/link-app.html" || fail 'client links page is not part of unified PWA'
 fetch "$BASE_URL/manager?deploy_health=$TARGET_SOURCE_SHA" "$TMP_DIR/manager.html"
+grep -q "scope:'/manager'" "$TMP_DIR/manager.html" || fail 'manager-specific push registration missing'
+grep -q 'createFreshSubscription' "$TMP_DIR/manager.html" || fail 'manager push repair flow missing'
+fetch "$BASE_URL/manager-sw.js?deploy_health=$TARGET_SOURCE_SHA" "$TMP_DIR/manager-sw.js"
+grep -q 'kuzdvor-manager-v3' "$TMP_DIR/manager-sw.js" || fail 'manager push service worker version is stale'
+grep -q "showNotification('Новая заявка с сайта'" "$TMP_DIR/manager-sw.js" || fail 'manager background notification handler missing'
 grep -q 'manager-push-test' "$TMP_DIR/manager.html" || fail 'manager push test UI missing'
 grep -q 'saveSubscriptionOnServer' "$TMP_DIR/manager.html" || fail 'manager push subscription repair missing'
 fetch "$BASE_URL/manager-sw.js?deploy_health=$TARGET_SOURCE_SHA" "$TMP_DIR/manager-sw.js"
