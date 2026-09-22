@@ -240,12 +240,31 @@
     function b64ToUint8(value){const pad='='.repeat((4-value.length%4)%4);const base64=(value+pad).replace(/-/g,'+').replace(/_/g,'/');const raw=atob(base64);return Uint8Array.from([...raw].map(ch=>ch.charCodeAt(0)))}
     async function getRegistration(){if(!('serviceWorker'in navigator))throw new Error('Этот браузер не поддерживает фоновые уведомления');return navigator.serviceWorker.register('/manager-sw.js',{scope:'/manager'}).then(()=>navigator.serviceWorker.ready)}
     async function currentSubscription(){const reg=await getRegistration();return reg.pushManager.getSubscription()}
-    async function syncPushButton(){
-      if(!('Notification'in window)||!('PushManager'in window)){pushButton.hidden=true;return}
-      try{const sub=await currentSubscription();const on=Notification.permission==='granted'&&Boolean(sub);pushButton.classList.toggle('is-on',on);pushButton.textContent=on?'🔔 Уведомления включены':'🔔 Включить уведомления'}catch{pushButton.textContent='🔔 Включить уведомления'}
+    async function saveSubscriptionOnServer(sub){
+      if(!sub)return false;
+      await api('/api/admin/manager-push-subscriptions',{method:'POST',body:JSON.stringify({subscription:sub.toJSON(),userAgent:navigator.userAgent})});
+      return true;
+    }
+    async function syncPushButton({repairServer=true}={}){
+      if(!('Notification'in window)||!('PushManager'in window)){pushButton.hidden=true;return null}
+      try{
+        const sub=await currentSubscription();
+        const on=Notification.permission==='granted'&&Boolean(sub);
+        if(on&&repairServer){
+          try{await saveSubscriptionOnServer(sub)}catch{}
+        }
+        pushButton.classList.toggle('is-on',on);
+        pushButton.textContent=on?'🔔 Уведомления включены · проверить':'🔔 Включить уведомления';
+        return sub;
+      }catch{
+        pushButton.textContent='🔔 Включить уведомления';
+        return null;
+      }
     }
     pushButton.addEventListener('click',async()=>{
       pushButton.disabled=true;
+      const original=pushButton.textContent;
+      pushButton.textContent='🔔 Проверяем…';
       try{
         const permission=await Notification.requestPermission();
         if(permission!=='granted')throw new Error('Разрешите уведомления для этого сайта в настройках браузера');
@@ -255,10 +274,18 @@
           const key=await api('/api/admin/manager-push-key');
           sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64ToUint8(key.publicKey)});
         }
-        await api('/api/admin/manager-push-subscriptions',{method:'POST',body:JSON.stringify({subscription:sub.toJSON(),userAgent:navigator.userAgent})});
-        await syncPushButton();showToast('Уведомления включены');
-      }catch(error){showToast(error.message,true)}
-      finally{pushButton.disabled=false}
+        await saveSubscriptionOnServer(sub);
+        const test=await api('/api/admin/manager-push-test',{method:'POST',body:'{}'});
+        await syncPushButton({repairServer:false});
+        showToast(test.sent>0?'Тестовое уведомление отправлено. Оно должно появиться сейчас.':'Push-подписка сохранена');
+      }catch(error){
+        const detail=error?.message||'Не удалось проверить уведомления';
+        showToast(detail,true);
+        await syncPushButton({repairServer:false}).catch(()=>{});
+      }finally{
+        pushButton.disabled=false;
+        if(pushButton.textContent==='🔔 Проверяем…')pushButton.textContent=original||'🔔 Включить уведомления';
+      }
     });
 
     window.addEventListener('beforeinstallprompt',event=>{event.preventDefault();installPrompt=event;installCard.hidden=false});
@@ -268,7 +295,7 @@
     async function boot(){
       if('serviceWorker'in navigator){navigator.serviceWorker.register('/manager-sw.js',{scope:'/manager'}).catch(()=>{})}
       loadCache();
-      try{await api('/api/admin/leads?limit=1');showApp();await loadLeads();await syncPushButton()}catch(error){if(!error.auth)showLogin()}
+      try{await api('/api/admin/leads?limit=1');showApp();await loadLeads();await syncPushButton({repairServer:true})}catch(error){if(!error.auth)showLogin()}
     }
     boot();
   })();
