@@ -1,4 +1,4 @@
-const CACHE='kuzdvor-manager-v2';
+const CACHE='kuzdvor-manager-v3';
 const SHELL=['/manager','/manager.html','/manager-manifest.webmanifest','/manager-icon.svg'];
 
 self.addEventListener('install',event=>{
@@ -21,26 +21,21 @@ self.addEventListener('fetch',event=>{
   }
 });
 self.addEventListener('push',event=>{
-  event.waitUntil((async()=>{
-    let title='Новая заявка с сайта';
-    let body='Откройте приложение менеджера';
-    let tag='kuzdvor-new-lead';
-    let data={url:'/manager'};
-    try{
-      const response=await fetch('/api/admin/leads?limit=1',{credentials:'include',cache:'no-store'});
-      if(response.ok){
-        const payload=await response.json();
-        const lead=Array.isArray(payload.leads)?payload.leads[0]:null;
-        if(lead){
-          const amount=new Intl.NumberFormat('ru-RU').format(Number(lead.client_total||lead.total)||0);
-          body=[lead.name||'Клиент',lead.city||'',lead.article||'',amount?amount+' ₽':''].filter(Boolean).join(' · ');
-          tag='lead-'+lead.id;
-          data={url:'/manager',leadId:lead.id};
-        }
-      }
-    }catch{}
-    await self.registration.showNotification(title,{body,tag,data,renotify:true,requireInteraction:false,icon:'/manager-icon.svg',badge:'/manager-icon.svg'});
-  })());
+  // Show immediately. A background push must not depend on the manager login
+  // cookie or an extra API request, otherwise Android may terminate the event
+  // before a notification becomes visible.
+  event.waitUntil(self.registration.showNotification('Новая заявка с сайта',{
+    body:'Откройте КД Менеджер, чтобы посмотреть клиента и расчёт.',
+    tag:'kuzdvor-new-lead',
+    data:{url:'/manager'},
+    renotify:true,
+    requireInteraction:false,
+    silent:false,
+    icon:'/manager-icon.svg',
+    badge:'/manager-icon.svg',
+    vibrate:[180,80,180],
+    timestamp:Date.now()
+  }));
 });
 self.addEventListener('notificationclick',event=>{
   event.notification.close();
