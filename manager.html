@@ -23,7 +23,7 @@
     .login-card{margin:9vh auto 0;padding:22px;max-width:440px}.login-card h1{margin:0 0 6px;font-size:24px}.login-card p{margin:0 0 18px;color:var(--muted);font-size:12px;line-height:1.5}
     .field{display:grid;gap:6px;margin:0 0 11px}.field span{color:var(--muted);font-size:10px;font-weight:800}.field input,.field select{width:100%;min-height:48px;padding:0 12px;border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--ink);font-size:16px;outline:none}.field input:focus,.field select:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,149,59,.14)}
     .primary{width:100%;min-height:48px;border:0;border-radius:12px;background:var(--ink);color:#fff;font-weight:900}.primary:disabled{opacity:.5}.error{margin:10px 0 0;color:var(--danger);font-size:11px;font-weight:700}
-    .summary{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;margin-bottom:12px}.summary h1{margin:0;font-size:24px}.summary p{margin:3px 0 0;color:var(--muted);font-size:11px}.push-button{min-height:42px;padding:0 12px;border:1px solid #d8bd85;border-radius:11px;background:#fff7e7;color:#70521e;font-size:11px;font-weight:900}.push-button.is-on{border-color:#bfd0b4;background:#f1f7ed;color:#49663b}
+    .summary{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;margin-bottom:12px}.summary h1{margin:0;font-size:24px}.summary p{margin:3px 0 0;color:var(--muted);font-size:11px}.push-state{min-height:14px;color:#6e675e!important;font-size:9px!important;line-height:1.35}.push-state.ok{color:#567a43!important}.push-state.warn{color:#9a6a22!important}.push-state.bad{color:#a6433e!important}.push-button{min-height:42px;padding:0 12px;border:1px solid #d8bd85;border-radius:11px;background:#fff7e7;color:#70521e;font-size:11px;font-weight:900}.push-button.is-on{border-color:#bfd0b4;background:#f1f7ed;color:#49663b}
     .tabs{display:flex;gap:7px;overflow:auto;margin:0 -14px 12px;padding:0 14px 2px;scrollbar-width:none}.tabs::-webkit-scrollbar{display:none}.tab{flex:0 0 auto;min-height:40px;padding:0 13px;border:1px solid var(--line);border-radius:999px;background:#fff;color:#6c655c;font-size:11px;font-weight:900}.tab.active{border-color:var(--ink);background:var(--ink);color:#fff}.tab b{display:inline-grid;min-width:18px;height:18px;margin-left:4px;place-items:center;border-radius:999px;background:#efe8dc;color:#655947;font-size:9px}.tab.active b{background:#c9953b;color:#17120a}
     .lead-list{display:grid;gap:10px}.lead-card{overflow:hidden;border:1px solid var(--line);border-radius:16px;background:#fff;box-shadow:0 8px 24px rgba(18,16,13,.05)}.lead-card.is-new{border-color:#d1a353;box-shadow:0 0 0 1px rgba(201,149,59,.12),0 8px 24px rgba(18,16,13,.05)}
     .lead-head{display:flex;justify-content:space-between;gap:12px;padding:14px 14px 10px}.lead-title{min-width:0}.lead-title b{display:block;font-size:15px;line-height:1.3}.lead-title span{display:block;margin-top:3px;color:var(--muted);font-size:10px}.lead-total{flex:0 0 auto;color:#8b6525;font-size:17px;font-weight:900;white-space:nowrap}
@@ -60,7 +60,7 @@
 
       <section id="appView" hidden>
         <div class="summary">
-          <div><h1>Заявки</h1><p id="syncText">Загрузка…</p></div>
+          <div><h1>Заявки</h1><p id="syncText">Загрузка…</p><p class="push-state" id="pushStatusText">Проверяем уведомления…</p></div>
           <button class="push-button" id="pushButton" type="button">🔔 Включить уведомления</button>
         </div>
         <div class="install-card" id="installCard" hidden><span>Добавьте приложение на главный экран Android — будет открываться как обычная программа.</span><button id="installButton" type="button">Установить</button></div>
@@ -88,6 +88,7 @@
     const logoutButton=document.getElementById('logoutButton');
     const refreshButton=document.getElementById('refreshButton');
     const pushButton=document.getElementById('pushButton');
+    const pushStatusText=document.getElementById('pushStatusText');
     const leadList=document.getElementById('leadList');
     const emptyView=document.getElementById('emptyView');
     const syncText=document.getElementById('syncText');
@@ -103,6 +104,8 @@
     let latestId=0;
     let pollTimer=0;
     let installPrompt=null;
+    let awaitingPushReceipt=false;
+    let pushReceiptTimer=0;
 
     const escape=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
     const money=value=>new Intl.NumberFormat('ru-RU').format(Number(value)||0)+' ₽';
@@ -271,53 +274,100 @@
       await saveSubscriptionOnServer(sub);
       return sub;
     }
+    function setPushState(text,kind=''){
+      pushStatusText.textContent=text;
+      pushStatusText.className='push-state'+(kind?' '+kind:'');
+    }
+    async function serverPushStatus(sub){
+      if(!sub)return {registered:false};
+      return api('/api/admin/manager-push-status',{method:'POST',body:JSON.stringify({endpoint:sub.endpoint})});
+    }
     async function syncPushButton({repairServer=true}={}){
-      if(!('Notification'in window)||!('PushManager'in window)){pushButton.hidden=true;return null}
+      if(!('Notification'in window)||!('PushManager'in window)){
+        pushButton.hidden=true;
+        setPushState('Этот браузер не поддерживает фоновые push-уведомления','bad');
+        return null;
+      }
+      if(Notification.permission==='denied'){
+        pushButton.classList.remove('is-on');
+        pushButton.textContent='🔔 Исправить уведомления';
+        setPushState('Уведомления запрещены в настройках телефона','bad');
+        return null;
+      }
       try{
         const sub=await currentSubscription();
-        const on=Notification.permission==='granted'&&Boolean(sub);
-        if(on&&repairServer){
-          try{await saveSubscriptionOnServer(sub)}catch{}
+        if(!sub){
+          pushButton.classList.remove('is-on');
+          pushButton.textContent='🔔 Включить уведомления';
+          setPushState('Push-подписки на этом телефоне нет','warn');
+          return null;
         }
+        if(repairServer) await saveSubscriptionOnServer(sub);
+        const status=await serverPushStatus(sub);
+        const on=Notification.permission==='granted'&&status?.registered===true;
         pushButton.classList.toggle('is-on',on);
-        pushButton.textContent=on?'🔔 Уведомления включены · проверить':'🔔 Включить уведомления';
+        pushButton.textContent=on?'🔔 Уведомления включены · проверить':'🔔 Исправить уведомления';
+        if(on){
+          const last=Number(status?.lastStatus);
+          if(last>=200&&last<300) setPushState('Телефон зарегистрирован · последняя отправка принята push-сервисом','ok');
+          else setPushState('Телефон зарегистрирован на сервере · нажмите «проверить»','ok');
+        }else{
+          setPushState('Телефон не зарегистрирован на сервере','bad');
+        }
         return sub;
-      }catch{
-        pushButton.textContent='🔔 Включить уведомления';
+      }catch(error){
+        pushButton.classList.remove('is-on');
+        pushButton.textContent='🔔 Исправить уведомления';
+        setPushState('Не удалось проверить push: '+(error?.message||'ошибка'),'bad');
         return null;
       }
     }
+
+    navigator.serviceWorker?.addEventListener('message',event=>{
+      if(event.data?.type!=='MANAGER_PUSH_RECEIVED')return;
+      if(awaitingPushReceipt){
+        awaitingPushReceipt=false;
+        clearTimeout(pushReceiptTimer);
+        setPushState('Тест дошёл до телефона ✓','ok');
+        showToast('Тестовое уведомление дошло до телефона ✓');
+      }
+    });
+
     pushButton.addEventListener('click',async()=>{
       pushButton.disabled=true;
       pushButton.textContent='🔔 Проверяем…';
+      setPushState('Создаём свежую push-подписку…');
       try{
         const permission=await Notification.requestPermission();
         if(permission!=='granted')throw new Error('Разрешите уведомления для КД Менеджер в настройках телефона');
-        const reg=await getRegistration();
-        let sub=await reg.pushManager.getSubscription();
-        if(!sub){
-          sub=await createFreshSubscription();
-        }else{
-          await saveSubscriptionOnServer(sub);
-        }
 
-        let test=null;
-        try{
-          test=await api('/api/admin/manager-push-test',{method:'POST',body:'{}'});
-        }catch(firstError){
-          // A browser can keep an expired endpoint and still report notifications as
-          // "enabled". Recreate the subscription once and test the new endpoint.
-          sub=await createFreshSubscription();
-          test=await api('/api/admin/manager-push-test',{method:'POST',body:'{}'});
-        }
+        // Always recreate the subscription during a manual check. This repairs
+        // stale Android/Chrome endpoints and any old VAPID-key binding in one step.
+        const sub=await createFreshSubscription();
+        const status=await serverPushStatus(sub);
+        if(!status?.registered)throw new Error('Сервер не сохранил push-подписку');
+
+        awaitingPushReceipt=true;
+        clearTimeout(pushReceiptTimer);
+        pushReceiptTimer=setTimeout(()=>{
+          if(!awaitingPushReceipt)return;
+          awaitingPushReceipt=false;
+          setPushState('Push-сервис принял тест, но телефон не подтвердил получение. Проверьте системные уведомления Chrome/КД Менеджер.','warn');
+        },8000);
+
+        const test=await api('/api/admin/manager-push-test',{method:'POST',body:'{}'});
+        if(!(test?.sent>0))throw new Error('Push-сервис не принял тест');
 
         await syncPushButton({repairServer:false});
-        showToast(test?.sent>0?'Тестовое уведомление отправлено ✓':'Уведомления включены');
+        showToast('Тест отправлен · ждём уведомление');
       }catch(error){
+        awaitingPushReceipt=false;
+        clearTimeout(pushReceiptTimer);
         const detail=error?.message||'Не удалось проверить уведомления';
         showToast(detail,true);
         pushButton.classList.remove('is-on');
         pushButton.textContent='🔔 Исправить уведомления';
+        setPushState(detail,'bad');
       }finally{
         pushButton.disabled=false;
         if(pushButton.textContent==='🔔 Проверяем…')pushButton.textContent='🔔 Включить уведомления';
