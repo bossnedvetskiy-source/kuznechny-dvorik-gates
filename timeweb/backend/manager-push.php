@@ -242,3 +242,60 @@ function kd_send_manager_push_notifications(int $leadId): void
         error_log('Kuzdvor manager push setup: ' . $e->getMessage());
     }
 }
+
+
+function kd_manager_push_test(int $adminId): never
+{
+    kd_manager_push_ensure_table();
+    $stmt = kd_db()->prepare('
+      SELECT endpoint_hash,endpoint
+      FROM manager_push_subscriptions
+      WHERE admin_id=?
+      ORDER BY updated_at DESC
+      LIMIT 10
+    ');
+    $stmt->execute([$adminId]);
+    $rows = $stmt->fetchAll();
+    if (!$rows) {
+        kd_json(['error' => 'Push-подписка не найдена. Нажмите «Включить уведомления» ещё раз.'], 409);
+    }
+
+    $keys = kd_manager_vapid_keys();
+    $accepted = 0;
+    $failed = [];
+    foreach ($rows as $row) {
+        $endpoint = (string)($row['endpoint'] ?? '');
+        if ($endpoint === '') continue;
+        try {
+            $status = kd_manager_push_http($endpoint, $keys);
+            if ($status >= 200 && $status < 300) {
+                $accepted++;
+                continue;
+            }
+            if ($status === 404 || $status === 410) {
+                kd_db()->prepare('DELETE FROM manager_push_subscriptions WHERE endpoint_hash=?')->execute([(string)$row['endpoint_hash']]);
+            }
+            $failed[] = ['status' => $status];
+        } catch (Throwable $e) {
+            $failed[] = ['status' => 0, 'error' => mb_substr($e->getMessage(), 0, 300)];
+        }
+    }
+
+    if ($accepted < 1) {
+        $first = $failed[0] ?? [];
+        $detail = !empty($first['status'])
+            ? 'Push-сервис вернул HTTP ' . (int)$first['status']
+            : (string)($first['error'] ?? 'Не удалось связаться с push-сервисом');
+        kd_json([
+            'error' => 'Тестовое уведомление не отправлено',
+            'detail' => $detail,
+            'failed' => count($failed),
+        ], 502);
+    }
+
+    kd_json([
+        'ok' => true,
+        'sent' => $accepted,
+        'failed' => count($failed),
+    ]);
+}
