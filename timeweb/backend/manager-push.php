@@ -20,6 +20,18 @@ function kd_manager_push_ensure_table(): void
           KEY idx_manager_push_updated (updated_at)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ");
+    $columns = [];
+    try {
+        foreach (kd_db()->query('SHOW COLUMNS FROM manager_push_subscriptions')->fetchAll() as $column) {
+            $columns[(string)($column['Field'] ?? '')] = true;
+        }
+        if (!isset($columns['last_status'])) kd_db()->exec('ALTER TABLE manager_push_subscriptions ADD COLUMN last_status SMALLINT NULL AFTER user_agent');
+        if (!isset($columns['last_attempt_at'])) kd_db()->exec('ALTER TABLE manager_push_subscriptions ADD COLUMN last_attempt_at DATETIME NULL AFTER last_status');
+        if (!isset($columns['last_success_at'])) kd_db()->exec('ALTER TABLE manager_push_subscriptions ADD COLUMN last_success_at DATETIME NULL AFTER last_attempt_at');
+        if (!isset($columns['failure_count'])) kd_db()->exec('ALTER TABLE manager_push_subscriptions ADD COLUMN failure_count INT UNSIGNED NOT NULL DEFAULT 0 AFTER last_success_at');
+    } catch (Throwable $e) {
+        error_log('Kuzdvor manager push diagnostics schema: ' . $e->getMessage());
+    }
     $ready = true;
 }
 
@@ -185,12 +197,65 @@ function kd_manager_push_subscription_delete(int $adminId): never
     kd_json(['ok' => true]);
 }
 
+function kd_manager_push_record_result(string $endpointHash, int $status): void
+{
+    try {
+        $success = $status >= 200 && $status < 300;
+        $stmt = kd_db()->prepare('
+          UPDATE manager_push_subscriptions
+          SET last_status=?,
+              last_attempt_at=UTC_TIMESTAMP(),
+              last_success_at=IF(?,UTC_TIMESTAMP(),last_success_at),
+              failure_count=IF(?,0,failure_count+1),
+              updated_at=updated_at
+          WHERE endpoint_hash=?
+        ');
+        $stmt->execute([$status, $success ? 1 : 0, $success ? 1 : 0, $endpointHash]);
+    } catch (Throwable $e) {
+        error_log('Kuzdvor manager push diagnostics: ' . $e->getMessage());
+    }
+}
+
+function kd_manager_push_status(int $adminId): never
+{
+    kd_manager_push_ensure_table();
+    $body = kd_json_body(8192);
+    $endpoint = trim((string)($body['endpoint'] ?? ''));
+    if ($endpoint === '') kd_json(['registered' => false, 'subscriptionCount' => 0]);
+
+    $countStmt = kd_db()->prepare('SELECT COUNT(*) FROM manager_push_subscriptions WHERE admin_id=?');
+    $countStmt->execute([$adminId]);
+    $count = (int)$countStmt->fetchColumn();
+
+    $stmt = kd_db()->prepare('
+      SELECT last_status,last_attempt_at,last_success_at,failure_count,updated_at
+      FROM manager_push_subscriptions
+      WHERE endpoint_hash=? AND admin_id=?
+      LIMIT 1
+    ');
+    $stmt->execute([hash('sha256', $endpoint), $adminId]);
+    $row = $stmt->fetch();
+    if (!is_array($row)) {
+        kd_json(['registered' => false, 'subscriptionCount' => $count]);
+    }
+
+    kd_json([
+        'registered' => true,
+        'subscriptionCount' => $count,
+        'lastStatus' => $row['last_status'] === null ? null : (int)$row['last_status'],
+        'lastAttemptAt' => $row['last_attempt_at'] ?? null,
+        'lastSuccessAt' => $row['last_success_at'] ?? null,
+        'failureCount' => (int)($row['failure_count'] ?? 0),
+        'updatedAt' => $row['updated_at'] ?? null,
+    ]);
+}
+
 function kd_manager_push_http(string $endpoint, array $keys): int
 {
     if (!function_exists('curl_init')) throw new RuntimeException('cURL недоступен для Web Push');
     $jwt = kd_manager_vapid_jwt($endpoint, $keys);
     $headers = [
-        'TTL: 90',
+        'TTL: 86400',
         'Urgency: high',
         'Authorization: vapid t=' . $jwt . ', k=' . $keys['publicKey'],
         'Crypto-Key: p256ecdsa=' . $keys['publicKey'],
@@ -229,12 +294,14 @@ function kd_send_manager_push_notifications(int $leadId): void
             if ($endpoint === '') continue;
             try {
                 $status = kd_manager_push_http($endpoint, $keys);
+                kd_manager_push_record_result((string)$row['endpoint_hash'], $status);
                 if ($status === 404 || $status === 410) {
                     kd_db()->prepare('DELETE FROM manager_push_subscriptions WHERE endpoint_hash=?')->execute([(string)$row['endpoint_hash']]);
                 } elseif ($status < 200 || $status >= 300) {
                     error_log('Kuzdvor manager push HTTP ' . $status . ' for lead ' . $leadId);
                 }
             } catch (Throwable $e) {
+                kd_manager_push_record_result((string)$row['endpoint_hash'], 0);
                 error_log('Kuzdvor manager push: ' . $e->getMessage());
             }
         }
@@ -268,6 +335,7 @@ function kd_manager_push_test(int $adminId): never
         if ($endpoint === '') continue;
         try {
             $status = kd_manager_push_http($endpoint, $keys);
+            kd_manager_push_record_result((string)$row['endpoint_hash'], $status);
             if ($status >= 200 && $status < 300) {
                 $accepted++;
                 continue;
@@ -277,6 +345,7 @@ function kd_manager_push_test(int $adminId): never
             }
             $failed[] = ['status' => $status];
         } catch (Throwable $e) {
+            kd_manager_push_record_result((string)$row['endpoint_hash'], 0);
             $failed[] = ['status' => 0, 'error' => mb_substr($e->getMessage(), 0, 300)];
         }
     }
