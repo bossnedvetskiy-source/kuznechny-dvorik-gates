@@ -143,6 +143,13 @@ grep -q 'updateBaseButton' "$TMP_DIR/work-app.html" || fail 'manual offline refr
 fetch "$BASE_URL/links?deploy_health=$TARGET_SOURCE_SHA" "$TMP_DIR/link-app.html"
 grep -q 'Создать ссылку' "$TMP_DIR/link-app.html" || fail 'client link app missing'
 grep -q '/site-manifest.webmanifest' "$TMP_DIR/link-app.html" || fail 'client links page is not part of unified PWA'
+fetch "$BASE_URL/manager?deploy_health=$TARGET_SOURCE_SHA" "$TMP_DIR/manager.html"
+grep -q 'manager-push-test' "$TMP_DIR/manager.html" || fail 'manager push test UI missing'
+grep -q 'saveSubscriptionOnServer' "$TMP_DIR/manager.html" || fail 'manager push subscription repair missing'
+fetch "$BASE_URL/manager-sw.js?deploy_health=$TARGET_SOURCE_SHA" "$TMP_DIR/manager-sw.js"
+grep -q 'kuzdvor-manager-v2' "$TMP_DIR/manager-sw.js" || fail 'manager service worker update missing'
+php -l backend/manager-push.php >/dev/null 2>&1 || fail 'manager push PHP has syntax errors'
+grep -q 'function kd_manager_push_test' backend/manager-push.php || fail 'manager push test endpoint missing'
 fetch "$BASE_URL/napravleniya?deploy_health=$TARGET_SOURCE_SHA" "$TMP_DIR/napravleniya.html"
 if grep -qi 'noindex' "$TMP_DIR/napravleniya.html"; then
   fail 'directions page is accidentally noindexed'
