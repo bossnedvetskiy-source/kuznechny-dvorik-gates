@@ -147,14 +147,15 @@ fetch "$BASE_URL/manager?deploy_health=$TARGET_SOURCE_SHA" "$TMP_DIR/manager.htm
 grep -q "scope:'/manager'" "$TMP_DIR/manager.html" || fail 'manager-specific push registration missing'
 grep -q 'createFreshSubscription' "$TMP_DIR/manager.html" || fail 'manager push repair flow missing'
 fetch "$BASE_URL/manager-sw.js?deploy_health=$TARGET_SOURCE_SHA" "$TMP_DIR/manager-sw.js"
-grep -q 'kuzdvor-manager-v3' "$TMP_DIR/manager-sw.js" || fail 'manager push service worker version is stale'
+grep -q 'kuzdvor-manager-v4' "$TMP_DIR/manager-sw.js" || fail 'manager push service worker version is stale'
 grep -q "showNotification('Новая заявка с сайта'" "$TMP_DIR/manager-sw.js" || fail 'manager background notification handler missing'
+grep -q 'MANAGER_PUSH_RECEIVED' "$TMP_DIR/manager-sw.js" || fail 'manager push receipt diagnostics missing'
 grep -q 'manager-push-test' "$TMP_DIR/manager.html" || fail 'manager push test UI missing'
 grep -q 'saveSubscriptionOnServer' "$TMP_DIR/manager.html" || fail 'manager push subscription repair missing'
-fetch "$BASE_URL/manager-sw.js?deploy_health=$TARGET_SOURCE_SHA" "$TMP_DIR/manager-sw.js"
-grep -q 'kuzdvor-manager-v2' "$TMP_DIR/manager-sw.js" || fail 'manager service worker update missing'
 php -l backend/manager-push.php >/dev/null 2>&1 || fail 'manager push PHP has syntax errors'
 grep -q 'function kd_manager_push_test' backend/manager-push.php || fail 'manager push test endpoint missing'
+grep -q 'function kd_manager_push_status' backend/manager-push.php || fail 'manager push status diagnostics missing'
+grep -q 'manager-push-status' local-api.php || fail 'manager push status route missing'
 fetch "$BASE_URL/napravleniya?deploy_health=$TARGET_SOURCE_SHA" "$TMP_DIR/napravleniya.html"
 if grep -qi 'noindex' "$TMP_DIR/napravleniya.html"; then
   fail 'directions page is accidentally noindexed'
