@@ -238,12 +238,38 @@
     document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&!loginView.hidden){}else if(document.visibilityState==='visible'&&!appView.hidden)loadLeads({silent:true})});
 
     function b64ToUint8(value){const pad='='.repeat((4-value.length%4)%4);const base64=(value+pad).replace(/-/g,'+').replace(/_/g,'/');const raw=atob(base64);return Uint8Array.from([...raw].map(ch=>ch.charCodeAt(0)))}
-    async function getRegistration(){if(!('serviceWorker'in navigator))throw new Error('Этот браузер не поддерживает фоновые уведомления');return navigator.serviceWorker.register('/manager-sw.js',{scope:'/manager'}).then(()=>navigator.serviceWorker.ready)}
+    async function waitForManagerWorker(reg){
+      if(reg.active)return reg;
+      await new Promise((resolve,reject)=>{
+        const worker=reg.installing||reg.waiting;
+        if(!worker){resolve();return}
+        const timer=setTimeout(()=>reject(new Error('Не удалось запустить службу уведомлений')),12000);
+        const done=()=>{if(worker.state==='activated'||reg.active){clearTimeout(timer);resolve()}};
+        worker.addEventListener('statechange',done);
+        done();
+      });
+      return reg;
+    }
+    async function getRegistration(){
+      if(!('serviceWorker'in navigator))throw new Error('Этот браузер не поддерживает фоновые уведомления');
+      const reg=await navigator.serviceWorker.register('/manager-sw.js',{scope:'/manager',updateViaCache:'none'});
+      await reg.update().catch(()=>{});
+      return waitForManagerWorker(reg);
+    }
     async function currentSubscription(){const reg=await getRegistration();return reg.pushManager.getSubscription()}
     async function saveSubscriptionOnServer(sub){
       if(!sub)return false;
       await api('/api/admin/manager-push-subscriptions',{method:'POST',body:JSON.stringify({subscription:sub.toJSON(),userAgent:navigator.userAgent})});
       return true;
+    }
+    async function createFreshSubscription(){
+      const reg=await getRegistration();
+      const existing=await reg.pushManager.getSubscription();
+      if(existing){try{await existing.unsubscribe()}catch{}}
+      const key=await api('/api/admin/manager-push-key');
+      const sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64ToUint8(key.publicKey)});
+      await saveSubscriptionOnServer(sub);
+      return sub;
     }
     async function syncPushButton({repairServer=true}={}){
       if(!('Notification'in window)||!('PushManager'in window)){pushButton.hidden=true;return null}
@@ -263,28 +289,38 @@
     }
     pushButton.addEventListener('click',async()=>{
       pushButton.disabled=true;
-      const original=pushButton.textContent;
       pushButton.textContent='🔔 Проверяем…';
       try{
         const permission=await Notification.requestPermission();
-        if(permission!=='granted')throw new Error('Разрешите уведомления для этого сайта в настройках браузера');
+        if(permission!=='granted')throw new Error('Разрешите уведомления для КД Менеджер в настройках телефона');
         const reg=await getRegistration();
         let sub=await reg.pushManager.getSubscription();
         if(!sub){
-          const key=await api('/api/admin/manager-push-key');
-          sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64ToUint8(key.publicKey)});
+          sub=await createFreshSubscription();
+        }else{
+          await saveSubscriptionOnServer(sub);
         }
-        await saveSubscriptionOnServer(sub);
-        const test=await api('/api/admin/manager-push-test',{method:'POST',body:'{}'});
+
+        let test=null;
+        try{
+          test=await api('/api/admin/manager-push-test',{method:'POST',body:'{}'});
+        }catch(firstError){
+          // A browser can keep an expired endpoint and still report notifications as
+          // "enabled". Recreate the subscription once and test the new endpoint.
+          sub=await createFreshSubscription();
+          test=await api('/api/admin/manager-push-test',{method:'POST',body:'{}'});
+        }
+
         await syncPushButton({repairServer:false});
-        showToast(test.sent>0?'Тестовое уведомление отправлено. Оно должно появиться сейчас.':'Push-подписка сохранена');
+        showToast(test?.sent>0?'Тестовое уведомление отправлено ✓':'Уведомления включены');
       }catch(error){
         const detail=error?.message||'Не удалось проверить уведомления';
         showToast(detail,true);
-        await syncPushButton({repairServer:false}).catch(()=>{});
+        pushButton.classList.remove('is-on');
+        pushButton.textContent='🔔 Исправить уведомления';
       }finally{
         pushButton.disabled=false;
-        if(pushButton.textContent==='🔔 Проверяем…')pushButton.textContent=original||'🔔 Включить уведомления';
+        if(pushButton.textContent==='🔔 Проверяем…')pushButton.textContent='🔔 Включить уведомления';
       }
     });
 
@@ -293,7 +329,7 @@
     window.addEventListener('appinstalled',()=>installCard.hidden=true);
 
     async function boot(){
-      if('serviceWorker'in navigator){navigator.serviceWorker.register('/manager-sw.js',{scope:'/manager'}).catch(()=>{})}
+      if('serviceWorker'in navigator){navigator.serviceWorker.register('/manager-sw.js',{scope:'/manager',updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{})}
       loadCache();
       try{await api('/api/admin/leads?limit=1');showApp();await loadLeads();await syncPushButton({repairServer:true})}catch(error){if(!error.auth)showLogin()}
     }
