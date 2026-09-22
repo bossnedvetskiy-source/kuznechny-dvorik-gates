@@ -71,6 +71,12 @@ try {
         kd_manager_push_subscription_delete((int)$session['admin_id']);
     }
 
+    if ($route === 'admin/manager-push-test' && $method === 'POST') {
+        kd_require_same_origin();
+        $session = kd_require_admin();
+        kd_manager_push_test((int)$session['admin_id']);
+    }
+
     if (str_starts_with($route, 'admin/')) {
         if ($method !== 'GET') kd_require_same_origin();
         kd_require_admin();
