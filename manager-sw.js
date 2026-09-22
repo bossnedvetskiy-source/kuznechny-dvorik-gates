@@ -1,4 +1,4 @@
-const CACHE='kuzdvor-manager-v1';
+const CACHE='kuzdvor-manager-v2';
 const SHELL=['/manager','/manager.html','/manager-manifest.webmanifest','/manager-icon.svg'];
 
 self.addEventListener('install',event=>{
@@ -6,8 +6,11 @@ self.addEventListener('install',event=>{
   self.skipWaiting();
 });
 self.addEventListener('activate',event=>{
-  event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key)))));
-  self.clients.claim();
+  event.waitUntil((async()=>{
+    const keys=await caches.keys();
+    await Promise.all(keys.filter(key=>key.startsWith('kuzdvor-manager-')&&key!==CACHE).map(key=>caches.delete(key)));
+    await self.clients.claim();
+  })());
 });
 self.addEventListener('fetch',event=>{
   const url=new URL(event.request.url);
