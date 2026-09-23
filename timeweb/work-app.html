@@ -118,7 +118,7 @@
   if(!navigator.onLine)set('Проверяем сохранённую базу…','offline');
 
   if('serviceWorker' in navigator){
-    const APP_BUILD='2026-09-23-v8';
+    const APP_BUILD='2026-09-23-v9';
     let controllerReloaded=false;
     navigator.serviceWorker.addEventListener('controllerchange',()=>{
       if(controllerReloaded)return;
@@ -195,9 +195,10 @@
         set(saved?'Не всё обновилось · сохранённая база работает':'Не удалось сохранить обязательные данные',saved?'ready':'');
         updateButton.disabled=false;
         updateButton.textContent='Повторить обновление';
+        const critical=Array.isArray(data.criticalFailures)?data.criticalFailures.filter(Boolean):[];
         meta.textContent=saved
-          ? 'Не удалось обновить файлов: '+(data.failedCount||0)+'. Предыдущая офлайн-база сохранена — можно продолжать работать без сети и повторить обновление позже.'
-          : 'Не удалось сохранить обязательные данные приложения. Повторите обновление. Отдельные фотографии больше не блокируют готовность офлайн-базы.';
+          ? 'Не удалось обновить обязательные данные. Предыдущая офлайн-база сохранена — можно продолжать работать без сети и повторить обновление позже.'
+          : 'Не удалось сохранить обязательные данные приложения'+(critical.length?' ('+critical.join(', ')+')':'')+'. Повторите обновление. Отдельные фотографии больше не блокируют готовность офлайн-базы.';
       }
     });
   }
