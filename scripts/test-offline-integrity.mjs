@@ -21,6 +21,9 @@ for (const required of [
   "'/links'",
   "'/offline-delivery-200km.json'",
   'GET_OFFLINE_STATUS',
+  'CHECK_OFFLINE_UPDATE',
+  'OFFLINE_UP_TO_DATE',
+  'OFFLINE_UPDATE_AVAILABLE',
   'OFFLINE_READY',
   'OFFLINE_PARTIAL',
   'catalog-media',
@@ -29,8 +32,13 @@ for (const required of [
 
 assert(app.includes('Обновить офлайн-базу'), 'Manual offline refresh button missing');
 assert(app.includes('navigator.storage.persist'), 'Persistent offline storage protection missing');
-assert(app.includes("post('WARM_OFFLINE')"), 'Manual offline refresh action is not wired');
+assert(app.includes("post('CHECK_OFFLINE_UPDATE',{auto:true,allowInitial:true})"), 'Manual offline refresh must check the lightweight version before downloading');
+assert(app.includes("post('CHECK_OFFLINE_UPDATE',{auto:true,allowInitial:false})"), 'Work app must automatically check for site changes without forcing the first download');
+assert(app.includes('Полная офлайн-база скачивается автоматически только если на сайте изменились'), 'Work app must explain change-driven offline downloads');
 assert(app.includes('Предыдущая офлайн-база сохранена'), 'Partial refresh must explain that the previous offline base is preserved');
+assert(sw.includes("fetch('/api/offline-version'"), 'Service worker must use the lightweight offline version endpoint');
+assert(sw.includes("localVersion===remote.version"), 'Service worker must skip full downloads when the site version is unchanged');
+assert(sw.includes("if(auto)return warmOffline(remote.version)"), 'Changed site content must trigger the offline refresh automatically');
 assert(sw.includes('FETCH_ATTEMPTS=3'), 'Offline refresh must retry transient file failures');
 assert(sw.includes('useCachedFallback'), 'Offline refresh must reuse a previously cached file after repeated network failures');
 assert(sw.includes('completeFallback||anyFallback'), 'Offline status must prefer a previously complete snapshot over an incomplete refresh attempt');
