@@ -60,7 +60,7 @@
       setStatus((data.stage==='media'?'Сохраняем фотографии · ':'Обновляем приложение · ')+pct+'%');
     }
     if(data.type==='OFFLINE_READY')setStatus('Офлайн-база обновлена ✓',true);
-    if(data.type==='OFFLINE_PARTIAL')setStatus('Офлайн-база скачана не полностью',true);
+    if(data.type==='OFFLINE_PARTIAL')setStatus(data.previousReady?'Не всё обновилось · сохранённая база работает':'Офлайн-база скачана не полностью',true);
     if(data.type==='LEAD_QUEUED')setStatus('Нет сети · заявка сохранена на телефоне');
     if(data.type==='LEAD_QUEUE_FLUSHED')setStatus('Отправлено заявок: '+data.sent,true);
   });
