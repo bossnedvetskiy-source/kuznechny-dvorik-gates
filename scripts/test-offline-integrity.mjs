@@ -30,6 +30,11 @@ for (const required of [
 assert(app.includes('Обновить офлайн-базу'), 'Manual offline refresh button missing');
 assert(app.includes('navigator.storage.persist'), 'Persistent offline storage protection missing');
 assert(app.includes("post('WARM_OFFLINE')"), 'Manual offline refresh action is not wired');
+assert(app.includes('Предыдущая офлайн-база сохранена'), 'Partial refresh must explain that the previous offline base is preserved');
+assert(sw.includes('FETCH_ATTEMPTS=3'), 'Offline refresh must retry transient file failures');
+assert(sw.includes('useCachedFallback'), 'Offline refresh must reuse a previously cached file after repeated network failures');
+assert(sw.includes('completeFallback||anyFallback'), 'Offline status must prefer a previously complete snapshot over an incomplete refresh attempt');
+assert(sw.includes('previousReady:Boolean(previousStatus.ready)'), 'Partial refresh must report whether a previous usable base exists');
 assert(!app.includes("then(()=>navigator.serviceWorker.ready).then(()=>{\n      post('WARM_OFFLINE')"), 'Offline database must not refresh automatically on every app open');
 
 const parsedManifest = JSON.parse(manifest);
