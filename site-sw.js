@@ -1,4 +1,4 @@
-const VERSION='kuzdvor-offline-2026-09-23-v5';
+const VERSION='kuzdvor-offline-2026-09-23-v6';
 const SHELL_CACHE=VERSION+'-shell';
 const MEDIA_CACHE=VERSION+'-media';
 const API_CACHE=VERSION+'-api';
@@ -136,13 +136,19 @@ async function verifyOfflineSnapshot(meta={cacheName:SHELL_CACHE}){
 
   const urls=[...all];
   const present=await Promise.all(urls.map(url=>mediaCache.match(url,{ignoreSearch:true})));
-  const missingMedia=present.filter(item=>!item).length;
-  return {ok:missingMedia===0,missingMedia,mediaTotal:urls.length};
+  const missingMediaUrls=urls.filter((url,index)=>!present[index]);
+  return {
+    ok:true,
+    mediaComplete:missingMediaUrls.length===0,
+    missingMedia:missingMediaUrls.length,
+    missingMediaUrls,
+    mediaTotal:urls.length
+  };
 }
 
 async function offlineStatus(){
   const meta=await readOfflineMeta();
-  const verification=meta?.complete ? await verifyOfflineSnapshot(meta) : {ok:false,missingMedia:0,mediaTotal:0};
+  const verification=meta?.complete ? await verifyOfflineSnapshot(meta) : {ok:false,missingMedia:0,missingMediaUrls:[],mediaTotal:0};
   const currentReady=Boolean(meta?.current && meta?.complete && verification.ok);
   const ready=Boolean(meta?.complete && verification.ok);
   return {
@@ -152,7 +158,8 @@ async function offlineStatus(){
     stale:Boolean(ready && !currentReady),
     updatedAt:meta?.updatedAt||null,
     mediaCount:verification.mediaTotal || Number(meta?.mediaCount)||0,
-    failedCount:verification.missingMedia || Number(meta?.failedCount)||0,
+    failedCount:verification.missingMedia || Number(meta?.failedMediaCount)||0,
+    missingMediaCount:verification.missingMedia || Number(meta?.failedMediaCount)||0,
     contentVersion:meta?.contentVersion||''
   };
 }
@@ -177,7 +184,7 @@ async function warmOffline(targetVersion=''){
     const mediaResult=await cacheBatch(media,MEDIA_CACHE,(current,total)=>broadcast({type:'OFFLINE_WARM_PROGRESS',current,total,stage:'media'}));
 
     let catalogStored=false;
-    if(shellResult.failed.length===0 && mediaResult.failed.length===0 && catalogSnapshot){
+    if(shellResult.failed.length===0 && catalogSnapshot){
       try{
         const apiCache=await caches.open(API_CACHE);
         await apiCache.put('/api/catalog-images',catalogSnapshot.response.clone());
@@ -185,34 +192,45 @@ async function warmOffline(targetVersion=''){
       }catch{}
     }
 
+    const coreComplete=Boolean(shellResult.failed.length===0&&catalogApiOk&&catalogStored);
     const provisional={
-      complete:true,
+      complete:coreComplete,
       updatedAt:new Date().toISOString(),
       mediaCount:mediaResult.done,
       mediaTotal:mediaResult.total,
-      failedCount:0,
+      failedCount:shellResult.failed.length+(catalogApiOk&&catalogStored?0:1),
+      failedMediaCount:mediaResult.failed.length,
+      failedMediaUrls:mediaResult.failed.slice(0,50),
       catalogApiOk,
       contentVersion:remoteVersion
     };
-    const verification=(shellResult.failed.length===0&&mediaResult.failed.length===0&&catalogApiOk&&catalogStored)
-      ? await verifyOfflineSnapshot({...provisional,cacheName:SHELL_CACHE,current:true})
-      : {ok:false,missingMedia:0,mediaTotal:mediaResult.total};
-    const complete=Boolean(shellResult.failed.length===0&&mediaResult.failed.length===0&&catalogApiOk&&catalogStored&&verification.ok);
-    const failedCount=complete?0:Math.max(
-      shellResult.failed.length+mediaResult.failed.length+(catalogApiOk&&catalogStored?0:1),
-      Number(verification.missingMedia)||0,
-      1
-    );
-    const meta={...provisional,complete,failedCount};
 
-    if(complete || !previousStatus.ready)await writeOfflineMeta(meta);
+    let verification={ok:false,missingMedia:mediaResult.failed.length,missingMediaUrls:mediaResult.failed,mediaTotal:mediaResult.total};
+    if(coreComplete){
+      await writeOfflineMeta(provisional);
+      verification=await verifyOfflineSnapshot({...provisional,cacheName:SHELL_CACHE,current:true});
+    }
+
+    const complete=Boolean(coreComplete&&verification.ok);
+    const missingMediaCount=Number(verification.missingMedia)||mediaResult.failed.length||0;
+    const meta={
+      ...provisional,
+      complete,
+      failedCount:complete?0:Math.max(provisional.failedCount,1),
+      failedMediaCount:missingMediaCount,
+      failedMediaUrls:Array.isArray(verification.missingMediaUrls)?verification.missingMediaUrls.slice(0,50):mediaResult.failed.slice(0,50)
+    };
+
+    if(complete)await writeOfflineMeta(meta);
+    else if(!previousStatus.ready)await writeOfflineMeta(meta);
     if(complete)await cleanupOldOfflineCaches();
 
     await broadcast({
       type:complete?'OFFLINE_READY':'OFFLINE_PARTIAL',
       count:mediaResult.done,
       total:mediaResult.total,
-      failedCount,
+      failedCount:meta.failedCount,
+      missingMediaCount,
       previousReady:Boolean(previousStatus.ready),
       contentVersion:remoteVersion,
       updatedAt:meta.updatedAt
@@ -240,7 +258,12 @@ async function checkOfflineUpdate({auto=false,allowInitial=false}={}){
   const meta=await readOfflineMeta();
   const localVersion=String(meta?.contentVersion||'');
   if(localVersion && localVersion===remote.version){
-    await broadcast({type:'OFFLINE_UP_TO_DATE',updatedAt:meta?.updatedAt||null,mediaCount:status.mediaCount||0});
+    await broadcast({
+      type:'OFFLINE_UP_TO_DATE',
+      updatedAt:meta?.updatedAt||null,
+      mediaCount:status.mediaCount||0,
+      missingMediaCount:status.missingMediaCount||0
+    });
     return {checked:true,changed:false};
   }
 
