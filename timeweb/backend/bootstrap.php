@@ -272,6 +272,14 @@ function kd_media_path(string $key): ?string
     return kd_storage_dir() . '/' . $key;
 }
 
+function kd_catalog_media_url_available(string $url): bool
+{
+    $key = kd_media_key_from_url($url);
+    if ($key === null) return true;
+    $path = kd_media_path($key);
+    return $path !== null && is_file($path) && filesize($path) > 0;
+}
+
 function kd_all_galleries(bool $includeDefaults = false): array
 {
     $defaults = kd_defaults()['catalogImages'] ?? [];
@@ -288,7 +296,7 @@ function kd_all_galleries(bool $includeDefaults = false): array
         $zooms = [];
         foreach ($stored as $item) {
             $url = is_array($item) ? (string)($item['url'] ?? '') : (string)$item;
-            if ($url === '') continue;
+            if ($url === '' || !kd_catalog_media_url_available($url)) continue;
             $photos[] = $url;
             $positions[$url] = [
                 'x' => max(0, min(100, (float)(is_array($item) ? ($item['x'] ?? 50) : 50))),
@@ -312,7 +320,11 @@ function kd_all_galleries(bool $includeDefaults = false): array
     $colors = kd_setting_get('catalog_color_photos', []);
     if (is_array($colors)) {
         foreach ($galleries as $article => &$gallery) {
-            $gallery['colorPhotos'] = is_array($colors[$article] ?? null) ? $colors[$article] : [];
+            $savedColors = is_array($colors[$article] ?? null) ? $colors[$article] : [];
+            $gallery['colorPhotos'] = array_filter(
+                $savedColors,
+                static fn($url): bool => is_string($url) && $url !== '' && kd_catalog_media_url_available($url)
+            );
         }
         unset($gallery);
     }
