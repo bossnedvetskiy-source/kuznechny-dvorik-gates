@@ -26,6 +26,11 @@ if ($route === 'health') {
 if (!kd_is_configured()) kd_json(['error' => 'PHP/MySQL backend ещё не настроен', 'backend' => 'timeweb-php'], 503);
 
 try {
+    if ($route === 'offline-version' && $method === 'GET') {
+        header('Cache-Control: no-store, max-age=0');
+        kd_json(kd_offline_version());
+    }
+
     if ($route === 'catalog-images' && $method === 'GET') {
         kd_json(['galleries' => kd_all_galleries(false)]);
     }
@@ -98,6 +103,32 @@ try {
 } catch (Throwable $e) {
     error_log('Kuzdvor Timeweb API: ' . $e->getMessage());
     kd_json(['error' => 'Ошибка серверной части сайта', 'detail' => $e->getMessage()], 500);
+}
+
+function kd_offline_version(): array
+{
+    $sourceSha = '';
+    $versionFile = __DIR__ . '/deployment-version.json';
+    if (is_file($versionFile)) {
+        $raw = json_decode((string)file_get_contents($versionFile), true);
+        if (is_array($raw)) $sourceSha = (string)($raw['sourceSha'] ?? '');
+    }
+
+    $keys = ['site_profile','prices','delivery_prices','catalog_color_photos','gate_excel_prices'];
+    $placeholders = implode(',', array_fill(0, count($keys), '?'));
+    $settingsStmt = kd_db()->prepare("SELECT COALESCE(DATE_FORMAT(MAX(updated_at),'%Y-%m-%dT%H:%i:%sZ'),'') FROM site_settings WHERE `key` IN ($placeholders)");
+    $settingsStmt->execute($keys);
+    $settingsUpdatedAt = (string)$settingsStmt->fetchColumn();
+
+    $catalogUpdatedAt = (string)kd_db()->query("SELECT COALESCE(DATE_FORMAT(MAX(updated_at),'%Y-%m-%dT%H:%i:%sZ'),'') FROM catalog_galleries")->fetchColumn();
+    $version = hash('sha256', implode('|', [$sourceSha, $settingsUpdatedAt, $catalogUpdatedAt]));
+
+    return [
+        'version' => $version,
+        'source' => $sourceSha,
+        'settingsUpdatedAt' => $settingsUpdatedAt,
+        'catalogUpdatedAt' => $catalogUpdatedAt,
+    ];
 }
 
 function kd_admin_login(): never
