@@ -59,7 +59,7 @@
       </a>
     </nav>
 
-    <p class="note">Офлайн-копия больше не обновляется сама. Нажимайте «Обновить офлайн-базу» только когда изменились цены, фотографии или данные сайта.</p>
+    <p class="note">Приложение при запуске проверяет только маленький номер версии. Полная офлайн-база скачивается автоматически только если на сайте изменились цены, фотографии, каталог или другие рабочие данные.</p>
   </main>
 <script>
 (() => {
@@ -78,9 +78,9 @@
     if(Number.isNaN(d.getTime()))return '';
     return d.toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});
   };
-  const post=type=>navigator.serviceWorker.ready.then(reg=>{
+  const post=(type,extra={})=>navigator.serviceWorker.ready.then(reg=>{
     const worker=reg.active||reg.waiting||reg.installing;
-    worker?.postMessage({type});
+    worker?.postMessage({type,...extra});
   }).catch(()=>{});
 
   function showStatus(data){
@@ -88,11 +88,11 @@
     knownReady=Boolean(data?.ready);
     if(data?.ready && data?.current){
       set(navigator.onLine?'Офлайн-база готова ✓':'Офлайн · база готова ✓',navigator.onLine?'ready':'offline');
-      updateButton.textContent='Обновить офлайн-базу';
+      updateButton.textContent='Проверить обновления';
       meta.textContent=[data.updatedAt?'Последнее обновление: '+fmt(data.updatedAt):'',data.mediaCount?'Фотографий сохранено: '+data.mediaCount:'',storageProtected?'хранилище защищено':''].filter(Boolean).join(' · ');
     }else if(data?.ready){
       set('Сохранённая база работает · доступно обновление','ready');
-      updateButton.textContent='Обновить офлайн-базу';
+      updateButton.textContent='Проверить обновления';
       meta.textContent=data.updatedAt?'Сохранённая копия от '+fmt(data.updatedAt):'Есть сохранённая офлайн-копия.';
     }else{
       set(navigator.onLine?'Офлайн-база ещё не скачана':'Нет сохранённой офлайн-базы',navigator.onLine?'':'offline');
@@ -121,17 +121,46 @@
     navigator.serviceWorker.register('/site-sw.js',{scope:'/'}).then(()=>navigator.serviceWorker.ready).then(async()=>{
       await protectOfflineStorage();
       post('GET_OFFLINE_STATUS');
+      post('CHECK_OFFLINE_UPDATE',{auto:true,allowInitial:false});
       post('FLUSH_LEADS');
     }).catch(()=>set('Не удалось включить офлайн-режим'));
 
     navigator.serviceWorker.addEventListener('message',event=>{
       const data=event.data||{};
       if(data.type==='OFFLINE_STATUS')showStatus(data);
+      if(data.type==='OFFLINE_NEEDS_INITIAL'){
+        if(updating)return;
+        knownReady=false;
+        set(navigator.onLine?'Офлайн-база ещё не скачана':'Нет сохранённой офлайн-базы',navigator.onLine?'':'offline');
+        updateButton.disabled=false;
+        updateButton.textContent='Скачать офлайн-базу';
+        meta.textContent=navigator.onLine?'Первая загрузка выполняется один раз. Дальше база скачивается только после изменений на сайте.':'Для первой загрузки базы нужен интернет.';
+      }
+      if(data.type==='OFFLINE_UPDATE_AVAILABLE'){
+        if(!updating){
+          set('На сайте есть изменения · обновляем базу');
+          meta.textContent='Обнаружена новая версия сайта. Скачиваются только после обнаружения изменений.';
+        }
+      }
+      if(data.type==='OFFLINE_UP_TO_DATE'){
+        updating=false;knownReady=true;
+        set(navigator.onLine?'Офлайн-база актуальна ✓':'Офлайн · база готова ✓',navigator.onLine?'ready':'offline');
+        updateButton.disabled=false;
+        updateButton.textContent='Проверить обновления';
+        meta.textContent=[data.updatedAt?'Последнее обновление: '+fmt(data.updatedAt):'',data.mediaCount?'Фотографий сохранено: '+data.mediaCount:'','Изменений на сайте нет'].filter(Boolean).join(' · ');
+      }
+      if(data.type==='OFFLINE_UPDATE_CHECK_FAILED'){
+        updating=false;
+        set(knownReady?'Сохранённая база работает · проверку повторим позже':'Не удалось проверить обновления',knownReady?'ready':'');
+        updateButton.disabled=false;
+        updateButton.textContent=knownReady?'Проверить обновления':'Скачать офлайн-базу';
+        meta.textContent=knownReady?'Полная база не скачивалась. Используется сохранённая копия.':'Проверьте интернет и повторите.';
+      }
       if(data.type==='OFFLINE_WARM_START'){
         updating=true;
         updateButton.disabled=true;
         updateButton.textContent='Обновляем…';
-        meta.textContent='Не закрывайте приложение до окончания загрузки.';
+        meta.textContent='На сайте обнаружены изменения. Не закрывайте приложение до окончания загрузки.';
         set('Обновляем офлайн-базу…');
       }
       if(data.type==='OFFLINE_WARM_PROGRESS'){
@@ -142,7 +171,7 @@
         updating=false;knownReady=true;
         set('Офлайн-база обновлена ✓','ready');
         updateButton.disabled=false;
-        updateButton.textContent='Обновить офлайн-базу';
+        updateButton.textContent='Проверить обновления';
         meta.textContent='Обновлено: '+fmt(data.updatedAt)+(data.count?' · Фотографий: '+data.count:'')+(storageProtected?' · хранилище защищено':'');
       }
       if(data.type==='OFFLINE_PARTIAL'){
@@ -168,13 +197,16 @@
     await protectOfflineStorage();
     updating=true;
     updateButton.disabled=true;
-    post('WARM_OFFLINE');
+    updateButton.textContent=knownReady?'Проверяем изменения…':'Скачиваем…';
+    meta.textContent=knownReady?'Сначала проверяем, менялся ли сайт. Если изменений нет, база скачиваться не будет.':'Выполняется первая загрузка офлайн-базы.';
+    post('CHECK_OFFLINE_UPDATE',{auto:true,allowInitial:true});
   });
 
   addEventListener('online',()=>{
     set(knownReady?'Связь есть · офлайн-база сохранена':'Связь появилась');
     post('FLUSH_LEADS');
     refreshStatus();
+    post('CHECK_OFFLINE_UPDATE',{auto:true,allowInitial:false});
   });
   addEventListener('offline',()=>set(knownReady?'Офлайн · база готова ✓':'Офлайн · база не скачана','offline'));
 
