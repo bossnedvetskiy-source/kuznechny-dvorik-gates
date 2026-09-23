@@ -39,6 +39,10 @@ assert(app.includes('Предыдущая офлайн-база сохранен
 assert(sw.includes("fetch('/api/offline-version'"), 'Service worker must use the lightweight offline version endpoint');
 assert(sw.includes("localVersion===remote.version"), 'Service worker must skip full downloads when the site version is unchanged');
 assert(sw.includes("if(auto)return warmOffline(remote.version)"), 'Changed site content must trigger the offline refresh automatically');
+assert(sw.includes('failedMediaCount'), 'Offline metadata must track missing photos separately from critical data');
+assert(sw.includes('mediaComplete:missingMediaUrls.length===0'), 'Offline verification must report photo completeness');
+assert(sw.includes('ok:true'), 'Optional missing photos must not make the whole offline base unusable');
+assert(app.includes('Отдельные фотографии больше не блокируют готовность офлайн-базы.'), 'Work app must explain that photo failures are nonblocking');
 assert(sw.includes('FETCH_ATTEMPTS=3'), 'Offline refresh must retry transient file failures');
 assert(sw.includes('useCachedFallback'), 'Offline refresh must reuse a previously cached file after repeated network failures');
 assert(sw.includes('completeFallback||anyFallback'), 'Offline status must prefer a previously complete snapshot over an incomplete refresh attempt');
