@@ -43,6 +43,12 @@ assert(sw.includes('failedMediaCount'), 'Offline metadata must track missing pho
 assert(sw.includes('mediaComplete:missingMediaUrls.length===0'), 'Offline verification must report photo completeness');
 assert(sw.includes('ok:true'), 'Optional missing photos must not make the whole offline base unusable');
 assert(app.includes('Отдельные фотографии больше не блокируют готовность офлайн-базы.'), 'Work app must explain that photo failures are nonblocking');
+assert(app.includes('updateViaCache:\'none\''), 'Installed PWA must bypass the browser HTTP cache when checking its service worker');
+assert(app.includes("'/site-sw.js?build='"), 'Installed PWA must register a versioned service worker URL');
+assert(app.includes("navigator.serviceWorker.addEventListener('controllerchange'"), 'Installed PWA must reload once when the new service worker takes control');
+assert(htaccess.includes('work-app.html?app-build=2026-09-23-v7'), 'The /app route must force a fresh versioned work-app navigation');
+assert(htaccess.includes('no-store, no-cache, must-revalidate, max-age=0'), 'Work app and service worker must be served without stale browser cache');
+
 assert(sw.includes('FETCH_ATTEMPTS=3'), 'Offline refresh must retry transient file failures');
 assert(sw.includes('useCachedFallback'), 'Offline refresh must reuse a previously cached file after repeated network failures');
 assert(sw.includes('completeFallback||anyFallback'), 'Offline status must prefer a previously complete snapshot over an incomplete refresh attempt');
@@ -50,7 +56,7 @@ assert(sw.includes('previousReady:Boolean(previousStatus.ready)'), 'Partial refr
 assert(!app.includes("then(()=>navigator.serviceWorker.ready).then(()=>{\n      post('WARM_OFFLINE')"), 'Offline database must not refresh automatically on every app open');
 
 const parsedManifest = JSON.parse(manifest);
-assert.equal(parsedManifest.start_url, '/app', 'Unified PWA must open the work app');
+assert.match(parsedManifest.start_url, /^\/app(?:\?|$)/, 'Unified PWA must open the work app');
 assert.equal(parsedManifest.display, 'standalone', 'PWA must remain standalone');
 
 assert(htaccess.includes('X-Frame-Options "DENY"'), 'Clickjacking protection missing');
