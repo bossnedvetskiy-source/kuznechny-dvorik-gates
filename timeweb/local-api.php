@@ -522,9 +522,39 @@ function kd_catalog_color_delete(string $remainder): never
 
 function kd_serve_media(string $key, bool $head): never
 {
-    $key=rawurldecode($key);$path=kd_media_path($key);if(!$path||!is_file($path))kd_text('Файл не найден',404);
+    $key=rawurldecode($key);
+    $path=kd_media_path($key);
+    $fallback=false;
+
+    if(!$path||!is_file($path)||filesize($path)<=0){
+        $parts=explode('/',$key);
+        $slug=(string)($parts[1]??'');
+        $defaults=kd_defaults()['catalogImages']??[];
+        foreach($defaults as $article=>$urls){
+            if(kd_article_slug((string)$article)!==$slug)continue;
+            $first=is_array($urls)?(string)($urls[0]??''):'';
+            if($first!==''&&str_starts_with($first,'/catalog/')){
+                $candidate=__DIR__.$first;
+                if(is_file($candidate)&&filesize($candidate)>0){
+                    $path=$candidate;
+                    $fallback=true;
+                    break;
+                }
+            }
+        }
+    }
+
+    if(!$path||!is_file($path)||filesize($path)<=0)kd_text('Файл не найден',404);
     $ext=strtolower(pathinfo($path,PATHINFO_EXTENSION));$type=['webp'=>'image/webp','jpg'=>'image/jpeg','jpeg'=>'image/jpeg','png'=>'image/png'][$ext]??'application/octet-stream';
-    http_response_code(200);header('Content-Type: '.$type);header('Content-Length: '.filesize($path));header('Cache-Control: public, max-age=31536000, immutable');header('X-Content-Type-Options: nosniff');header('X-Kuzdvor-Backend: timeweb-php');if(!$head)readfile($path);exit;
+    http_response_code(200);
+    header('Content-Type: '.$type);
+    header('Content-Length: '.filesize($path));
+    header('Cache-Control: public, max-age=31536000, immutable');
+    header('X-Content-Type-Options: nosniff');
+    header('X-Kuzdvor-Backend: timeweb-php');
+    if($fallback)header('X-Kuzdvor-Media-Fallback: 1');
+    if(!$head)readfile($path);
+    exit;
 }
 
 function kd_admin_leads(): never
