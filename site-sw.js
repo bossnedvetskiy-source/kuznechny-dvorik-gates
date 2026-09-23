@@ -1,4 +1,4 @@
-const VERSION='kuzdvor-offline-2026-09-23-v6';
+const VERSION='kuzdvor-offline-2026-09-23-v7';
 const SHELL_CACHE=VERSION+'-shell';
 const MEDIA_CACHE=VERSION+'-media';
 const API_CACHE=VERSION+'-api';
@@ -386,7 +386,8 @@ self.addEventListener('fetch',event=>{
   }
   if(request.method!=='GET')return;
   if(request.mode==='navigate'){
-    event.respondWith(networkFirst(request,SHELL_CACHE,'/').catch(async()=>await matchAny(request) || await caches.match('/')));
+    const freshRequest=new Request(request,{cache:'no-store'});
+    event.respondWith(networkFirst(freshRequest,SHELL_CACHE,'/').catch(async()=>await matchAny(request) || await caches.match('/')));
     return;
   }
   if(url.pathname==='/api/catalog-images'){
