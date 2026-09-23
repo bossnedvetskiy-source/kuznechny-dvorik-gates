@@ -1,4 +1,4 @@
-const VERSION='kuzdvor-offline-2026-09-23-v9';
+const VERSION='kuzdvor-offline-2026-09-23-v10';
 const SHELL_CACHE=VERSION+'-shell';
 const MEDIA_CACHE=VERSION+'-media';
 const API_CACHE=VERSION+'-api';
@@ -161,6 +161,7 @@ async function offlineStatus(){
     mediaCount:verification.mediaTotal || Number(meta?.mediaCount)||0,
     failedCount:verification.missingMedia || Number(meta?.failedMediaCount)||0,
     missingMediaCount:verification.missingMedia || Number(meta?.failedMediaCount)||0,
+    missingMediaUrls:(Array.isArray(verification.missingMediaUrls)&&verification.missingMediaUrls.length?verification.missingMediaUrls:(Array.isArray(meta?.failedMediaUrls)?meta.failedMediaUrls:[])).slice(0,50),
     contentVersion:meta?.contentVersion||''
   };
 }
@@ -252,12 +253,54 @@ async function warmOffline(targetVersion=''){
       total:mediaResult.total,
       failedCount:meta.failedCount,
       missingMediaCount,
+      missingMediaUrls:meta.failedMediaUrls.slice(0,50),
       criticalFailures:criticalFailures.slice(0,20),
       previousReady:Boolean(previousStatus.ready),
       contentVersion:remoteVersion,
       updatedAt:meta.updatedAt
     });
     return meta;
+  })().finally(()=>{warmPromise=null});
+  return warmPromise;
+}
+
+async function retryMissingMedia(){
+  if(warmPromise)return warmPromise;
+  warmPromise=(async()=>{
+    const status=await offlineStatus().catch(()=>({ready:false,missingMediaUrls:[]}));
+    const urls=Array.isArray(status.missingMediaUrls)?status.missingMediaUrls.filter(Boolean):[];
+    if(!status.ready || !urls.length){
+      await broadcast({
+        type:'OFFLINE_MEDIA_RETRY_DONE',
+        retried:0,
+        remaining:0,
+        missingMediaUrls:[]
+      });
+      return {retried:0,remaining:0};
+    }
+
+    await broadcast({type:'OFFLINE_MEDIA_RETRY_START',total:urls.length});
+    const mediaResult=await cacheBatch(urls,MEDIA_CACHE,(current,total)=>broadcast({type:'OFFLINE_MEDIA_RETRY_PROGRESS',current,total}));
+    const meta=await readOfflineMeta();
+    const verification=await verifyOfflineSnapshot(meta||{cacheName:SHELL_CACHE});
+    const remainingUrls=Array.isArray(verification.missingMediaUrls)?verification.missingMediaUrls:[];
+    const nextMeta={
+      ...(meta||{}),
+      complete:true,
+      failedMediaCount:remainingUrls.length,
+      failedMediaUrls:remainingUrls.slice(0,50),
+      mediaTotal:Number(verification.mediaTotal)||Number(meta?.mediaTotal)||0,
+      mediaCount:Math.max(0,(Number(verification.mediaTotal)||Number(meta?.mediaTotal)||0)-remainingUrls.length)
+    };
+    await writeOfflineMeta(nextMeta);
+    await broadcast({
+      type:'OFFLINE_MEDIA_RETRY_DONE',
+      retried:urls.length,
+      remaining:remainingUrls.length,
+      missingMediaUrls:remainingUrls.slice(0,50),
+      mediaCount:nextMeta.mediaCount
+    });
+    return {retried:urls.length,remaining:remainingUrls.length};
   })().finally(()=>{warmPromise=null});
   return warmPromise;
 }
@@ -284,7 +327,8 @@ async function checkOfflineUpdate({auto=false,allowInitial=false}={}){
       type:'OFFLINE_UP_TO_DATE',
       updatedAt:meta?.updatedAt||null,
       mediaCount:status.mediaCount||0,
-      missingMediaCount:status.missingMediaCount||0
+      missingMediaCount:status.missingMediaCount||0,
+      missingMediaUrls:Array.isArray(status.missingMediaUrls)?status.missingMediaUrls.slice(0,50):[]
     });
     return {checked:true,changed:false};
   }
@@ -389,6 +433,7 @@ self.addEventListener('sync',event=>{if(event.tag==='kuzdvor-leads-sync')event.w
 self.addEventListener('message',event=>{
   if(event.data?.type==='WARM_OFFLINE')event.waitUntil(warmOffline());
   if(event.data?.type==='CHECK_OFFLINE_UPDATE')event.waitUntil(checkOfflineUpdate({auto:Boolean(event.data?.auto),allowInitial:Boolean(event.data?.allowInitial)}));
+  if(event.data?.type==='RETRY_MISSING_MEDIA')event.waitUntil(retryMissingMedia());
   if(event.data?.type==='FLUSH_LEADS')event.waitUntil(flushLeadQueue());
   if(event.data?.type==='GET_OFFLINE_STATUS')event.waitUntil(offlineStatus().then(status=>broadcast(status)));
 });
