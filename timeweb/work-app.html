@@ -69,6 +69,7 @@
   let prompt=null;
   let updating=false;
   let knownReady=false;
+  let knownMissingMediaUrls=[];
   let storageProtected=false;
 
   const set=(message,mode='')=>{text.textContent=message;status.className='status '+mode};
@@ -78,6 +79,21 @@
     if(Number.isNaN(d.getTime()))return '';
     return d.toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});
   };
+  const mediaLabel=url=>{
+    const value=String(url||'');
+    try{
+      const decoded=decodeURIComponent(value);
+      return decoded.split('/').filter(Boolean).pop()||decoded;
+    }catch{
+      return value.split('/').filter(Boolean).pop()||value;
+    }
+  };
+  const missingMediaText=urls=>{
+    const items=(Array.isArray(urls)?urls:[]).filter(Boolean);
+    if(!items.length)return '';
+    const first=mediaLabel(items[0]);
+    return items.length===1?'Не сохранилось фото: '+first:'Не сохранилось фото: '+items.length+' · первое: '+first;
+  };
   const post=(type,extra={})=>navigator.serviceWorker.ready.then(reg=>{
     const worker=reg.active||reg.waiting||reg.installing;
     worker?.postMessage({type,...extra});
@@ -86,10 +102,11 @@
   function showStatus(data){
     if(updating)return;
     knownReady=Boolean(data?.ready);
+    knownMissingMediaUrls=Array.isArray(data?.missingMediaUrls)?data.missingMediaUrls.filter(Boolean):[];
     if(data?.ready && data?.current){
       set(navigator.onLine?'Офлайн-база готова ✓':'Офлайн · база готова ✓',navigator.onLine?'ready':'offline');
-      updateButton.textContent='Проверить обновления';
-      meta.textContent=[data.updatedAt?'Последнее обновление: '+fmt(data.updatedAt):'',data.mediaCount?'Фотографий сохранено: '+data.mediaCount:'',data.missingMediaCount?'Не сохранилось фото: '+data.missingMediaCount:'',storageProtected?'хранилище защищено':''].filter(Boolean).join(' · ');
+      updateButton.textContent=knownMissingMediaUrls.length?'Догрузить '+knownMissingMediaUrls.length+' фото':'Проверить обновления';
+      meta.textContent=[data.updatedAt?'Последнее обновление: '+fmt(data.updatedAt):'',data.mediaCount?'Фотографий сохранено: '+data.mediaCount:'',missingMediaText(knownMissingMediaUrls),storageProtected?'хранилище защищено':''].filter(Boolean).join(' · ');
     }else if(data?.ready){
       set('Сохранённая база работает · доступно обновление','ready');
       updateButton.textContent='Проверить обновления';
@@ -118,7 +135,7 @@
   if(!navigator.onLine)set('Проверяем сохранённую базу…','offline');
 
   if('serviceWorker' in navigator){
-    const APP_BUILD='2026-09-23-v9';
+    const APP_BUILD='2026-09-23-v10';
     let controllerReloaded=false;
     navigator.serviceWorker.addEventListener('controllerchange',()=>{
       if(controllerReloaded)return;
@@ -158,10 +175,11 @@
       }
       if(data.type==='OFFLINE_UP_TO_DATE'){
         updating=false;knownReady=true;
+        knownMissingMediaUrls=Array.isArray(data.missingMediaUrls)?data.missingMediaUrls.filter(Boolean):[];
         set(navigator.onLine?'Офлайн-база актуальна ✓':'Офлайн · база готова ✓',navigator.onLine?'ready':'offline');
         updateButton.disabled=false;
-        updateButton.textContent='Проверить обновления';
-        meta.textContent=[data.updatedAt?'Последнее обновление: '+fmt(data.updatedAt):'',data.mediaCount?'Фотографий сохранено: '+data.mediaCount:'',data.missingMediaCount?'Не сохранилось фото: '+data.missingMediaCount:'','Изменений на сайте нет'].filter(Boolean).join(' · ');
+        updateButton.textContent=knownMissingMediaUrls.length?'Догрузить '+knownMissingMediaUrls.length+' фото':'Проверить обновления';
+        meta.textContent=[data.updatedAt?'Последнее обновление: '+fmt(data.updatedAt):'',data.mediaCount?'Фотографий сохранено: '+data.mediaCount:'',missingMediaText(knownMissingMediaUrls),'Изменений на сайте нет'].filter(Boolean).join(' · ');
       }
       if(data.type==='OFFLINE_UPDATE_CHECK_FAILED'){
         updating=false;
@@ -183,10 +201,32 @@
       }
       if(data.type==='OFFLINE_READY'){
         updating=false;knownReady=true;
+        knownMissingMediaUrls=Array.isArray(data.missingMediaUrls)?data.missingMediaUrls.filter(Boolean):[];
         set('Офлайн-база обновлена ✓','ready');
         updateButton.disabled=false;
-        updateButton.textContent='Проверить обновления';
-        meta.textContent='Обновлено: '+fmt(data.updatedAt)+(data.count?' · Фотографий: '+data.count:'')+(data.missingMediaCount?' · Не сохранилось фото: '+data.missingMediaCount:'')+(storageProtected?' · хранилище защищено':'');
+        updateButton.textContent=knownMissingMediaUrls.length?'Догрузить '+knownMissingMediaUrls.length+' фото':'Проверить обновления';
+        meta.textContent=['Обновлено: '+fmt(data.updatedAt),data.count?'Фотографий: '+data.count:'',missingMediaText(knownMissingMediaUrls),storageProtected?'хранилище защищено':''].filter(Boolean).join(' · ');
+      }
+      if(data.type==='OFFLINE_MEDIA_RETRY_START'){
+        updating=true;
+        updateButton.disabled=true;
+        updateButton.textContent='Догружаем фото…';
+        set('Догружаем недостающее фото…');
+        meta.textContent='Повторно скачиваются только недостающие фотографии. Вся база заново не загружается.';
+      }
+      if(data.type==='OFFLINE_MEDIA_RETRY_PROGRESS'){
+        const pct=data.total?Math.round(data.current/data.total*100):0;
+        set('Догружаем недостающее фото · '+pct+'%');
+      }
+      if(data.type==='OFFLINE_MEDIA_RETRY_DONE'){
+        updating=false;knownReady=true;
+        knownMissingMediaUrls=Array.isArray(data.missingMediaUrls)?data.missingMediaUrls.filter(Boolean):[];
+        set(knownMissingMediaUrls.length?'Офлайн-база готова · не всё фото сохранено':'Все фотографии сохранены ✓','ready');
+        updateButton.disabled=false;
+        updateButton.textContent=knownMissingMediaUrls.length?'Догрузить '+knownMissingMediaUrls.length+' фото':'Проверить обновления';
+        meta.textContent=knownMissingMediaUrls.length
+          ? missingMediaText(knownMissingMediaUrls)+' · остальная база полностью работает офлайн.'
+          : 'Недостающее фото успешно догружено. Офлайн-база полная.';
       }
       if(data.type==='OFFLINE_PARTIAL'){
         updating=false;
@@ -212,6 +252,12 @@
     await protectOfflineStorage();
     updating=true;
     updateButton.disabled=true;
+    if(knownReady && knownMissingMediaUrls.length){
+      updateButton.textContent='Догружаем фото…';
+      meta.textContent='Повторно скачивается только '+knownMissingMediaUrls.length+' недостающее фото. Остальная база не трогается.';
+      post('RETRY_MISSING_MEDIA');
+      return;
+    }
     updateButton.textContent=knownReady?'Проверяем изменения…':'Скачиваем…';
     meta.textContent=knownReady?'Сначала проверяем, менялся ли сайт. Если изменений нет, база скачиваться не будет.':'Выполняется первая загрузка офлайн-базы.';
     post('CHECK_OFFLINE_UPDATE',{auto:true,allowInitial:true});
