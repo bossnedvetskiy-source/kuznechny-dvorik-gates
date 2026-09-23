@@ -1,4 +1,4 @@
-const VERSION='kuzdvor-offline-2026-09-23-v8';
+const VERSION='kuzdvor-offline-2026-09-23-v9';
 const SHELL_CACHE=VERSION+'-shell';
 const MEDIA_CACHE=VERSION+'-media';
 const API_CACHE=VERSION+'-api';
@@ -6,7 +6,8 @@ const DB_NAME='kuzdvor-offline-v1';
 const STORE='leadQueue';
 const META_URL='/__kuzdvor_offline_meta__';
 
-const CORE=['/','/app','/links','/offline-delivery-200km.json','/site.css','/site.bundle.js','/calculator.bundle.js','/catalog-enhancements.bundle.js','/hero-gates.jpg','/site-manifest.webmanifest','/site-icon.svg'];
+const CORE=['/','/work-app.html','/link-app.html','/offline-delivery-200km.json','/site.css','/site.bundle.js','/calculator.bundle.js','/catalog-enhancements.bundle.js','/hero-gates.jpg','/site-manifest.webmanifest','/site-icon.svg'];
+const NAV_FALLBACKS={'/':'/','/app':'/work-app.html','/links':'/link-app.html'};
 const STATIC_MEDIA=["/catalog/art-6-1.webp","/catalog/art-6-2.webp","/catalog/art-6-3.webp","/catalog/art-18-2.webp","/catalog/art-18-1.webp","/catalog/art-18-3.webp","/catalog/art-31-1.webp","/catalog/art-31-2.webp","/catalog/art-31-3.webp","/catalog/art-28-1.webp","/catalog/art-28-2.webp","/catalog/art-28-3.webp","/catalog/art-15-2.webp","/catalog/art-15-1.webp","/catalog/art-15-3.webp","/catalog/art-30-1.webp","/catalog/art-30-2.webp","/catalog/art-30-3.webp","/catalog/art-38-2.webp","/catalog/art-38-3.webp","/catalog/art-9-1.webp","/catalog/art-9-2.webp","/catalog/art-9-3.webp","/catalog/art-22-2-3.webp","/catalog/art-22-2-2.webp","/catalog/art-21-2.webp","/catalog/art-21-3.webp","/catalog/art-21-1.webp","/catalog/art-29-1.webp","/catalog/art-29-2.webp","/catalog/art-14-2.webp","/catalog/art-14-1.webp","/catalog/art-14-3.webp","/catalog/art-36-1.webp","/catalog/art-36-2.webp","/catalog/art-36-3.webp","/catalog/art-24-1.webp","/catalog/art-24-2.webp","/catalog/art-24-3.webp","/catalog/art-1-3.webp","/catalog/art-1-1.webp","/catalog/art-1-2.webp","/catalog/art-12-2.webp","/catalog/art-12-1.webp","/catalog/art-12-3.webp","/catalog/art-32-2.webp","/catalog/art-32-1.webp","/catalog/art-32-3.webp","/catalog/art-17s-3.webp","/catalog/art-17s-1.webp","/catalog/art-17s-2.webp","/catalog/art-4-1.webp","/catalog/art-33-1.webp","/catalog/art-33-2.webp","/catalog/art-33-3.webp","/catalog/art-46-3.webp","/catalog/art-46-1.webp","/catalog/art-46-2.webp","/catalog/art-27-3.webp","/catalog/art-27-1.webp","/catalog/art-27-2.webp","/catalog/art-8-3.webp","/catalog/art-8-1.webp","/catalog/art-8-2.webp","/catalog/art-16-1.webp","/catalog/art-16-2.webp","/catalog/art-16-3.webp","/catalog/art-7-1.webp","/catalog/art-34-1.webp","/catalog/art-23s-1.webp","/catalog/art-23s-2.webp","/catalog/art-23s-3.webp","/catalog/art-25-1.webp","/catalog/art-25-2.webp","/catalog/art-10-2.webp","/catalog/art-10-1.webp","/catalog/art-10-3.webp","/catalog/art-35-3.webp","/catalog/art-35-1.webp","/catalog/art-35-2.webp","/catalog/art-37-1.webp","/catalog/art-9-3-1.webp","/catalog/art-9-3-2.webp","/catalog/art-9-3-3.webp","/catalog/art-13-1.webp","/catalog/art-13-2.webp","/catalog/art-11-1.webp","/catalog/art-20-1.webp","/catalog/art-20-2.webp","/catalog/art-20-3.webp","/catalog/art-2-1.webp","/catalog/art-2-2.webp","/catalog/art-2-3.webp","/catalog/art-3-1.webp","/catalog/art-3-2.webp","/catalog/art-3-3.webp","/catalog/art-5-3.webp","/catalog/art-5-2.webp","/catalog/art-5-1.webp"];
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const FETCH_ATTEMPTS=3;
@@ -175,14 +176,14 @@ async function warmOffline(targetVersion=''){
     const previousStatus=await offlineStatus().catch(()=>({ready:false,current:false}));
     const remoteVersion=targetVersion || (await fetchOfflineContentVersion())?.version || '';
     await broadcast({type:'OFFLINE_WARM_START'});
+
+    // 1) Save the small, mandatory application shell first.
     const shellResult=await cacheBatch(CORE,SHELL_CACHE,(current,total)=>broadcast({type:'OFFLINE_WARM_PROGRESS',current,total,stage:'shell'}));
-    const all=new Set(STATIC_MEDIA);
+
+    // 2) Save the catalog JSON BEFORE photos. This prevents a large photo cache
+    // from consuming browser quota and blocking the mandatory offline data.
     const catalogSnapshot=await fetchCatalogSnapshot();
     const catalogApiOk=Boolean(catalogSnapshot);
-    if(catalogSnapshot)collectMedia(catalogSnapshot.data,all);
-    const media=[...all];
-    const mediaResult=await cacheBatch(media,MEDIA_CACHE,(current,total)=>broadcast({type:'OFFLINE_WARM_PROGRESS',current,total,stage:'media'}));
-
     let catalogStored=false;
     if(shellResult.failed.length===0 && catalogSnapshot){
       try{
@@ -193,32 +194,52 @@ async function warmOffline(targetVersion=''){
     }
 
     const coreComplete=Boolean(shellResult.failed.length===0&&catalogApiOk&&catalogStored);
-    const provisional={
-      complete:coreComplete,
-      updatedAt:new Date().toISOString(),
-      mediaCount:mediaResult.done,
-      mediaTotal:mediaResult.total,
-      failedCount:shellResult.failed.length+(catalogApiOk&&catalogStored?0:1),
-      failedMediaCount:mediaResult.failed.length,
-      failedMediaUrls:mediaResult.failed.slice(0,50),
-      catalogApiOk,
-      contentVersion:remoteVersion
-    };
+    const criticalFailures=[
+      ...shellResult.failed,
+      ...(!catalogApiOk?['/api/catalog-images']:[]),
+      ...(catalogApiOk&&!catalogStored?['offline-catalog-storage']:[])
+    ];
+
+    // Mark the base usable as soon as all mandatory data is safe. Photos below
+    // are best-effort and must never turn a usable base into a failed one.
+    const baseUpdatedAt=new Date().toISOString();
+    if(coreComplete){
+      await writeOfflineMeta({
+        complete:true,
+        updatedAt:baseUpdatedAt,
+        mediaCount:0,
+        mediaTotal:0,
+        failedCount:0,
+        failedMediaCount:0,
+        failedMediaUrls:[],
+        catalogApiOk:true,
+        contentVersion:remoteVersion
+      });
+    }
+
+    // 3) Download photos last. Individual failures are non-blocking.
+    const all=new Set(STATIC_MEDIA);
+    if(catalogSnapshot)collectMedia(catalogSnapshot.data,all);
+    const media=[...all];
+    const mediaResult=await cacheBatch(media,MEDIA_CACHE,(current,total)=>broadcast({type:'OFFLINE_WARM_PROGRESS',current,total,stage:'media'}));
 
     let verification={ok:false,missingMedia:mediaResult.failed.length,missingMediaUrls:mediaResult.failed,mediaTotal:mediaResult.total};
     if(coreComplete){
-      await writeOfflineMeta(provisional);
-      verification=await verifyOfflineSnapshot({...provisional,cacheName:SHELL_CACHE,current:true});
+      verification=await verifyOfflineSnapshot({complete:true,cacheName:SHELL_CACHE,current:true});
     }
 
     const complete=Boolean(coreComplete&&verification.ok);
     const missingMediaCount=Number(verification.missingMedia)||mediaResult.failed.length||0;
     const meta={
-      ...provisional,
       complete,
-      failedCount:complete?0:Math.max(provisional.failedCount,1),
+      updatedAt:baseUpdatedAt,
+      mediaCount:Math.max(0,mediaResult.total-missingMediaCount),
+      mediaTotal:mediaResult.total,
+      failedCount:complete?0:Math.max(criticalFailures.length,1),
       failedMediaCount:missingMediaCount,
-      failedMediaUrls:Array.isArray(verification.missingMediaUrls)?verification.missingMediaUrls.slice(0,50):mediaResult.failed.slice(0,50)
+      failedMediaUrls:Array.isArray(verification.missingMediaUrls)?verification.missingMediaUrls.slice(0,50):mediaResult.failed.slice(0,50),
+      catalogApiOk,
+      contentVersion:remoteVersion
     };
 
     if(complete)await writeOfflineMeta(meta);
@@ -227,10 +248,11 @@ async function warmOffline(targetVersion=''){
 
     await broadcast({
       type:complete?'OFFLINE_READY':'OFFLINE_PARTIAL',
-      count:mediaResult.done,
+      count:meta.mediaCount,
       total:mediaResult.total,
       failedCount:meta.failedCount,
       missingMediaCount,
+      criticalFailures:criticalFailures.slice(0,20),
       previousReady:Boolean(previousStatus.ready),
       contentVersion:remoteVersion,
       updatedAt:meta.updatedAt
@@ -387,7 +409,8 @@ self.addEventListener('fetch',event=>{
   if(request.method!=='GET')return;
   if(request.mode==='navigate'){
     const freshRequest=new Request(request,{cache:'no-store'});
-    event.respondWith(networkFirst(freshRequest,SHELL_CACHE,'/').catch(async()=>await matchAny(request) || await caches.match('/')));
+    const fallback=NAV_FALLBACKS[url.pathname]||'/';
+    event.respondWith(networkFirst(freshRequest,SHELL_CACHE,fallback).catch(async()=>await matchAny(request) || await caches.match(fallback,{ignoreSearch:true}) || await caches.match('/')));
     return;
   }
   if(url.pathname==='/api/catalog-images'){
