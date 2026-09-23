@@ -181,6 +181,7 @@ for (const linkAppFile of ['link-app.html','link-app-sw.js','link-app.webmanifes
 
 await cp(path.join(root, 'timeweb/work-app.html'), path.join(output, 'work-app.html'));
 await cp(path.join(root, 'timeweb/force-update.html'), path.join(output, 'force-update.html'));
+await cp(path.join(root, 'timeweb/update'), path.join(output, 'update'), { recursive: true });
 
 for (const sitePwaFile of ['site-sw.js','site-manifest.webmanifest','site-icon.svg']) {
   await cp(path.join(root, 'dist/client', sitePwaFile), path.join(output, sitePwaFile));
