@@ -89,7 +89,7 @@
     if(data?.ready && data?.current){
       set(navigator.onLine?'Офлайн-база готова ✓':'Офлайн · база готова ✓',navigator.onLine?'ready':'offline');
       updateButton.textContent='Проверить обновления';
-      meta.textContent=[data.updatedAt?'Последнее обновление: '+fmt(data.updatedAt):'',data.mediaCount?'Фотографий сохранено: '+data.mediaCount:'',storageProtected?'хранилище защищено':''].filter(Boolean).join(' · ');
+      meta.textContent=[data.updatedAt?'Последнее обновление: '+fmt(data.updatedAt):'',data.mediaCount?'Фотографий сохранено: '+data.mediaCount:'',data.missingMediaCount?'Не сохранилось фото: '+data.missingMediaCount:'',storageProtected?'хранилище защищено':''].filter(Boolean).join(' · ');
     }else if(data?.ready){
       set('Сохранённая база работает · доступно обновление','ready');
       updateButton.textContent='Проверить обновления';
@@ -147,7 +147,7 @@
         set(navigator.onLine?'Офлайн-база актуальна ✓':'Офлайн · база готова ✓',navigator.onLine?'ready':'offline');
         updateButton.disabled=false;
         updateButton.textContent='Проверить обновления';
-        meta.textContent=[data.updatedAt?'Последнее обновление: '+fmt(data.updatedAt):'',data.mediaCount?'Фотографий сохранено: '+data.mediaCount:'','Изменений на сайте нет'].filter(Boolean).join(' · ');
+        meta.textContent=[data.updatedAt?'Последнее обновление: '+fmt(data.updatedAt):'',data.mediaCount?'Фотографий сохранено: '+data.mediaCount:'',data.missingMediaCount?'Не сохранилось фото: '+data.missingMediaCount:'','Изменений на сайте нет'].filter(Boolean).join(' · ');
       }
       if(data.type==='OFFLINE_UPDATE_CHECK_FAILED'){
         updating=false;
@@ -172,18 +172,18 @@
         set('Офлайн-база обновлена ✓','ready');
         updateButton.disabled=false;
         updateButton.textContent='Проверить обновления';
-        meta.textContent='Обновлено: '+fmt(data.updatedAt)+(data.count?' · Фотографий: '+data.count:'')+(storageProtected?' · хранилище защищено':'');
+        meta.textContent='Обновлено: '+fmt(data.updatedAt)+(data.count?' · Фотографий: '+data.count:'')+(data.missingMediaCount?' · Не сохранилось фото: '+data.missingMediaCount:'')+(storageProtected?' · хранилище защищено':'');
       }
       if(data.type==='OFFLINE_PARTIAL'){
         updating=false;
         const saved=Boolean(data.previousReady||knownReady);
         knownReady=saved;
-        set(saved?'Не всё обновилось · сохранённая база работает':'База скачана не полностью',saved?'ready':'');
+        set(saved?'Не всё обновилось · сохранённая база работает':'Не удалось сохранить обязательные данные',saved?'ready':'');
         updateButton.disabled=false;
         updateButton.textContent='Повторить обновление';
         meta.textContent=saved
           ? 'Не удалось обновить файлов: '+(data.failedCount||0)+'. Предыдущая офлайн-база сохранена — можно продолжать работать без сети и повторить обновление позже.'
-          : 'Не удалось сохранить файлов: '+(data.failedCount||0)+'. Повторите обновление — приложение автоматически повторит каждый проблемный файл несколько раз.';
+          : 'Не удалось сохранить обязательные данные приложения. Повторите обновление. Отдельные фотографии больше не блокируют готовность офлайн-базы.';
       }
     });
   }
