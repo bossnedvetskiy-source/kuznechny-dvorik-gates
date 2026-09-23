@@ -68,6 +68,15 @@ async function fetchCatalogSnapshot(){
   }
   return null;
 }
+async function fetchOfflineContentVersion(){
+  try{
+    const response=await fetch('/api/offline-version',{cache:'no-store',headers:{accept:'application/json'}});
+    if(!response.ok)return null;
+    const data=await response.json().catch(()=>null);
+    const version=typeof data?.version==='string'?data.version:'';
+    return version?{version,data}:null;
+  }catch{return null}
+}
 function collectMedia(value,set){
   if(typeof value==='string'){
     if(/^\/(?:catalog|catalog-media)\/.*\.(?:webp|jpe?g|png)$/i.test(value))set.add(value);
@@ -143,7 +152,8 @@ async function offlineStatus(){
     stale:Boolean(ready && !currentReady),
     updatedAt:meta?.updatedAt||null,
     mediaCount:verification.mediaTotal || Number(meta?.mediaCount)||0,
-    failedCount:verification.missingMedia || Number(meta?.failedCount)||0
+    failedCount:verification.missingMedia || Number(meta?.failedCount)||0,
+    contentVersion:meta?.contentVersion||''
   };
 }
 
@@ -152,10 +162,11 @@ async function broadcast(message){
   clientsList.forEach(client=>client.postMessage(message));
 }
 let warmPromise=null;
-async function warmOffline(){
+async function warmOffline(targetVersion=''){
   if(warmPromise)return warmPromise;
   warmPromise=(async()=>{
     const previousStatus=await offlineStatus().catch(()=>({ready:false,current:false}));
+    const remoteVersion=targetVersion || (await fetchOfflineContentVersion())?.version || '';
     await broadcast({type:'OFFLINE_WARM_START'});
     const shellResult=await cacheBatch(CORE,SHELL_CACHE,(current,total)=>broadcast({type:'OFFLINE_WARM_PROGRESS',current,total,stage:'shell'}));
     const all=new Set(STATIC_MEDIA);
@@ -180,7 +191,8 @@ async function warmOffline(){
       mediaCount:mediaResult.done,
       mediaTotal:mediaResult.total,
       failedCount:0,
-      catalogApiOk
+      catalogApiOk,
+      contentVersion:remoteVersion
     };
     const verification=(shellResult.failed.length===0&&mediaResult.failed.length===0&&catalogApiOk&&catalogStored)
       ? await verifyOfflineSnapshot({...provisional,cacheName:SHELL_CACHE,current:true})
@@ -202,11 +214,39 @@ async function warmOffline(){
       total:mediaResult.total,
       failedCount,
       previousReady:Boolean(previousStatus.ready),
+      contentVersion:remoteVersion,
       updatedAt:meta.updatedAt
     });
     return meta;
   })().finally(()=>{warmPromise=null});
   return warmPromise;
+}
+
+async function checkOfflineUpdate({auto=false,allowInitial=false}={}){
+  if(warmPromise)return warmPromise;
+  const status=await offlineStatus().catch(()=>({ready:false,contentVersion:''}));
+  if(!status.ready){
+    if(allowInitial)return warmOffline((await fetchOfflineContentVersion())?.version||'');
+    await broadcast({type:'OFFLINE_NEEDS_INITIAL'});
+    return {needsInitial:true};
+  }
+
+  const remote=await fetchOfflineContentVersion();
+  if(!remote){
+    await broadcast({type:'OFFLINE_UPDATE_CHECK_FAILED',ready:true});
+    return {checked:false};
+  }
+
+  const meta=await readOfflineMeta();
+  const localVersion=String(meta?.contentVersion||'');
+  if(localVersion && localVersion===remote.version){
+    await broadcast({type:'OFFLINE_UP_TO_DATE',updatedAt:meta?.updatedAt||null,mediaCount:status.mediaCount||0});
+    return {checked:true,changed:false};
+  }
+
+  await broadcast({type:'OFFLINE_UPDATE_AVAILABLE'});
+  if(auto)return warmOffline(remote.version);
+  return {checked:true,changed:true};
 }
 self.addEventListener('install',event=>{
   event.waitUntil((async()=>{
@@ -303,6 +343,7 @@ async function flushLeadQueue(){
 self.addEventListener('sync',event=>{if(event.tag==='kuzdvor-leads-sync')event.waitUntil(flushLeadQueue())});
 self.addEventListener('message',event=>{
   if(event.data?.type==='WARM_OFFLINE')event.waitUntil(warmOffline());
+  if(event.data?.type==='CHECK_OFFLINE_UPDATE')event.waitUntil(checkOfflineUpdate({auto:Boolean(event.data?.auto),allowInitial:Boolean(event.data?.allowInitial)}));
   if(event.data?.type==='FLUSH_LEADS')event.waitUntil(flushLeadQueue());
   if(event.data?.type==='GET_OFFLINE_STATUS')event.waitUntil(offlineStatus().then(status=>broadcast(status)));
 });
