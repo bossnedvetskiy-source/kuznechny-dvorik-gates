@@ -41,6 +41,10 @@ assert(sw.includes("localVersion===remote.version"), 'Service worker must skip f
 assert(sw.includes("if(auto)return warmOffline(remote.version)"), 'Changed site content must trigger the offline refresh automatically');
 assert(sw.includes('failedMediaCount'), 'Offline metadata must track missing photos separately from critical data');
 assert(sw.includes('offline-catalog-storage'), 'Offline refresh must report catalog storage failures explicitly');
+assert(sw.includes('RETRY_MISSING_MEDIA'), 'Offline app must retry only missing photos without redownloading the full base');
+assert(sw.includes('OFFLINE_MEDIA_RETRY_DONE'), 'Offline app must report targeted media retry results');
+assert(app.includes('Догрузить '), 'Work app must offer targeted download for missing photos');
+
 assert(sw.includes('const NAV_FALLBACKS'), 'Offline navigation must use physical work/link app fallbacks');
 assert(sw.includes("'/work-app.html'"), 'Physical work app must be cached for offline use');
 assert(sw.includes('mediaComplete:missingMediaUrls.length===0'), 'Offline verification must report photo completeness');
@@ -49,7 +53,7 @@ assert(app.includes('Отдельные фотографии больше не �
 assert(app.includes('updateViaCache:\'none\''), 'Installed PWA must bypass the browser HTTP cache when checking its service worker');
 assert(app.includes("'/site-sw.js?build='"), 'Installed PWA must register a versioned service worker URL');
 assert(app.includes("navigator.serviceWorker.addEventListener('controllerchange'"), 'Installed PWA must reload once when the new service worker takes control');
-assert(htaccess.includes('work-app.html?app-build=2026-09-23-v9'), 'The /app route must force a fresh versioned work-app navigation');
+assert(htaccess.includes('work-app.html?app-build=2026-09-23-v10'), 'The /app route must force a fresh versioned work-app navigation');
 assert(htaccess.includes('RewriteRule ^update/?$ force-update.html [L]'), 'A short /update recovery route must exist');
 assert(htaccess.includes('force-update\\.html'), 'Force-update page must bypass stale browser cache');
 assert(htaccess.includes('no-store, no-cache, must-revalidate, max-age=0'), 'Work app and service worker must be served without stale browser cache');
