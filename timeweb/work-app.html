@@ -147,10 +147,14 @@
       }
       if(data.type==='OFFLINE_PARTIAL'){
         updating=false;
-        set('База скачана не полностью');
+        const saved=Boolean(data.previousReady||knownReady);
+        knownReady=saved;
+        set(saved?'Не всё обновилось · сохранённая база работает':'База скачана не полностью',saved?'ready':'');
         updateButton.disabled=false;
         updateButton.textContent='Повторить обновление';
-        meta.textContent='Не удалось загрузить файлов: '+(data.failedCount||0)+'. Подключитесь к стабильному интернету и повторите.';
+        meta.textContent=saved
+          ? 'Не удалось обновить файлов: '+(data.failedCount||0)+'. Предыдущая офлайн-база сохранена — можно продолжать работать без сети и повторить обновление позже.'
+          : 'Не удалось сохранить файлов: '+(data.failedCount||0)+'. Повторите обновление — приложение автоматически повторит каждый проблемный файл несколько раз.';
       }
     });
   }
