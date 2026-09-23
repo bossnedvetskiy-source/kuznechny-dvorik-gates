@@ -36,7 +36,7 @@ RewriteRule ^catalog-media/(.*)$ local-api.php?__route=catalog-media/$1 [QSA,L]
 RewriteRule ^vorota/?$ / [R=301,L]
 RewriteRule ^admin/?$ admin.html [L]
 RewriteRule ^links/?$ link-app.html [L]
-RewriteRule ^app/?$ work-app.html [L]
+RewriteRule ^app/?$ /work-app.html?app-build=2026-09-23-v7 [R=302,L,NE]
 RewriteRule ^manager/?$ manager.html [L]
 RewriteRule ^napravleniya/?$ napravleniya/index.html [L]
 
@@ -72,6 +72,11 @@ RewriteRule ^napravleniya/?$ napravleniya/index.html [L]
   </FilesMatch>
   <FilesMatch "\.(?:css|js)$">
     Header set Cache-Control "no-cache, must-revalidate"
+  </FilesMatch>
+  <FilesMatch "^(?:site-sw\.js|work-app\.html|site-manifest\.webmanifest)$">
+    Header set Cache-Control "no-store, no-cache, must-revalidate, max-age=0"
+    Header set Pragma "no-cache"
+    Header set Expires "0"
   </FilesMatch>
   <FilesMatch "\.(?:webp|jpe?g|png|svg)$">
     Header set Cache-Control "public, max-age=86400"
