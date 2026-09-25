@@ -28,14 +28,24 @@ function isJunkSettlementName(name) {
   return /^\s*\d+(?:[.,]\d+)?\s*(?:км|km)\s*$/iu.test(String(name || ''));
 }
 
-function kindLabel(place) {
-  return ({city:'город',town:'город / посёлок',village:'село / деревня',hamlet:'деревня / хутор'})[place] || 'населённый пункт';
-}
-
 function secondaryFor(tags) {
-  const district = String(tags?.['addr:district'] || tags?.['is_in:district'] || tags?.['addr:county'] || '').trim();
-  const base = kindLabel(String(tags?.place || ''));
-  return [district, base].filter(Boolean).join(' · ');
+  const district = String(
+    tags?.['addr:district']
+    || tags?.['is_in:district']
+    || tags?.['addr:county']
+    || tags?.['is_in:county']
+    || ''
+  ).trim();
+  const region = String(
+    tags?.['addr:region']
+    || tags?.['addr:state']
+    || tags?.['is_in:state']
+    || tags?.['is_in:region']
+    || ''
+  ).trim();
+  return [district, region]
+    .filter((value,index,list) => value && list.findIndex(item => normalize(item) === normalize(value)) === index)
+    .join(', ');
 }
 
 async function fetchOverpass() {
