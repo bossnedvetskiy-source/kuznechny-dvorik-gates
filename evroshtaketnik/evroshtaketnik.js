@@ -434,6 +434,77 @@ function initInternalToggle() {
   });
 }
 
+function renderInputValidation(result) {
+  const rawSections = readSections();
+
+  rawSections.forEach((raw, index) => {
+    const box = sectionsList.querySelector(`[data-section-validation="${index}"]`);
+    if (!box) return;
+
+    const lengthInput = sectionsList.querySelector(`[data-field="length"][data-index="${index}"]`);
+    const heightInput = sectionsList.querySelector(`[data-field="height"][data-index="${index}"]`);
+    const gateInput = sectionsList.querySelector(`[data-field="gateOpening"][data-index="${index}"]`);
+    const wicketInput = sectionsList.querySelector(`[data-field="wicketOpening"][data-index="${index}"]`);
+
+    for (const input of [lengthInput,heightInput,gateInput,wicketInput]) input?.removeAttribute('aria-invalid');
+
+    if (index >= visibleSections || raw.length <= 0) {
+      box.hidden = true;
+      box.textContent = '';
+      box.className = 'section-validation';
+      return;
+    }
+
+    const messages = [];
+    const openingWidth = Math.max(0, raw.gateOpening) + Math.max(0, raw.wicketOpening);
+    if (openingWidth > raw.length + 1e-9) {
+      messages.push({level:'error', text:`Проёмы ${number(openingWidth)} м больше длины участка ${number(raw.length)} м.`});
+      lengthInput?.setAttribute('aria-invalid','true');
+      gateInput?.setAttribute('aria-invalid','true');
+      wicketInput?.setAttribute('aria-invalid','true');
+    } else if (openingWidth > 0) {
+      const remaining = Math.max(0, raw.length - openingWidth);
+      messages.push({
+        level: remaining < .5 ? 'warn' : 'info',
+        text: remaining > 0
+          ? `После ворот и калитки останется ${number(remaining)} м заполнения забором.`
+          : 'После проёмов длины для заполнения забором не остаётся.'
+      });
+    }
+
+    const availablePostHeight = Math.max(0, Number(runtimeSettings.postLength) - Number(runtimeSettings.postDepth));
+    if (availablePostHeight > 0 && raw.height > availablePostHeight + 1e-9) {
+      messages.push({level:'warn', text:`Высота ${number(raw.height)} м выше доступной части столба ${number(availablePostHeight)} м — проверьте столб на замере.`});
+      heightInput?.setAttribute('aria-invalid','true');
+    }
+
+    if (!messages.length) {
+      box.hidden = true;
+      box.textContent = '';
+      box.className = 'section-validation';
+      return;
+    }
+
+    const rank = {info:1,warn:2,error:3};
+    const level = messages.reduce((best,item) => rank[item.level] > rank[best] ? item.level : best, 'info');
+    box.className = `section-validation is-${level}`;
+    box.innerHTML = messages.map(item => `<span>${item.text}</span>`).join('');
+    box.hidden = false;
+  });
+
+  if (existingPostsHint) {
+    const requested = Math.max(0, Math.floor(Number(existingPostsInput?.value || 0)));
+    const required = Math.max(0, Number(result.summary.postsByScheme) || 0);
+    existingPostsHint.classList.remove('is-warn');
+    if (includePostsInput.checked && requested > required && required > 0) {
+      existingPostsHint.textContent = `По схеме требуется ${required} столбов. Указано ${requested} готовых — в расчёте учтём только ${required}.`;
+      existingPostsHint.classList.add('is-warn');
+    } else {
+      existingPostsHint.textContent = 'Если часть столбов уже установлена, укажите количество — калькулятор добавит только недостающие.';
+    }
+  }
+}
+
 function calculate() {
   const result = calculateFence({
     type: typeInput.value,
@@ -449,6 +520,8 @@ function calculate() {
   renderScheme(result);
   renderInternal(result);
   renderLeadPreview(result);
+  renderInputValidation(result);
+  scheduleDraftSave();
 }
 
 function renderResult(result) {
