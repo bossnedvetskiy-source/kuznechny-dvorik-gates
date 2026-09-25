@@ -50,6 +50,10 @@ jobs:
           node --check dev-access.js
           node --check evroshtaketnik/engine.js
           node --check evroshtaketnik/evroshtaketnik.js
+          node --check admin-prices.js
+          node --check site-sw.js
+          node --check worker/site-settings-d1.js
+          php -l timeweb/local-api.php
           node --check scripts/build-dev-preview.mjs
           node scripts/test-picket-calculator.mjs
           npm run build
@@ -61,6 +65,11 @@ jobs:
           test -s timeweb-dist/evroshtaketnik/index.html
           test -s timeweb-dist/evroshtaketnik/engine.js
           test -s timeweb-dist/evroshtaketnik/evroshtaketnik.js
+          test -s timeweb-dist/evroshtaketnik/assets/fence-double.webp
+          test -s timeweb-dist/evroshtaketnik/assets/fence-single.webp
+          test -s timeweb-dist/evroshtaketnik/assets/fence-horizontal.webp
+          grep -Fq 'Выберите тип заполнения' timeweb-dist/evroshtaketnik/index.html
+          grep -Fq 'Оставить заявку на бесплатный замер' timeweb-dist/evroshtaketnik/index.html
 
       - name: Snapshot current production catalog
         continue-on-error: true
