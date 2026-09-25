@@ -3,6 +3,21 @@
   const normalize = value => String(value || '').toLocaleLowerCase('ru-RU').replace(/ё/g,'е').replace(/[^а-яa-z0-9]/gi,'');
   const escapeHTML = value => String(value).replace(/[&<>'"]/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[character]));
   const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+  const cleanAdministrativeAddress = value => String(value || '')
+    .split('·')
+    .map(part => part.trim())
+    .filter(part => part
+      && !/^(?:город|город\s*\/\s*пос[её]лок|пос[её]лок|село\s*\/\s*деревня|деревня\s*\/\s*хутор|насел[её]нный пункт)$/iu.test(part)
+      && !/^\d+\s*км\s*от\s*Мелеуза$/iu.test(part)
+      && !/^(?:Из списка доставки|Доступно офлайн)$/iu.test(part))
+    .join(', ')
+    .replace(/\s*,\s*,+/g, ', ')
+    .trim();
+  const hasDistrict = value => /(?:район|округ|муниципал)/iu.test(String(value || ''));
+  const adminDistrictKey = value => {
+    const match = cleanAdministrativeAddress(value).match(/([^,]*(?:район|округ|муниципал)[^,]*)/iu);
+    return normalize(match?.[1] || '');
+  };
 
   function readData() {
     const node = document.getElementById('deliveryData');
@@ -260,7 +275,17 @@
       try {
         const response = await fetch(`/api/delivery-search?place=${encodeURIComponent(place)}`, {headers:{accept:'application/json'}});
         const payload = response.ok ? await response.json().catch(() => null) : null;
-        remoteChoices = Array.isArray(payload?.choices) ? payload.choices : [];
+        remoteChoices = Array.isArray(payload?.choices) ? payload.choices.map(choice => {
+          const name = String(choice?.name || '').trim();
+          const secondary = cleanAdministrativeAddress(choice?.secondary);
+          return {
+            ...choice,
+            name,
+            secondary,
+            label:String(choice?.label || [name,secondary].filter(Boolean).join(', ')).trim(),
+            query:String(choice?.query || [name,secondary,'Россия'].filter(Boolean).join(', ')).trim()
+          };
+        }) : [];
       } catch {
         remoteChoices = [];
       }
@@ -284,17 +309,19 @@
       });
       const exactLocal = matchingLocal.filter(item => normalize(item?.name) === queryKey);
       const visibleLocal = exactLocal.length ? exactLocal.slice(0, 24) : matchingLocal.slice(0, 10);
-      visibleLocal.forEach(item => localChoices.push({
-        name:String(item.name || '').trim(),
-        label:String(item.label || item.name || '').trim(),
-        secondary:String(item.secondary || (navigator.onLine ? 'Из списка доставки' : 'Доступно офлайн'))
-          .replace(/\s*·\s*\d+\s*км\s*от\s*Мелеуза\s*$/iu,'')
-          .trim(),
-        query:String(item.query || item.label || item.name || '').trim(),
-        fixedItem:item,
-        lat:Number(item.lat) || undefined,
-        lon:Number(item.lon) || undefined
-      }));
+      visibleLocal.forEach(item => {
+        const name = String(item.name || '').trim();
+        const secondary = cleanAdministrativeAddress(item.secondary);
+        localChoices.push({
+          name,
+          label:String(item.label || [name,secondary].filter(Boolean).join(', ')).trim(),
+          secondary,
+          query:String(item.query || [name,secondary,'Россия'].filter(Boolean).join(', ')).trim(),
+          fixedItem:item,
+          lat:Number(item.lat) || undefined,
+          lon:Number(item.lon) || undefined
+        });
+      });
 
       if (queryKey && originKey.startsWith(queryKey) && !localChoices.some(item => normalize(item.name) === originKey)) {
         localChoices.unshift({
@@ -305,11 +332,25 @@
         });
       }
 
+      // Online search is authoritative for the displayed address: it contains
+      // municipality/district and region. Do not show a second local row with
+      // "село / деревня" or another incomplete description for the same place.
+      const filteredLocal = localChoices.filter(local => {
+        if (!remoteChoices.length) return true;
+        const sameNameRemote = remoteChoices.filter(remote => normalize(remote.name) === normalize(local.name));
+        if (!sameNameRemote.length) return true;
+        const localDistrict = adminDistrictKey(local.secondary);
+        if (!localDistrict) return !sameNameRemote.some(remote => hasDistrict(remote.secondary));
+        return !sameNameRemote.some(remote => adminDistrictKey(remote.secondary) === localDistrict);
+      });
+
       const seen = new Set();
-      const merged = [...localChoices, ...remoteChoices].filter(choice => {
-        const key = `${normalize(choice.name)}|${normalize(choice.secondary)}`;
+      const merged = [...remoteChoices, ...filteredLocal].filter(choice => {
+        const secondary = cleanAdministrativeAddress(choice.secondary);
+        const key = `${normalize(choice.name)}|${normalize(secondary)}`;
         if (seen.has(key)) return false;
         seen.add(key);
+        choice.secondary = secondary;
         return true;
       });
       return merged.slice(0, exactLocal.length > 8 ? Math.min(24, exactLocal.length) : 8);
