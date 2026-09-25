@@ -34,6 +34,10 @@ const leadState = $('leadState');
 const leadCity = $('leadCity');
 const leadSubmit = $('leadSubmit');
 const savedQuoteBar = $('savedQuoteBar');
+const resultLeadButton = $('resultLeadButton');
+const includedBlock = $('includedBlock');
+const quoteMainActions = $('quoteMainActions');
+const quoteMoreActions = $('quoteMoreActions');
 const SAVED_QUOTE_KEY = 'kuzdvor:picket-saved-v1';
 
 let visibleSections = 1;
@@ -50,7 +54,7 @@ function sectionMarkup(index) {
     <article class="section-card" data-section-card="${index}">
       <div class="section-card-head"><b>Участок ${n}</b><span data-section-caption="${index}">не заполнен</span></div>
       <div class="section-fields">
-        <label class="field"><span>Длина линии, м</span><input data-field="length" data-index="${index}" type="number" min="0" max="200" step="0.1" inputmode="decimal" value="0"></label>
+        <label class="field"><span>Длина линии, м</span><input data-field="length" data-index="${index}" type="number" min="0" max="200" step="0.1" inputmode="decimal" value="" placeholder="Например, 10"></label>
         <label class="field"><span>Высота, м</span><input data-field="height" data-index="${index}" type="number" min="0.5" max="3" step="0.05" inputmode="decimal" value="1.8"></label>
       </div>
       <div class="quick-presets" aria-label="Быстрые размеры участка">
@@ -374,7 +378,8 @@ function calculate() {
 function renderResult(result) {
   const {summary,type} = result;
   const deliveryPending = !deliveryIsKnown();
-  $('totalPrice').textContent = summary.activeSections ? money(summary.total) : '0 ₽';
+  const hasQuote = summary.activeSections > 0;
+  $('totalPrice').textContent = hasQuote ? money(summary.total) : '—';
   $('summaryType').textContent = type.label;
   $('summaryLength').textContent = summary.openingsWidth > 0
     ? `${number(summary.totalLength)} м из линии ${number(summary.grossLineLength)} м`
@@ -386,12 +391,14 @@ function renderResult(result) {
     ? 'не указана'
     : (summary.deliveryCost === 0 ? '0 ₽' : money(summary.deliveryCost));
 
-  if (totalLabel) totalLabel.textContent = deliveryPending
-    ? 'Предварительная стоимость без доставки'
-    : 'Предварительная стоимость с доставкой';
-  if (resultNote) resultNote.textContent = deliveryPending
-    ? 'Укажите населённый пункт, чтобы получить итог с доставкой. Точные размеры и цену зафиксируем после бесплатного замера.'
-    : 'Доставка учтена. Точные размеры и итоговую стоимость зафиксируем после бесплатного замера.';
+  if (totalLabel) totalLabel.textContent = !hasQuote
+    ? 'Рассчитайте стоимость'
+    : (deliveryPending ? 'Предварительная стоимость без доставки' : 'Предварительная стоимость с доставкой');
+  if (resultNote) resultNote.textContent = !hasQuote
+    ? 'Укажите длину участка — калькулятор сразу покажет предварительную стоимость.'
+    : (deliveryPending
+        ? 'Укажите населённый пункт, чтобы получить итог с доставкой. Точные размеры и цену зафиксируем после бесплатного замера.'
+        : 'Доставка учтена. Точные размеры и итоговую стоимость зафиксируем после бесплатного замера.');
 
   const status = $('resultStatus');
   status.className = 'result-status';
@@ -427,10 +434,19 @@ function renderResult(result) {
       : 'не заполнен';
   });
 
-  const hasQuote = summary.activeSections > 0;
   if (mobileQuoteBar) mobileQuoteBar.hidden = !hasQuote;
-  if (mobileBarPrice) mobileBarPrice.textContent = hasQuote ? money(summary.total) : '0 ₽';
+  if (mobileBarPrice) mobileBarPrice.textContent = hasQuote ? money(summary.total) : '—';
   if (mobileBarNote) mobileBarNote.textContent = deliveryPending ? 'без доставки' : 'с доставкой';
+  if (includedBlock) includedBlock.classList.toggle('is-muted', !hasQuote);
+  if (quoteMainActions) quoteMainActions.hidden = !hasQuote;
+  if (quoteMoreActions) {
+    quoteMoreActions.hidden = !hasQuote;
+    if (!hasQuote) quoteMoreActions.open = false;
+  }
+  if (savedQuoteBar && !hasQuote) savedQuoteBar.hidden = true;
+  if (resultLeadButton) resultLeadButton.textContent = hasQuote
+    ? 'Оставить заявку на бесплатный замер'
+    : 'Перейти к размерам';
 }
 
 function renderScheme(result) {
@@ -861,7 +877,15 @@ document.querySelectorAll('.color-choice[data-color]').forEach(button => button.
   syncColorPicker();
   calculate();
 }));
-$('resultLeadButton')?.addEventListener('click', scrollToLead);
+resultLeadButton?.addEventListener('click', () => {
+  if (lastResult?.summary.activeSections) {
+    scrollToLead();
+    return;
+  }
+  const firstLength = sectionsList.querySelector('[data-field="length"][data-index="0"]');
+  firstLength?.scrollIntoView({behavior:'smooth',block:'center'});
+  setTimeout(() => firstLength?.focus({preventScroll:true}), 350);
+});
 $('mobileLeadButton')?.addEventListener('click', scrollToLead);
 $('copyQuote')?.addEventListener('click', async () => {
   const text = quoteText();
