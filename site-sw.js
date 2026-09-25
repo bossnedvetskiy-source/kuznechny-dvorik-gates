@@ -1,4 +1,4 @@
-const VERSION='kuzdvor-offline-2026-09-25-v11';
+const VERSION='kuzdvor-offline-2026-09-25-v12';
 const SHELL_CACHE=VERSION+'-shell';
 const MEDIA_CACHE=VERSION+'-media';
 const API_CACHE=VERSION+'-api';
@@ -9,6 +9,7 @@ const META_URL='/__kuzdvor_offline_meta__';
 const CORE=['/','/work-app.html','/link-app.html','/offline-delivery-200km.json','/site.css','/site.bundle.js','/calculator.bundle.js','/catalog-enhancements.bundle.js','/hero-gates.jpg','/site-manifest.webmanifest','/site-icon.svg','/evroshtaketnik/','/evroshtaketnik/evroshtaketnik.css','/evroshtaketnik/evroshtaketnik.js','/evroshtaketnik/engine.js'];
 const NAV_FALLBACKS={'/':'/','/app':'/work-app.html','/links':'/link-app.html','/evroshtaketnik':'/evroshtaketnik/','/evroshtaketnik/':'/evroshtaketnik/'};
 const STATIC_MEDIA=["/catalog/art-6-1.webp","/catalog/art-6-2.webp","/catalog/art-6-3.webp","/catalog/art-18-2.webp","/catalog/art-18-1.webp","/catalog/art-18-3.webp","/catalog/art-31-1.webp","/catalog/art-31-2.webp","/catalog/art-31-3.webp","/catalog/art-28-1.webp","/catalog/art-28-2.webp","/catalog/art-28-3.webp","/catalog/art-15-2.webp","/catalog/art-15-1.webp","/catalog/art-15-3.webp","/catalog/art-30-1.webp","/catalog/art-30-2.webp","/catalog/art-30-3.webp","/catalog/art-38-2.webp","/catalog/art-38-3.webp","/catalog/art-9-1.webp","/catalog/art-9-2.webp","/catalog/art-9-3.webp","/catalog/art-22-2-3.webp","/catalog/art-22-2-2.webp","/catalog/art-21-2.webp","/catalog/art-21-3.webp","/catalog/art-21-1.webp","/catalog/art-29-1.webp","/catalog/art-29-2.webp","/catalog/art-14-2.webp","/catalog/art-14-1.webp","/catalog/art-14-3.webp","/catalog/art-36-1.webp","/catalog/art-36-2.webp","/catalog/art-36-3.webp","/catalog/art-24-1.webp","/catalog/art-24-2.webp","/catalog/art-24-3.webp","/catalog/art-1-3.webp","/catalog/art-1-1.webp","/catalog/art-1-2.webp","/catalog/art-12-2.webp","/catalog/art-12-1.webp","/catalog/art-12-3.webp","/catalog/art-32-2.webp","/catalog/art-32-1.webp","/catalog/art-32-3.webp","/catalog/art-17s-3.webp","/catalog/art-17s-1.webp","/catalog/art-17s-2.webp","/catalog/art-4-1.webp","/catalog/art-33-1.webp","/catalog/art-33-2.webp","/catalog/art-33-3.webp","/catalog/art-46-3.webp","/catalog/art-46-1.webp","/catalog/art-46-2.webp","/catalog/art-27-3.webp","/catalog/art-27-1.webp","/catalog/art-27-2.webp","/catalog/art-8-3.webp","/catalog/art-8-1.webp","/catalog/art-8-2.webp","/catalog/art-16-1.webp","/catalog/art-16-2.webp","/catalog/art-16-3.webp","/catalog/art-7-1.webp","/catalog/art-34-1.webp","/catalog/art-23s-1.webp","/catalog/art-23s-2.webp","/catalog/art-23s-3.webp","/catalog/art-25-1.webp","/catalog/art-25-2.webp","/catalog/art-10-2.webp","/catalog/art-10-1.webp","/catalog/art-10-3.webp","/catalog/art-35-3.webp","/catalog/art-35-1.webp","/catalog/art-35-2.webp","/catalog/art-37-1.webp","/catalog/art-9-3-1.webp","/catalog/art-9-3-2.webp","/catalog/art-9-3-3.webp","/catalog/art-13-1.webp","/catalog/art-13-2.webp","/catalog/art-11-1.webp","/catalog/art-20-1.webp","/catalog/art-20-2.webp","/catalog/art-20-3.webp","/catalog/art-2-1.webp","/catalog/art-2-2.webp","/catalog/art-2-3.webp","/catalog/art-3-1.webp","/catalog/art-3-2.webp","/catalog/art-3-3.webp","/catalog/art-5-3.webp","/catalog/art-5-2.webp","/catalog/art-5-1.webp"];
+STATIC_MEDIA.push('/evroshtaketnik/assets/fence-double.webp','/evroshtaketnik/assets/fence-single.webp','/evroshtaketnik/assets/fence-horizontal.webp');
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const FETCH_ATTEMPTS=3;
 const FETCH_RETRY_DELAY=350;
@@ -468,6 +469,13 @@ self.addEventListener('fetch',event=>{
         return cached||new Response(JSON.stringify({error:'Нет сохранённого каталога'}),{status:503,headers:{'content-type':'application/json'}});
       }
     })());
+    return;
+  }
+  if(url.pathname==='/api/fence-prices'){
+    event.respondWith(networkFirst(request,API_CACHE).catch(async()=>{
+      const cached=await caches.open(API_CACHE).then(cache=>cache.match(request,{ignoreSearch:true})) || await matchAny(request);
+      return cached||new Response(JSON.stringify({fence:{}}),{status:200,headers:{'content-type':'application/json'}});
+    }));
     return;
   }
   if(url.pathname==='/api/share-link'){
