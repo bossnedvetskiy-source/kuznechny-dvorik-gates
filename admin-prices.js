@@ -194,7 +194,7 @@ function renderFencePrices() {
     title.innerHTML = `<b>${labelText}</b><small>${unit}</small>`;
     const input = document.createElement('input');
     input.type = 'number';
-    input.min = '0';
+    input.min = ['picketWidth','maxSpan','postLength','tubeStockLength'].includes(key) ? '0.01' : '0';
     input.max = key.includes('Percent')
       ? '100'
       : ['picketWidth','gapSingle','gapDouble','maxSpan','postLength','postDepth','tubeStockLength'].includes(key)
