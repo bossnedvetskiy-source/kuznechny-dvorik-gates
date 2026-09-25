@@ -216,22 +216,30 @@
     </section>
 
     <section id="leadSection" class="lead-section shell">
-      <div class="lead-card">
-        <div class="lead-copy">
+      <div class="lead-card lead-card-simple">
+        <div id="leadEmptyState" class="lead-empty-state">
           <small>Бесплатный замер</small>
-          <h2>Отправить этот расчёт менеджеру</h2>
-          <p>Вместе с заявкой передадим выбранный тип забора, размеры участков, столбы, цвет, населённый пункт и рассчитанную стоимость — ничего повторно объяснять не придётся.</p>
-          <div id="leadQuotePreview" class="lead-quote-preview">Сначала укажите длину участка.</div>
+          <h2>Сначала рассчитайте забор</h2>
+          <p>Укажите длину участка — после расчёта здесь появится короткая форма заявки.</p>
+          <button id="leadBackToCalc" class="secondary-button" type="button">Перейти к расчёту</button>
         </div>
-        <form id="leadForm" class="lead-form" novalidate>
-          <label><span>Имя</span><input id="leadName" type="text" autocomplete="name" maxlength="100" placeholder="Как к вам обращаться"></label>
-          <label><span>Телефон *</span><input id="leadPhone" type="tel" autocomplete="tel" inputmode="tel" maxlength="24" placeholder="+7 999 000-00-00" required></label>
-          <label><span>Населённый пункт *</span><input id="leadCity" type="text" autocomplete="address-level2" maxlength="150" placeholder="Выберите доставку выше" required></label>
-          <label><span>Комментарий</span><textarea id="leadComment" rows="3" maxlength="1000" placeholder="Например: нужен замер вечером"></textarea></label>
-          <label class="consent"><input id="leadConsent" type="checkbox" required><span>Согласен на обработку персональных данных для связи по заявке.</span></label>
-          <button id="leadSubmit" class="primary-button" type="submit">Заказать бесплатный замер</button>
-          <div id="leadState" class="lead-state" role="status" aria-live="polite"></div>
-        </form>
+
+        <div id="leadReadyContent" class="lead-ready" hidden>
+          <div class="lead-copy lead-copy-simple">
+            <small>Бесплатный замер</small>
+            <h2>Оставить заявку на замер</h2>
+            <p>Менеджер получит ваш расчёт, размеры и населённый пункт автоматически.</p>
+            <div id="leadQuotePreview" class="lead-quote-preview"></div>
+          </div>
+
+          <form id="leadForm" class="lead-form lead-form-simple" novalidate>
+            <label><span>Телефон *</span><input id="leadPhone" type="tel" autocomplete="tel" inputmode="tel" maxlength="24" placeholder="+7 999 000-00-00" required></label>
+            <input id="leadCity" type="hidden" value="">
+            <label class="consent"><input id="leadConsent" type="checkbox" required><span>Согласен на обработку персональных данных для связи по заявке.</span></label>
+            <button id="leadSubmit" class="primary-button" type="submit">Заказать замер</button>
+            <div id="leadState" class="lead-state" role="status" aria-live="polite"></div>
+          </form>
+        </div>
       </div>
     </section>
 
