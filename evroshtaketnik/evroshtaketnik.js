@@ -195,8 +195,12 @@ function renderResult(result) {
   const deliveryPending = !deliveryIsKnown();
   $('totalPrice').textContent = summary.activeSections ? money(summary.total) : '0 ₽';
   $('summaryType').textContent = type.label;
-  $('summaryLength').textContent = `${number(summary.totalLength)} м`;
-  $('summaryPosts').textContent = String(summary.postsByScheme);
+  $('summaryLength').textContent = summary.openingsWidth > 0
+    ? `${number(summary.totalLength)} м из линии ${number(summary.grossLineLength)} м`
+    : `${number(summary.totalLength)} м`;
+  $('summaryPosts').textContent = result.includeNewPosts
+    ? `${summary.postsByScheme} (новых ${summary.newPosts})`
+    : String(summary.postsByScheme);
   $('summaryDelivery').textContent = deliveryPending
     ? 'не указана'
     : (summary.deliveryCost === 0 ? '0 ₽' : money(summary.deliveryCost));
@@ -227,14 +231,18 @@ function renderResult(result) {
     '<span>монтаж забора</span>',
     '<span>крепёж</span>'
   ];
-  if (result.includeNewPosts) chips.push('<span>новые столбы + установка</span>');
+  if (result.includeNewPosts && summary.newPosts > 0) chips.push(`<span>новые столбы: ${summary.newPosts} шт + установка</span>`);
+  if (summary.existingPostsUsed > 0) chips.push(`<span>готовые столбы: ${summary.existingPostsUsed} шт</span>`);
+  if (summary.openingsWidth > 0) chips.push(`<span>проёмы вычтены: ${number(summary.openingsWidth)} м</span>`);
   if ($('includedChips')) $('includedChips').innerHTML = chips.join('');
 
   result.sections.forEach((item, index) => {
     const caption = sectionsList.querySelector(`[data-section-caption="${index}"]`);
     if (!caption) return;
     caption.textContent = item.active
-      ? `${item.spans} прол. · чистый ${number(item.clearSpan)} м`
+      ? (item.openingsWidth > 0
+          ? `${item.spans} прол. · забор ${number(item.fenceLength)} из ${number(item.grossLength)} м`
+          : `${item.spans} прол. · чистый ${number(item.clearSpan)} м`)
       : 'не заполнен';
   });
 
@@ -255,6 +263,9 @@ function renderScheme(result) {
     const line = Array.from({length:visibleSpans}, () => '<span class="scheme-post"></span><span class="scheme-span"></span>').join('') + '<span class="scheme-post"></span>';
     const compact = item.spans > visibleSpans ? `<div class="shared-note">На схеме показано ${visibleSpans} из ${item.spans} пролётов</div>` : '';
     const shared = item.sharedPost ? '<div class="shared-note">Последний столб общий со следующим участком</div>' : '';
+    const openings = item.openingsWidth > 0
+      ? `<div class="shared-note">Проёмы ворот/калитки: ${number(item.openingsWidth)} м · в заборе считается ${number(item.fenceLength)} м</div>`
+      : '';
     return `
       <article class="scheme-card">
         <div class="scheme-top"><b>Участок ${item.index}</b><span>${number(item.length)} × ${number(item.height)} м</span></div>
@@ -264,7 +275,7 @@ function renderScheme(result) {
           <div><small>Чистый пролёт</small><b>${number(item.clearSpan)} м</b></div>
           <div><small>Факт. зазор</small><b>${number(item.actualGap*1000,1)} мм</b></div>
         </div>
-        ${shared}${compact}
+        ${openings}${shared}${compact}
       </article>`;
   }).join('');
 }
@@ -310,7 +321,10 @@ function renderInternal(result) {
     row('40×20 используется', `${number(result.purchase.tubeUsed)} м`) +
     row('40×20 купить', `${result.purchase.tubeStocks} хлыст. × 6 м`) +
     row('Остаток 40×20', `${number(result.purchase.tubeRemainder)} м`) +
-    row('Новые столбы', `${result.purchase.posts} шт × 3 м`) +
+    row('Столбов требуется по схеме', `${result.summary.postsByScheme} шт`) +
+    row('Готовых столбов учтено', `${result.summary.existingPostsUsed} шт`) +
+    row('Новых столбов', `${result.purchase.posts} шт × 3 м`) +
+    row('Проёмы ворот/калитки', `${number(result.summary.openingsWidth)} м`) +
     row('Саморезы', `${result.purchase.screws} шт`);
 
   const c = result.costs;
