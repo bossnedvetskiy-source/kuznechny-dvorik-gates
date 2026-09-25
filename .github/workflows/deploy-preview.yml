@@ -43,114 +43,50 @@ jobs:
             cp node_modules/xlsx/xlsx.js node_modules/xlsx/dist/xlsx.full.min.js
           fi
 
-      - name: Check development build
-        run: |
-          node --check app.js
-          node --check shared/delivery.js
-          node --check dev-access.js
-          npm run build
-
-      - name: Prepare isolated static dev site
+      - name: Build exact Timeweb frontend
         shell: bash
         run: |
           set -euo pipefail
-          rm -rf _site
-          mkdir -p _site/catalog _site/shared _site/napravleniya
+          node --check dev-access.js
+          node --check scripts/build-dev-preview.mjs
+          npm run build
+          node scripts/build-timeweb.mjs
+          test -s timeweb-dist/index.html
+          test -s timeweb-dist/site.css
+          test -s timeweb-dist/site.bundle.js
+          test -s timeweb-dist/calculator.bundle.js
 
-          cp index.html styles.css storefront.css gate-page.css app.js public-site-settings.js gate-page-ui.js color-photo-site.js gate-formula-prices-site.js prices.js catalog-images.js dev-access.js _site/
-          cp gate-calc-prices.js gate-calc-models-chunk1.js gate-calc-models-chunk2.js gate-calc-models-chunk3.js gate-calc-models-chunk4.js gate-calc-models.js gate-calc-engine.js _site/
-          cp shared/customer-context.js shared/delivery.js shared/leads.js _site/shared/
-          cp assets/hero-gates.jpg _site/hero-gates.jpg
-          cp -R assets/catalog/. _site/catalog/
-          cp offline-delivery-200km.json _site/offline-delivery-200km.json
-          cp delivery-prices.json _site/delivery-prices.json
+      - name: Snapshot current production catalog
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f /tmp/kuzdvor-live-catalog.json
+          curl -fsS --connect-timeout 4 --max-time 15 --retry 2 --retry-delay 2 \
+            https://kuzdvor.tw1.ru/api/catalog-images \
+            -o /tmp/kuzdvor-live-catalog.json
+          node -e "JSON.parse(require('fs').readFileSync('/tmp/kuzdvor-live-catalog.json','utf8')); console.log('Live catalog snapshot OK')"
 
-          cp home.html home.css product-categories.js _site/napravleniya/
-          cp admin.html admin.css admin.js admin-colors.js admin-prices.js admin-site.js admin-leads.js admin-enhancements.js admin-excel-import.js _site/
-          cp dist/client/xlsx.bundle.js _site/xlsx.full.min.js
-          touch _site/.nojekyll
+      - name: Prepare protected dev preview
+        run: node scripts/build-dev-preview.mjs
 
-          cat > _site/robots.txt <<'ROBOTS'
-          User-agent: *
-          Disallow: /
-          ROBOTS
-
-          node <<'NODE'
-          const fs = require('fs');
-          const path = require('path');
-          const delivery = fs.readFileSync('offline-delivery-200km.json', 'utf8').trim();
-
-          let html = fs.readFileSync('_site/index.html', 'utf8');
-          html = html.replace('<script id="deliveryData" type="application/json">{}</script>', `<script id="deliveryData" type="application/json">${delivery.replace(/</g,'\\u003c')}</script>`);
-          html = html.replace('<script src="gate-page-ui.js"></script>', '<script src="gate-page-ui.js"></script>\n  <script src="color-photo-site.js"></script>\n  <script src="gate-formula-prices-site.js"></script>');
-          html = html.replaceAll('/hero-gates.jpg', 'hero-gates.jpg');
-          html = html.replaceAll('/catalog/', 'catalog/');
-          fs.writeFileSync('_site/index.html', html);
-
-          let galleries = fs.readFileSync('_site/catalog-images.js', 'utf8');
-          galleries = galleries.replaceAll('/catalog/', 'catalog/');
-          fs.writeFileSync('_site/catalog-images.js', galleries);
-
-          let app = fs.readFileSync('_site/app.js', 'utf8');
-          app = app.replaceAll('/hero-gates.jpg', 'hero-gates.jpg');
-          app = app.replaceAll("fetch('/api/", "fetch('api/");
-          app = app.replaceAll('fetch(`/api/', 'fetch(`api/');
-          fs.writeFileSync('_site/app.js', app);
-
-          let colors = fs.readFileSync('_site/color-photo-site.js', 'utf8');
-          colors = colors.replaceAll("fetch('/api/", "fetch('api/");
-          fs.writeFileSync('_site/color-photo-site.js', colors);
-
-          let home = fs.readFileSync('_site/napravleniya/home.html', 'utf8');
-          home = home.replace('__RUNTIME_SITE_DATA__', '{}');
-          home = home.replace('href="/napravleniya"', 'href="./"');
-          home = home.replaceAll('href="/vorota"', 'href="../"');
-          fs.writeFileSync('_site/napravleniya/index.html', home);
-          fs.unlinkSync('_site/napravleniya/home.html');
-
-          let categories = fs.readFileSync('_site/napravleniya/product-categories.js', 'utf8');
-          categories = categories.replace("href: '/vorota'", "href: '../'");
-          fs.writeFileSync('_site/napravleniya/product-categories.js', categories);
-
-          let admin = fs.readFileSync('_site/admin.html', 'utf8');
-          admin = admin.replace('<script src="admin.js"></script>', '<script src="admin.js"></script>\n  <script src="admin-colors.js"></script>');
-          admin = admin.replace('<script src="admin-prices.js"></script>', '<script src="admin-prices.js"></script>\n  <script src="admin-site.js"></script>\n  <script src="admin-leads.js"></script>\n  <script src="admin-enhancements.js"></script>\n  <script src="xlsx.full.min.js"></script>\n  <script src="gate-calc-models-chunk1.js"></script>\n  <script src="gate-calc-models-chunk2.js"></script>\n  <script src="gate-calc-models-chunk3.js"></script>\n  <script src="gate-calc-models-chunk4.js"></script>\n  <script src="gate-calc-models.js"></script>\n  <script src="admin-excel-import.js"></script>');
-          admin = admin.replaceAll('href="/"', 'href="./"');
-          fs.writeFileSync('_site/admin.html', admin);
-
-          for (const file of ['admin.js','admin-colors.js','admin-prices.js','admin-site.js','admin-leads.js','admin-enhancements.js','admin-excel-import.js']) {
-            let js = fs.readFileSync(`_site/${file}`, 'utf8');
-            js = js.replaceAll("'/api/", "'api/");
-            js = js.replaceAll('"/api/', '"api/');
-            fs.writeFileSync(`_site/${file}`, js);
-          }
-
-          const access = fs.readFileSync('_site/dev-access.js', 'utf8');
-          const hideStyle = '<style id="kuzdvor-dev-hide">html{background:#0c0d0f}body>*{visibility:hidden!important}#kuzdvor-dev-gate,#kuzdvor-dev-gate *{visibility:visible!important}</style>';
-          const robots = '<meta name="robots" content="noindex,nofollow,noarchive">';
-          function protectHtml(dir) {
-            for (const entry of fs.readdirSync(dir, {withFileTypes:true})) {
-              const full = path.join(dir, entry.name);
-              if (entry.isDirectory()) protectHtml(full);
-              else if (entry.isFile() && entry.name.endsWith('.html')) {
-                let page = fs.readFileSync(full, 'utf8');
-                page = page.replace(/<meta\s+name=["']robots["'][^>]*>/i, '');
-                page = page.replace(/<\/head>/i, `${robots}\n${hideStyle}\n</head>`);
-                page = page.replace(/<\/body>/i, `<script>${access}</script>\n</body>`);
-                fs.writeFileSync(full, page);
-              }
-            }
-          }
-          protectHtml('_site');
-          NODE
-
-      - name: Verify dev access protection
+      - name: Verify dev mirrors production frontend
         shell: bash
         run: |
           set -euo pipefail
           grep -Fq 'noindex,nofollow,noarchive' _site/index.html
           grep -Fq 'kuzdvor-dev-gate' _site/index.html
+          grep -Fq '/kuznechny-dvorik-gates/site.css' _site/index.html
+          grep -Fq '/kuznechny-dvorik-gates/site.bundle.js' _site/index.html
+          grep -Fq 'window.SITE_SETTINGS' _site/index.html
           grep -Fq 'Disallow: /' _site/robots.txt
+          test -s _site/calculator.bundle.js
+          test -s _site/catalog-enhancements.bundle.js
+          test -s _site/api/catalog-images
+          if grep -Fq '<script src="app.js"' _site/index.html; then
+            echo 'Dev preview is still using raw source scripts' >&2
+            exit 1
+          fi
           if grep -Rq 'KD-Dev-9Q7M-4X2P' _site; then
             echo 'Plain-text dev password leaked into published files' >&2
             exit 1
