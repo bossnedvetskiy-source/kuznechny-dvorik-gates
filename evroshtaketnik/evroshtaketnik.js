@@ -135,6 +135,12 @@ function syncTypeHelp() {
   if (typeHelp) typeHelp.textContent = TYPE_HELP[typeInput.value] || '';
 }
 
+function syncPostMode() {
+  if (!existingPostsWrap) return;
+  existingPostsWrap.hidden = !includePostsInput.checked;
+  if (!includePostsInput.checked && existingPostsInput) existingPostsInput.value = '0';
+}
+
 function syncTypePicker() {
   document.querySelectorAll('.type-card[data-type]').forEach(card => {
     const selected = card.dataset.type === typeInput.value;
@@ -471,16 +477,23 @@ async function loadFencePrices() {
 function quoteText() {
   if (!lastResult?.summary.activeSections) return '';
   const sections = lastResult.sections.filter(item => item.active).map(item => {
-    const opening = item.openingsWidth > 0 ? `, проёмы ${number(item.openingsWidth)} м, забор ${number(item.fenceLength)} м` : '';
-    return `Участок ${item.index}: линия ${number(item.grossLength)} × ${number(item.height)} м${opening}, ${item.spans} прол.`;
+    const opening = item.openingsWidth > 0 ? `, проёмы ${number(item.openingsWidth)} м` : '';
+    return `Участок ${item.index}: линия ${number(item.grossLength ?? item.length)} × ${number(item.height)} м, заполнение ${number(item.fenceLength ?? item.length)} м${opening}, ${item.spans} прол.`;
   }).join('\n');
+  const postMode = includePostsInput.checked
+    ? `новых ${lastResult.summary.newPosts}, готовых учтено ${lastResult.summary.existingPostsUsed || 0}`
+    : 'все столбы готовые';
   return [
     'Кузнечный ДворикЪ — предварительный расчёт забора из металлического евроштакетника',
     `Тип: ${lastResult.type.label}`,
-    `Столбы: ${postInput.options[postInput.selectedIndex]?.textContent || postInput.value}; требуется ${lastResult.summary.postsByScheme}, готовых учтено ${lastResult.summary.existingPostsUsed}, новых ${lastResult.summary.newPosts}`,
+    `Столбы: ${postInput.options[postInput.selectedIndex]?.textContent || postInput.value}; ${postMode}`,
     `Цвет: ${selectedColor}`,
     sections,
-    `Общая длина: ${number(lastResult.summary.totalLength)} м`,
+    `Длина линии: ${number(lastResult.summary.grossLineLength ?? lastResult.summary.totalLength)} м`,
+    ...(lastResult.summary.openingsWidth > 0 ? [
+      `Проёмы: ${number(lastResult.summary.openingsWidth)} м`,
+      `Длина заполнения евроштакетником: ${number(lastResult.summary.totalLength)} м`
+    ] : []),
     `Доставка: ${deliveryIsKnown() ? money(lastResult.summary.deliveryCost) : 'не указана'}`,
     `Предварительная стоимость: ${money(lastResult.summary.total)}${deliveryIsKnown() ? '' : ' без доставки'}`
   ].filter(Boolean).join('\n');
@@ -511,6 +524,8 @@ function leadPayload() {
       sections:readSections().filter(item => item.length > 0),
       delivery:{known:deliveryIsKnown(),name:selectedDelivery?.name || settlementInput.value.trim(),price:deliveryCost()},
       summary:lastResult ? {
+        grossLineLength:lastResult.summary.grossLineLength,
+        openingsWidth:lastResult.summary.openingsWidth,
         totalLength:lastResult.summary.totalLength,
         totalSpans:lastResult.summary.totalSpans,
         postsByScheme:lastResult.summary.postsByScheme,
@@ -579,6 +594,95 @@ async function submitLead(event) {
   }
 }
 
+function snapshotQuote() {
+  return {
+    v:1,
+    savedAt:new Date().toISOString(),
+    type:typeInput.value,
+    post:postInput.value,
+    includePosts:includePostsInput.checked,
+    existingPostsCount:Number(existingPostsInput?.value) || 0,
+    sections:readSections(),
+    visibleSections,
+    color:selectedColor,
+    settlement:selectedDelivery ? {...selectedDelivery} : null,
+    settlementText:settlementInput.value,
+    manualDeliveryEnabled:manualDeliveryEnabled.checked,
+    manualDelivery:Number(manualDeliveryInput.value) || 0
+  };
+}
+
+function updateSavedQuoteBar() {
+  if (!savedQuoteBar) return;
+  try { savedQuoteBar.hidden = !localStorage.getItem(SAVED_QUOTE_KEY); }
+  catch { savedQuoteBar.hidden = true; }
+}
+
+function saveQuoteLocal() {
+  if (!lastResult?.summary.activeSections) { showToast('Сначала укажите размеры'); return; }
+  try {
+    localStorage.setItem(SAVED_QUOTE_KEY, JSON.stringify(snapshotQuote()));
+    updateSavedQuoteBar();
+    showToast('Расчёт сохранён на этом устройстве');
+  } catch { showToast('Не удалось сохранить расчёт'); }
+}
+
+function restoreQuoteLocal() {
+  try {
+    const raw = localStorage.getItem(SAVED_QUOTE_KEY);
+    if (!raw) return;
+    const saved = JSON.parse(raw);
+    typeInput.value = saved.type || 'vertical-double';
+    postInput.value = saved.post || '80x80x3';
+    includePostsInput.checked = saved.includePosts !== false;
+    if (existingPostsInput) existingPostsInput.value = String(Math.max(0, Number(saved.existingPostsCount) || 0));
+    visibleSections = Math.min(4, Math.max(1, Number(saved.visibleSections) || 1));
+    (saved.sections || []).slice(0,4).forEach((item,index) => {
+      const set = (field,value) => {
+        const input = sectionsList.querySelector(`[data-field="${field}"][data-index="${index}"]`);
+        if (input) input.value = String(value ?? 0);
+      };
+      set('length', item.length || 0);
+      set('height', item.height || 1.8);
+      set('gateOpening', item.gateOpening || 0);
+      set('wicketOpening', item.wicketOpening || 0);
+      const shared = sectionsList.querySelector(`[data-field="shared"][data-index="${index}"]`);
+      if (shared) shared.checked = Boolean(item.sharedWithNext);
+    });
+    selectedColor = saved.color || 'Графит';
+    selectedDelivery = saved.settlement && typeof saved.settlement === 'object' ? saved.settlement : null;
+    settlementInput.value = saved.settlementText || selectedDelivery?.name || '';
+    if (leadCity) leadCity.value = settlementInput.value;
+    manualDeliveryEnabled.checked = Boolean(saved.manualDeliveryEnabled);
+    manualDeliveryInput.value = String(Math.max(0, Number(saved.manualDelivery) || 0));
+    syncVisibleSections();
+    syncTypePicker();
+    syncColorPicker();
+    syncPostMode();
+    calculate();
+    showToast('Сохранённый расчёт восстановлен');
+  } catch { showToast('Не удалось восстановить расчёт'); }
+}
+
+async function shareQuote() {
+  const text = quoteText();
+  if (!text) { showToast('Сначала укажите размеры'); return; }
+  if (navigator.share) {
+    try {
+      await navigator.share({title:'Расчёт забора — Кузнечный ДворикЪ',text});
+      return;
+    } catch (error) {
+      if (error?.name === 'AbortError') return;
+    }
+  }
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast('Расчёт скопирован — можно отправить клиенту');
+  } catch {
+    showToast('Не удалось открыть отправку');
+  }
+}
+
 addSectionButton.addEventListener('click', () => {
   if (visibleSections >= 4) return;
   visibleSections += 1;
@@ -594,6 +698,10 @@ removeSectionButton.addEventListener('click', () => {
   const sharedBefore = sectionsList.querySelector(`[data-field="shared"][data-index="${index-1}"]`);
   if (length) length.value = '0';
   if (height) height.value = '1.8';
+  const gateOpening = sectionsList.querySelector(`[data-field="gateOpening"][data-index="${index}"]`);
+  const wicketOpening = sectionsList.querySelector(`[data-field="wicketOpening"][data-index="${index}"]`);
+  if (gateOpening) gateOpening.value = '0';
+  if (wicketOpening) wicketOpening.value = '0';
   if (sharedBefore) sharedBefore.checked = false;
   visibleSections -= 1;
   syncVisibleSections();
@@ -607,6 +715,7 @@ form.addEventListener('input', event => {
 form.addEventListener('change', event => {
   if (event.target === settlementInput) return;
   if (event.target === typeInput) syncTypeHelp();
+  if (event.target === includePostsInput) syncPostMode();
   calculate();
 });
 
@@ -663,6 +772,9 @@ $('copyQuote')?.addEventListener('click', async () => {
   try { await navigator.clipboard.writeText(text); showToast('Расчёт скопирован'); }
   catch { showToast('Не удалось скопировать автоматически'); }
 });
+$('shareQuote')?.addEventListener('click', shareQuote);
+$('saveQuote')?.addEventListener('click', saveQuoteLocal);
+$('restoreQuote')?.addEventListener('click', restoreQuoteLocal);
 $('printQuote')?.addEventListener('click', () => {
   if (!lastResult?.summary.activeSections) { showToast('Сначала укажите размеры'); return; }
   window.print();
@@ -672,5 +784,7 @@ leadForm?.addEventListener('submit', submitLead);
 syncVisibleSections();
 syncTypePicker();
 syncColorPicker();
+syncPostMode();
+updateSavedQuoteBar();
 await Promise.all([loadDeliveryBase(), loadFencePrices()]);
 calculate();
