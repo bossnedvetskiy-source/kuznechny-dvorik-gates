@@ -356,6 +356,8 @@ export function calculateFence(input = {}) {
 
   let check = 'ГОТОВО';
   if (!activeSections.length) check = 'Добавьте участок';
+  else if (sectionsInput.some(item => item.length > 0 && item.gateOpening + item.wicketOpening > item.length + 1e-9)) check = 'ПРОВЕРЬТЕ ПРОЁМЫ: ИХ ШИРИНА БОЛЬШЕ УЧАСТКА';
+  else if (totalLength <= 0) check = 'ПОСЛЕ ПРОЁМОВ НЕ ОСТАЛОСЬ ДЛИНЫ ЗАБОРА';
   else if (activeSections.some(item => item.clearSpan > settings.maxSpan + 1e-9)) check = 'ОШИБКА: ПРОЛЁТ > 2,5 м';
   else if (activeSections.some(item => item.height > settings.postLength - settings.postDepth)) check = 'ПРОВЕРЬТЕ ВЫСОТУ / ДЛИНУ СТОЛБА';
 
