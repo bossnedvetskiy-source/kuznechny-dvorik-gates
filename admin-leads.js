@@ -29,7 +29,15 @@
       </div>
     </div>
     <div class="lead-search-panel">
-      <label class="lead-search-main"><span>Поиск</span><input id="leadSearchInput" type="search" placeholder="Имя, телефон, населённый пункт, артикул…" autocomplete="off"></label>
+      <label class="lead-search-main"><span>Поиск</span><input id="leadSearchInput" type="search" placeholder="Телефон, населённый пункт, артикул, № расчёта…" autocomplete="off"></label>
+      <label><span>Изделие</span><select id="leadCategoryFilter">
+        <option value="">Все изделия</option>
+        <option value="gates">Ворота с калиткой</option>
+        <option value="picket-fence">Евроштакетник</option>
+        <option value="profsheet-fence">Забор из профнастила</option>
+        <option value="forged-fence">Кованый забор</option>
+        <option value="canopy">Навес</option>
+      </select></label>
       <label><span>Источник</span><select id="leadSourceFilter"><option value="">Все источники</option></select></label>
       <label><span>С даты</span><input id="leadDateFrom" type="date"></label>
       <label><span>По дату</span><input id="leadDateTo" type="date"></label>
@@ -51,9 +59,10 @@
   const style = document.createElement('style');
   style.textContent = `
     .lead-toolbar{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:13px}.lead-toolbar-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}.lead-stats{display:flex;gap:8px;flex-wrap:wrap}.lead-stat{padding:8px 11px;border:1px solid var(--line);border-radius:999px;background:#fff;color:var(--muted);font-size:10px;font-weight:800}.lead-stat b{color:var(--ink)}
-    .lead-search-panel{display:grid;grid-template-columns:minmax(260px,2fr) minmax(160px,1fr) minmax(135px,.75fr) minmax(135px,.75fr) auto;gap:8px;align-items:end;margin:0 0 12px;padding:12px;border:1px solid var(--line);border-radius:14px;background:#faf8f4}.lead-search-panel label{display:grid;gap:5px}.lead-search-panel label>span{color:var(--muted);font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.45px}.lead-search-panel input,.lead-search-panel select{width:100%;height:40px;padding:0 10px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);font:inherit;font-size:11px}.lead-search-panel input:focus,.lead-search-panel select:focus{outline:2px solid rgba(198,147,63,.22);border-color:#c6933f}.lead-clear-filters{height:40px}
+    .lead-search-panel{display:grid;grid-template-columns:minmax(240px,1.6fr) minmax(170px,.9fr) minmax(150px,.85fr) minmax(130px,.7fr) minmax(130px,.7fr) auto;gap:8px;align-items:end;margin:0 0 12px;padding:12px;border:1px solid var(--line);border-radius:14px;background:#faf8f4}.lead-search-panel label{display:grid;gap:5px}.lead-search-panel label>span{color:var(--muted);font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.45px}.lead-search-panel input,.lead-search-panel select{width:100%;height:40px;padding:0 10px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);font:inherit;font-size:11px}.lead-search-panel input:focus,.lead-search-panel select:focus{outline:2px solid rgba(198,147,63,.22);border-color:#c6933f}.lead-clear-filters{height:40px}
     .lead-export-note{margin:0 0 13px;padding:9px 11px;border:1px solid #e6c990;border-radius:10px;background:#fff8e9;color:#6c5427;font-size:10px;line-height:1.45}
     .lead-filters{display:flex;gap:7px;overflow:auto;margin-bottom:16px;padding-bottom:2px}.lead-filters button{min-height:38px;padding:0 13px;border:1px solid var(--line);border-radius:999px;background:#fff;color:var(--muted);font-size:11px;font-weight:800;white-space:nowrap}.lead-filters button.active{background:var(--ink);border-color:var(--ink);color:#fff}
+    .lead-badges{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:5px}.lead-badge{display:inline-flex;align-items:center;min-height:22px;padding:0 8px;border-radius:999px;font-size:8px;font-weight:900;line-height:1}.lead-badge.category{border:1px solid #e2c98f;background:#fff7e7;color:#74531b}.lead-badge.source{border:1px solid #dde1e5;background:#f3f5f6;color:#58616b}
     .lead-list{display:grid;gap:10px}.lead-card{padding:16px;border:1px solid #e2ddd4;border-radius:16px;background:#fff;box-shadow:0 10px 30px rgba(18,16,13,.045)}.lead-card.is-new{border-color:rgba(198,147,63,.52);box-shadow:0 0 0 1px rgba(198,147,63,.12),0 10px 30px rgba(18,16,13,.045)}
     .lead-card-head{display:flex;align-items:start;justify-content:space-between;gap:18px;margin-bottom:13px}.lead-main{display:grid;gap:4px}.lead-main b{font-size:15px}.lead-main span{color:var(--muted);font-size:10px}.lead-total{font:20px Prata,serif;color:#8a6326;white-space:nowrap}
     .lead-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:12px}.lead-field{display:grid;gap:3px;padding:9px 10px;border-radius:10px;background:#f7f4ef}.lead-field span{color:var(--muted);font-size:9px;text-transform:uppercase;letter-spacing:.4px}.lead-field b{font-size:11px;word-break:break-word}
@@ -75,6 +84,7 @@
   const backupJsonButton = panel.querySelector('#backupLeadsJson');
   const exportNote = panel.querySelector('#leadExportNote');
   const searchInput = panel.querySelector('#leadSearchInput');
+  const categoryFilter = panel.querySelector('#leadCategoryFilter');
   const sourceFilter = panel.querySelector('#leadSourceFilter');
   const dateFrom = panel.querySelector('#leadDateFrom');
   const dateTo = panel.querySelector('#leadDateTo');
@@ -109,6 +119,7 @@
   function currentFilters() {
     return {
       q: searchInput.value.trim(),
+      category: categoryFilter.value,
       source: sourceFilter.value,
       from: dateFrom.value,
       to: dateTo.value
@@ -116,8 +127,8 @@
   }
 
   function hasExtraFilters() {
-    const {q, source, from, to} = currentFilters();
-    return Boolean(q || source || from || to);
+    const {q, category, source, from, to} = currentFilters();
+    return Boolean(q || category || source || from || to);
   }
 
   function renderStats(counts = {}) {
@@ -158,13 +169,39 @@
     if (beforeId) params.set('before_id', String(beforeId));
     if (status && status !== 'all') params.set('status', status);
     if (useFilters) {
-      const {q, source, from, to} = currentFilters();
+      const {q, category, source, from, to} = currentFilters();
       if (q) params.set('q', q);
+      if (category) params.set('category', category);
       if (source) params.set('source', source);
       if (from) params.set('from', from);
       if (to) params.set('to', to);
     }
     return `/api/admin/leads?${params.toString()}`;
+  }
+
+  function syncCategoryOptions(items = []) {
+    const current = categoryFilter.value;
+    const counts = new Map(items.map(item => [String(item?.value || ''), Number(item?.count) || 0]));
+    const definitions = [
+      ['', 'Все изделия'],
+      ['gates','Ворота с калиткой'],
+      ['picket-fence','Евроштакетник'],
+      ['profsheet-fence','Забор из профнастила'],
+      ['forged-fence','Кованый забор'],
+      ['canopy','Навес']
+    ];
+    const known = new Set(definitions.map(([value]) => value));
+    const options = definitions.map(([value,label]) => {
+      const count = value ? counts.get(value) || 0 : [...counts.values()].reduce((sum,n)=>sum+n,0);
+      return `<option value="${escape(value)}">${escape(label)}${count ? ` · ${count}` : ''}</option>`;
+    });
+    for (const item of items) {
+      const value = String(item?.value || '').trim();
+      if (!value || known.has(value)) continue;
+      options.push(`<option value="${escape(value)}">${escape(categoryLabel(value))} · ${Number(item.count)||0}</option>`);
+    }
+    categoryFilter.innerHTML = options.join('');
+    if ([...categoryFilter.options].some(option => option.value === current)) categoryFilter.value = current;
   }
 
   function syncSourceOptions(items = []) {
@@ -256,8 +293,9 @@
       const fieldThreeLabel=category==='gates'?'Калитка':(isPicket?'Столбы':'Изделие');
       const fieldThreeValue=category==='gates'?wicket:(isPicket?(fencePosts?`${fencePosts} всего · ${newFencePosts} новых`:'—'):(lead.product_title||categoryName));
       const optionValue=isPicket?(manualReview?'Проверить условия на замере':'Обычные условия'):options;
+      const sourceName=String(lead.source||'Сайт').trim()||'Сайт';
       return `<article class="lead-card ${lead.status==='new'?'is-new':''}" data-lead-id="${lead.id}">
-        <div class="lead-card-head"><div class="lead-main"><b>#${lead.id} · ${escape(productLine)} · ${escape(lead.name || 'Без имени')}</b><span>${escape(formatDate(lead.created_at))} · ${escape(lead.city)}${escape(sourceLine)}</span></div><strong class="lead-total">${money(lead.total)}</strong></div>
+        <div class="lead-card-head"><div class="lead-main"><div class="lead-badges"><span class="lead-badge category">${escape(categoryName)}</span><span class="lead-badge source">${escape(sourceName)}</span></div><b>#${lead.id}${lead.article?' · '+escape(lead.article):''} · ${escape(lead.name || 'Клиент')}</b><span>${escape(formatDate(lead.created_at))} · ${escape(lead.city)}</span></div><strong class="lead-total">${money(lead.total)}</strong></div>
         <div class="lead-grid">
           <div class="lead-field"><span>Телефон</span><b>${escape(lead.phone)}</b></div>
           <div class="lead-field"><span>${escape(fieldTwoLabel)}</span><b>${escape(fieldTwoValue)}</b></div>
@@ -310,6 +348,7 @@
       totalCount = Number(data.totalCount) || 0;
       filteredTotal = Number(data.filteredTotal ?? totalCount) || 0;
       renderStats(data.counts || {});
+      syncCategoryOptions(data.categories || []);
       syncSourceOptions(data.sources || []);
       if (activeFilter === 'all' && !hasExtraFilters() && newestId > latestLeadId) latestLeadId = newestId;
       loaded = true;
@@ -349,11 +388,13 @@
     clearTimeout(searchTimer);
     applyLeadFilters();
   });
+  categoryFilter.addEventListener('change', applyLeadFilters);
   sourceFilter.addEventListener('change', applyLeadFilters);
   dateFrom.addEventListener('change', applyLeadFilters);
   dateTo.addEventListener('change', applyLeadFilters);
   clearFiltersButton.addEventListener('click', async () => {
     searchInput.value = '';
+    categoryFilter.value = '';
     sourceFilter.value = '';
     dateFrom.value = '';
     dateTo.value = '';
