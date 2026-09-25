@@ -69,3 +69,28 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,su
 .quick-presets button{min-height:30px;padding:0 9px;border:1px solid rgba(255,255,255,.09);border-radius:9px;background:rgba(255,255,255,.025);color:#b9bbbe;font-size:9px;font-weight:800;cursor:pointer}
 .quick-presets button:hover,.quick-presets button:focus-visible{border-color:rgba(239,200,111,.4);color:#e7c46f;background:rgba(210,163,78,.07)}
 @media(max-width:620px){.opening-warning{font-size:10.5px}.quick-presets span{font-size:9.5px}.quick-presets button{min-height:34px;font-size:9.5px}}
+
+.compact-color-block{margin-top:12px;padding:13px;border:1px solid rgba(255,255,255,.08);border-radius:13px;background:rgba(255,255,255,.02)}
+.compact-color-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:9px}
+.compact-color-head b{font-size:11px}
+.compact-color-head span,.compact-color-block>small{color:#7f8286;font-size:9px;line-height:1.4}
+.compact-color-block>small{display:block;margin-top:8px}
+.trust-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;padding:5px 0 42px}
+.trust-strip>div{padding:14px 15px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.025)}
+.trust-strip b{display:block;font-size:11px}
+.trust-strip span{display:block;margin-top:4px;color:#8e9195;font-size:9px;line-height:1.45}
+.quote-more{margin-top:7px}
+.quote-more summary{cursor:pointer;text-align:center;color:#85898d;font-size:9px;font-weight:800;padding:4px 0}
+.quote-more .quote-tools{margin-top:5px}
+@media(max-width:620px){
+  .hero{padding-top:34px}
+  .hero h1{font-size:36px;line-height:1.04}
+  .hero p{font-size:12px;line-height:1.55}
+  .compact-color-head{align-items:flex-start;flex-direction:column;gap:2px}
+  .compact-color-block .color-picker{grid-template-columns:1fr 1fr}
+  .compact-color-block .color-choice{min-height:52px}
+  .trust-strip{grid-template-columns:1fr;gap:7px;padding-bottom:34px}
+  .trust-strip>div{padding:12px 13px}
+  .trust-strip b{font-size:11px}
+  .trust-strip span{font-size:9.5px}
+}
