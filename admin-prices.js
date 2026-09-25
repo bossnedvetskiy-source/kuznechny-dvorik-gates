@@ -408,6 +408,10 @@ function setupPriceCompactUi() {
     #pricesTab .extra-price-edit{min-height:34px;padding:0 10px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--ink);font-size:9px;font-weight:800}
     #pricesTab .compact-extra-price.is-open .extra-price-fields{margin-top:10px}
     #pricesTab .fence-price-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+    #pricesTab .fence-price-group-title{grid-column:1/-1;display:grid;gap:2px;margin-top:6px;padding:9px 10px;border-radius:10px;background:#f1ede6;color:#463d33}
+    #pricesTab .fence-price-group-title:first-child{margin-top:0}
+    #pricesTab .fence-price-group-title b{font-size:11px}
+    #pricesTab .fence-price-group-title small{color:#81776c;font-size:8px}
     #pricesTab .fence-price-field{display:grid;grid-template-columns:minmax(0,1fr) 130px;align-items:center;gap:10px;padding:9px 10px;border:1px solid var(--line);border-radius:11px;background:#fff}
     #pricesTab .fence-price-field>span{display:grid;gap:2px;min-width:0}
     #pricesTab .fence-price-field b{font-size:10px}
