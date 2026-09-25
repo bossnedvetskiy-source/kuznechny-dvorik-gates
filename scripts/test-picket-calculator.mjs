@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { calculateFence } from '../evroshtaketnik/engine.js';
+import { calculateFence, FENCE_SETTINGS } from '../evroshtaketnik/engine.js';
 
 const verticalDouble = calculateFence({
   type: 'vertical-double',
@@ -80,5 +80,29 @@ assert.equal(singleExistingPosts.costs.screws, 384);
 assert.equal(singleExistingPosts.costs.order, 24081);
 assert.equal(singleExistingPosts.costs.measurer, 963);
 assert.equal(singleExistingPosts.costs.total, 26044);
+
+
+const runtimeBase = calculateFence({
+  type: 'vertical-double',
+  post: '80x80x3',
+  includeNewPosts: true,
+  sections: [{ length: 10, height: 1.8 }]
+});
+const runtimeCustom = calculateFence({
+  type: 'vertical-double',
+  post: '80x80x3',
+  includeNewPosts: true,
+  sections: [{ length: 10, height: 1.8 }],
+  settings: {
+    picketDoublePrice: FENCE_SETTINGS.picketDoublePrice * 2,
+    tube40Price: FENCE_SETTINGS.tube40Price * 2,
+    post80Price: FENCE_SETTINGS.post80Price * 2
+  }
+});
+assert.equal(runtimeCustom.costs.picket, runtimeBase.costs.picket * 2);
+assert.equal(runtimeCustom.costs.tube, runtimeBase.costs.tube * 2);
+assert.equal(runtimeCustom.costs.posts, runtimeBase.costs.posts * 2);
+assert.equal(runtimeCustom.summary.totalLength, runtimeBase.summary.totalLength);
+assert.equal(runtimeCustom.summary.totalSpans, runtimeBase.summary.totalSpans);
 
 console.log('Euro picket calculator matches Excel reference scenarios.');
