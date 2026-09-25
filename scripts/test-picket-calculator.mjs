@@ -147,4 +147,38 @@ assert.equal(allOpening.summary.totalLength, 0);
 assert.equal(allOpening.summary.totalSpans, 0);
 assert.match(allOpening.summary.check, /НЕ ОСТАЛОСЬ/);
 
+const techDefault = calculateFence({
+  type: 'vertical-single',
+  post: '80x80x3',
+  includeNewPosts: true,
+  sections: [{length: 10, height: 1.8}]
+});
+const techCustom = calculateFence({
+  type: 'vertical-single',
+  post: '80x80x3',
+  includeNewPosts: true,
+  sections: [{length: 10, height: 1.8}],
+  settings: {
+    maxSpan: 2,
+    screwVertical: 6,
+    tubeStockLength: 7,
+    postLength: 4
+  }
+});
+assert.equal(techDefault.summary.totalSpans, 4);
+assert.equal(techCustom.summary.totalSpans, 5);
+assert.equal(techCustom.purchase.screws, techCustom.summary.picketsActual * 6);
+assert.equal(techCustom.purchase.tubePurchased, techCustom.purchase.tubeStocks * 7);
+assert.equal(techCustom.purchase.postLm, techCustom.summary.newPosts * 4);
+
+const customReserve = calculateFence({
+  type: 'vertical-double',
+  post: '80x80x3',
+  includeNewPosts: true,
+  sections: [{length: 5, height: 1.8}],
+  settings: {picketReservePerSide: 3}
+});
+assert.equal(customReserve.purchase.pickets[0].reserveFront, 3);
+assert.equal(customReserve.purchase.pickets[0].reserveRear, 3);
+
 console.log('Euro picket calculator matches Excel reference scenarios.');
