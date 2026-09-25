@@ -1,8 +1,8 @@
-name: Deploy test site to GitHub Pages
+name: Deploy protected dev site
 
 on:
   push:
-    branches: [main]
+    branches: [dev]
   workflow_dispatch:
 
 permissions:
@@ -11,17 +11,26 @@ permissions:
   id-token: write
 
 concurrency:
-  group: pages
+  group: dev-pages
   cancel-in-progress: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - name: Checkout
+      - name: Checkout dev
         uses: actions/checkout@v6
+        with:
+          ref: dev
 
-      - name: Install build dependencies
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
         run: npm ci --include=dev --no-audit --no-fund
 
       - name: Normalize XLSX browser bundle
@@ -34,89 +43,27 @@ jobs:
             cp node_modules/xlsx/xlsx.js node_modules/xlsx/dist/xlsx.full.min.js
           fi
 
-      - name: Check JavaScript syntax
+      - name: Check development build
         run: |
           node --check app.js
-          node --check gate-page-ui.js
-          node --check color-photo-site.js
-          node --check gate-formula-prices-site.js
-          node --check shared/customer-context.js
           node --check shared/delivery.js
-          node --check shared/leads.js
-          node --check public-site-settings.js
-          node --check admin.js
-          node --check admin-colors.js
-          node --check admin-prices.js
-          node --check admin-site.js
-          node --check admin-leads.js
-          node --check admin-enhancements.js
-          node --check admin-excel-import.js
-          node --check worker/runtime.js
-          node --check worker/auth-d1.js
-          node --check worker/site-settings-d1.js
-          node --check worker/excel-pricing-d1.js
-          node --check worker/gate-quote-d1.js
-          node --check worker/lead-antispam.js
-          node --check worker/catalog-media-d1.js
-          node --check worker/catalog-colors-d1.js
-          node --check worker/leads-d1.js
-          node --check scripts/build.mjs
-          node --check scripts/test-catalog-images.mjs
-          node --check scripts/test-color-photos.mjs
-          node --check scripts/test-admin-integrity.mjs
-          node --check scripts/check-production.mjs
+          node --check dev-access.js
+          node scripts/test-offline-integrity.mjs
+          npm run build
 
-      - name: Verify catalog images
-        run: node scripts/test-catalog-images.mjs
-
-      - name: Verify color photo flow
-        run: node scripts/test-color-photos.mjs
-
-      - name: Verify admin integrity
-        run: node scripts/test-admin-integrity.mjs
-
-      - name: Verify gate page foundation
-        run: node scripts/test-gate-page.mjs
-
-      - name: Verify gate calculator
-        run: node scripts/test-gate-calculator.mjs
-
-      - name: Verify server gate quote
-        run: node scripts/test-server-gate-quote.mjs
-
-      - name: Verify production build
-        run: npm run build
-
-      - name: Check built Worker syntax
-        run: node --check dist/server/index.js
-
-      - name: Install browser
-        run: npx playwright install --with-deps chromium
-
-      - name: Run browser E2E tests
-        run: npm run test:e2e
-
-      - name: Smoke check Timeweb production endpoint
-        continue-on-error: true
-        env:
-          PRODUCTION_URL: https://kuzdvor.tw1.ru
-        run: node scripts/check-production.mjs
-
-      - name: Configure Pages
-        uses: actions/configure-pages@v5
-
-      - name: Prepare static test build
+      - name: Prepare isolated static dev site
         shell: bash
         run: |
           set -euo pipefail
           rm -rf _site
           mkdir -p _site/catalog _site/shared _site/napravleniya
 
-          cp index.html styles.css storefront.css gate-page.css app.js public-site-settings.js gate-page-ui.js color-photo-site.js gate-formula-prices-site.js prices.js catalog-images.js _site/
+          cp index.html styles.css storefront.css gate-page.css app.js public-site-settings.js gate-page-ui.js color-photo-site.js gate-formula-prices-site.js prices.js catalog-images.js dev-access.js _site/
           cp gate-calc-prices.js gate-calc-models-chunk1.js gate-calc-models-chunk2.js gate-calc-models-chunk3.js gate-calc-models-chunk4.js gate-calc-models.js gate-calc-engine.js _site/
           cp shared/customer-context.js shared/delivery.js shared/leads.js _site/shared/
           cp assets/hero-gates.jpg _site/hero-gates.jpg
           cp -R assets/catalog/. _site/catalog/
+          cp offline-delivery-200km.json _site/offline-delivery-200km.json
           cp delivery-prices.json _site/delivery-prices.json
 
           cp home.html home.css product-categories.js _site/napravleniya/
@@ -124,9 +71,15 @@ jobs:
           cp dist/client/xlsx.bundle.js _site/xlsx.full.min.js
           touch _site/.nojekyll
 
+          cat > _site/robots.txt <<'ROBOTS'
+          User-agent: *
+          Disallow: /
+          ROBOTS
+
           node <<'NODE'
           const fs = require('fs');
-          const delivery = fs.readFileSync('delivery-prices.json', 'utf8').trim();
+          const path = require('path');
+          const delivery = fs.readFileSync('offline-delivery-200km.json', 'utf8').trim();
 
           let html = fs.readFileSync('_site/index.html', 'utf8');
           html = html.replace('<script id="deliveryData" type="application/json">{}</script>', `<script id="deliveryData" type="application/json">${delivery.replace(/</g,'\\u003c')}</script>`);
@@ -172,9 +125,42 @@ jobs:
             js = js.replaceAll('"/api/', '"api/');
             fs.writeFileSync(`_site/${file}`, js);
           }
+
+          const access = fs.readFileSync('_site/dev-access.js', 'utf8');
+          const hideStyle = '<style id="kuzdvor-dev-hide">html{background:#0c0d0f}body>*{visibility:hidden!important}#kuzdvor-dev-gate,#kuzdvor-dev-gate *{visibility:visible!important}</style>';
+          const robots = '<meta name="robots" content="noindex,nofollow,noarchive">';
+          function protectHtml(dir) {
+            for (const entry of fs.readdirSync(dir, {withFileTypes:true})) {
+              const full = path.join(dir, entry.name);
+              if (entry.isDirectory()) protectHtml(full);
+              else if (entry.isFile() && entry.name.endsWith('.html')) {
+                let page = fs.readFileSync(full, 'utf8');
+                page = page.replace(/<meta\s+name=["']robots["'][^>]*>/i, '');
+                page = page.replace(/<\/head>/i, `${robots}\n${hideStyle}\n</head>`);
+                page = page.replace(/<\/body>/i, `<script>${access}</script>\n</body>`);
+                fs.writeFileSync(full, page);
+              }
+            }
+          }
+          protectHtml('_site');
           NODE
 
-      - name: Upload Pages artifact
+      - name: Verify dev access protection
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq 'noindex,nofollow,noarchive' _site/index.html
+          grep -Fq 'kuzdvor-dev-gate' _site/index.html
+          grep -Fq 'Disallow: /' _site/robots.txt
+          if grep -Rq 'KD-Dev-9Q7M-4X2P' _site; then
+            echo 'Plain-text dev password leaked into published files' >&2
+            exit 1
+          fi
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload protected dev artifact
         uses: actions/upload-pages-artifact@v4
         with:
           path: _site
@@ -186,6 +172,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     steps:
-      - name: Deploy to GitHub Pages
+      - name: Deploy protected dev site
         id: deployment
         uses: actions/deploy-pages@v4
