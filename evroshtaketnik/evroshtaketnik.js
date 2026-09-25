@@ -131,6 +131,183 @@ function scrollToLead() {
   setTimeout(() => $('leadPhone')?.focus({preventScroll:true}), 450);
 }
 
+function syncPostOptions() {
+  if (existingPostsWrap) existingPostsWrap.hidden = !includePostsInput.checked;
+}
+
+function quoteState() {
+  return {
+    v: 1,
+    type: typeInput.value,
+    post: postInput.value,
+    includeNewPosts: includePostsInput.checked,
+    existingPostsCount: Math.max(0, Math.floor(Number(existingPostsInput?.value || 0))),
+    color: selectedColor,
+    sections: readSections().slice(0, visibleSections),
+    delivery: {
+      manual: Boolean(manualDeliveryEnabled.checked),
+      manualPrice: Math.max(0, Number(manualDeliveryInput.value) || 0),
+      name: String(selectedDelivery?.name || settlementInput.value || '').trim(),
+      secondary: String(selectedDelivery?.secondary || '').trim(),
+      price: Math.max(0, Number(selectedDelivery?.price) || 0)
+    }
+  };
+}
+
+function encodeQuoteState(state) {
+  try {
+    const bytes = new TextEncoder().encode(JSON.stringify(state));
+    let binary = '';
+    for (const byte of bytes) binary += String.fromCharCode(byte);
+    return btoa(binary).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  } catch {
+    return '';
+  }
+}
+
+function decodeQuoteState(value) {
+  try {
+    const normalized = String(value || '').replace(/-/g,'+').replace(/_/g,'/');
+    const padded = normalized + '='.repeat((4 - normalized.length % 4) % 4);
+    const binary = atob(padded);
+    const bytes = Uint8Array.from(binary, char => char.charCodeAt(0));
+    const parsed = JSON.parse(new TextDecoder().decode(bytes));
+    return parsed && typeof parsed === 'object' ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function readSavedQuote() {
+  try {
+    const value = JSON.parse(localStorage.getItem(SAVED_QUOTE_KEY) || 'null');
+    return value && typeof value === 'object' ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+function syncSavedQuoteBar() {
+  if (savedQuoteBar) savedQuoteBar.hidden = !readSavedQuote();
+}
+
+function saveQuoteState() {
+  if (!lastResult?.summary.activeSections) {
+    showToast('Сначала укажите размеры');
+    return;
+  }
+  try {
+    localStorage.setItem(SAVED_QUOTE_KEY, JSON.stringify(quoteState()));
+    syncSavedQuoteBar();
+    showToast('Расчёт сохранён на этом устройстве');
+  } catch {
+    showToast('Не удалось сохранить расчёт');
+  }
+}
+
+function setSectionValue(index, field, value) {
+  const input = sectionsList.querySelector(`[data-field="${field}"][data-index="${index}"]`);
+  if (!input) return;
+  if (input.type === 'checkbox') input.checked = Boolean(value);
+  else input.value = String(value ?? '');
+}
+
+function restoreQuoteState(state, {fromLink = false} = {}) {
+  if (!state || typeof state !== 'object') return false;
+  if (state.type && [...typeInput.options].some(option => option.value === state.type)) typeInput.value = state.type;
+  if (state.post && [...postInput.options].some(option => option.value === state.post)) postInput.value = state.post;
+  includePostsInput.checked = state.includeNewPosts !== false;
+  if (existingPostsInput) existingPostsInput.value = String(Math.max(0, Math.floor(Number(state.existingPostsCount) || 0)));
+  selectedColor = String(state.color || 'Графит');
+
+  const sections = Array.isArray(state.sections) ? state.sections.slice(0,4) : [];
+  visibleSections = Math.min(4, Math.max(1, sections.length || 1));
+  for (let index = 0; index < 4; index += 1) {
+    const item = sections[index] || {};
+    setSectionValue(index, 'length', index < visibleSections ? Math.max(0, Number(item.length) || 0) : 0);
+    setSectionValue(index, 'height', Math.max(.5, Number(item.height) || 1.8));
+    setSectionValue(index, 'gateOpening', index < visibleSections ? Math.max(0, Number(item.gateOpening) || 0) : 0);
+    setSectionValue(index, 'wicketOpening', index < visibleSections ? Math.max(0, Number(item.wicketOpening) || 0) : 0);
+    setSectionValue(index, 'shared', index < visibleSections - 1 && Boolean(item.sharedWithNext));
+  }
+
+  const delivery = state.delivery && typeof state.delivery === 'object' ? state.delivery : {};
+  manualDeliveryEnabled.checked = Boolean(delivery.manual);
+  manualDeliveryInput.value = String(Math.max(0, Number(delivery.manualPrice) || 0));
+  const name = String(delivery.name || '').trim();
+  settlementInput.value = name;
+  if (leadCity) leadCity.value = name;
+  selectedDelivery = null;
+
+  if (!manualDeliveryEnabled.checked && name) {
+    const candidates = deliveryRows.filter(item => normalize(item.name) === normalize(name));
+    const secondary = normalize(delivery.secondary);
+    selectedDelivery = candidates.find(item => secondary && normalize(item.secondary) === secondary)
+      || candidates[0]
+      || {
+        name,
+        secondary: String(delivery.secondary || ''),
+        price: Math.max(0, Number(delivery.price) || 0)
+      };
+  }
+
+  if (manualDeliveryEnabled.checked) {
+    deliveryStatus.className = 'delivery-status is-warn';
+    deliveryStatus.textContent = 'Используется сохранённая ручная стоимость доставки.';
+  } else if (selectedDelivery) {
+    deliveryStatus.className = 'delivery-status is-ok';
+    deliveryStatus.textContent = `${selectedDelivery.name}${selectedDelivery.secondary ? ', ' + selectedDelivery.secondary : ''} · доставка учтена в расчёте`;
+  } else if (name) {
+    deliveryStatus.className = 'delivery-status is-warn';
+    deliveryStatus.textContent = 'Проверьте населённый пункт — стоимость доставки пока не подтверждена.';
+  } else {
+    deliveryStatus.className = 'delivery-status';
+    deliveryStatus.textContent = 'Начните вводить населённый пункт — итог обновится с учётом доставки.';
+  }
+
+  syncVisibleSections();
+  syncPostOptions();
+  syncTypePicker();
+  syncColorPicker();
+  calculate();
+  if (fromLink) showToast('Расчёт из ссылки восстановлен');
+  return true;
+}
+
+async function shareQuoteState() {
+  if (!lastResult?.summary.activeSections) {
+    showToast('Сначала укажите размеры');
+    return;
+  }
+  const encoded = encodeQuoteState(quoteState());
+  if (!encoded) {
+    showToast('Не удалось подготовить ссылку');
+    return;
+  }
+  const url = new URL(location.href);
+  url.searchParams.set('q', encoded);
+  url.hash = '';
+  const payload = {
+    title: 'Расчёт забора из металлического евроштакетника',
+    text: quoteText(),
+    url: url.toString()
+  };
+  if (navigator.share) {
+    try {
+      await navigator.share(payload);
+      return;
+    } catch (error) {
+      if (error?.name === 'AbortError') return;
+    }
+  }
+  try {
+    await navigator.clipboard.writeText(url.toString());
+    showToast('Ссылка на расчёт скопирована');
+  } catch {
+    showToast('Не удалось скопировать ссылку');
+  }
+}
+
 function syncTypeHelp() {
   if (typeHelp) typeHelp.textContent = TYPE_HELP[typeInput.value] || '';
 }
