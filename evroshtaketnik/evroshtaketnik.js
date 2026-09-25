@@ -891,6 +891,8 @@ function leadPayload() {
         totalLength:lastResult.summary.totalLength,
         totalSpans:lastResult.summary.totalSpans,
         postsByScheme:lastResult.summary.postsByScheme,
+        existingPostsUsed:lastResult.summary.existingPostsUsed,
+        newPosts:lastResult.summary.newPosts,
         picketsActual:lastResult.summary.picketsActual,
         tubeStocks:lastResult.summary.tubeStocks,
         total:lastResult.summary.total
