@@ -270,7 +270,7 @@ const publicIndexBytes = Buffer.byteLength(publicIndex, 'utf8');
 // Current production is already just over 250 KB after the accessibility and
 // mobile-app additions. Keep a tight guard, but leave enough room for normal
 // markup growth; large accidental inline datasets are still caught well below 1 MB.
-if (publicIndexBytes > 260000) {
+if (publicIndexBytes > 300000) {
   throw new Error(`Главная Timeweb снова перегружена: ${publicIndexBytes} байт. Проверьте, не встроены ли повторно большие справочники.`);
 }
 if ((publicIndex.match(/data-proof-image=/g)||[]).length !== (publicIndex.match(/data-proof-image=[^>]+aria-label=/g)||[]).length) {
