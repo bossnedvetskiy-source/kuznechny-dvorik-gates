@@ -50,9 +50,17 @@ function sectionMarkup(index) {
     <article class="section-card" data-section-card="${index}">
       <div class="section-card-head"><b>Участок ${n}</b><span data-section-caption="${index}">не заполнен</span></div>
       <div class="section-fields">
-        <label class="field"><span>Длина, м</span><input data-field="length" data-index="${index}" type="number" min="0" max="200" step="0.1" inputmode="decimal" value="0"></label>
+        <label class="field"><span>Длина линии, м</span><input data-field="length" data-index="${index}" type="number" min="0" max="200" step="0.1" inputmode="decimal" value="0"></label>
         <label class="field"><span>Высота, м</span><input data-field="height" data-index="${index}" type="number" min="0.5" max="3" step="0.05" inputmode="decimal" value="1.8"></label>
       </div>
+      <details class="section-openings">
+        <summary>Есть ворота или калитка в этом участке?</summary>
+        <div class="section-fields opening-fields">
+          <label class="field"><span>Проём ворот, м</span><input data-field="gateOpening" data-index="${index}" type="number" min="0" max="10" step="0.05" inputmode="decimal" value="0"></label>
+          <label class="field"><span>Проём калитки, м</span><input data-field="wicketOpening" data-index="${index}" type="number" min="0" max="3" step="0.05" inputmode="decimal" value="0"></label>
+        </div>
+        <small>Проёмы вычитаются из длины забора. Стоимость самих ворот и калитки в этот расчёт не входит.</small>
+      </details>
       ${index < 3 ? `
       <label class="switch-field shared-row" data-shared-row="${index}">
         <span><b>Следующий участок начинается от этого же столба</b><small>Включите для угла или продолжения — один столб не посчитается дважды</small></span>
