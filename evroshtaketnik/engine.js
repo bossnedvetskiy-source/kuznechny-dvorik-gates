@@ -145,6 +145,8 @@ export function calculateFence(input = {}) {
     return {
       length: Math.max(0, finite(item.length)),
       height: Math.max(0, finite(item.height) || 1.8),
+      gateOpening: Math.max(0, finite(item.gateOpening)),
+      wicketOpening: Math.max(0, finite(item.wicketOpening)),
       sharedWithNext: Boolean(item.sharedWithNext)
     };
   });
@@ -158,6 +160,11 @@ export function calculateFence(input = {}) {
         index: index + 1,
         active: false,
         length: 0,
+        grossLength: 0,
+        fenceLength: 0,
+        openingsWidth: 0,
+        gateOpening: 0,
+        wicketOpening: 0,
         height: item.height,
         sharedWithNext: false,
         spans: 0,
@@ -170,6 +177,8 @@ export function calculateFence(input = {}) {
         tubeUsed: 0,
         basePosts: 0,
         sharedPost: 0,
+        requiredPosts: 0,
+        existingPosts: 0,
         newPosts: 0,
         tubeStocks: 0,
         tubePurchased: 0,
@@ -188,13 +197,17 @@ export function calculateFence(input = {}) {
       };
     }
 
-    const spans = Math.max(1, Math.ceil(Math.max(0, item.length - post.width) / (settings.maxSpan + post.width)));
-    const clearSpan = Math.max(0, (item.length - (spans + 1) * post.width) / spans);
+    const grossLength = item.length;
+    const openingsWidth = Math.min(grossLength, Math.max(0, item.gateOpening) + Math.max(0, item.wicketOpening));
+    const fenceLength = Math.max(0, grossLength - openingsWidth);
+    const spans = fenceLength > 0
+      ? Math.max(1, Math.ceil(Math.max(0, fenceLength - post.width) / (settings.maxSpan + post.width)))
+      : 0;
+    const clearSpan = spans > 0 ? Math.max(0, (fenceLength - (spans + 1) * post.width) / spans) : 0;
     const measure = type.isVertical ? clearSpan : item.height;
-    const frontPerSpan = Math.max(
-      1,
-      Math.ceil((measure + type.maxGap) / (settings.picketWidth + type.maxGap))
-    );
+    const frontPerSpan = spans > 0
+      ? Math.max(1, Math.ceil((measure + type.maxGap) / (settings.picketWidth + type.maxGap)))
+      : 0;
     const rearPerSpan = type.isDouble ? Math.max(0, frontPerSpan - 1) : 0;
     const actualGap = frontPerSpan <= 1
       ? 0
@@ -205,9 +218,9 @@ export function calculateFence(input = {}) {
     const tubeUsed = type.isVertical
       ? spans * 2 * clearSpan
       : spans * (2 * clearSpan + 3 * item.height);
-    const basePosts = spans + 1;
-    const sharedPost = item.sharedWithNext && index < 3 && activeFlags[index + 1] ? 1 : 0;
-    const newPosts = includeNewPosts ? Math.max(0, basePosts - sharedPost) : 0;
+    const basePosts = spans > 0 ? spans + 1 : 0;
+    const sharedPost = basePosts > 0 && item.sharedWithNext && index < 3 && activeFlags[index + 1] ? 1 : 0;
+    const requiredPosts = Math.max(0, basePosts - sharedPost);
     const cutting = tubeStockPlan(spans, clearSpan, item.height, !type.isVertical, settings.tubeStockLength);
     const tubePurchased = cutting.stocks * settings.tubeStockLength;
     const frontActual = spans * frontPerSpan;
@@ -216,7 +229,7 @@ export function calculateFence(input = {}) {
 
     let reserveFront = 0;
     let reserveRear = 0;
-    if (type.isDouble && !seenPicketLengths.has(picketLengthMm)) {
+    if (actualCount > 0 && type.isDouble && !seenPicketLengths.has(picketLengthMm)) {
       reserveFront = 2;
       reserveRear = 2;
       seenPicketLengths.add(picketLengthMm);
@@ -228,7 +241,12 @@ export function calculateFence(input = {}) {
     return {
       index: index + 1,
       active: true,
-      length: item.length,
+      length: grossLength,
+      grossLength,
+      fenceLength,
+      openingsWidth,
+      gateOpening: Math.min(grossLength, item.gateOpening),
+      wicketOpening: Math.min(Math.max(0, grossLength - Math.min(grossLength, item.gateOpening)), item.wicketOpening),
       height: item.height,
       sharedWithNext: Boolean(sharedPost),
       spans,
@@ -241,7 +259,9 @@ export function calculateFence(input = {}) {
       tubeUsed,
       basePosts,
       sharedPost,
-      newPosts,
+      requiredPosts,
+      existingPosts: 0,
+      newPosts: 0,
       tubeStocks: cutting.stocks,
       tubePurchased,
       tubeRemainder: Math.max(0, tubePurchased - tubeUsed),
@@ -261,11 +281,24 @@ export function calculateFence(input = {}) {
 
   const activeSections = sections.filter(item => item.active);
   const sum = (key) => activeSections.reduce((acc, item) => acc + finite(item[key]), 0);
-  const totalLength = sum('length');
+  const grossLineLength = sum('grossLength');
+  const openingsWidth = sum('openingsWidth');
+  const totalLength = sum('fenceLength');
   const totalSpans = sum('spans');
   const sharedPosts = sum('sharedPost');
-  const postsByScheme = Math.max(0, sum('basePosts') - sharedPosts);
-  const newPosts = sum('newPosts');
+  const postsByScheme = Math.max(0, sum('requiredPosts'));
+  const requestedExistingPosts = Math.max(0, Math.floor(finite(input.existingPostsCount)));
+  const existingPostsUsed = includeNewPosts ? Math.min(postsByScheme, requestedExistingPosts) : postsByScheme;
+  const newPosts = includeNewPosts ? Math.max(0, postsByScheme - existingPostsUsed) : 0;
+
+  let remainingExistingPosts = existingPostsUsed;
+  for (const item of activeSections) {
+    const used = Math.min(item.requiredPosts, remainingExistingPosts);
+    item.existingPosts = used;
+    item.newPosts = includeNewPosts ? Math.max(0, item.requiredPosts - used) : 0;
+    remainingExistingPosts -= used;
+  }
+
   const picketsActual = sum('actualCount');
   const picketLmActual = sum('actualPicketLm');
   const picketLmCosted = sum('costedPicketLm');
@@ -332,6 +365,7 @@ export function calculateFence(input = {}) {
     postKey,
     post,
     includeNewPosts,
+    existingPostsCount: requestedExistingPosts,
     sections,
     purchase: {
       pickets: [...uniquePickets.values()].sort((a, b) => a.length - b.length),
@@ -345,10 +379,13 @@ export function calculateFence(input = {}) {
     },
     summary: {
       activeSections: activeSections.length,
+      grossLineLength: round(grossLineLength),
+      openingsWidth: round(openingsWidth),
       totalLength: round(totalLength),
       totalSpans,
       sharedPosts,
       postsByScheme,
+      existingPostsUsed,
       newPosts,
       picketsActual,
       picketLmActual: round(picketLmActual),
