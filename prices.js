@@ -94,7 +94,19 @@ window.PRICE_DATA = {
     postInstallPrice: 800,
     screwPrice: 2,
     markupPercent: 0,
-    measurerPercent: 4
+    measurerPercent: 4,
+
+    // Технологические параметры забора — редактируются в админке.
+    picketWidth: 0.12,
+    gapSingle: 0.05,
+    gapDouble: 0.06,
+    postLength: 3,
+    postDepth: 0.7,
+    maxSpan: 2.5,
+    screwVertical: 4,
+    screwHorizontal: 6,
+    tubeStockLength: 6,
+    picketReservePerSide: 2
   },
 
   catalog: [
