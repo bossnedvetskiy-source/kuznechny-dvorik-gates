@@ -107,3 +107,29 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,su
   .trust-strip>div:before{width:24px;height:24px}
   .result-card:has(#resultSummary[hidden]){padding-bottom:13px}
 }
+
+.lead-card-simple{display:block;max-width:760px;margin:0 auto;padding:22px}
+.lead-empty-state,.lead-ready{display:grid;gap:14px}
+.lead-empty-state small,.lead-copy-simple small{color:var(--gold2);font-size:9px;font-weight:800;letter-spacing:1px;text-transform:uppercase}
+.lead-empty-state h2,.lead-copy-simple h2{margin:0;font:32px/1.08 Prata,serif}
+.lead-empty-state p,.lead-copy-simple p{margin:0;color:#989b9f;font-size:11px;line-height:1.55}
+.lead-empty-state .secondary-button{width:100%;margin-top:2px}
+.lead-copy-simple{display:grid;gap:8px}
+.lead-quote-preview{display:grid;gap:3px;margin-top:3px;padding:11px 12px}
+.lead-quote-preview b{font-size:15px}
+.lead-quote-preview span{color:#9b9ea2;font-size:9.5px;line-height:1.45}
+.lead-form-simple{display:grid;gap:12px;margin-top:14px}
+.lead-form-simple>label:not(.consent){display:grid;gap:7px}
+.lead-form-simple>label>span{font-size:10px;font-weight:800}
+.lead-form-simple input[type="tel"]{height:54px}
+.lead-form-simple .consent{margin-top:0}
+.lead-form-simple .primary-button{min-height:54px;font-size:12px}
+@media(max-width:620px){
+  .lead-section{padding-top:22px}
+  .lead-card-simple{padding:15px;border-radius:16px}
+  .lead-empty-state h2,.lead-copy-simple h2{font-size:26px}
+  .lead-empty-state p,.lead-copy-simple p{font-size:10.5px}
+  .lead-form-simple{margin-top:12px;gap:10px}
+  .lead-form-simple input[type="tel"]{height:52px}
+  .lead-form-simple .primary-button{min-height:52px}
+}
