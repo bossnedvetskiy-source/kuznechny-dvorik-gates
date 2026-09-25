@@ -7,6 +7,7 @@ const catalogInstallationInput = document.getElementById('catalogInstallationInp
 const catalogPostsInput = document.getElementById('catalogPostsInput');
 const catalogPriceList = document.getElementById('catalogPriceList');
 const extraPriceList = document.getElementById('extraPriceList');
+const fencePriceList = document.getElementById('fencePriceList');
 const priceSaveState = document.getElementById('priceSaveState');
 const savePricesButton = document.getElementById('savePricesButton');
 const priceActionBar = savePricesButton?.closest('.action-bar');
@@ -140,6 +141,47 @@ function renderExtraPrices() {
 
     card.append(heading, fields);
     extraPriceList.append(card);
+  }
+}
+
+
+const FENCE_PRICE_DEFINITIONS = [
+  ['picketSinglePrice','Евроштакетник односторонний','₽/п.м.',1],
+  ['picketDoublePrice','Евроштакетник двусторонний','₽/п.м.',1],
+  ['tube40Price','Труба 40×20×2','₽/м',1],
+  ['post60Price','Столб 60×60×2','₽/м',1],
+  ['post80Price','Столб 80×80×3','₽/м',1],
+  ['post100Price','Столб 100×100×3','₽/м',1],
+  ['paintPrice','Покраска профильных труб','₽/м²',10],
+  ['workVerticalSingle','Работа: вертикальный односторонний','₽/п.м.',10],
+  ['workVerticalDouble','Работа: вертикальный двусторонний','₽/п.м.',10],
+  ['workHorizontalDouble','Работа: горизонтальный двусторонний','₽/п.м.',10],
+  ['postInstallPrice','Установка столба','₽/шт',10],
+  ['screwPrice','Саморез','₽/шт',1],
+  ['markupPercent','Наценка / резерв','%',0.1],
+  ['measurerPercent','ЗП замерщика','%',0.1]
+];
+
+function renderFencePrices() {
+  if (!fencePriceList) return;
+  fencePriceList.replaceChildren();
+  const fence = priceSettings?.fence || {};
+  for (const [key,labelText,unit,step] of FENCE_PRICE_DEFINITIONS) {
+    const label = document.createElement('label');
+    label.className = 'fence-price-field';
+    const title = document.createElement('span');
+    title.innerHTML = `<b>${labelText}</b><small>${unit}</small>`;
+    const input = document.createElement('input');
+    input.type = 'number';
+    input.min = '0';
+    input.max = key.includes('Percent') ? '100' : '10000000';
+    input.step = String(step);
+    input.inputMode = 'decimal';
+    input.value = String(Number(fence[key]) || 0);
+    input.dataset.fenceKey = key;
+    input.addEventListener('input', () => setPriceDirty());
+    label.append(title,input);
+    fencePriceList.append(label);
   }
 }
 
@@ -340,6 +382,12 @@ function setupPriceCompactUi() {
     #pricesTab .extra-price-current{font-size:11px;font-weight:900;white-space:nowrap;color:#6c5732}
     #pricesTab .extra-price-edit{min-height:34px;padding:0 10px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--ink);font-size:9px;font-weight:800}
     #pricesTab .compact-extra-price.is-open .extra-price-fields{margin-top:10px}
+    #pricesTab .fence-price-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+    #pricesTab .fence-price-field{display:grid;grid-template-columns:minmax(0,1fr) 130px;align-items:center;gap:10px;padding:9px 10px;border:1px solid var(--line);border-radius:11px;background:#fff}
+    #pricesTab .fence-price-field>span{display:grid;gap:2px;min-width:0}
+    #pricesTab .fence-price-field b{font-size:10px}
+    #pricesTab .fence-price-field small{color:var(--muted);font-size:8px}
+    #pricesTab .fence-price-field input{width:100%;height:38px;padding:0 9px;border:1px solid var(--line);border-radius:9px;background:#faf9f6;font:inherit;font-size:12px}
     @media(max-width:620px){
       #pricesTab .settings-card{padding:13px}
       #pricesTab .extra-price-list{grid-template-columns:1fr!important}
@@ -348,6 +396,7 @@ function setupPriceCompactUi() {
       #pricesTab .extra-price-fields input{height:41px!important}
       #pricesTab .extra-price-current{font-size:10px}
       #pricesTab .extra-price-edit{min-height:32px;padding:0 8px}
+      #pricesTab .fence-price-grid{grid-template-columns:1fr!important}#pricesTab .fence-price-field{grid-template-columns:minmax(0,1fr) 105px;padding:8px 9px}#pricesTab .fence-price-field input{font-size:16px}
       #pricesTab .price-action-bar{bottom:8px;align-items:center!important;flex-direction:row!important;padding:8px!important;border-radius:12px}
       #pricesTab .price-action-bar .save-state{display:none}
       #pricesTab .price-action-bar .save-button{width:100%;min-height:44px}
@@ -371,6 +420,7 @@ function renderPrices() {
   catalogPostsInput.value = moneyInputValue(priceSettings.catalogPosts);
   renderCatalogPrices();
   renderExtraPrices();
+  renderFencePrices();
   normalizeCatalogDraft();
   setupCatalogManagementUi();
   renderCatalogManagement();
@@ -405,12 +455,18 @@ function collectPrices() {
     if (item) item[input.dataset.extraField] = Number(input.value);
   });
 
+  const fence = {...(priceSettings.fence || {})};
+  fencePriceList?.querySelectorAll('[data-fence-key]').forEach(input => {
+    fence[input.dataset.fenceKey] = Number(input.value);
+  });
+
   return {
     ...priceSettings,
     catalogInstallation: Number(catalogInstallationInput.value),
     catalogPosts: Number(catalogPostsInput.value),
     catalog,
-    extraProducts: [...extraById.values()]
+    extraProducts: [...extraById.values()],
+    fence
   };
 }
 
