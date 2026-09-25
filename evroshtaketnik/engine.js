@@ -5,6 +5,9 @@ export const FENCE_SETTINGS = Object.freeze({
   picketSinglePrice: 110,
   picketDoublePrice: 130,
   tube40Price: 144,
+  post60Price: 305,
+  post80Price: 600,
+  post100Price: 750,
   paintPrice: 650,
   workVerticalSingle: 1300,
   workVerticalDouble: 1800,
@@ -115,8 +118,26 @@ function tubeStockPlan(spans, clearSpan, height, horizontalDouble, stockLength) 
 
 export function calculateFence(input = {}) {
   const settings = { ...FENCE_SETTINGS, ...(input.settings || {}) };
-  const type = FENCE_TYPES[input.type] || FENCE_TYPES['vertical-double'];
-  const post = POST_TYPES[input.post] || POST_TYPES['80x80x3'];
+  const typeKey = FENCE_TYPES[input.type] ? input.type : 'vertical-double';
+  const baseType = FENCE_TYPES[typeKey];
+  const type = {
+    ...baseType,
+    picketPrice: typeKey === 'vertical-single' ? settings.picketSinglePrice : settings.picketDoublePrice,
+    maxGap: typeKey === 'vertical-single' ? settings.gapSingle : settings.gapDouble,
+    workRate: typeKey === 'vertical-single'
+      ? settings.workVerticalSingle
+      : typeKey === 'horizontal-double'
+        ? settings.workHorizontalDouble
+        : settings.workVerticalDouble
+  };
+  const postKey = POST_TYPES[input.post] ? input.post : '80x80x3';
+  const basePost = POST_TYPES[postKey];
+  const postPriceMap = {
+    '60x60x2': settings.post60Price,
+    '80x80x3': settings.post80Price,
+    '100x100x3': settings.post100Price
+  };
+  const post = {...basePost, pricePerM: Number(postPriceMap[postKey]) || basePost.pricePerM};
   const includeNewPosts = input.includeNewPosts !== false;
   const rawSections = Array.isArray(input.sections) ? input.sections.slice(0, 4) : [];
   const sectionsInput = Array.from({ length: 4 }, (_, index) => {
@@ -306,9 +327,9 @@ export function calculateFence(input = {}) {
   else if (activeSections.some(item => item.height > settings.postLength - settings.postDepth)) check = 'ПРОВЕРЬТЕ ВЫСОТУ / ДЛИНУ СТОЛБА';
 
   return {
-    typeKey: Object.keys(FENCE_TYPES).find(key => FENCE_TYPES[key] === type) || 'vertical-double',
+    typeKey,
     type,
-    postKey: Object.keys(POST_TYPES).find(key => POST_TYPES[key] === post) || '80x80x3',
+    postKey,
     post,
     includeNewPosts,
     sections,
