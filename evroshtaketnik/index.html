@@ -87,9 +87,14 @@
               </select>
             </label>
             <label class="switch-field">
-              <span><b>Нужны новые столбы</b><small>Выключите, если подходящие столбы уже установлены</small></span>
+              <span><b>Нужны новые столбы</b><small>Выключите, если все подходящие столбы уже установлены</small></span>
               <input id="includePosts" type="checkbox" checked>
               <i aria-hidden="true"></i>
+            </label>
+            <label id="existingPostsWrap" class="field field-wide existing-posts-field">
+              <span>Сколько подходящих столбов уже есть</span>
+              <input id="existingPostsCount" type="number" min="0" max="200" step="1" value="0" inputmode="numeric">
+              <small class="field-note">Если часть столбов уже установлена, укажите количество — калькулятор добавит только недостающие.</small>
             </label>
           </div>
         </div>
@@ -99,7 +104,7 @@
             <div><small>Шаг 2</small><h2>Размеры участков</h2></div>
             <span class="panel-hint">максимум 4</span>
           </div>
-          <p class="help">Каждый прямой участок с отдельной длиной или высотой добавляйте отдельно. Если следующий участок начинается от того же углового столба, включите переключатель между ними.</p>
+          <p class="help">Каждый прямой участок с отдельной длиной или высотой добавляйте отдельно. Внутри участка можно вычесть проём ворот и калитки. Если следующий участок начинается от того же углового столба, включите переключатель между ними.</p>
           <div id="sectionsList" class="sections-list"></div>
           <div class="section-actions">
             <button id="addSection" type="button" class="secondary-button">+ Добавить участок</button>
@@ -153,7 +158,13 @@
           <a class="result-call" href="tel:+79373296750">или позвонить 8 937 329-67-50</a>
           <div class="quote-tools">
             <button id="copyQuote" type="button">Скопировать расчёт</button>
+            <button id="shareQuote" type="button">Поделиться</button>
+            <button id="saveQuote" type="button">Сохранить</button>
             <button id="printQuote" type="button">Печать / PDF</button>
+          </div>
+          <div id="savedQuoteBar" class="saved-quote-bar" hidden>
+            <span>Последний расчёт сохранён на этом устройстве</span>
+            <button id="restoreQuote" type="button">Восстановить</button>
           </div>
         </div>
       </aside>
