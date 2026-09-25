@@ -127,6 +127,16 @@
     const stageOf=lead=>String(workflows[String(lead.id)]?.stage || (lead.status==='done'?'completed':lead.status==='contacted'?'contacted':'new'));
     const stageLabel=stage=>({new:'Новая',contacted:'В работе',measurement_scheduled:'Замер назначен',measurement_done:'Замер выполнен',contract:'Договор',production:'Производство',installation:'Монтаж',completed:'Закрыта',lost:'Отказ'})[stage]||stage;
     const categoryLabel=value=>({gates:'Ворота с калиткой',canopy:'Навес','forged-fence':'Кованый забор','profsheet-fence':'Забор из профнастила','picket-fence':'Евроштакетник'})[value]||'Изделие';
+    const sourceLabel=value=>{
+      const raw=String(value||'').trim();const key=raw.toLocaleLowerCase('ru-RU');
+      if(!raw||key==='site'||key.includes('calculator')||key.includes('kuzdvor')||key.includes('website'))return 'Сайт';
+      if(key.includes('vk')||key.includes('vkontakte'))return 'ВКонтакте';
+      if(key.includes('avito'))return 'Авито';
+      if(key.includes('direct')||key.includes('yandex'))return 'Яндекс Директ';
+      if(key==='ok'||key.includes('odnoklass'))return 'Одноклассники';
+      if(key.includes('whatsapp'))return 'WhatsApp';
+      return raw;
+    };
 
     function showToast(message,error=false){toast.textContent=message;toast.className='toast'+(error?' error':'');toast.hidden=false;clearTimeout(showToast.t);showToast.t=setTimeout(()=>toast.hidden=true,2800)}
     async function api(url,options={}){const response=await fetch(url,{credentials:'same-origin',cache:'no-store',...options,headers:{accept:'application/json',...(options.body?{'content-type':'application/json'}:{}),...(options.headers||{})}});const data=await response.json().catch(()=>({}));if(response.status===401){showLogin();throw Object.assign(new Error('Требуется вход'),{auth:true})}if(!response.ok){const message=[data.error,data.detail].filter(Boolean).join(': ');throw new Error(message||'Ошибка сервера')}return data}
@@ -194,9 +204,9 @@
         const infoFourLabel=isPicket?'Условия':'Столбы';
         const infoFourValue=isPicket?(manualReview?'Проверить на замере':'Обычные'):(lead.posts?'Нужны новые':'Свои');
         const when=String(wf.nextActionAt||'').slice(0,16);
-        const sourceLabel=String(lead.source||'Сайт').trim()||'Сайт';
+        const sourceName=sourceLabel(lead.source);
         return `<article class="lead-card ${stage==='new'?'is-new':''}" data-lead-id="${lead.id}">
-          <div class="lead-head"><div class="lead-title"><div class="lead-badges"><span class="lead-badge category">${escape(categoryLabel(lead.category||'gates'))}</span><span class="lead-badge source">${escape(sourceLabel)}</span></div><b>${escape(lead.name||'Клиент')} · ${escape(lead.city||'')}</b><span>№${lead.id} · ${escape(fmt(lead.created_at))}${lead.article?' · '+escape(lead.article):''}</span></div><div class="lead-total">${money(lead.client_total||lead.total)}</div></div>
+          <div class="lead-head"><div class="lead-title"><div class="lead-badges"><span class="lead-badge category">${escape(categoryLabel(lead.category||'gates'))}</span><span class="lead-badge source">${escape(sourceName)}</span></div><b>${escape(lead.name||'Клиент')} · ${escape(lead.city||'')}</b><span>№${lead.id} · ${escape(fmt(lead.created_at))}${lead.article?' · '+escape(lead.article):''}</span></div><div class="lead-total">${money(lead.client_total||lead.total)}</div></div>
           <div class="lead-info">
             <div class="info"><span>Телефон</span><b>${escape(lead.phone||'—')}</b></div>
             <div class="info"><span>${escape(infoTwoLabel)}</span><b>${escape(infoTwoValue)}</b></div>
@@ -222,7 +232,7 @@
       offlineBadge.hidden=true;
       if(!silent) syncText.textContent='Обновляем заявки…';
       try{
-        const data=await api('/api/admin/leads?limit=100');
+        const data=await api('/api/admin/leads?limit=200');
         const next=Array.isArray(data.leads)?data.leads:[];
         const ids=next.map(x=>Number(x.id)).filter(Boolean);
         const wfData=ids.length?await api('/api/admin/lead-workflows?ids='+encodeURIComponent(ids.join(','))):{workflows:{}};
@@ -235,7 +245,7 @@
         if(oldLatest&&latestId>oldLatest&&document.visibilityState==='visible'){
           const newest=leads.find(x=>Number(x.id)===latestId);
           const newestCategory=categoryLabel(newest?.category||'gates');
-          const newestSource=String(newest?.source||'Сайт').trim()||'Сайт';
+          const newestSource=sourceLabel(newest?.source);
           showToast('Новая заявка · '+newestCategory);
           if(Notification.permission==='granted'&&newest){try{new Notification('Новая заявка · '+newestCategory,{body:[newest.city||'',newestSource,money(newest.client_total||newest.total)].filter(Boolean).join(' · '),tag:'lead-'+newest.id})}catch{}}
         }
