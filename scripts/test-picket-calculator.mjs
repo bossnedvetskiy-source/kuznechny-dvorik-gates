@@ -105,4 +105,28 @@ assert.equal(runtimeCustom.costs.posts, runtimeBase.costs.posts * 2);
 assert.equal(runtimeCustom.summary.totalLength, runtimeBase.summary.totalLength);
 assert.equal(runtimeCustom.summary.totalSpans, runtimeBase.summary.totalSpans);
 
+
+const openingsAndExistingPosts = calculateFence({
+  type: 'vertical-double',
+  post: '80x80x3',
+  includeNewPosts: true,
+  existingPostsCount: 2,
+  sections: [{
+    length: 10,
+    height: 1.8,
+    gateOpening: 3.4,
+    wicketOpening: 1
+  }]
+});
+assert.equal(openingsAndExistingPosts.summary.grossLineLength, 10);
+assert.equal(openingsAndExistingPosts.summary.openingsWidth, 4.4);
+assert.equal(openingsAndExistingPosts.summary.totalLength, 5.6);
+assert.equal(openingsAndExistingPosts.sections[0].fenceLength, 5.6);
+assert.equal(openingsAndExistingPosts.summary.existingPostsUsed, Math.min(2, openingsAndExistingPosts.summary.postsByScheme));
+assert.equal(
+  openingsAndExistingPosts.summary.newPosts,
+  Math.max(0, openingsAndExistingPosts.summary.postsByScheme - 2)
+);
+assert.equal(openingsAndExistingPosts.purchase.posts, openingsAndExistingPosts.summary.newPosts);
+
 console.log('Euro picket calculator matches Excel reference scenarios.');
