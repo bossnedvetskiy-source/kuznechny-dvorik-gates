@@ -856,7 +856,7 @@ function leadPayload() {
   const reference = ensureQuoteNumber();
   return {
     category:'picket-fence',
-    source:'evroshtaketnik-calculator',
+    source:'site',
     article:reference,
     productTitle:'Забор из металлического евроштакетника',
     name:'',
