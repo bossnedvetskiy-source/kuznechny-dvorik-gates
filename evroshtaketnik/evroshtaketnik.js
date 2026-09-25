@@ -33,6 +33,9 @@ const leadForm = $('leadForm');
 const leadState = $('leadState');
 const leadCity = $('leadCity');
 const leadSubmit = $('leadSubmit');
+const leadEmptyState = $('leadEmptyState');
+const leadReadyContent = $('leadReadyContent');
+const leadBackToCalc = $('leadBackToCalc');
 const savedQuoteBar = $('savedQuoteBar');
 const resultLeadButton = $('resultLeadButton');
 const includedBlock = $('includedBlock');
@@ -647,15 +650,13 @@ async function resolveUnknownSettlement() {
 
 function renderLeadPreview(result) {
   const target = $('leadQuotePreview');
-  if (!target) return;
-  if (!result.summary.activeSections) {
-    target.textContent = 'Сначала укажите длину участка.';
-    return;
-  }
-  const postText = result.includeNewPosts
-    ? `новых столбов: ${result.summary.newPosts}, готовых: ${result.summary.existingPostsUsed}`
-    : 'на готовые столбы';
-  target.innerHTML = `<b>${money(result.summary.total)}${deliveryIsKnown() ? '' : ' · без доставки'}</b><br>${result.type.label} · ${number(result.summary.totalLength)} м забора${result.summary.openingsWidth > 0 ? ` из линии ${number(result.summary.grossLineLength)} м` : ''} · ${result.summary.totalSpans} пролётов · ${postText} · цвет: ${selectedColor}`;
+  const hasQuote = Boolean(result.summary.activeSections);
+  if (leadEmptyState) leadEmptyState.hidden = hasQuote;
+  if (leadReadyContent) leadReadyContent.hidden = !hasQuote;
+  if (!target || !hasQuote) return;
+
+  const locationText = selectedDelivery?.name || settlementInput.value.trim() || 'населённый пункт не выбран';
+  target.innerHTML = `<b>${money(result.summary.total)}${deliveryIsKnown() ? '' : ' · без доставки'}</b><span>${number(result.summary.totalLength)} м · ${result.type.label} · ${locationText}</span>`;
 }
 
 async function loadFencePrices() {
@@ -698,12 +699,12 @@ function leadPayload() {
     category:'picket-fence',
     source:'evroshtaketnik-calculator',
     productTitle:'Забор из металлического евроштакетника',
-    name:$('leadName')?.value.trim() || '',
+    name:'',
     phone:$('leadPhone')?.value.trim() || '',
     city,
     consent:Boolean($('leadConsent')?.checked),
     policyVersion:'2026-09-25',
-    comment:$('leadComment')?.value.trim() || '',
+    comment:'',
     total:lastResult?.summary.total || 0,
     posts:includePostsInput.checked,
     message:quoteText(),
@@ -750,8 +751,9 @@ async function submitLead(event) {
   }
   if (!payload.city) {
     leadState.classList.add('is-error');
-    leadState.textContent = 'Укажите населённый пункт.';
-    leadCity?.focus();
+    leadState.textContent = 'Сначала выберите населённый пункт в разделе «Доставка».';
+    settlementInput?.scrollIntoView({behavior:'smooth',block:'center'});
+    setTimeout(() => settlementInput?.focus({preventScroll:true}), 350);
     return;
   }
   if (!payload.consent) {
@@ -783,7 +785,7 @@ async function submitLead(event) {
     leadState.textContent = error?.message || 'Не удалось отправить заявку.';
   } finally {
     leadSubmit.disabled = false;
-    leadSubmit.textContent = 'Заказать бесплатный замер';
+    leadSubmit.textContent = 'Заказать замер';
   }
 }
 
@@ -908,6 +910,11 @@ $('printQuote')?.addEventListener('click', () => {
   window.print();
 });
 leadForm?.addEventListener('submit', submitLead);
+leadBackToCalc?.addEventListener('click', () => {
+  const firstLength = sectionsList.querySelector('[data-field="length"][data-index="0"]');
+  firstLength?.scrollIntoView({behavior:'smooth',block:'center'});
+  setTimeout(() => firstLength?.focus({preventScroll:true}), 350);
+});
 
 syncVisibleSections();
 syncTypePicker();
