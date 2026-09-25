@@ -10,6 +10,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 jobs:
   enrich:
@@ -61,3 +62,10 @@ jobs:
           git add offline-delivery-200km.json
           git commit -m "Enrich offline settlement districts and regions"
           git push origin HEAD:main
+
+      # Pushes made by GITHUB_TOKEN do not start other workflows automatically.
+      # Explicitly rebuild production so the enriched offline snapshot reaches Timeweb.
+      - name: Rebuild Timeweb with enriched addresses
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run deploy-timeweb-main.yml --ref main
