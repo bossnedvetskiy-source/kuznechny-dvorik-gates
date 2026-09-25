@@ -105,7 +105,7 @@
             <label id="existingPostsWrap" class="field field-wide existing-posts-field">
               <span>Сколько подходящих столбов уже есть</span>
               <input id="existingPostsCount" type="number" min="0" max="200" step="1" value="0" inputmode="numeric">
-              <small class="field-note">Если часть столбов уже установлена, укажите количество — калькулятор добавит только недостающие.</small>
+              <small id="existingPostsHint" class="field-note">Если часть столбов уже установлена, укажите количество — калькулятор добавит только недостающие.</small>
             </label>
           </div>
         </div>
@@ -116,12 +116,23 @@
             <span class="panel-hint">максимум 4</span>
           </div>
           <p class="help">Укажите полную длину каждого прямого участка. Если внутри есть ворота или калитка — добавьте их проёмы, калькулятор вычтет их из длины заполнения. Для угла отметьте общий столб.</p>
+          <div class="measure-guide">
+            <div class="measure-guide-copy"><b>Как измерить длину</b><span>Мерьте всю линию от начала до конца, включая место ворот и калитки. Их ширину укажите отдельно ниже.</span></div>
+            <div class="measure-guide-line" aria-hidden="true"><i></i><span>вся линия участка</span><i></i></div>
+          </div>
           <div class="opening-warning"><b>Важно:</b> стоимость ворот и калитки здесь не считается — из забора вычитается только ширина их проёмов.</div>
           <div id="sectionsList" class="sections-list"></div>
           <div class="section-actions">
             <button id="addSection" type="button" class="secondary-button">+ Добавить участок</button>
             <button id="removeSection" type="button" class="ghost-button">Убрать последний</button>
           </div>
+          <details class="site-conditions">
+            <summary>Есть перепад высоты или сложные условия монтажа?</summary>
+            <div class="site-condition-options">
+              <label><input id="hasSlope" type="checkbox"><span><b>Есть заметный уклон / перепад</b><small>Отметим для проверки на замере — цену автоматически не увеличиваем.</small></span></label>
+              <label><input id="hasHardSurface" type="checkbox"><span><b>Бетон, асфальт, подпорная стенка или другое сложное основание</b><small>Менеджер увидит пометку и уточнит условия до фиксации цены.</small></span></label>
+            </div>
+          </details>
         </div>
 
         <div class="panel">
@@ -149,7 +160,7 @@
 
       <aside class="result-card" aria-live="polite">
         <div class="result-sticky">
-          <small id="totalLabel" class="result-label">Предварительная стоимость без доставки</small>
+          <div class="result-kicker"><small id="totalLabel" class="result-label">Предварительная стоимость без доставки</small><span id="quoteReference" class="quote-reference" hidden></span></div>
           <div id="totalPrice" class="total-price">0 ₽</div>
           <div id="resultStatus" class="result-status">Добавьте длину первого участка</div>
 
