@@ -711,6 +711,7 @@ function chooseSettlement(item) {
     ? `${item.name}${item.secondary ? ', ' + item.secondary : ''} · доставка учтена в расчёте`
     : `${item.name}${item.secondary ? ', ' + item.secondary : ''} · доставка 0 ₽`;
   calculate();
+  settlementInput.blur();
 }
 
 function settlementMatches(value) {
@@ -959,7 +960,9 @@ addSectionButton.addEventListener('click', () => {
   visibleSections += 1;
   syncVisibleSections();
   calculate();
-  sectionsList.querySelector(`[data-field="length"][data-index="${visibleSections-1}"]`)?.focus();
+  const nextLength = sectionsList.querySelector(`[data-field="length"][data-index="${visibleSections-1}"]`);
+  nextLength?.scrollIntoView({behavior:'smooth',block:'center'});
+  setTimeout(() => nextLength?.focus({preventScroll:true}), 300);
 });
 removeSectionButton.addEventListener('click', () => {
   if (visibleSections <= 1) return;
@@ -997,6 +1000,8 @@ settlementInput.addEventListener('input', () => {
     deliveryStatus.className = 'delivery-status';
     deliveryStatus.textContent = 'Выберите населённый пункт из подсказки, чтобы учесть доставку.';
     calculate();
+  } else {
+    scheduleDraftSave();
   }
   renderSettlementResults();
 });
@@ -1088,4 +1093,9 @@ syncPostOptions();
 syncSavedQuoteBar();
 await Promise.all([loadDeliveryBase(), loadFencePrices()]);
 const sharedState = decodeQuoteState(new URL(location.href).searchParams.get('q'));
-if (!sharedState || !restoreQuoteState(sharedState, {fromLink:true})) calculate();
+if (sharedState && restoreQuoteState(sharedState, {fromLink:true})) {
+  // shared links are authoritative
+} else {
+  const draftState = readDraftQuote();
+  if (!draftState || !restoreQuoteState(draftState, {fromDraft:true})) calculate();
+}
