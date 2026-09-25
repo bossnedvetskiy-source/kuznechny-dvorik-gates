@@ -1,9 +1,10 @@
-import { calculateFence, FENCE_TYPES, POST_TYPES } from './engine.js';
+import { calculateFence, FENCE_SETTINGS } from './engine.js';
 
 const $ = id => document.getElementById(id);
 const money = value => new Intl.NumberFormat('ru-RU', {maximumFractionDigits:0}).format(Math.round(Number(value)||0)) + ' ₽';
 const number = (value, digits = 2) => new Intl.NumberFormat('ru-RU', {maximumFractionDigits:digits}).format(Number(value)||0);
 const normalize = value => String(value||'').trim().toLocaleLowerCase('ru-RU').replace(/ё/g,'е').replace(/\s+/g,' ');
+const isDev = location.hostname.endsWith('github.io') || Boolean(document.querySelector('meta[name="kuzdvor-environment"][content="development"]'));
 
 const form = $('fenceForm');
 const typeInput = $('fenceType');
@@ -23,11 +24,21 @@ const resultNote = $('resultNote');
 const internalGrid = $('internalGrid');
 const internalToggle = $('internalToggle');
 const internalOverview = $('internalOverview');
+const mobileQuoteBar = $('mobileQuoteBar');
+const mobileBarPrice = $('mobileBarPrice');
+const mobileBarNote = $('mobileBarNote');
+const leadForm = $('leadForm');
+const leadState = $('leadState');
+const leadCity = $('leadCity');
+const leadSubmit = $('leadSubmit');
 
 let visibleSections = 1;
 let deliveryRows = [];
 let selectedDelivery = null;
+let selectedColor = 'Графит';
 let lastResult = null;
+let runtimeSettings = {...FENCE_SETTINGS};
+let toastTimer = 0;
 
 function sectionMarkup(index) {
   const n = index + 1;
@@ -87,11 +98,42 @@ function deliveryIsKnown() {
 const TYPE_HELP = {
   'vertical-double': 'Штакетник с двух сторон в шахматном порядке — забор меньше просматривается.',
   'vertical-single': 'Штакетник устанавливается с одной стороны — самый простой и экономичный вариант.',
-  'horizontal-double': 'Горизонтальные планки с двух сторон. В расчёте добавляются вертикальные прожилины внутри каждого пролёта.'
+  'horizontal-double': 'Горизонтальные металлические планки с двух сторон. В расчёте добавляются вертикальные прожилины внутри каждого пролёта.'
 };
+
+function showToast(message) {
+  const toast = $('pageToast');
+  if (!toast) return;
+  clearTimeout(toastTimer);
+  toast.textContent = message;
+  toast.hidden = false;
+  toastTimer = setTimeout(() => { toast.hidden = true; }, 2600);
+}
+
+function scrollToLead() {
+  $('leadSection')?.scrollIntoView({behavior:'smooth',block:'start'});
+  setTimeout(() => $('leadPhone')?.focus({preventScroll:true}), 450);
+}
 
 function syncTypeHelp() {
   if (typeHelp) typeHelp.textContent = TYPE_HELP[typeInput.value] || '';
+}
+
+function syncTypePicker() {
+  document.querySelectorAll('.type-card[data-type]').forEach(card => {
+    const selected = card.dataset.type === typeInput.value;
+    card.classList.toggle('is-selected', selected);
+    card.setAttribute('aria-pressed', String(selected));
+  });
+  syncTypeHelp();
+}
+
+function syncColorPicker() {
+  document.querySelectorAll('.color-choice[data-color]').forEach(button => {
+    const selected = button.dataset.color === selectedColor;
+    button.classList.toggle('is-selected', selected);
+    button.setAttribute('aria-pressed', String(selected));
+  });
 }
 
 function setInternalOpen(open) {
@@ -121,12 +163,14 @@ function calculate() {
     post: postInput.value,
     includeNewPosts: includePostsInput.checked,
     sections: readSections(),
-    deliveryCost: deliveryCost()
+    deliveryCost: deliveryCost(),
+    settings: runtimeSettings
   });
   lastResult = result;
   renderResult(result);
   renderScheme(result);
   renderInternal(result);
+  renderLeadPreview(result);
 }
 
 function renderResult(result) {
@@ -142,10 +186,10 @@ function renderResult(result) {
 
   if (totalLabel) totalLabel.textContent = deliveryPending
     ? 'Предварительная стоимость без доставки'
-    : 'Предварительная стоимость';
+    : 'Предварительная стоимость с доставкой';
   if (resultNote) resultNote.textContent = deliveryPending
     ? 'Укажите населённый пункт, чтобы получить итог с доставкой. Точные размеры и цену зафиксируем после бесплатного замера.'
-    : 'Это предварительный расчёт с учётом доставки. Точные размеры и итоговую стоимость зафиксируем после бесплатного замера.';
+    : 'Доставка учтена. Точные размеры и итоговую стоимость зафиксируем после бесплатного замера.';
 
   const status = $('resultStatus');
   status.className = 'result-status';
@@ -159,6 +203,16 @@ function renderResult(result) {
     status.classList.add('is-warn');
   }
 
+  const chips = [
+    '<span class="accent">металлический евроштакетник</span>',
+    '<span>каркас 40×20×2</span>',
+    '<span>покраска каркаса</span>',
+    '<span>монтаж забора</span>',
+    '<span>крепёж</span>'
+  ];
+  if (result.includeNewPosts) chips.push('<span>новые столбы + установка</span>');
+  if ($('includedChips')) $('includedChips').innerHTML = chips.join('');
+
   result.sections.forEach((item, index) => {
     const caption = sectionsList.querySelector(`[data-section-caption="${index}"]`);
     if (!caption) return;
@@ -166,6 +220,11 @@ function renderResult(result) {
       ? `${item.spans} прол. · чистый ${number(item.clearSpan)} м`
       : 'не заполнен';
   });
+
+  const hasQuote = summary.activeSections > 0;
+  if (mobileQuoteBar) mobileQuoteBar.hidden = !hasQuote;
+  if (mobileBarPrice) mobileBarPrice.textContent = hasQuote ? money(summary.total) : '0 ₽';
+  if (mobileBarNote) mobileBarNote.textContent = deliveryPending ? 'без доставки' : 'с доставкой';
 }
 
 function renderScheme(result) {
@@ -199,7 +258,6 @@ function row(label, value) {
 
 function renderInternal(result) {
   const panel = $('internalPanel');
-  const isDev = Boolean(document.querySelector('meta[name="kuzdvor-environment"][content="development"]'));
   panel.hidden = !isDev;
   if (!isDev) return;
 
@@ -262,6 +320,7 @@ function hideSettlementResults() {
 function chooseSettlement(item) {
   selectedDelivery = item;
   settlementInput.value = item.name;
+  if (leadCity) leadCity.value = item.name;
   hideSettlementResults();
   deliveryStatus.className = 'delivery-status is-ok';
   deliveryStatus.textContent = item.price > 0
@@ -345,12 +404,141 @@ async function resolveUnknownSettlement() {
       secondary: String(data.district || data.region || '').trim(),
       price: Number(data.price)||0
     };
+    if (leadCity) leadCity.value = selectedDelivery.name;
     deliveryStatus.className = 'delivery-status is-ok';
     deliveryStatus.textContent = `${selectedDelivery.name} · доставка учтена в расчёте`;
     calculate();
   } catch {
     deliveryStatus.className = 'delivery-status is-warn';
     deliveryStatus.textContent = 'Автоматически рассчитать не удалось. Выберите вариант из подсказки или укажите доставку вручную.';
+  }
+}
+
+
+function renderLeadPreview(result) {
+  const target = $('leadQuotePreview');
+  if (!target) return;
+  if (!result.summary.activeSections) {
+    target.textContent = 'Сначала укажите длину участка.';
+    return;
+  }
+  target.innerHTML = `<b>${money(result.summary.total)}${deliveryIsKnown() ? '' : ' · без доставки'}</b><br>${result.type.label} · ${number(result.summary.totalLength)} м · ${result.summary.totalSpans} пролётов · ${result.includeNewPosts ? 'новые столбы' : 'на готовые столбы'} · цвет: ${selectedColor}`;
+}
+
+async function loadFencePrices() {
+  if (isDev) return;
+  try {
+    const response = await fetch('/api/fence-prices', {cache:'no-store',headers:{accept:'application/json'}});
+    if (!response.ok) return;
+    const data = await response.json();
+    if (data?.fence && typeof data.fence === 'object') runtimeSettings = {...FENCE_SETTINGS,...data.fence};
+  } catch {}
+}
+
+function quoteText() {
+  if (!lastResult?.summary.activeSections) return '';
+  const sections = lastResult.sections.filter(item => item.active).map(item => `Участок ${item.index}: ${number(item.length)} × ${number(item.height)} м, ${item.spans} прол.`).join('\n');
+  return [
+    'Кузнечный ДворикЪ — предварительный расчёт забора из металлического евроштакетника',
+    `Тип: ${lastResult.type.label}`,
+    `Столбы: ${postInput.options[postInput.selectedIndex]?.textContent || postInput.value}; ${includePostsInput.checked ? 'нужны новые' : 'готовые'}`,
+    `Цвет: ${selectedColor}`,
+    sections,
+    `Общая длина: ${number(lastResult.summary.totalLength)} м`,
+    `Доставка: ${deliveryIsKnown() ? money(lastResult.summary.deliveryCost) : 'не указана'}`,
+    `Предварительная стоимость: ${money(lastResult.summary.total)}${deliveryIsKnown() ? '' : ' без доставки'}`
+  ].filter(Boolean).join('\n');
+}
+
+function leadPayload() {
+  const city = (leadCity?.value || selectedDelivery?.name || settlementInput.value).trim();
+  return {
+    category:'picket-fence',
+    source:'evroshtaketnik-calculator',
+    productTitle:'Забор из металлического евроштакетника',
+    name:$('leadName')?.value.trim() || '',
+    phone:$('leadPhone')?.value.trim() || '',
+    city,
+    consent:Boolean($('leadConsent')?.checked),
+    policyVersion:'2026-09-25',
+    comment:$('leadComment')?.value.trim() || '',
+    total:lastResult?.summary.total || 0,
+    posts:includePostsInput.checked,
+    message:quoteText(),
+    configuration:{
+      fenceType:typeInput.value,
+      fenceTypeLabel:lastResult?.type.label || '',
+      postType:postInput.value,
+      includeNewPosts:includePostsInput.checked,
+      color:selectedColor,
+      sections:readSections().filter(item => item.length > 0),
+      delivery:{known:deliveryIsKnown(),name:selectedDelivery?.name || settlementInput.value.trim(),price:deliveryCost()},
+      summary:lastResult ? {
+        totalLength:lastResult.summary.totalLength,
+        totalSpans:lastResult.summary.totalSpans,
+        postsByScheme:lastResult.summary.postsByScheme,
+        picketsActual:lastResult.summary.picketsActual,
+        tubeStocks:lastResult.summary.tubeStocks,
+        total:lastResult.summary.total
+      } : null
+    }
+  };
+}
+
+async function submitLead(event) {
+  event.preventDefault();
+  if (!leadState || !leadSubmit) return;
+  leadState.className = 'lead-state';
+  leadState.textContent = '';
+  if (!lastResult?.summary.activeSections) {
+    leadState.classList.add('is-error');
+    leadState.textContent = 'Сначала укажите размеры забора.';
+    return;
+  }
+  const payload = leadPayload();
+  const digits = payload.phone.replace(/\D/g,'');
+  if (digits.length < 10) {
+    leadState.classList.add('is-error');
+    leadState.textContent = 'Укажите корректный номер телефона.';
+    $('leadPhone')?.focus();
+    return;
+  }
+  if (!payload.city) {
+    leadState.classList.add('is-error');
+    leadState.textContent = 'Укажите населённый пункт.';
+    leadCity?.focus();
+    return;
+  }
+  if (!payload.consent) {
+    leadState.classList.add('is-error');
+    leadState.textContent = 'Подтвердите согласие на обработку персональных данных.';
+    return;
+  }
+
+  leadSubmit.disabled = true;
+  leadSubmit.textContent = 'Отправляем…';
+  try {
+    if (isDev) {
+      await new Promise(resolve => setTimeout(resolve, 300));
+      leadState.textContent = 'DEV: форма и состав заявки проверены. Реальному менеджеру заявка не отправлена.';
+      showToast('DEV-заявка подготовлена');
+      return;
+    }
+    const response = await fetch('/api/leads', {
+      method:'POST',
+      headers:{'content-type':'application/json','accept':'application/json'},
+      body:JSON.stringify(payload)
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || 'Не удалось отправить заявку');
+    leadState.textContent = 'Заявка отправлена. Менеджер получит ваш расчёт и свяжется с вами.';
+    showToast('Заявка отправлена ✓');
+  } catch (error) {
+    leadState.classList.add('is-error');
+    leadState.textContent = error?.message || 'Не удалось отправить заявку.';
+  } finally {
+    leadSubmit.disabled = false;
+    leadSubmit.textContent = 'Заказать бесплатный замер';
   }
 }
 
@@ -386,6 +574,7 @@ form.addEventListener('change', event => {
 });
 
 settlementInput.addEventListener('input', () => {
+  if (leadCity) leadCity.value = settlementInput.value;
   if (selectedDelivery && normalize(selectedDelivery.name) !== normalize(settlementInput.value)) {
     selectedDelivery = null;
     deliveryStatus.className = 'delivery-status';
@@ -419,7 +608,32 @@ document.addEventListener('click', event => {
   if (!settlementResults.contains(event.target) && event.target !== settlementInput) hideSettlementResults();
 });
 
+document.querySelectorAll('.type-card[data-type]').forEach(card => card.addEventListener('click', () => {
+  typeInput.value = card.dataset.type;
+  syncTypePicker();
+  calculate();
+}));
+document.querySelectorAll('.color-choice[data-color]').forEach(button => button.addEventListener('click', () => {
+  selectedColor = button.dataset.color || 'Графит';
+  syncColorPicker();
+  calculate();
+}));
+$('resultLeadButton')?.addEventListener('click', scrollToLead);
+$('mobileLeadButton')?.addEventListener('click', scrollToLead);
+$('copyQuote')?.addEventListener('click', async () => {
+  const text = quoteText();
+  if (!text) { showToast('Сначала укажите размеры'); return; }
+  try { await navigator.clipboard.writeText(text); showToast('Расчёт скопирован'); }
+  catch { showToast('Не удалось скопировать автоматически'); }
+});
+$('printQuote')?.addEventListener('click', () => {
+  if (!lastResult?.summary.activeSections) { showToast('Сначала укажите размеры'); return; }
+  window.print();
+});
+leadForm?.addEventListener('submit', submitLead);
+
 syncVisibleSections();
-syncTypeHelp();
-await loadDeliveryBase();
+syncTypePicker();
+syncColorPicker();
+await Promise.all([loadDeliveryBase(), loadFencePrices()]);
 calculate();
