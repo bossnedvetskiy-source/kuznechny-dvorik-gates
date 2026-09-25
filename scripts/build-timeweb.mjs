@@ -190,6 +190,7 @@ for (const sitePwaFile of ['site-sw.js','site-manifest.webmanifest','site-icon.s
 const hubHtml = await render('/napravleniya');
 await mkdir(path.join(output, 'napravleniya'), { recursive: true });
 await writeFile(path.join(output, 'napravleniya/index.html'), hubHtml, 'utf8');
+if (!(await readFile(path.join(output, 'evroshtaketnik/index.html'), 'utf8')).includes('Забор из')) throw new Error('Калькулятор евроштакетника не попал в Timeweb-сборку');
 
 const robotsTxt = [
   'User-agent: *',
@@ -218,6 +219,12 @@ const sitemapXml = `<?xml version="1.0" encoding="UTF-8"?>
     <lastmod>${lastmod}</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>${publicOrigin}/evroshtaketnik</loc>
+    <lastmod>${lastmod}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
   </url>
 </urlset>
 `;
