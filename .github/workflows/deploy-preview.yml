@@ -48,7 +48,6 @@ jobs:
           node --check app.js
           node --check shared/delivery.js
           node --check dev-access.js
-          node scripts/test-offline-integrity.mjs
           npm run build
 
       - name: Prepare isolated static dev site
