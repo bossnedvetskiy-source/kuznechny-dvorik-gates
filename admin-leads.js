@@ -152,7 +152,7 @@
     showToast(items.length===1?'Получена новая заявка':`Новых заявок: ${items.length}`);
     if (!('Notification' in window) || Notification.permission !== 'granted') return;
     const lead=items[0];
-    try { new Notification(items.length===1?'Новая заявка с сайта':`Новых заявок: ${items.length}`, {body:`${categoryLabel(lead.category||'gates')} · ${lead.city} · ${money(lead.total)}`, tag:`lead-${lead.id}`}); } catch {}
+    try { new Notification(items.length===1?`Новая заявка · ${categoryLabel(lead.category||'gates')}`:`Новых заявок: ${items.length}`, {body:[lead.city,sourceLabel(lead.source),money(lead.total)].filter(Boolean).join(' · '), tag:`lead-${lead.id}`}); } catch {}
   }
 
   function syncNotificationButton() {
