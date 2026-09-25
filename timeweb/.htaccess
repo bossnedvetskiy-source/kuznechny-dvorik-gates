@@ -40,6 +40,7 @@ RewriteRule ^update/?$ force-update.html [L]
 RewriteRule ^app/?$ /work-app.html?app-build=2026-09-23-v10 [R=302,L,NE]
 RewriteRule ^manager/?$ manager.html [L]
 RewriteRule ^napravleniya/?$ napravleniya/index.html [L]
+RewriteRule ^evroshtaketnik/?$ evroshtaketnik/index.html [L]
 
 # Compress text assets when the hosting Apache module is available. Image files
 # are already compressed and are intentionally not passed through DEFLATE.
