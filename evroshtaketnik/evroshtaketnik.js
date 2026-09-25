@@ -10,6 +10,8 @@ const form = $('fenceForm');
 const typeInput = $('fenceType');
 const postInput = $('postType');
 const includePostsInput = $('includePosts');
+const existingPostsInput = $('existingPostsCount');
+const existingPostsWrap = $('existingPostsWrap');
 const sectionsList = $('sectionsList');
 const addSectionButton = $('addSection');
 const removeSectionButton = $('removeSection');
@@ -31,6 +33,8 @@ const leadForm = $('leadForm');
 const leadState = $('leadState');
 const leadCity = $('leadCity');
 const leadSubmit = $('leadSubmit');
+const savedQuoteBar = $('savedQuoteBar');
+const SAVED_QUOTE_KEY = 'kuzdvor:picket-saved-v1';
 
 let visibleSections = 1;
 let deliveryRows = [];
@@ -77,10 +81,14 @@ function readSections() {
   return Array.from({length:4}, (_, index) => {
     const length = Number(sectionsList.querySelector(`[data-field="length"][data-index="${index}"]`)?.value || 0);
     const height = Number(sectionsList.querySelector(`[data-field="height"][data-index="${index}"]`)?.value || 1.8);
+    const gateOpening = Number(sectionsList.querySelector(`[data-field="gateOpening"][data-index="${index}"]`)?.value || 0);
+    const wicketOpening = Number(sectionsList.querySelector(`[data-field="wicketOpening"][data-index="${index}"]`)?.value || 0);
     const shared = Boolean(sectionsList.querySelector(`[data-field="shared"][data-index="${index}"]`)?.checked);
     return {
       length: index < visibleSections ? Math.max(0, length) : 0,
       height: Math.max(.5, height || 1.8),
+      gateOpening: index < visibleSections ? Math.max(0, gateOpening) : 0,
+      wicketOpening: index < visibleSections ? Math.max(0, wicketOpening) : 0,
       sharedWithNext: index < visibleSections - 1 ? shared : false
     };
   });
@@ -162,6 +170,7 @@ function calculate() {
     type: typeInput.value,
     post: postInput.value,
     includeNewPosts: includePostsInput.checked,
+    existingPostsCount: Number(existingPostsInput?.value || 0),
     sections: readSections(),
     deliveryCost: deliveryCost(),
     settings: runtimeSettings
