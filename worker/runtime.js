@@ -410,6 +410,15 @@ export default {
         return json({galleries: Object.fromEntries([...ALLOWED_ARTICLES].map(article => [article, defaultGallery(article)]))}, 200, 'no-store');
       }
     }
+    if (url.pathname === '/api/fence-prices') {
+      if (request.method !== 'GET') return json({error: 'Метод не поддерживается'}, 405);
+      try {
+        const prices = await loadPrices(env);
+        return json({fence: prices?.fence || {}}, 200, 'no-store');
+      } catch (error) {
+        return json({error: 'Не удалось загрузить расценки забора: ' + errorMessage(error)}, 503);
+      }
+    }
     if (url.pathname === '/api/delivery') {
       if (request.method !== 'GET') return json({error: 'Метод не поддерживается'}, 405);
       const place = (url.searchParams.get('place') || '').trim().replace(/\s+/g, ' ');
