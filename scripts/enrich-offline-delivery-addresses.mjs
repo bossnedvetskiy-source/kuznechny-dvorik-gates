@@ -28,7 +28,7 @@ async function fetchBoundaries(){
 (
   rel["boundary"="administrative"]["admin_level"~"^(4|6|8)$"](around:${RADIUS_M},${ORIGIN.lat},${ORIGIN.lon});
 );
-out tags geom;`;
+out body geom;`;
   let lastError=null;
   for(const endpoint of OVERPASS_ENDPOINTS){
     try{
