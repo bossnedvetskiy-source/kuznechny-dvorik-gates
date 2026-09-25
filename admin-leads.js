@@ -109,6 +109,16 @@
   };
   const statusLabel = status => ({new:'Новая',contacted:'Связались',done:'Закрыта',archived:'Архив'})[status] || status;
   const categoryLabel = category => ({gates:'Ворота с калиткой',canopy:'Автомобильный навес','forged-fence':'Кованый забор','profsheet-fence':'Забор из профнастила','picket-fence':'Евроштакетник'})[category] || 'Изделие';
+  const sourceLabel = value => {
+    const raw=String(value||'').trim();const key=raw.toLocaleLowerCase('ru-RU');
+    if(!raw||key==='site'||key.includes('calculator')||key.includes('kuzdvor')||key.includes('website')) return 'Сайт';
+    if(key.includes('vk')||key.includes('vkontakte')) return 'ВКонтакте';
+    if(key.includes('avito')) return 'Авито';
+    if(key.includes('direct')||key.includes('yandex')) return 'Яндекс Директ';
+    if(key==='ok'||key.includes('odnoklass')) return 'Одноклассники';
+    if(key.includes('whatsapp')) return 'WhatsApp';
+    return raw;
+  };
   const configLabel = key => ({width:'ширина',height:'высота',length:'длина',wicketWidth:'калитка',wicketHeight:'высота калитки',type:'тип',roof:'кровля',color:'цвет'})[key] || key;
   const phoneDigits = value => String(value || '').replace(/\D/g, '');
 
@@ -210,7 +220,7 @@
     for (const item of items) {
       const value = String(item?.value || '').trim();
       if (!value) continue;
-      options.push(`<option value="${escape(value)}">${escape(value)}${Number(item.count) ? ` · ${Number(item.count)}` : ''}</option>`);
+      options.push(`<option value="${escape(value)}">${escape(sourceLabel(value))}${Number(item.count) ? ` · ${Number(item.count)}` : ''}</option>`);
     }
     sourceFilter.innerHTML = options.join('');
     if ([...sourceFilter.options].some(option => option.value === current)) sourceFilter.value = current;
@@ -293,7 +303,7 @@
       const fieldThreeLabel=category==='gates'?'Калитка':(isPicket?'Столбы':'Изделие');
       const fieldThreeValue=category==='gates'?wicket:(isPicket?(fencePosts?`${fencePosts} всего · ${newFencePosts} новых`:'—'):(lead.product_title||categoryName));
       const optionValue=isPicket?(manualReview?'Проверить условия на замере':'Обычные условия'):options;
-      const sourceName=String(lead.source||'Сайт').trim()||'Сайт';
+      const sourceName=sourceLabel(lead.source);
       return `<article class="lead-card ${lead.status==='new'?'is-new':''}" data-lead-id="${lead.id}">
         <div class="lead-card-head"><div class="lead-main"><div class="lead-badges"><span class="lead-badge category">${escape(categoryName)}</span><span class="lead-badge source">${escape(sourceName)}</span></div><b>#${lead.id}${lead.article?' · '+escape(lead.article):''} · ${escape(lead.name || 'Клиент')}</b><span>${escape(formatDate(lead.created_at))} · ${escape(lead.city)}</span></div><strong class="lead-total">${money(lead.total)}</strong></div>
         <div class="lead-grid">
