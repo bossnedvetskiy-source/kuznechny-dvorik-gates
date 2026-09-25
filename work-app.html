@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0c0d0f">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Кузнечный Дворик — рабочее приложение</title>
+  <link rel="manifest" href="/site-manifest.webmanifest">
+  <link rel="icon" href="/site-icon.svg" type="image/svg+xml">
+  <style>
+    :root{--bg:#0c0d0f;--card:#151619;--card2:#1b1d20;--line:rgba(255,255,255,.10);--text:#f7f2e8;--muted:#aaa39a;--gold:#d3a044;--gold2:#f0c96f}
+    *{box-sizing:border-box}html{background:var(--bg)}body{margin:0;min-height:100dvh;background:radial-gradient(circle at 50% -10%,rgba(211,160,68,.15),transparent 42%),linear-gradient(180deg,#0c0d0f,#141518);color:var(--text);font-family:Arial,Helvetica,sans-serif}
+    button,a{font:inherit}.app{width:min(100%,620px);margin:0 auto;padding:max(18px,env(safe-area-inset-top)) 15px calc(26px + env(safe-area-inset-bottom))}
+    .brand{display:flex;align-items:center;gap:12px;margin:4px 0 24px}.logo{width:48px;height:48px;border:1px solid rgba(230,189,105,.35);border-radius:15px;display:grid;place-items:center;background:#121315;box-shadow:0 10px 26px rgba(0,0,0,.22)}.logo img{width:34px;height:34px}.brand-text{display:grid;gap:2px}.brand-text small{color:var(--gold2);font-weight:900;font-size:10px;letter-spacing:.08em;text-transform:uppercase}.brand-text strong{font:25px/1.05 Georgia,serif}
+    .hero{padding:19px;border:1px solid var(--line);border-radius:22px;background:rgba(21,22,25,.94);box-shadow:0 18px 42px rgba(0,0,0,.22)}h1{margin:0 0 8px;font:34px/1.05 Georgia,serif}.hero p{margin:0;color:var(--muted);font-size:13px;line-height:1.5}
+    .status{display:flex;align-items:center;gap:7px;margin-top:14px;color:#d9d2c8;font-size:11px;font-weight:800}.dot{width:8px;height:8px;border-radius:50%;background:#7b7b7b;box-shadow:0 0 0 4px rgba(255,255,255,.04)}.status.ready .dot{background:#63c37b}.status.offline .dot{background:var(--gold)}
+    .menu{display:grid;gap:11px;margin-top:14px}.tile{display:grid;grid-template-columns:52px 1fr auto;align-items:center;gap:13px;min-height:96px;padding:15px;border:1px solid var(--line);border-radius:19px;background:linear-gradient(145deg,#191a1d,#141518);color:var(--text);text-decoration:none;box-shadow:0 12px 30px rgba(0,0,0,.16)}.tile:active{transform:translateY(1px)}.tile-icon{width:52px;height:52px;border-radius:15px;display:grid;place-items:center;background:rgba(211,160,68,.10);border:1px solid rgba(211,160,68,.22);font-size:24px}.tile-copy{display:grid;gap:5px}.tile-copy b{font:20px/1.1 Georgia,serif}.tile-copy span{color:var(--muted);font-size:11px;line-height:1.4}.arrow{color:var(--gold2);font-size:25px}
+    .tile.primary{border-color:rgba(211,160,68,.34);background:linear-gradient(145deg,rgba(211,160,68,.12),#151619 55%)}.note{margin:14px 3px 0;color:#817b73;font-size:10.5px;line-height:1.5}
+    .install{display:none;width:100%;min-height:50px;margin-top:13px;border:0;border-radius:14px;background:linear-gradient(135deg,var(--gold2),var(--gold));color:#17120b;font-weight:900;font-size:14px}.install.show{display:block}.offline-tools{display:grid;gap:8px;margin-top:13px}.update-base{width:100%;min-height:50px;border:1px solid rgba(211,160,68,.34);border-radius:14px;background:#1b1c20;color:#f5e3bb;font-weight:900;font-size:14px}.update-base:disabled{opacity:.55}.update-meta{min-height:16px;color:var(--muted);font-size:10.5px;line-height:1.4}
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="brand">
+      <div class="logo"><img src="/site-icon.svg" alt=""></div>
+      <div class="brand-text"><small>Кузнечный ДворикЪ</small><strong>Рабочее приложение</strong></div>
+    </header>
+
+    <section class="hero">
+      <h1>Что делаем?</h1>
+      <p>Каталог, расчёт и ссылки клиентам теперь находятся в одном приложении.</p>
+      <div class="status" id="appStatus"><span class="dot"></span><span id="statusText">Проверяем офлайн-базу…</span></div>
+      <div class="offline-tools">
+        <button class="update-base" id="updateBaseButton" type="button">Проверяем базу…</button>
+        <div class="update-meta" id="updateMeta"></div>
+      </div>
+      <button class="install" id="installButton" type="button">Установить приложение на телефон</button>
+    </section>
+
+    <nav class="menu" aria-label="Разделы приложения">
+      <a class="tile primary" href="/?app=1">
+        <span class="tile-icon">▦</span>
+        <span class="tile-copy"><b>Каталог и расчёт</b><span>Все модели, фотографии, размеры, доставка и предварительная стоимость. Работает без сети.</span></span>
+        <span class="arrow">›</span>
+      </a>
+      <a class="tile" href="/links">
+        <span class="tile-icon">↗</span>
+        <span class="tile-copy"><b>Создать ссылку клиенту</b><span>Выберите населённый пункт, столбы, размеры и отправьте готовую ссылку.</span></span>
+        <span class="arrow">›</span>
+      </a>
+      <a class="tile" href="/admin">
+        <span class="tile-icon">📥</span>
+        <span class="tile-copy"><b>Заявки и админка</b><span>Новые заявки, фотографии, цены и каталог. Для этого раздела нужен интернет.</span></span>
+        <span class="arrow">›</span>
+      </a>
+    </nav>
+
+    <p class="note">Версия приложения обновляется автоматически. При запуске проверяется только маленький номер версии, а полная офлайн-база скачивается только если на сайте действительно что-то изменилось.</p>
+  </main>
+<script>
+(() => {
+  const $=id=>document.getElementById(id);
+  const status=$('appStatus'), text=$('statusText'), install=$('installButton');
+  const updateButton=$('updateBaseButton'), meta=$('updateMeta');
+  let prompt=null;
+  let updating=false;
+  let knownReady=false;
+  let knownMissingMediaUrls=[];
+  let storageProtected=false;
+
+  const set=(message,mode='')=>{text.textContent=message;status.className='status '+mode};
+  const fmt=value=>{
+    if(!value)return '';
+    const d=new Date(value);
+    if(Number.isNaN(d.getTime()))return '';
+    return d.toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});
+  };
+  const mediaLabel=url=>{
+    const value=String(url||'');
+    try{
+      const decoded=decodeURIComponent(value);
+      return decoded.split('/').filter(Boolean).pop()||decoded;
+    }catch{
+      return value.split('/').filter(Boolean).pop()||value;
+    }
+  };
+  const missingMediaText=urls=>{
+    const items=(Array.isArray(urls)?urls:[]).filter(Boolean);
+    if(!items.length)return '';
+    const first=mediaLabel(items[0]);
+    return items.length===1?'Не сохранилось фото: '+first:'Не сохранилось фото: '+items.length+' · первое: '+first;
+  };
+  const post=(type,extra={})=>navigator.serviceWorker.ready.then(reg=>{
+    const worker=reg.active||reg.waiting||reg.installing;
+    worker?.postMessage({type,...extra});
+  }).catch(()=>{});
+
+  function showStatus(data){
+    if(updating)return;
+    knownReady=Boolean(data?.ready);
+    knownMissingMediaUrls=Array.isArray(data?.missingMediaUrls)?data.missingMediaUrls.filter(Boolean):[];
+    if(data?.ready && data?.current){
+      set(navigator.onLine?'Офлайн-база готова ✓':'Офлайн · база готова ✓',navigator.onLine?'ready':'offline');
+      updateButton.textContent=knownMissingMediaUrls.length?'Догрузить '+knownMissingMediaUrls.length+' фото':'Проверить обновления';
+      meta.textContent=[data.updatedAt?'Последнее обновление: '+fmt(data.updatedAt):'',data.mediaCount?'Фотографий сохранено: '+data.mediaCount:'',missingMediaText(knownMissingMediaUrls),storageProtected?'хранилище защищено':''].filter(Boolean).join(' · ');
+    }else if(data?.ready){
+      set('Сохранённая база работает · доступно обновление','ready');
+      updateButton.textContent='Проверить обновления';
+      meta.textContent=data.updatedAt?'Сохранённая копия от '+fmt(data.updatedAt):'Есть сохранённая офлайн-копия.';
+    }else{
+      set(navigator.onLine?'Офлайн-база ещё не скачана':'Нет сохранённой офлайн-базы',navigator.onLine?'':'offline');
+      updateButton.textContent='Скачать офлайн-базу';
+      meta.textContent=navigator.onLine?'Нажмите кнопку перед первой поездкой без связи.':'Для первой загрузки базы нужен интернет.';
+    }
+    updateButton.disabled=false;
+  }
+
+  async function protectOfflineStorage(){
+    if(!navigator.storage?.persist)return false;
+    try{
+      storageProtected = await navigator.storage.persisted?.() || await navigator.storage.persist();
+      return storageProtected;
+    }catch{return false}
+  }
+
+  async function refreshStatus(){
+    if(!('serviceWorker' in navigator))return;
+    await post('GET_OFFLINE_STATUS');
+  }
+
+  if(!navigator.onLine)set('Проверяем сохранённую базу…','offline');
+
+  if('serviceWorker' in navigator){
+    const APP_BUILD='2026-09-23-v10';
+    let controllerReloaded=false;
+    navigator.serviceWorker.addEventListener('controllerchange',()=>{
+      if(controllerReloaded)return;
+      controllerReloaded=true;
+      const key='kuzdvor-controller-reload-'+APP_BUILD;
+      if(sessionStorage.getItem(key)==='1')return;
+      sessionStorage.setItem(key,'1');
+      location.reload();
+    });
+
+    navigator.serviceWorker.register('/site-sw.js?build='+encodeURIComponent(APP_BUILD),{scope:'/',updateViaCache:'none'}).then(async reg=>{
+      try{await reg.update()}catch{}
+      return navigator.serviceWorker.ready;
+    }).then(async()=>{
+      await protectOfflineStorage();
+      post('GET_OFFLINE_STATUS');
+      post('CHECK_OFFLINE_UPDATE',{auto:true,allowInitial:false});
+      post('FLUSH_LEADS');
+    }).catch(()=>set('Не удалось включить офлайн-режим'));
+
+    navigator.serviceWorker.addEventListener('message',event=>{
+      const data=event.data||{};
+      if(data.type==='OFFLINE_STATUS')showStatus(data);
+      if(data.type==='OFFLINE_NEEDS_INITIAL'){
+        if(updating)return;
+        knownReady=false;
+        set(navigator.onLine?'Офлайн-база ещё не скачана':'Нет сохранённой офлайн-базы',navigator.onLine?'':'offline');
+        updateButton.disabled=false;
+        updateButton.textContent='Скачать офлайн-базу';
+        meta.textContent=navigator.onLine?'Первая загрузка выполняется один раз. Дальше база скачивается только после изменений на сайте.':'Для первой загрузки базы нужен интернет.';
+      }
+      if(data.type==='OFFLINE_UPDATE_AVAILABLE'){
+        if(!updating){
+          set('На сайте есть изменения · обновляем базу');
+          meta.textContent='Обнаружена новая версия сайта. Скачиваются только после обнаружения изменений.';
+        }
+      }
+      if(data.type==='OFFLINE_UP_TO_DATE'){
+        updating=false;knownReady=true;
+        knownMissingMediaUrls=Array.isArray(data.missingMediaUrls)?data.missingMediaUrls.filter(Boolean):[];
+        set(navigator.onLine?'Офлайн-база актуальна ✓':'Офлайн · база готова ✓',navigator.onLine?'ready':'offline');
+        updateButton.disabled=false;
+        updateButton.textContent=knownMissingMediaUrls.length?'Догрузить '+knownMissingMediaUrls.length+' фото':'Проверить обновления';
+        meta.textContent=[data.updatedAt?'Последнее обновление: '+fmt(data.updatedAt):'',data.mediaCount?'Фотографий сохранено: '+data.mediaCount:'',missingMediaText(knownMissingMediaUrls),'Изменений на сайте нет'].filter(Boolean).join(' · ');
+      }
+      if(data.type==='OFFLINE_UPDATE_CHECK_FAILED'){
+        updating=false;
+        set(knownReady?'Сохранённая база работает · проверку повторим позже':'Не удалось проверить обновления',knownReady?'ready':'');
+        updateButton.disabled=false;
+        updateButton.textContent=knownReady?'Проверить обновления':'Скачать офлайн-базу';
+        meta.textContent=knownReady?'Полная база не скачивалась. Используется сохранённая копия.':'Проверьте интернет и повторите.';
+      }
+      if(data.type==='OFFLINE_WARM_START'){
+        updating=true;
+        updateButton.disabled=true;
+        updateButton.textContent='Обновляем…';
+        meta.textContent='На сайте обнаружены изменения. Не закрывайте приложение до окончания загрузки.';
+        set('Обновляем офлайн-базу…');
+      }
+      if(data.type==='OFFLINE_WARM_PROGRESS'){
+        const pct=data.total?Math.round(data.current/data.total*100):0;
+        set((data.stage==='media'?'Сохраняем фотографии · ':'Обновляем приложение · ')+pct+'%');
+      }
+      if(data.type==='OFFLINE_READY'){
+        updating=false;knownReady=true;
+        knownMissingMediaUrls=Array.isArray(data.missingMediaUrls)?data.missingMediaUrls.filter(Boolean):[];
+        set('Офлайн-база обновлена ✓','ready');
+        updateButton.disabled=false;
+        updateButton.textContent=knownMissingMediaUrls.length?'Догрузить '+knownMissingMediaUrls.length+' фото':'Проверить обновления';
+        meta.textContent=['Обновлено: '+fmt(data.updatedAt),data.count?'Фотографий: '+data.count:'',missingMediaText(knownMissingMediaUrls),storageProtected?'хранилище защищено':''].filter(Boolean).join(' · ');
+      }
+      if(data.type==='OFFLINE_MEDIA_RETRY_START'){
+        updating=true;
+        updateButton.disabled=true;
+        updateButton.textContent='Догружаем фото…';
+        set('Догружаем недостающее фото…');
+        meta.textContent='Повторно скачиваются только недостающие фотографии. Вся база заново не загружается.';
+      }
+      if(data.type==='OFFLINE_MEDIA_RETRY_PROGRESS'){
+        const pct=data.total?Math.round(data.current/data.total*100):0;
+        set('Догружаем недостающее фото · '+pct+'%');
+      }
+      if(data.type==='OFFLINE_MEDIA_RETRY_DONE'){
+        updating=false;knownReady=true;
+        knownMissingMediaUrls=Array.isArray(data.missingMediaUrls)?data.missingMediaUrls.filter(Boolean):[];
+        set(knownMissingMediaUrls.length?'Офлайн-база готова · не всё фото сохранено':'Все фотографии сохранены ✓','ready');
+        updateButton.disabled=false;
+        updateButton.textContent=knownMissingMediaUrls.length?'Догрузить '+knownMissingMediaUrls.length+' фото':'Проверить обновления';
+        meta.textContent=knownMissingMediaUrls.length
+          ? missingMediaText(knownMissingMediaUrls)+' · остальная база полностью работает офлайн.'
+          : 'Недостающее фото успешно догружено. Офлайн-база полная.';
+      }
+      if(data.type==='OFFLINE_PARTIAL'){
+        updating=false;
+        const saved=Boolean(data.previousReady||knownReady);
+        knownReady=saved;
+        set(saved?'Не всё обновилось · сохранённая база работает':'Не удалось сохранить обязательные данные',saved?'ready':'');
+        updateButton.disabled=false;
+        updateButton.textContent='Повторить обновление';
+        const critical=Array.isArray(data.criticalFailures)?data.criticalFailures.filter(Boolean):[];
+        meta.textContent=saved
+          ? 'Не удалось обновить обязательные данные. Предыдущая офлайн-база сохранена — можно продолжать работать без сети и повторить обновление позже.'
+          : 'Не удалось сохранить обязательные данные приложения'+(critical.length?' ('+critical.join(', ')+')':'')+'. Повторите обновление. Отдельные фотографии больше не блокируют готовность офлайн-базы.';
+      }
+    });
+  }
+
+  updateButton.addEventListener('click',async()=>{
+    if(!navigator.onLine){
+      set(knownReady?'Офлайн · используется сохранённая база':'Для загрузки базы нужен интернет','offline');
+      return;
+    }
+    if(updating)return;
+    await protectOfflineStorage();
+    updating=true;
+    updateButton.disabled=true;
+    if(knownReady && knownMissingMediaUrls.length){
+      updateButton.textContent='Догружаем фото…';
+      meta.textContent='Повторно скачивается только '+knownMissingMediaUrls.length+' недостающее фото. Остальная база не трогается.';
+      post('RETRY_MISSING_MEDIA');
+      return;
+    }
+    updateButton.textContent=knownReady?'Проверяем изменения…':'Скачиваем…';
+    meta.textContent=knownReady?'Сначала проверяем, менялся ли сайт. Если изменений нет, база скачиваться не будет.':'Выполняется первая загрузка офлайн-базы.';
+    post('CHECK_OFFLINE_UPDATE',{auto:true,allowInitial:true});
+  });
+
+  addEventListener('online',()=>{
+    set(knownReady?'Связь есть · офлайн-база сохранена':'Связь появилась');
+    post('FLUSH_LEADS');
+    refreshStatus();
+    post('CHECK_OFFLINE_UPDATE',{auto:true,allowInitial:false});
+  });
+  addEventListener('offline',()=>set(knownReady?'Офлайн · база готова ✓':'Офлайн · база не скачана','offline'));
+
+  addEventListener('beforeinstallprompt',event=>{event.preventDefault();prompt=event;install.classList.add('show')});
+  install.addEventListener('click',async()=>{if(!prompt)return;prompt.prompt();try{await prompt.userChoice}catch{}prompt=null;install.classList.remove('show')});
+  addEventListener('appinstalled',async()=>{install.classList.remove('show');await protectOfflineStorage();refreshStatus()});
+})();
+</script>
+</body>
+</html>
