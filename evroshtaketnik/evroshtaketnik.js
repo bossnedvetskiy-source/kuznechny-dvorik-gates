@@ -156,14 +156,40 @@ function syncPostOptions() {
   if (existingPostsWrap) existingPostsWrap.hidden = !includePostsInput.checked;
 }
 
+function createQuoteNumber() {
+  const now = new Date();
+  const yy = String(now.getFullYear()).slice(-2);
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const dd = String(now.getDate()).padStart(2, '0');
+  let suffix = '';
+  try {
+    const bytes = new Uint8Array(2);
+    crypto.getRandomValues(bytes);
+    suffix = [...bytes].map(value => value.toString(16).padStart(2, '0')).join('').toUpperCase();
+  } catch {
+    suffix = Math.random().toString(36).slice(2, 6).toUpperCase().padEnd(4, '0');
+  }
+  return `ЗБ-${yy}${mm}${dd}-${suffix}`;
+}
+
+function ensureQuoteNumber() {
+  if (!quoteNumber) quoteNumber = createQuoteNumber();
+  return quoteNumber;
+}
+
 function quoteState() {
   return {
-    v: 1,
+    v: 2,
+    quoteNumber: lastResult?.summary.activeSections ? ensureQuoteNumber() : quoteNumber,
     type: typeInput.value,
     post: postInput.value,
     includeNewPosts: includePostsInput.checked,
     existingPostsCount: Math.max(0, Math.floor(Number(existingPostsInput?.value || 0))),
     color: selectedColor,
+    siteConditions: {
+      slope: Boolean(hasSlopeInput?.checked),
+      hardSurface: Boolean(hasHardSurfaceInput?.checked)
+    },
     sections: readSections().slice(0, visibleSections),
     delivery: {
       manual: Boolean(manualDeliveryEnabled.checked),
@@ -173,6 +199,35 @@ function quoteState() {
       price: Math.max(0, Number(selectedDelivery?.price) || 0)
     }
   };
+}
+
+function readDraftQuote() {
+  try {
+    const value = JSON.parse(localStorage.getItem(DRAFT_QUOTE_KEY) || 'null');
+    if (!value || typeof value !== 'object') return null;
+    const savedAt = Number(value.savedAt || 0);
+    if (savedAt && Date.now() - savedAt > 30 * 24 * 60 * 60 * 1000) {
+      localStorage.removeItem(DRAFT_QUOTE_KEY);
+      return null;
+    }
+    return value;
+  } catch {
+    return null;
+  }
+}
+
+function scheduleDraftSave() {
+  if (restoringState) return;
+  clearTimeout(draftTimer);
+  draftTimer = setTimeout(() => {
+    try {
+      if (!lastResult?.summary.activeSections) {
+        localStorage.removeItem(DRAFT_QUOTE_KEY);
+        return;
+      }
+      localStorage.setItem(DRAFT_QUOTE_KEY, JSON.stringify({...quoteState(), savedAt:Date.now()}));
+    } catch {}
+  }, 220);
 }
 
 function encodeQuoteState(state) {
