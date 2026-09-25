@@ -104,7 +104,8 @@
             <div><small>Шаг 2</small><h2>Размеры участков</h2></div>
             <span class="panel-hint">максимум 4</span>
           </div>
-          <p class="help">Каждый прямой участок с отдельной длиной или высотой добавляйте отдельно. Внутри участка можно вычесть проём ворот и калитки. Если следующий участок начинается от того же углового столба, включите переключатель между ними.</p>
+          <p class="help">Укажите полную длину каждого прямого участка. Если внутри есть ворота или калитка — добавьте их проёмы, калькулятор вычтет их из длины заполнения. Для угла отметьте общий столб.</p>
+          <div class="opening-warning"><b>Важно:</b> стоимость ворот и калитки здесь не считается — из забора вычитается только ширина их проёмов.</div>
           <div id="sectionsList" class="sections-list"></div>
           <div class="section-actions">
             <button id="addSection" type="button" class="secondary-button">+ Добавить участок</button>
@@ -143,7 +144,7 @@
 
           <dl class="result-summary">
             <div><dt>Тип заполнения</dt><dd id="summaryType">Вертикальный двусторонний</dd></div>
-            <div><dt>Общая длина</dt><dd id="summaryLength">0 м</dd></div>
+            <div><dt>Длина заполнения</dt><dd id="summaryLength">0 м</dd></div>
             <div><dt>Столбов на схеме</dt><dd id="summaryPosts">0</dd></div>
             <div><dt>Доставка</dt><dd id="summaryDelivery">не указана</dd></div>
           </dl>
