@@ -883,6 +883,8 @@ function leadPayload() {
       },
       sections:readSections().filter(item => item.length > 0),
       delivery:{known:deliveryIsKnown(),name:selectedDelivery?.name || settlementInput.value.trim(),price:deliveryCost()},
+      calculationSettings:{...runtimeSettings},
+      costs:lastResult ? {...lastResult.costs} : null,
       summary:lastResult ? {
         grossLineLength:lastResult.summary.grossLineLength,
         openingsWidth:lastResult.summary.openingsWidth,
