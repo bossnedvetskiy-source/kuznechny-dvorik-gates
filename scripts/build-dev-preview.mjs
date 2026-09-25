@@ -7,6 +7,7 @@ const OUT = path.join(ROOT, '_site');
 const BASE = '/kuznechny-dvorik-gates';
 const ACCESS_FILE = path.join(ROOT, 'dev-access.js');
 const LIVE_CATALOG = '/tmp/kuzdvor-live-catalog.json';
+const LIVE_FENCE_PRICES = '/tmp/kuzdvor-live-fence-prices.json';
 
 await rm(OUT, {recursive:true, force:true});
 await cp(SOURCE, OUT, {recursive:true});
@@ -42,6 +43,18 @@ try {
 catalogJson = catalogJson.replaceAll('"/catalog-media/', '"https://kuzdvor.tw1.ru/catalog-media/');
 await mkdir(path.join(OUT, 'api'), {recursive:true});
 await writeFile(path.join(OUT, 'api', 'catalog-images'), catalogJson, 'utf8');
+
+// DEV uses the current production fence rates, but remains read-only and isolated.
+let fencePricesJson = '';
+try {
+  fencePricesJson = await readFile(LIVE_FENCE_PRICES, 'utf8');
+  const parsed = JSON.parse(fencePricesJson);
+  if (!parsed?.fence || typeof parsed.fence !== 'object') throw new Error('invalid live fence rates');
+} catch {
+  const defaults = JSON.parse(await readFile(path.join(SOURCE, 'backend/defaults.json'), 'utf8'));
+  fencePricesJson = JSON.stringify({fence:defaults?.prices?.fence || {}});
+}
+await writeFile(path.join(OUT, 'api', 'fence-prices'), fencePricesJson, 'utf8');
 
 const access = await readFile(ACCESS_FILE, 'utf8');
 const hideStyle = '<style id="kuzdvor-dev-hide">html{background:#0c0d0f}body>*{visibility:hidden!important}#kuzdvor-dev-gate,#kuzdvor-dev-gate *{visibility:visible!important}</style>';
@@ -108,5 +121,7 @@ for (const required of [
   if (!index.includes(required)) throw new Error(`Dev preview missing: ${required}`);
 }
 if (index.includes('<script src="app.js"')) throw new Error('Dev preview is using raw source scripts instead of the production bundle');
+const fencePrices = JSON.parse(await readFile(path.join(OUT, 'api', 'fence-prices'), 'utf8'));
+if (!fencePrices?.fence || typeof fencePrices.fence !== 'object') throw new Error('Dev preview fence prices are missing');
 
 console.log('Protected dev preview built from exact Timeweb frontend package');
