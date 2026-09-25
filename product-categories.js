@@ -39,9 +39,9 @@ window.PRODUCT_CATEGORIES = [
     id: 'picket-fence',
     title: 'Забор из евроштакетника',
     eyebrow: 'Заборы',
-    description: 'Односторонний или шахматка — расчёт по вашим размерам.',
+    description: 'Односторонний, шахматка или горизонтальный — точный расчёт по участкам.',
     href: '/evroshtaketnik',
     action: 'Рассчитать забор',
-    status: 'planned'
+    status: 'active'
   }
 ];
