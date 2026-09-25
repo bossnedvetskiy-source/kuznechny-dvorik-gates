@@ -288,19 +288,24 @@ function setSectionValue(index, field, value) {
   else input.value = String(value ?? '');
 }
 
-function restoreQuoteState(state, {fromLink = false} = {}) {
+function restoreQuoteState(state, {fromLink = false, fromDraft = false} = {}) {
   if (!state || typeof state !== 'object') return false;
+  restoringState = true;
   if (state.type && [...typeInput.options].some(option => option.value === state.type)) typeInput.value = state.type;
   if (state.post && [...postInput.options].some(option => option.value === state.post)) postInput.value = state.post;
   includePostsInput.checked = state.includeNewPosts !== false;
   if (existingPostsInput) existingPostsInput.value = String(Math.max(0, Math.floor(Number(state.existingPostsCount) || 0)));
   selectedColor = String(state.color || 'Графит');
+  quoteNumber = String(state.quoteNumber || quoteNumber || '');
+  if (hasSlopeInput) hasSlopeInput.checked = Boolean(state.siteConditions?.slope);
+  if (hasHardSurfaceInput) hasHardSurfaceInput.checked = Boolean(state.siteConditions?.hardSurface);
 
   const sections = Array.isArray(state.sections) ? state.sections.slice(0,4) : [];
   visibleSections = Math.min(4, Math.max(1, sections.length || 1));
   for (let index = 0; index < 4; index += 1) {
     const item = sections[index] || {};
-    setSectionValue(index, 'length', index < visibleSections ? Math.max(0, Number(item.length) || 0) : 0);
+    const restoredLength = index < visibleSections ? Math.max(0, Number(item.length) || 0) : 0;
+    setSectionValue(index, 'length', restoredLength > 0 ? restoredLength : '');
     setSectionValue(index, 'height', Math.max(.5, Number(item.height) || 1.8));
     setSectionValue(index, 'gateOpening', index < visibleSections ? Math.max(0, Number(item.gateOpening) || 0) : 0);
     setSectionValue(index, 'wicketOpening', index < visibleSections ? Math.max(0, Number(item.wicketOpening) || 0) : 0);
@@ -346,7 +351,10 @@ function restoreQuoteState(state, {fromLink = false} = {}) {
   syncTypePicker();
   syncColorPicker();
   calculate();
+  restoringState = false;
+  scheduleDraftSave();
   if (fromLink) showToast('Расчёт из ссылки восстановлен');
+  else if (fromDraft) showToast('Черновик расчёта восстановлен');
   return true;
 }
 
