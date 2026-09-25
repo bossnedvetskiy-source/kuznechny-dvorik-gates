@@ -150,14 +150,28 @@
         const title=[categoryLabel(lead.category),lead.article].filter(Boolean).join(' · ');
         const size=lead.width&&lead.height?lead.width+'×'+lead.height+' м':'—';
         const wicket=lead.wicket_width?lead.wicket_width+' м':'—';
+        const config=lead.configuration&&typeof lead.configuration==='object'?lead.configuration:{};
+        const isPicket=lead.category==='picket-fence';
+        const fenceSummary=config.summary&&typeof config.summary==='object'?config.summary:{};
+        const fenceLength=Number(fenceSummary.totalLength)||0;
+        const fenceType=String(config.fenceTypeLabel||'Евроштакетник');
+        const fencePosts=Number(fenceSummary.postsByScheme)||0;
+        const newFencePosts=Number(fenceSummary.newPosts)||0;
+        const manualReview=Boolean(config.siteConditions?.needsManualReview);
+        const infoTwoLabel=isPicket?'Забор':'Размер ворот';
+        const infoTwoValue=isPicket?(fenceLength?fenceLength+' м · '+fenceType:fenceType):size;
+        const infoThreeLabel=isPicket?'Столбы':'Калитка';
+        const infoThreeValue=isPicket?(fencePosts?fencePosts+' всего · '+newFencePosts+' новых':'—'):wicket;
+        const infoFourLabel=isPicket?'Условия':'Столбы';
+        const infoFourValue=isPicket?(manualReview?'Проверить на замере':'Обычные'):(lead.posts?'Нужны новые':'Свои');
         const when=String(wf.nextActionAt||'').slice(0,16);
         return `<article class="lead-card ${stage==='new'?'is-new':''}" data-lead-id="${lead.id}">
           <div class="lead-head"><div class="lead-title"><b>${escape(lead.name||'Клиент')} · ${escape(lead.city||'')}</b><span>№${lead.id} · ${escape(fmt(lead.created_at))} · ${escape(title)}</span></div><div class="lead-total">${money(lead.client_total||lead.total)}</div></div>
           <div class="lead-info">
             <div class="info"><span>Телефон</span><b>${escape(lead.phone||'—')}</b></div>
-            <div class="info"><span>Размер ворот</span><b>${escape(size)}</b></div>
-            <div class="info"><span>Калитка</span><b>${escape(wicket)}</b></div>
-            <div class="info"><span>Столбы</span><b>${lead.posts?'Нужны новые':'Свои'}</b></div>
+            <div class="info"><span>${escape(infoTwoLabel)}</span><b>${escape(infoTwoValue)}</b></div>
+            <div class="info"><span>${escape(infoThreeLabel)}</span><b>${escape(infoThreeValue)}</b></div>
+            <div class="info"><span>${escape(infoFourLabel)}</span><b>${escape(infoFourValue)}</b></div>
           </div>
           <div class="contact-row"><a href="tel:+${digits}">☎ Позвонить</a><a href="${wa}" target="_blank" rel="noopener">WhatsApp</a></div>
           <div class="workflow">
