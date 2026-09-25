@@ -71,16 +71,20 @@ jobs:
           grep -Fq 'Выберите тип заполнения' timeweb-dist/evroshtaketnik/index.html
           grep -Fq 'Оставить заявку на бесплатный замер' timeweb-dist/evroshtaketnik/index.html
 
-      - name: Snapshot current production catalog
+      - name: Snapshot current production data
         continue-on-error: true
         shell: bash
         run: |
           set -euo pipefail
-          rm -f /tmp/kuzdvor-live-catalog.json
+          rm -f /tmp/kuzdvor-live-catalog.json /tmp/kuzdvor-live-fence-prices.json
           curl -fsS --connect-timeout 4 --max-time 15 --retry 2 --retry-delay 2 \
             https://kuzdvor.tw1.ru/api/catalog-images \
             -o /tmp/kuzdvor-live-catalog.json
+          curl -fsS --connect-timeout 4 --max-time 15 --retry 2 --retry-delay 2 \
+            https://kuzdvor.tw1.ru/api/fence-prices \
+            -o /tmp/kuzdvor-live-fence-prices.json
           node -e "JSON.parse(require('fs').readFileSync('/tmp/kuzdvor-live-catalog.json','utf8')); console.log('Live catalog snapshot OK')"
+          node -e "const x=JSON.parse(require('fs').readFileSync('/tmp/kuzdvor-live-fence-prices.json','utf8')); if(!x.fence) throw Error('Fence prices missing'); console.log('Live fence prices snapshot OK')"
 
       - name: Prepare protected dev preview
         run: node scripts/build-dev-preview.mjs
@@ -98,6 +102,7 @@ jobs:
           test -s _site/calculator.bundle.js
           test -s _site/catalog-enhancements.bundle.js
           test -s _site/api/catalog-images
+          test -s _site/api/fence-prices
           if grep -Fq '<script src="app.js"' _site/index.html; then
             echo 'Dev preview is still using raw source scripts' >&2
             exit 1
