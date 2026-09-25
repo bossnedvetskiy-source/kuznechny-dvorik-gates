@@ -48,13 +48,19 @@ jobs:
         run: |
           set -euo pipefail
           node --check dev-access.js
+          node --check evroshtaketnik/engine.js
+          node --check evroshtaketnik/evroshtaketnik.js
           node --check scripts/build-dev-preview.mjs
+          node scripts/test-picket-calculator.mjs
           npm run build
           node scripts/build-timeweb.mjs
           test -s timeweb-dist/index.html
           test -s timeweb-dist/site.css
           test -s timeweb-dist/site.bundle.js
           test -s timeweb-dist/calculator.bundle.js
+          test -s timeweb-dist/evroshtaketnik/index.html
+          test -s timeweb-dist/evroshtaketnik/engine.js
+          test -s timeweb-dist/evroshtaketnik/evroshtaketnik.js
 
       - name: Snapshot current production catalog
         continue-on-error: true
