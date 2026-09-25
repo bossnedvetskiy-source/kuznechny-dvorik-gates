@@ -35,6 +35,11 @@ try {
         kd_json(['galleries' => kd_all_galleries(false)]);
     }
 
+    if ($route === 'fence-prices' && $method === 'GET') {
+        $prices = kd_prices();
+        kd_json(['fence' => is_array($prices['fence'] ?? null) ? $prices['fence'] : []]);
+    }
+
     if ($route === 'delivery' && $method === 'GET') {
         kd_json(kd_delivery_quote((string)($_GET['place'] ?? '')));
     }
