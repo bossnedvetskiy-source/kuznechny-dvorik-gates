@@ -949,6 +949,7 @@ async function submitLead(event) {
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || 'Не удалось отправить заявку');
     leadState.textContent = 'Заявка отправлена. Менеджер получит ваш расчёт и свяжется с вами.';
+    try { localStorage.removeItem(DRAFT_QUOTE_KEY); } catch {}
     showToast('Заявка отправлена ✓');
   } catch (error) {
     leadState.classList.add('is-error');
