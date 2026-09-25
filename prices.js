@@ -78,6 +78,25 @@ window.PRICE_DATA = {
   catalogInstallation: 8000,
   catalogPosts: 25000,
 
+  // Расценки калькулятора забора из металлического евроштакетника.
+  // Геометрические правила остаются в engine.js, здесь только изменяемые ставки.
+  fence: {
+    picketSinglePrice: 110,
+    picketDoublePrice: 130,
+    tube40Price: 144,
+    post60Price: 305,
+    post80Price: 600,
+    post100Price: 750,
+    paintPrice: 650,
+    workVerticalSingle: 1300,
+    workVerticalDouble: 1800,
+    workHorizontalDouble: 2000,
+    postInstallPrice: 800,
+    screwPrice: 2,
+    markupPercent: 0,
+    measurerPercent: 4
+  },
+
   catalog: [
     { art: 'Арт.6', price: 56600 },
     { art: 'Арт.18', price: 59800 },
