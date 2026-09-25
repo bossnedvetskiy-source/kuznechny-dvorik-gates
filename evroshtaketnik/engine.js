@@ -21,6 +21,7 @@ export const FENCE_SETTINGS = Object.freeze({
   screwPrice: 2,
   markupPercent: 0,
   tubeStockLength: 6,
+  picketReservePerSide: 2,
   measurerPercent: 4
 });
 
@@ -128,7 +129,10 @@ export function calculateFence(input = {}) {
       ? settings.workVerticalSingle
       : typeKey === 'horizontal-double'
         ? settings.workHorizontalDouble
-        : settings.workVerticalDouble
+        : settings.workVerticalDouble,
+    screwsPerPicket: typeKey === 'horizontal-double'
+      ? settings.screwHorizontal
+      : settings.screwVertical
   };
   const postKey = POST_TYPES[input.post] ? input.post : '80x80x3';
   const basePost = POST_TYPES[postKey];
@@ -230,8 +234,8 @@ export function calculateFence(input = {}) {
     let reserveFront = 0;
     let reserveRear = 0;
     if (actualCount > 0 && type.isDouble && !seenPicketLengths.has(picketLengthMm)) {
-      reserveFront = 2;
-      reserveRear = 2;
+      reserveFront = Math.max(0, Math.floor(finite(settings.picketReservePerSide)));
+      reserveRear = Math.max(0, Math.floor(finite(settings.picketReservePerSide)));
       seenPicketLengths.add(picketLengthMm);
     }
     const frontCosted = frontActual + reserveFront;
