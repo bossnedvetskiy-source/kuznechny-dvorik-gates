@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0d0f11">
+  <meta name="robots" content="index,follow,max-image-preview:large">
+  <meta name="description" content="Предварительный расчёт забора из евроштакетника по длине, высоте, типу заполнения, столбам и доставке. Кузнечный ДворикЪ, Мелеуз.">
+  <link rel="canonical" href="https://kuzdvor.tw1.ru/evroshtaketnik">
+  <title>Забор из евроштакетника — расчёт стоимости | Кузнечный ДворикЪ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Prata&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./evroshtaketnik.css">
+</head>
+<body>
+  <header class="topbar shell">
+    <a class="brand" href="/napravleniya">
+      <span class="brand-mark">К</span>
+      <span><b>Кузнечный ДворикЪ</b><small>собственное производство · Мелеуз</small></span>
+    </a>
+    <a class="back-link" href="/napravleniya">← Все изделия</a>
+  </header>
+
+  <main>
+    <section class="hero shell">
+      <div class="eyebrow">Заборы · онлайн-расчёт</div>
+      <h1>Забор из <em>евроштакетника</em></h1>
+      <p>Укажите длину и высоту участков. Калькулятор сам разобьёт забор на пролёты до 2,5 м, учтёт ширину столбов, целые планки евроштакетника, раскрой трубы 40×20 по 6 м и стоимость работ.</p>
+      <div class="hero-pills">
+        <span>до 4 участков</span><span>ширина столбов учтена</span><span>без резки штакетника вдоль</span>
+      </div>
+    </section>
+
+    <section class="calculator shell">
+      <form id="fenceForm" class="calc-form" novalidate>
+        <div class="panel">
+          <div class="panel-head"><div><small>Шаг 1</small><h2>Комплектация</h2></div></div>
+
+          <div class="field-grid">
+            <label class="field field-wide">
+              <span>Тип забора</span>
+              <select id="fenceType">
+                <option value="vertical-double">Вертикальный двусторонний — шахматка</option>
+                <option value="vertical-single">Вертикальный односторонний</option>
+                <option value="horizontal-double">Горизонтальный двусторонний</option>
+              </select>
+            </label>
+
+            <label class="field">
+              <span>Столбы</span>
+              <select id="postType">
+                <option value="60x60x2">60×60×2</option>
+                <option value="80x80x3" selected>80×80×3</option>
+                <option value="100x100x3">100×100×3</option>
+              </select>
+            </label>
+
+            <label class="switch-field">
+              <span><b>Новые столбы</b><small>Учесть материал, бетонирование и установку</small></span>
+              <input id="includePosts" type="checkbox" checked>
+              <i aria-hidden="true"></i>
+            </label>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <div><small>Шаг 2</small><h2>Размеры участков</h2></div>
+            <span class="panel-hint">максимум 4</span>
+          </div>
+          <p class="help">Каждый прямой участок с отдельной длиной или высотой добавляйте отдельно. Если два участка сходятся на одном угловом столбе, отметьте это между ними.</p>
+
+          <div id="sectionsList" class="sections-list"></div>
+          <div class="section-actions">
+            <button id="addSection" type="button" class="secondary-button">+ Добавить участок</button>
+            <button id="removeSection" type="button" class="ghost-button">Убрать последний</button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head"><div><small>Шаг 3</small><h2>Доставка</h2></div></div>
+          <label class="field field-wide delivery-field">
+            <span>Населённый пункт</span>
+            <input id="settlement" type="text" autocomplete="off" placeholder="Например, Салават">
+            <div id="settlementResults" class="settlement-results" hidden></div>
+          </label>
+          <div id="deliveryStatus" class="delivery-status">Начните вводить населённый пункт — стоимость доставки добавится автоматически.</div>
+          <details class="manual-delivery">
+            <summary>Указать доставку вручную</summary>
+            <label class="field">
+              <span>Стоимость доставки, ₽</span>
+              <input id="manualDelivery" type="number" min="0" step="100" value="0" inputmode="numeric">
+            </label>
+            <label class="switch-field compact">
+              <span><b>Использовать ручную стоимость</b></span>
+              <input id="manualDeliveryEnabled" type="checkbox">
+              <i aria-hidden="true"></i>
+            </label>
+          </details>
+        </div>
+      </form>
+
+      <aside class="result-card" aria-live="polite">
+        <div class="result-sticky">
+          <small class="result-label">Предварительная стоимость</small>
+          <div id="totalPrice" class="total-price">0 ₽</div>
+          <div id="resultStatus" class="result-status">Добавьте длину первого участка</div>
+
+          <dl class="result-summary">
+            <div><dt>Тип</dt><dd id="summaryType">Вертикальный двусторонний</dd></div>
+            <div><dt>Общая длина</dt><dd id="summaryLength">0 м</dd></div>
+            <div><dt>Столбов по схеме</dt><dd id="summaryPosts">0</dd></div>
+            <div><dt>Доставка</dt><dd id="summaryDelivery">0 ₽</dd></div>
+          </dl>
+
+          <div class="result-note">Это предварительный расчёт. Точные размеры и итоговую стоимость зафиксируем после бесплатного замера.</div>
+          <a class="primary-button" href="tel:+79373296750">Позвонить и записаться на замер</a>
+        </div>
+      </aside>
+    </section>
+
+    <section class="scheme-section shell">
+      <div class="section-title">
+        <div><small>Схема</small><h2>Как разбит ваш забор</h2></div>
+        <p>▮ — столб. Размер каждого пролёта уже рассчитан с учётом ширины выбранного столба.</p>
+      </div>
+      <div id="schemeList" class="scheme-list">
+        <div class="empty-state">Добавьте длину участка, чтобы увидеть схему.</div>
+      </div>
+    </section>
+
+    <section id="internalPanel" class="internal shell" hidden>
+      <div class="section-title">
+        <div><small>Только DEV</small><h2>Производство и закупка</h2></div>
+        <p>Этот блок используется для проверки расчёта и не будет показываться клиентам на рабочем сайте.</p>
+      </div>
+
+      <div class="internal-grid">
+        <div class="internal-card">
+          <h3>Спецификация по участкам</h3>
+          <div class="table-wrap"><table id="specTable"></table></div>
+        </div>
+        <div class="internal-card">
+          <h3>Закупка евроштакетника</h3>
+          <div class="table-wrap"><table id="picketTable"></table></div>
+        </div>
+        <div class="internal-card">
+          <h3>Материалы</h3>
+          <dl id="materialDetails" class="details-list"></dl>
+        </div>
+        <div class="internal-card">
+          <h3>Себестоимость расчёта</h3>
+          <dl id="costDetails" class="details-list"></dl>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="shell footer-inner">
+      <div><b>Кузнечный ДворикЪ</b><span>Мелеуз · изготовление по вашим размерам</span></div>
+      <a href="/napravleniya">Другие изделия</a>
+    </div>
+  </footer>
+
+  <script type="module" src="./evroshtaketnik.js"></script>
+</body>
+</html>
