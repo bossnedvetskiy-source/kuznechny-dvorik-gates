@@ -129,4 +129,22 @@ assert.equal(
 );
 assert.equal(openingsAndExistingPosts.purchase.posts, openingsAndExistingPosts.summary.newPosts);
 
+const invalidOpenings = calculateFence({
+  type: 'vertical-single',
+  post: '80x80x3',
+  includeNewPosts: true,
+  sections: [{length: 4, height: 1.8, gateOpening: 3.4, wicketOpening: 1}]
+});
+assert.match(invalidOpenings.summary.check, /ПРОЁМЫ/);
+
+const allOpening = calculateFence({
+  type: 'vertical-single',
+  post: '80x80x3',
+  includeNewPosts: true,
+  sections: [{length: 4.4, height: 1.8, gateOpening: 3.4, wicketOpening: 1}]
+});
+assert.equal(allOpening.summary.totalLength, 0);
+assert.equal(allOpening.summary.totalSpans, 0);
+assert.match(allOpening.summary.check, /НЕ ОСТАЛОСЬ/);
+
 console.log('Euro picket calculator matches Excel reference scenarios.');
