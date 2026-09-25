@@ -25,6 +25,8 @@
     .primary{width:100%;min-height:48px;border:0;border-radius:12px;background:var(--ink);color:#fff;font-weight:900}.primary:disabled{opacity:.5}.error{margin:10px 0 0;color:var(--danger);font-size:11px;font-weight:700}
     .summary{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;margin-bottom:12px}.summary h1{margin:0;font-size:24px}.summary p{margin:3px 0 0;color:var(--muted);font-size:11px}.push-state{min-height:14px;color:#6e675e!important;font-size:9px!important;line-height:1.35}.push-state.ok{color:#567a43!important}.push-state.warn{color:#9a6a22!important}.push-state.bad{color:#a6433e!important}.push-button{min-height:42px;padding:0 12px;border:1px solid #d8bd85;border-radius:11px;background:#fff7e7;color:#70521e;font-size:11px;font-weight:900}.push-button.is-on{border-color:#bfd0b4;background:#f1f7ed;color:#49663b}
     .tabs{display:flex;gap:7px;overflow:auto;margin:0 -14px 12px;padding:0 14px 2px;scrollbar-width:none}.tabs::-webkit-scrollbar{display:none}.tab{flex:0 0 auto;min-height:40px;padding:0 13px;border:1px solid var(--line);border-radius:999px;background:#fff;color:#6c655c;font-size:11px;font-weight:900}.tab.active{border-color:var(--ink);background:var(--ink);color:#fff}.tab b{display:inline-grid;min-width:18px;height:18px;margin-left:4px;place-items:center;border-radius:999px;background:#efe8dc;color:#655947;font-size:9px}.tab.active b{background:#c9953b;color:#17120a}
+    .filter-caption{margin:2px 0 6px;color:#8a8277;font-size:9px;font-weight:900;letter-spacing:.08em;text-transform:uppercase}.category-tabs{display:flex;gap:7px;overflow:auto;margin:0 -14px 12px;padding:0 14px 2px;scrollbar-width:none}.category-tabs::-webkit-scrollbar{display:none}.category-tab{flex:0 0 auto;min-height:38px;padding:0 11px;border:1px solid #ddd6ca;border-radius:11px;background:#faf8f4;color:#625b52;font-size:10px;font-weight:900}.category-tab.active{border-color:#c9953b;background:#fff7e7;color:#6f4f19;box-shadow:inset 0 0 0 1px rgba(201,149,59,.12)}.category-tab b{display:inline-grid;min-width:17px;height:17px;margin-left:3px;place-items:center;border-radius:999px;background:#eee7db;color:#6b6258;font-size:8px}.category-tab.active b{background:#c9953b;color:#17120a}
+    .lead-badges{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:7px}.lead-badge{display:inline-flex;align-items:center;min-height:23px;padding:0 8px;border-radius:999px;font-size:8px;font-weight:900;line-height:1}.lead-badge.category{background:#f3ead8;color:#77571e;border:1px solid #e4ce9e}.lead-badge.source{background:#f0f2f4;color:#5c6470;border:1px solid #dde1e5}
     .lead-list{display:grid;gap:10px}.lead-card{overflow:hidden;border:1px solid var(--line);border-radius:16px;background:#fff;box-shadow:0 8px 24px rgba(18,16,13,.05)}.lead-card.is-new{border-color:#d1a353;box-shadow:0 0 0 1px rgba(201,149,59,.12),0 8px 24px rgba(18,16,13,.05)}
     .lead-head{display:flex;justify-content:space-between;gap:12px;padding:14px 14px 10px}.lead-title{min-width:0}.lead-title b{display:block;font-size:15px;line-height:1.3}.lead-title span{display:block;margin-top:3px;color:var(--muted);font-size:10px}.lead-total{flex:0 0 auto;color:#8b6525;font-size:17px;font-weight:900;white-space:nowrap}
     .lead-info{display:grid;grid-template-columns:1fr 1fr;gap:7px;padding:0 14px 12px}.info{min-width:0;padding:9px 10px;border-radius:10px;background:#f7f4ee}.info span{display:block;color:#8a8277;font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.04em}.info b{display:block;overflow:hidden;margin-top:3px;font-size:11px;line-height:1.35;text-overflow:ellipsis}
@@ -64,11 +66,20 @@
           <button class="push-button" id="pushButton" type="button">🔔 Включить уведомления</button>
         </div>
         <div class="install-card" id="installCard" hidden><span>Добавьте приложение на главный экран Android — будет открываться как обычная программа.</span><button id="installButton" type="button">Установить</button></div>
-        <nav class="tabs" id="tabs">
+        <nav class="tabs" id="tabs" aria-label="Статус заявки">
           <button class="tab active" data-filter="new" type="button">Новые <b id="countNew">0</b></button>
           <button class="tab" data-filter="work" type="button">В работе <b id="countWork">0</b></button>
           <button class="tab" data-filter="measurement" type="button">Замеры <b id="countMeasurement">0</b></button>
           <button class="tab" data-filter="all" type="button">Все</button>
+        </nav>
+        <div class="filter-caption">Изделие</div>
+        <nav class="category-tabs" id="categoryTabs" aria-label="Категория изделия">
+          <button class="category-tab active" data-category="all" type="button">Все <b id="countCategoryAll">0</b></button>
+          <button class="category-tab" data-category="gates" type="button">Ворота <b id="countCategoryGates">0</b></button>
+          <button class="category-tab" data-category="picket-fence" type="button">Евроштакетник <b id="countCategoryPicket">0</b></button>
+          <button class="category-tab" data-category="profsheet-fence" type="button">Профнастил <b id="countCategoryProfsheet">0</b></button>
+          <button class="category-tab" data-category="forged-fence" type="button">Кованый забор <b id="countCategoryForged">0</b></button>
+          <button class="category-tab" data-category="canopy" type="button">Навесы <b id="countCategoryCanopy">0</b></button>
         </nav>
         <div class="lead-list" id="leadList"></div>
         <div class="empty" id="emptyView" hidden>Заявок в этом разделе пока нет.</div>
@@ -97,10 +108,12 @@
     const installCard=document.getElementById('installCard');
     const installButton=document.getElementById('installButton');
     const tabs=[...document.querySelectorAll('.tab[data-filter]')];
+    const categoryTabs=[...document.querySelectorAll('.category-tab[data-category]')];
     const CACHE_KEY='kuzdvor-manager-leads-v1';
     let leads=[];
     let workflows={};
     let activeFilter='new';
+    let activeCategory='all';
     let latestId=0;
     let pollTimer=0;
     let installPrompt=null;
@@ -123,7 +136,7 @@
     function saveCache(){try{localStorage.setItem(CACHE_KEY,JSON.stringify({leads,workflows,savedAt:Date.now()}))}catch{}}
     function loadCache(){try{const v=JSON.parse(localStorage.getItem(CACHE_KEY)||'null');if(v&&Array.isArray(v.leads)){leads=v.leads;workflows=v.workflows||{};latestId=Math.max(0,...leads.map(x=>Number(x.id)||0));render();syncText.textContent='Последние сохранённые данные';return true}}catch{}return false}
 
-    function matches(lead){
+    function stageMatches(lead){
       const stage=stageOf(lead);
       if(activeFilter==='new') return stage==='new';
       if(activeFilter==='work') return ['contacted','measurement_done','contract','production','installation'].includes(stage);
@@ -131,11 +144,27 @@
       return true;
     }
 
+    function matches(lead){
+      if(!stageMatches(lead)) return false;
+      if(activeCategory!=='all' && String(lead.category||'gates')!==activeCategory) return false;
+      return true;
+    }
+
     function updateCounts(){
-      const stages=leads.map(stageOf);
+      const statusScope=activeCategory==='all'?leads:leads.filter(lead=>String(lead.category||'gates')===activeCategory);
+      const stages=statusScope.map(stageOf);
       document.getElementById('countNew').textContent=stages.filter(x=>x==='new').length;
       document.getElementById('countWork').textContent=stages.filter(x=>['contacted','measurement_done','contract','production','installation'].includes(x)).length;
       document.getElementById('countMeasurement').textContent=stages.filter(x=>x==='measurement_scheduled').length;
+
+      const categoryScope=activeFilter==='all'?leads:leads.filter(stageMatches);
+      const count=value=>categoryScope.filter(lead=>String(lead.category||'gates')===value).length;
+      document.getElementById('countCategoryAll').textContent=categoryScope.length;
+      document.getElementById('countCategoryGates').textContent=count('gates');
+      document.getElementById('countCategoryPicket').textContent=count('picket-fence');
+      document.getElementById('countCategoryProfsheet').textContent=count('profsheet-fence');
+      document.getElementById('countCategoryForged').textContent=count('forged-fence');
+      document.getElementById('countCategoryCanopy').textContent=count('canopy');
     }
 
     function render(){
@@ -165,8 +194,9 @@
         const infoFourLabel=isPicket?'Условия':'Столбы';
         const infoFourValue=isPicket?(manualReview?'Проверить на замере':'Обычные'):(lead.posts?'Нужны новые':'Свои');
         const when=String(wf.nextActionAt||'').slice(0,16);
+        const sourceLabel=String(lead.source||'Сайт').trim()||'Сайт';
         return `<article class="lead-card ${stage==='new'?'is-new':''}" data-lead-id="${lead.id}">
-          <div class="lead-head"><div class="lead-title"><b>${escape(lead.name||'Клиент')} · ${escape(lead.city||'')}</b><span>№${lead.id} · ${escape(fmt(lead.created_at))} · ${escape(title)}</span></div><div class="lead-total">${money(lead.client_total||lead.total)}</div></div>
+          <div class="lead-head"><div class="lead-title"><div class="lead-badges"><span class="lead-badge category">${escape(categoryLabel(lead.category||'gates'))}</span><span class="lead-badge source">${escape(sourceLabel)}</span></div><b>${escape(lead.name||'Клиент')} · ${escape(lead.city||'')}</b><span>№${lead.id} · ${escape(fmt(lead.created_at))}${lead.article?' · '+escape(lead.article):''}</span></div><div class="lead-total">${money(lead.client_total||lead.total)}</div></div>
           <div class="lead-info">
             <div class="info"><span>Телефон</span><b>${escape(lead.phone||'—')}</b></div>
             <div class="info"><span>${escape(infoTwoLabel)}</span><b>${escape(infoTwoValue)}</b></div>
@@ -204,8 +234,10 @@
         syncText.textContent='Обновлено · '+new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
         if(oldLatest&&latestId>oldLatest&&document.visibilityState==='visible'){
           const newest=leads.find(x=>Number(x.id)===latestId);
-          showToast('Новая заявка · '+(newest?.city||''));
-          if(Notification.permission==='granted'&&newest){try{new Notification('Новая заявка с сайта',{body:(newest.city||'')+' · '+money(newest.client_total||newest.total),tag:'lead-'+newest.id})}catch{}}
+          const newestCategory=categoryLabel(newest?.category||'gates');
+          const newestSource=String(newest?.source||'Сайт').trim()||'Сайт';
+          showToast('Новая заявка · '+newestCategory);
+          if(Notification.permission==='granted'&&newest){try{new Notification('Новая заявка · '+newestCategory,{body:[newest.city||'',newestSource,money(newest.client_total||newest.total)].filter(Boolean).join(' · '),tag:'lead-'+newest.id})}catch{}}
         }
       }catch(error){if(!error.auth){offlineBadge.hidden=false;loadCache();if(!silent)showToast(error.message,true)}}
     }
@@ -236,6 +268,7 @@
     });
 
     tabs.forEach(tab=>tab.addEventListener('click',()=>{tabs.forEach(x=>x.classList.toggle('active',x===tab));activeFilter=tab.dataset.filter;render()}));
+    categoryTabs.forEach(tab=>tab.addEventListener('click',()=>{categoryTabs.forEach(x=>x.classList.toggle('active',x===tab));activeCategory=tab.dataset.category||'all';render()}));
 
     loginForm.addEventListener('submit',async event=>{
       event.preventDefault();loginError.hidden=true;loginButton.disabled=true;loginButton.textContent='Входим…';
