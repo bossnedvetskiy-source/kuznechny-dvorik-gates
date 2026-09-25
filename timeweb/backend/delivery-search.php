@@ -62,7 +62,7 @@ function kd_delivery_search_places(string $place): array
         if ($district !== '') $secondaryParts[] = $district;
         if ($region !== '' && kd_delivery_search_normalize($region) !== kd_delivery_search_normalize($district)) $secondaryParts[] = $region;
         $secondary = implode(', ', $secondaryParts);
-        $label = $locality . ($district !== '' ? ', ' . $district : ($region !== '' ? ', ' . $region : ''));
+        $label = implode(', ', array_values(array_unique(array_filter([$locality, $district, $region]))));
 
         $queryParts = [$locality];
         if ($district !== '') $queryParts[] = $district;
@@ -130,7 +130,34 @@ function kd_delivery_search_parts(array $item, array $address, string $fallback)
         }
     }
 
+    // Some OSM objects omit county/state_district in addressdetails but still
+    // include the municipality in display_name. Recover it so every visible
+    // suggestion carries a useful administrative address instead of
+    // "село / деревня".
+    $displayParts = array_values(array_filter(array_map(
+        static fn($part): string => trim((string)$part),
+        explode(',', (string)($item['display_name'] ?? ''))
+    )));
+    if ($district === '') {
+        foreach ($displayParts as $part) {
+            $normalized = kd_delivery_search_normalize($part);
+            if ($normalized === '' || $normalized === kd_delivery_search_normalize($locality)) continue;
+            if (preg_match('/район|округ|муниципал/u', mb_strtolower($part, 'UTF-8'))) {
+                $district = $part;
+                break;
+            }
+        }
+    }
+
     $region = trim((string)($address['state'] ?? $address['region'] ?? ''));
+    if ($region === '') {
+        foreach ($displayParts as $part) {
+            if (preg_match('/республика|область|край/u', mb_strtolower($part, 'UTF-8'))) {
+                $region = $part;
+                break;
+            }
+        }
+    }
     if (kd_delivery_search_normalize($region) === kd_delivery_search_normalize($locality)) $region = '';
     return [$locality, $district, $region];
 }
