@@ -94,3 +94,16 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,su
   .trust-strip b{font-size:11px}
   .trust-strip span{font-size:9.5px}
 }
+
+.compact-color-head{display:grid!important;grid-template-columns:1fr;gap:3px;align-items:start!important;justify-content:start!important}
+.compact-color-head b{line-height:1.25}
+.compact-color-head span{display:block}
+.trust-strip>div{display:grid;grid-template-columns:28px minmax(0,1fr);grid-template-areas:"icon title" "icon text";column-gap:10px;row-gap:3px;align-items:start}
+.trust-strip>div:before{content:"✓";grid-area:icon;width:26px;height:26px;display:grid;place-items:center;border:1px solid rgba(239,200,111,.3);border-radius:50%;color:var(--gold2);font-size:11px;font-weight:900}
+.trust-strip b{grid-area:title;line-height:1.25}
+.trust-strip span{grid-area:text;margin-top:0!important;line-height:1.45}
+@media(max-width:620px){
+  .trust-strip>div{grid-template-columns:26px minmax(0,1fr);column-gap:9px}
+  .trust-strip>div:before{width:24px;height:24px}
+  .result-card:has(#resultSummary[hidden]){padding-bottom:13px}
+}
