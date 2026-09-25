@@ -240,21 +240,29 @@
       const wicket = [lead.wicket_width ? `${lead.wicket_width} м` : '', lead.wicket_height ? `× ${lead.wicket_height} м` : ''].filter(Boolean).join(' ') || '—';
       const options = [lead.install ? 'монтаж' : '', lead.posts ? 'новые столбы' : '', lead.color || ''].filter(Boolean).join(' · ') || 'без дополнительных опций';
       const config=lead.configuration&&typeof lead.configuration==='object'?lead.configuration:{};
-      const genericParams=Object.entries(config).filter(([key,value])=>value!==null&&value!==''&&value!==false&&!['article','install','posts'].includes(key)).slice(0,5).map(([key,value])=>`${configLabel(key)}: ${value}`).join(' · ') || '—';
+      const genericParams=Object.entries(config).filter(([key,value])=>value!==null&&value!==''&&value!==false&&!['article','install','posts','calculationSettings','costs','summary','siteConditions','sections','delivery'].includes(key)).slice(0,5).map(([key,value])=>`${configLabel(key)}: ${value}`).join(' · ') || '—';
+      const isPicket=category==='picket-fence';
+      const fenceSummary=config.summary&&typeof config.summary==='object'?config.summary:{};
+      const fenceLength=Number(fenceSummary.totalLength)||0;
+      const fenceType=String(config.fenceTypeLabel||'Евроштакетник');
+      const fencePosts=Number(fenceSummary.postsByScheme)||0;
+      const newFencePosts=Number(fenceSummary.newPosts)||0;
+      const manualReview=Boolean(config.siteConditions?.needsManualReview);
       const digits = phoneDigits(lead.phone);
       const productLine=[categoryName,lead.article].filter(Boolean).join(' · ');
       const sourceLine=lead.source?` · ${lead.source}`:'';
-      const fieldTwoLabel=category==='gates'?'Ворота':'Параметры';
-      const fieldTwoValue=category==='gates'?(dimensions||'—'):genericParams;
-      const fieldThreeLabel=category==='gates'?'Калитка':'Изделие';
-      const fieldThreeValue=category==='gates'?wicket:(lead.product_title||categoryName);
+      const fieldTwoLabel=category==='gates'?'Ворота':(isPicket?'Забор':'Параметры');
+      const fieldTwoValue=category==='gates'?(dimensions||'—'):(isPicket?(fenceLength?`${fenceLength} м · ${fenceType}`:fenceType):genericParams);
+      const fieldThreeLabel=category==='gates'?'Калитка':(isPicket?'Столбы':'Изделие');
+      const fieldThreeValue=category==='gates'?wicket:(isPicket?(fencePosts?`${fencePosts} всего · ${newFencePosts} новых`:'—'):(lead.product_title||categoryName));
+      const optionValue=isPicket?(manualReview?'Проверить условия на замере':'Обычные условия'):options;
       return `<article class="lead-card ${lead.status==='new'?'is-new':''}" data-lead-id="${lead.id}">
         <div class="lead-card-head"><div class="lead-main"><b>#${lead.id} · ${escape(productLine)} · ${escape(lead.name || 'Без имени')}</b><span>${escape(formatDate(lead.created_at))} · ${escape(lead.city)}${escape(sourceLine)}</span></div><strong class="lead-total">${money(lead.total)}</strong></div>
         <div class="lead-grid">
           <div class="lead-field"><span>Телефон</span><b>${escape(lead.phone)}</b></div>
           <div class="lead-field"><span>${escape(fieldTwoLabel)}</span><b>${escape(fieldTwoValue)}</b></div>
           <div class="lead-field"><span>${escape(fieldThreeLabel)}</span><b>${escape(fieldThreeValue)}</b></div>
-          <div class="lead-field"><span>Комплектация</span><b>${escape(options)}</b></div>
+          <div class="lead-field"><span>${isPicket?'Условия':'Комплектация'}</span><b>${escape(optionValue)}</b></div>
         </div>
         ${lead.comment?`<p class="lead-note">${escape(lead.comment)}</p>`:''}
         <div class="lead-card-actions">
