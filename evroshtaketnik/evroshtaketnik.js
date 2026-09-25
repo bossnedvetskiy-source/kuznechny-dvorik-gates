@@ -528,6 +528,11 @@ function renderResult(result) {
   const {summary,type} = result;
   const deliveryPending = !deliveryIsKnown();
   const hasQuote = summary.activeSections > 0;
+  const currentQuoteNumber = hasQuote ? ensureQuoteNumber() : '';
+  if (quoteReference) {
+    quoteReference.hidden = !hasQuote;
+    quoteReference.textContent = currentQuoteNumber ? `№ ${currentQuoteNumber}` : '';
+  }
   $('totalPrice').textContent = hasQuote ? money(summary.total) : '—';
   $('summaryType').textContent = type.label;
   $('summaryLength').textContent = summary.openingsWidth > 0
@@ -571,6 +576,7 @@ function renderResult(result) {
   if (result.includeNewPosts && summary.newPosts > 0) chips.push(`<span>новые столбы: ${summary.newPosts} шт + установка</span>`);
   if (summary.existingPostsUsed > 0) chips.push(`<span>готовые столбы: ${summary.existingPostsUsed} шт</span>`);
   if (summary.openingsWidth > 0) chips.push(`<span>проёмы вычтены: ${number(summary.openingsWidth)} м</span>`);
+  if (hasSlopeInput?.checked || hasHardSurfaceInput?.checked) chips.push('<span class="warn">условия монтажа — проверить на замере</span>');
   if ($('includedChips')) $('includedChips').innerHTML = chips.join('');
 
   result.sections.forEach((item, index) => {
