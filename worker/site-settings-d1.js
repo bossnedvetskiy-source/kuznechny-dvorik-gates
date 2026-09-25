@@ -95,6 +95,32 @@ function normalizeSiteProfile(input) {
   };
 }
 
+function normalizedFenceNumber(value, fallback, max = 10000000) {
+  const number = Number(value);
+  return Number.isFinite(number) && number >= 0 && number <= max ? number : fallback;
+}
+
+function normalizeFencePrices(input) {
+  const source = input && typeof input === 'object' ? input : {};
+  const defaults = DEFAULT_PRICES.fence && typeof DEFAULT_PRICES.fence === 'object' ? DEFAULT_PRICES.fence : {};
+  return {
+    picketSinglePrice: normalizedFenceNumber(source.picketSinglePrice, Number(defaults.picketSinglePrice) || 110),
+    picketDoublePrice: normalizedFenceNumber(source.picketDoublePrice, Number(defaults.picketDoublePrice) || 130),
+    tube40Price: normalizedFenceNumber(source.tube40Price, Number(defaults.tube40Price) || 144),
+    post60Price: normalizedFenceNumber(source.post60Price, Number(defaults.post60Price) || 305),
+    post80Price: normalizedFenceNumber(source.post80Price, Number(defaults.post80Price) || 600),
+    post100Price: normalizedFenceNumber(source.post100Price, Number(defaults.post100Price) || 750),
+    paintPrice: normalizedFenceNumber(source.paintPrice, Number(defaults.paintPrice) || 650),
+    workVerticalSingle: normalizedFenceNumber(source.workVerticalSingle, Number(defaults.workVerticalSingle) || 1300),
+    workVerticalDouble: normalizedFenceNumber(source.workVerticalDouble, Number(defaults.workVerticalDouble) || 1800),
+    workHorizontalDouble: normalizedFenceNumber(source.workHorizontalDouble, Number(defaults.workHorizontalDouble) || 2000),
+    postInstallPrice: normalizedFenceNumber(source.postInstallPrice, Number(defaults.postInstallPrice) || 800),
+    screwPrice: normalizedFenceNumber(source.screwPrice, Number(defaults.screwPrice) || 2),
+    markupPercent: normalizedFenceNumber(source.markupPercent, Number(defaults.markupPercent) || 0, 100),
+    measurerPercent: normalizedFenceNumber(source.measurerPercent, Number(defaults.measurerPercent) || 4, 100)
+  };
+}
+
 function normalizePrices(input) {
   const source = input && typeof input === 'object' ? input : {};
   const defaultCatalog = Array.isArray(DEFAULT_PRICES.catalog) ? DEFAULT_PRICES.catalog : [];
@@ -111,6 +137,7 @@ function normalizePrices(input) {
     updatedAt:new Date().toISOString().slice(0,10),
     catalogInstallation:positiveMoney(source.catalogInstallation,DEFAULT_PRICES.catalogInstallation),
     catalogPosts:positiveMoney(source.catalogPosts,DEFAULT_PRICES.catalogPosts),
+    fence:normalizeFencePrices(source.fence),
     catalog,
     extraProducts:defaultExtras.map(defaultItem=>{
       const item=inputExtras.get(defaultItem.id)||{};
