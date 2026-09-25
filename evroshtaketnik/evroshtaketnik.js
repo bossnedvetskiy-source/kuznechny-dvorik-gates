@@ -828,8 +828,13 @@ function quoteText() {
   const postMode = includePostsInput.checked
     ? `новых ${lastResult.summary.newPosts}, готовых учтено ${lastResult.summary.existingPostsUsed || 0}`
     : 'все столбы готовые';
+  const conditions = [
+    hasSlopeInput?.checked ? 'заметный уклон / перепад высоты' : '',
+    hasHardSurfaceInput?.checked ? 'сложное основание (бетон / асфальт / подпорная стенка)' : ''
+  ].filter(Boolean);
   return [
-    'Кузнечный ДворикЪ — предварительный расчёт забора из металлического евроштакетника',
+    `Кузнечный ДворикЪ — расчёт ${ensureQuoteNumber()}`,
+    'Забор из металлического евроштакетника',
     `Тип: ${lastResult.type.label}`,
     `Столбы: ${postInput.options[postInput.selectedIndex]?.textContent || postInput.value}; ${postMode}`,
     `Цвет: ${selectedColor}`,
@@ -839,6 +844,7 @@ function quoteText() {
       `Проёмы: ${number(lastResult.summary.openingsWidth)} м`,
       `Длина заполнения евроштакетником: ${number(lastResult.summary.totalLength)} м`
     ] : []),
+    ...(conditions.length ? [`Условия монтажа: ${conditions.join('; ')} — проверить на замере`] : []),
     `Доставка: ${deliveryIsKnown() ? money(lastResult.summary.deliveryCost) : 'не указана'}`,
     `Предварительная стоимость: ${money(lastResult.summary.total)}${deliveryIsKnown() ? '' : ' без доставки'}`
   ].filter(Boolean).join('\n');
@@ -846,9 +852,11 @@ function quoteText() {
 
 function leadPayload() {
   const city = (leadCity?.value || selectedDelivery?.name || settlementInput.value).trim();
+  const reference = ensureQuoteNumber();
   return {
     category:'picket-fence',
     source:'evroshtaketnik-calculator',
+    article:reference,
     productTitle:'Забор из металлического евроштакетника',
     name:'',
     phone:$('leadPhone')?.value.trim() || '',
@@ -860,12 +868,18 @@ function leadPayload() {
     posts:includePostsInput.checked,
     message:quoteText(),
     configuration:{
+      quoteNumber:reference,
       fenceType:typeInput.value,
       fenceTypeLabel:lastResult?.type.label || '',
       postType:postInput.value,
       includeNewPosts:includePostsInput.checked,
       existingPostsCount:Number(existingPostsInput?.value || 0),
       color:selectedColor,
+      siteConditions:{
+        slope:Boolean(hasSlopeInput?.checked),
+        hardSurface:Boolean(hasHardSurfaceInput?.checked),
+        needsManualReview:Boolean(hasSlopeInput?.checked || hasHardSurfaceInput?.checked)
+      },
       sections:readSections().filter(item => item.length > 0),
       delivery:{known:deliveryIsKnown(),name:selectedDelivery?.name || settlementInput.value.trim(),price:deliveryCost()},
       summary:lastResult ? {
