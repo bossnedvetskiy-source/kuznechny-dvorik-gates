@@ -35,16 +35,19 @@
     node.style.opacity='1';
     if(temporary)setTimeout(()=>{if(navigator.onLine)node.style.opacity='.68'},2400);
   }
-  function post(type){
+  function post(type,payload={}){
     navigator.serviceWorker.ready.then(reg=>{
       const worker=reg.active||reg.waiting||reg.installing;
-      if(worker)worker.postMessage({type:type});
+      if(worker)worker.postMessage({type:type,...payload});
     }).catch(()=>{});
   }
   ensureAppMenuButton();
   navigator.serviceWorker.register('/site-sw.js',{scope:'/'}).then(()=>{
     setStatus(navigator.onLine?'Проверяем офлайн-базу…':'Проверяем сохранённую базу…');
     post('GET_OFFLINE_STATUS');
+    // A tiny version request is allowed on every online launch. The heavy
+    // offline database is downloaded only when the server content version changed.
+    if(navigator.onLine)post('CHECK_OFFLINE_UPDATE',{auto:true,allowInitial:false});
     post('FLUSH_LEADS');
   }).catch(()=>{});
   navigator.serviceWorker.addEventListener('message',event=>{
@@ -65,7 +68,7 @@
     if(data.type==='LEAD_QUEUE_FLUSHED')setStatus('Отправлено заявок: '+data.sent,true);
   });
   window.addEventListener('offline',()=>setStatus('Офлайн-режим · сайт работает без сети'));
-  window.addEventListener('online',()=>{setStatus('Связь появилась');post('GET_OFFLINE_STATUS');post('FLUSH_LEADS')});
+  window.addEventListener('online',()=>{setStatus('Связь появилась');post('GET_OFFLINE_STATUS');post('CHECK_OFFLINE_UPDATE',{auto:true,allowInitial:false});post('FLUSH_LEADS')});
   window.addEventListener('beforeinstallprompt',event=>{
     if(params.get('app')!=='1')return;
     event.preventDefault();
