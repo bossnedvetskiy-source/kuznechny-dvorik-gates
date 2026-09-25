@@ -312,12 +312,6 @@ function syncTypeHelp() {
   if (typeHelp) typeHelp.textContent = TYPE_HELP[typeInput.value] || '';
 }
 
-function syncPostMode() {
-  if (!existingPostsWrap) return;
-  existingPostsWrap.hidden = !includePostsInput.checked;
-  if (!includePostsInput.checked && existingPostsInput) existingPostsInput.value = '0';
-}
-
 function syncTypePicker() {
   document.querySelectorAll('.type-card[data-type]').forEach(card => {
     const selected = card.dataset.type === typeInput.value;
@@ -771,95 +765,6 @@ async function submitLead(event) {
   }
 }
 
-function snapshotQuote() {
-  return {
-    v:1,
-    savedAt:new Date().toISOString(),
-    type:typeInput.value,
-    post:postInput.value,
-    includePosts:includePostsInput.checked,
-    existingPostsCount:Number(existingPostsInput?.value) || 0,
-    sections:readSections(),
-    visibleSections,
-    color:selectedColor,
-    settlement:selectedDelivery ? {...selectedDelivery} : null,
-    settlementText:settlementInput.value,
-    manualDeliveryEnabled:manualDeliveryEnabled.checked,
-    manualDelivery:Number(manualDeliveryInput.value) || 0
-  };
-}
-
-function updateSavedQuoteBar() {
-  if (!savedQuoteBar) return;
-  try { savedQuoteBar.hidden = !localStorage.getItem(SAVED_QUOTE_KEY); }
-  catch { savedQuoteBar.hidden = true; }
-}
-
-function saveQuoteLocal() {
-  if (!lastResult?.summary.activeSections) { showToast('Сначала укажите размеры'); return; }
-  try {
-    localStorage.setItem(SAVED_QUOTE_KEY, JSON.stringify(snapshotQuote()));
-    updateSavedQuoteBar();
-    showToast('Расчёт сохранён на этом устройстве');
-  } catch { showToast('Не удалось сохранить расчёт'); }
-}
-
-function restoreQuoteLocal() {
-  try {
-    const raw = localStorage.getItem(SAVED_QUOTE_KEY);
-    if (!raw) return;
-    const saved = JSON.parse(raw);
-    typeInput.value = saved.type || 'vertical-double';
-    postInput.value = saved.post || '80x80x3';
-    includePostsInput.checked = saved.includePosts !== false;
-    if (existingPostsInput) existingPostsInput.value = String(Math.max(0, Number(saved.existingPostsCount) || 0));
-    visibleSections = Math.min(4, Math.max(1, Number(saved.visibleSections) || 1));
-    (saved.sections || []).slice(0,4).forEach((item,index) => {
-      const set = (field,value) => {
-        const input = sectionsList.querySelector(`[data-field="${field}"][data-index="${index}"]`);
-        if (input) input.value = String(value ?? 0);
-      };
-      set('length', item.length || 0);
-      set('height', item.height || 1.8);
-      set('gateOpening', item.gateOpening || 0);
-      set('wicketOpening', item.wicketOpening || 0);
-      const shared = sectionsList.querySelector(`[data-field="shared"][data-index="${index}"]`);
-      if (shared) shared.checked = Boolean(item.sharedWithNext);
-    });
-    selectedColor = saved.color || 'Графит';
-    selectedDelivery = saved.settlement && typeof saved.settlement === 'object' ? saved.settlement : null;
-    settlementInput.value = saved.settlementText || selectedDelivery?.name || '';
-    if (leadCity) leadCity.value = settlementInput.value;
-    manualDeliveryEnabled.checked = Boolean(saved.manualDeliveryEnabled);
-    manualDeliveryInput.value = String(Math.max(0, Number(saved.manualDelivery) || 0));
-    syncVisibleSections();
-    syncTypePicker();
-    syncColorPicker();
-    syncPostMode();
-    calculate();
-    showToast('Сохранённый расчёт восстановлен');
-  } catch { showToast('Не удалось восстановить расчёт'); }
-}
-
-async function shareQuote() {
-  const text = quoteText();
-  if (!text) { showToast('Сначала укажите размеры'); return; }
-  if (navigator.share) {
-    try {
-      await navigator.share({title:'Расчёт забора — Кузнечный ДворикЪ',text});
-      return;
-    } catch (error) {
-      if (error?.name === 'AbortError') return;
-    }
-  }
-  try {
-    await navigator.clipboard.writeText(text);
-    showToast('Расчёт скопирован — можно отправить клиенту');
-  } catch {
-    showToast('Не удалось открыть отправку');
-  }
-}
-
 addSectionButton.addEventListener('click', () => {
   if (visibleSections >= 4) return;
   visibleSections += 1;
@@ -892,7 +797,7 @@ form.addEventListener('input', event => {
 form.addEventListener('change', event => {
   if (event.target === settlementInput) return;
   if (event.target === typeInput) syncTypeHelp();
-  if (event.target === includePostsInput) syncPostMode();
+  if (event.target === includePostsInput) syncPostOptions();
   calculate();
 });
 
@@ -949,9 +854,14 @@ $('copyQuote')?.addEventListener('click', async () => {
   try { await navigator.clipboard.writeText(text); showToast('Расчёт скопирован'); }
   catch { showToast('Не удалось скопировать автоматически'); }
 });
-$('shareQuote')?.addEventListener('click', shareQuote);
-$('saveQuote')?.addEventListener('click', saveQuoteLocal);
-$('restoreQuote')?.addEventListener('click', restoreQuoteLocal);
+$('shareQuote')?.addEventListener('click', shareQuoteState);
+$('saveQuote')?.addEventListener('click', saveQuoteState);
+$('restoreQuote')?.addEventListener('click', () => {
+  const saved = readSavedQuote();
+  if (!saved) { syncSavedQuoteBar(); showToast('Сохранённый расчёт не найден'); return; }
+  restoreQuoteState(saved);
+  showToast('Сохранённый расчёт восстановлен');
+});
 $('printQuote')?.addEventListener('click', () => {
   if (!lastResult?.summary.activeSections) { showToast('Сначала укажите размеры'); return; }
   window.print();
@@ -961,7 +871,8 @@ leadForm?.addEventListener('submit', submitLead);
 syncVisibleSections();
 syncTypePicker();
 syncColorPicker();
-syncPostMode();
-updateSavedQuoteBar();
+syncPostOptions();
+syncSavedQuoteBar();
 await Promise.all([loadDeliveryBase(), loadFencePrices()]);
-calculate();
+const sharedState = decodeQuoteState(new URL(location.href).searchParams.get('q'));
+if (!sharedState || !restoreQuoteState(sharedState, {fromLink:true})) calculate();
