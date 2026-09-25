@@ -15,6 +15,15 @@ assert(rows.length >= 1000, 'Offline delivery database is unexpectedly small');
 assert.equal(rows.filter(item => /^\s*\d+(?:[.,]\d+)?\s*(?:км|km)\s*$/iu.test(String(item?.name||''))).length, 0, 'Kilometer markers leaked into settlement database');
 assert.equal(Number(db?.meta?.roadLimitKm), 200, 'Offline delivery radius must stay at 200 km');
 assert.equal(Number(db?.meta?.ratePerKm), 90, 'Offline delivery rate must stay at 90 ₽/km');
+const addressRows = rows.filter(item => Number.isFinite(Number(item?.lat)) && Number.isFinite(Number(item?.lon)));
+const typedAddress = addressRows.find(item => /(?:село\s*\/\s*деревня|деревня\s*\/\s*хутор|город\s*\/\s*пос[её]лок)/iu.test(String(item?.secondary||'')));
+assert.equal(typedAddress, undefined, 'Settlement type must not be shown instead of district');
+const missingDistrict = addressRows.find(item => !['city','town'].includes(String(item?.place||'')) && !/(?:район|округ|муниципал)/iu.test(String(item?.secondary||'')));
+assert.equal(missingDistrict, undefined, `Settlement district missing: ${missingDistrict?.name||''}`);
+const staromuraptalovo = rows.find(item => String(item?.name||'').toLocaleLowerCase('ru-RU') === 'старомурапталово');
+assert(staromuraptalovo, 'Старомурапталово missing from offline delivery database');
+assert.match(String(staromuraptalovo.secondary||''), /Куюргазинский район/iu, 'Старомурапталово must show Куюргазинский район');
+
 
 for (const required of [
   "'/app'",
