@@ -17,6 +17,12 @@ const settlementResults = $('settlementResults');
 const deliveryStatus = $('deliveryStatus');
 const manualDeliveryInput = $('manualDelivery');
 const manualDeliveryEnabled = $('manualDeliveryEnabled');
+const typeHelp = $('typeHelp');
+const totalLabel = $('totalLabel');
+const resultNote = $('resultNote');
+const internalGrid = $('internalGrid');
+const internalToggle = $('internalToggle');
+const internalOverview = $('internalOverview');
 
 let visibleSections = 1;
 let deliveryRows = [];
@@ -34,7 +40,7 @@ function sectionMarkup(index) {
       </div>
       ${index < 3 ? `
       <label class="switch-field shared-row" data-shared-row="${index}">
-        <span><b>Общий столб со следующим участком</b><small>Например, угол или продолжение от того же столба</small></span>
+        <span><b>Следующий участок начинается от этого же столба</b><small>Включите для угла или продолжения — один столб не посчитается дважды</small></span>
         <input data-field="shared" data-index="${index}" type="checkbox">
         <i aria-hidden="true"></i>
       </label>` : ''}
@@ -74,6 +80,41 @@ function deliveryCost() {
   return selectedDelivery ? Math.max(0, Number(selectedDelivery.price)||0) : 0;
 }
 
+function deliveryIsKnown() {
+  return manualDeliveryEnabled.checked || Boolean(selectedDelivery);
+}
+
+const TYPE_HELP = {
+  'vertical-double': 'Штакетник с двух сторон в шахматном порядке — забор меньше просматривается.',
+  'vertical-single': 'Штакетник устанавливается с одной стороны — самый простой и экономичный вариант.',
+  'horizontal-double': 'Горизонтальные планки с двух сторон. В расчёте добавляются вертикальные прожилины внутри каждого пролёта.'
+};
+
+function syncTypeHelp() {
+  if (typeHelp) typeHelp.textContent = TYPE_HELP[typeInput.value] || '';
+}
+
+function setInternalOpen(open) {
+  if (!internalGrid || !internalToggle) return;
+  internalGrid.hidden = !open;
+  internalToggle.setAttribute('aria-expanded', String(open));
+  internalToggle.classList.toggle('is-open', open);
+  const label = internalToggle.querySelector('span');
+  if (label) label.textContent = open ? 'Скрыть детализацию' : 'Показать детализацию';
+  try { sessionStorage.setItem('kuzdvor-picket-internal-open', open ? '1' : '0'); } catch {}
+}
+
+function initInternalToggle() {
+  if (!internalToggle || internalToggle.dataset.bound === '1') return;
+  internalToggle.dataset.bound = '1';
+  let open = false;
+  try { open = sessionStorage.getItem('kuzdvor-picket-internal-open') === '1'; } catch {}
+  setInternalOpen(open);
+  internalToggle.addEventListener('click', () => {
+    setInternalOpen(internalToggle.getAttribute('aria-expanded') !== 'true');
+  });
+}
+
 function calculate() {
   const result = calculateFence({
     type: typeInput.value,
@@ -90,18 +131,28 @@ function calculate() {
 
 function renderResult(result) {
   const {summary,type} = result;
+  const deliveryPending = !deliveryIsKnown();
   $('totalPrice').textContent = summary.activeSections ? money(summary.total) : '0 ₽';
   $('summaryType').textContent = type.label;
   $('summaryLength').textContent = `${number(summary.totalLength)} м`;
   $('summaryPosts').textContent = String(summary.postsByScheme);
-  $('summaryDelivery').textContent = money(summary.deliveryCost);
+  $('summaryDelivery').textContent = deliveryPending
+    ? 'не указана'
+    : (summary.deliveryCost === 0 ? '0 ₽' : money(summary.deliveryCost));
+
+  if (totalLabel) totalLabel.textContent = deliveryPending
+    ? 'Предварительная стоимость без доставки'
+    : 'Предварительная стоимость';
+  if (resultNote) resultNote.textContent = deliveryPending
+    ? 'Укажите населённый пункт, чтобы получить итог с доставкой. Точные размеры и цену зафиксируем после бесплатного замера.'
+    : 'Это предварительный расчёт с учётом доставки. Точные размеры и итоговую стоимость зафиксируем после бесплатного замера.';
 
   const status = $('resultStatus');
   status.className = 'result-status';
   if (!summary.activeSections) {
     status.textContent = 'Добавьте длину первого участка';
   } else if (summary.check === 'ГОТОВО') {
-    status.textContent = `${summary.totalSpans} прол. · ${summary.picketsActual} штакетин · ${summary.tubeStocks} хлыст. 40×20`;
+    status.textContent = `${summary.totalSpans} пролётов · ${summary.picketsActual} штакетин · ${summary.tubeStocks} хлыстов 40×20`;
     status.classList.add('is-ok');
   } else {
     status.textContent = summary.check;
@@ -151,6 +202,16 @@ function renderInternal(result) {
   const isDev = Boolean(document.querySelector('meta[name="kuzdvor-environment"][content="development"]'));
   panel.hidden = !isDev;
   if (!isDev) return;
+
+  initInternalToggle();
+  if (internalOverview) {
+    internalOverview.innerHTML = [
+      `<span><b>${result.summary.picketsActual}</b> штакетин</span>`,
+      `<span><b>${result.purchase.tubeStocks}</b> хлыстов 40×20</span>`,
+      `<span><b>${result.purchase.posts}</b> новых столбов</span>`,
+      `<span><b>${money(result.costs.total)}</b> итог</span>`
+    ].join('');
+  }
 
   const active = result.sections.filter(item => item.active);
   $('specTable').innerHTML = `
@@ -320,6 +381,7 @@ form.addEventListener('input', event => {
 });
 form.addEventListener('change', event => {
   if (event.target === settlementInput) return;
+  if (event.target === typeInput) syncTypeHelp();
   calculate();
 });
 
@@ -358,5 +420,6 @@ document.addEventListener('click', event => {
 });
 
 syncVisibleSections();
+syncTypeHelp();
 await loadDeliveryBase();
 calculate();
