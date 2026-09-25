@@ -38,7 +38,7 @@
           <div class="panel-head">
             <div><small>Шаг 1</small><h2>Выберите тип заполнения</h2></div>
           </div>
-          <p class="help type-intro">Варианты ниже — металлический евроштакетник. Фотографии пока используются как визуальные примеры и позже могут быть заменены на реальные.</p>
+          <p class="help type-intro">Нажмите на вариант, который вам нравится. Цена сразу пересчитается под выбранный тип металлического евроштакетника.</p>
 
           <select id="fenceType" class="visually-hidden" aria-label="Тип заполнения">
             <option value="vertical-double">Вертикальный двусторонний — шахматка</option>
@@ -76,6 +76,17 @@
             </button>
           </div>
           <p id="typeHelp" class="type-help">Штакетник с двух сторон в шахматном порядке — забор меньше просматривается.</p>
+
+          <div class="compact-color-block">
+            <div class="compact-color-head"><b>Цвет евроштакетника</b><span>ориентир для расчёта и заявки</span></div>
+            <div class="color-picker" id="colorPicker" role="group" aria-label="Цвет евроштакетника">
+              <button type="button" class="color-choice is-selected" data-color="Графит" aria-pressed="true"><i style="--swatch:#34383d"></i><span>Графит</span></button>
+              <button type="button" class="color-choice" data-color="Шоколад" aria-pressed="false"><i style="--swatch:#4a3028"></i><span>Шоколад</span></button>
+              <button type="button" class="color-choice" data-color="Зелёный" aria-pressed="false"><i style="--swatch:#284634"></i><span>Зелёный</span></button>
+              <button type="button" class="color-choice" data-color="Светлый" aria-pressed="false"><i style="--swatch:#d2d0c8"></i><span>Светлый</span></button>
+            </div>
+            <small>Точный оттенок и наличие подтвердим перед заказом.</small>
+          </div>
 
           <div class="field-grid post-grid">
             <label class="field">
@@ -157,12 +168,17 @@
           <div id="resultNote" class="result-note">Укажите населённый пункт, чтобы получить итог с доставкой. Точные размеры и цену зафиксируем после бесплатного замера.</div>
           <button id="resultLeadButton" class="primary-button" type="button">Оставить заявку на бесплатный замер</button>
           <a class="result-call" href="tel:+79373296750">или позвонить 8 937 329-67-50</a>
-          <div class="quote-tools">
-            <button id="copyQuote" type="button">Скопировать расчёт</button>
+          <div class="quote-tools quote-tools-main">
             <button id="shareQuote" type="button">Поделиться</button>
             <button id="saveQuote" type="button">Сохранить</button>
-            <button id="printQuote" type="button">Печать / PDF</button>
           </div>
+          <details class="quote-more">
+            <summary>Ещё действия</summary>
+            <div class="quote-tools">
+              <button id="copyQuote" type="button">Скопировать расчёт</button>
+              <button id="printQuote" type="button">Печать / PDF</button>
+            </div>
+          </details>
           <div id="savedQuoteBar" class="saved-quote-bar" hidden>
             <span>Последний расчёт сохранён на этом устройстве</span>
             <button id="restoreQuote" type="button">Восстановить</button>
@@ -181,30 +197,10 @@
       </div>
     </section>
 
-    <section class="benefits shell">
-      <div class="section-title">
-        <div><small>Понятная комплектация</small><h2>Что получаете</h2></div>
-        <p>Калькулятор даёт ориентир до выезда замерщика, а итог фиксируется после проверки размеров на объекте.</p>
-      </div>
-      <div class="benefit-grid">
-        <article><b>Металлический евроштакетник</b><p>Количество считается целыми планками по выбранному типу заполнения и высоте.</p></article>
-        <article><b>Каркас и столбы</b><p>Труба 40×20×2 считается хлыстами по 6 м. Новые столбы можно включить или исключить.</p></article>
-        <article><b>Покраска и монтаж</b><p>Работы и покраска металлического каркаса входят в предварительный расчёт.</p></article>
-        <article><b>Гарантия 3 года</b><p>После замера согласуем комплектацию и зафиксируем итоговую стоимость в договоре.</p></article>
-      </div>
-    </section>
-
-    <section class="colors-section shell">
-      <div class="section-title">
-        <div><small>Внешний вид</small><h2>Примеры цветов</h2></div>
-        <p>Выберите ориентир для заявки. Наличие конкретного оттенка подтвердим перед заказом.</p>
-      </div>
-      <div class="color-picker" id="colorPicker" role="group" aria-label="Пример цвета евроштакетника">
-        <button type="button" class="color-choice is-selected" data-color="Графит" aria-pressed="true"><i style="--swatch:#34383d"></i><span>Графит</span></button>
-        <button type="button" class="color-choice" data-color="Шоколад" aria-pressed="false"><i style="--swatch:#4a3028"></i><span>Шоколад</span></button>
-        <button type="button" class="color-choice" data-color="Зелёный" aria-pressed="false"><i style="--swatch:#284634"></i><span>Зелёный</span></button>
-        <button type="button" class="color-choice" data-color="Светлый" aria-pressed="false"><i style="--swatch:#d2d0c8"></i><span>Светлый</span></button>
-      </div>
+    <section class="trust-strip shell" aria-label="Преимущества заказа">
+      <div><b>Бесплатный замер</b><span>Проверим размеры и условия монтажа</span></div>
+      <div><b>Договор и фиксированная цена</b><span>Комплектацию согласуем до изготовления</span></div>
+      <div><b>Гарантия 3 года</b><span>На изготовленную металлическую конструкцию</span></div>
     </section>
 
     <section class="process-section shell">
