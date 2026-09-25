@@ -77,6 +77,13 @@ async function walk(dir) {
       let text = await readFile(full, 'utf8');
       text = rewriteRootStrings(text);
       await writeFile(full, text, 'utf8');
+      continue;
+    }
+
+    if (entry.name.endsWith('.css')) {
+      let text = await readFile(full, 'utf8');
+      text = text.replace(/url\(\/(?!\/)/g, `url(${BASE}/`);
+      await writeFile(full, text, 'utf8');
     }
   }
 }
