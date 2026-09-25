@@ -146,27 +146,48 @@ function renderExtraPrices() {
 
 
 const FENCE_PRICE_DEFINITIONS = [
-  ['picketSinglePrice','Евроштакетник односторонний','₽/п.м.',1],
-  ['picketDoublePrice','Евроштакетник двусторонний','₽/п.м.',1],
-  ['tube40Price','Труба 40×20×2','₽/м',1],
-  ['post60Price','Столб 60×60×2','₽/м',1],
-  ['post80Price','Столб 80×80×3','₽/м',1],
-  ['post100Price','Столб 100×100×3','₽/м',1],
-  ['paintPrice','Покраска профильных труб','₽/м²',10],
-  ['workVerticalSingle','Работа: вертикальный односторонний','₽/п.м.',10],
-  ['workVerticalDouble','Работа: вертикальный двусторонний','₽/п.м.',10],
-  ['workHorizontalDouble','Работа: горизонтальный двусторонний','₽/п.м.',10],
-  ['postInstallPrice','Установка столба','₽/шт',10],
-  ['screwPrice','Саморез','₽/шт',1],
-  ['markupPercent','Наценка / резерв','%',0.1],
-  ['measurerPercent','ЗП замерщика','%',0.1]
+  ['picketSinglePrice','Евроштакетник односторонний','₽/п.м.',1,'prices'],
+  ['picketDoublePrice','Евроштакетник двусторонний','₽/п.м.',1,'prices'],
+  ['tube40Price','Труба 40×20×2','₽/м',1,'prices'],
+  ['post60Price','Столб 60×60×2','₽/м',1,'prices'],
+  ['post80Price','Столб 80×80×3','₽/м',1,'prices'],
+  ['post100Price','Столб 100×100×3','₽/м',1,'prices'],
+  ['paintPrice','Покраска профильных труб','₽/м²',10,'prices'],
+  ['workVerticalSingle','Работа: вертикальный односторонний','₽/п.м.',10,'prices'],
+  ['workVerticalDouble','Работа: вертикальный двусторонний','₽/п.м.',10,'prices'],
+  ['workHorizontalDouble','Работа: горизонтальный двусторонний','₽/п.м.',10,'prices'],
+  ['postInstallPrice','Установка столба','₽/шт',10,'prices'],
+  ['screwPrice','Саморез','₽/шт',1,'prices'],
+  ['markupPercent','Наценка / резерв','%',0.1,'prices'],
+  ['measurerPercent','ЗП замерщика','%',0.1,'prices'],
+
+  ['picketWidth','Ширина планки евроштакетника','м',0.005,'technology'],
+  ['gapSingle','Макс. зазор: односторонний','м',0.005,'technology'],
+  ['gapDouble','Макс. зазор: шахматка / двусторонний','м',0.005,'technology'],
+  ['maxSpan','Максимальный чистый пролёт','м',0.05,'technology'],
+  ['postLength','Длина столба','м',0.1,'technology'],
+  ['postDepth','Заглубление столба','м',0.05,'technology'],
+  ['tubeStockLength','Длина хлыста 40×20×2','м',0.5,'technology'],
+  ['screwVertical','Саморезов на вертикальную планку','шт',1,'technology'],
+  ['screwHorizontal','Саморезов на горизонтальную планку','шт',1,'technology'],
+  ['picketReservePerSide','Запас штакетника на каждую сторону','шт',1,'technology']
 ];
 
 function renderFencePrices() {
   if (!fencePriceList) return;
   fencePriceList.replaceChildren();
   const fence = priceSettings?.fence || {};
-  for (const [key,labelText,unit,step] of FENCE_PRICE_DEFINITIONS) {
+  let previousGroup = '';
+  for (const [key,labelText,unit,step,group] of FENCE_PRICE_DEFINITIONS) {
+    if (group !== previousGroup) {
+      const title = document.createElement('div');
+      title.className = 'fence-price-group-title';
+      title.innerHTML = group === 'technology'
+        ? '<b>Технологические параметры</b><small>Меняйте только если изменилась конструкция или материал.</small>'
+        : '<b>Цены и работа</b><small>Используются в расчёте клиента.</small>';
+      fencePriceList.append(title);
+      previousGroup = group;
+    }
     const label = document.createElement('label');
     label.className = 'fence-price-field';
     const title = document.createElement('span');
@@ -174,7 +195,11 @@ function renderFencePrices() {
     const input = document.createElement('input');
     input.type = 'number';
     input.min = '0';
-    input.max = key.includes('Percent') ? '100' : '10000000';
+    input.max = key.includes('Percent')
+      ? '100'
+      : ['picketWidth','gapSingle','gapDouble','maxSpan','postLength','postDepth','tubeStockLength'].includes(key)
+        ? '20'
+        : '10000000';
     input.step = String(step);
     input.inputMode = 'decimal';
     input.value = String(Number(fence[key]) || 0);
