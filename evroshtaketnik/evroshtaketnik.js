@@ -53,6 +53,10 @@ function sectionMarkup(index) {
         <label class="field"><span>Длина линии, м</span><input data-field="length" data-index="${index}" type="number" min="0" max="200" step="0.1" inputmode="decimal" value="0"></label>
         <label class="field"><span>Высота, м</span><input data-field="height" data-index="${index}" type="number" min="0.5" max="3" step="0.05" inputmode="decimal" value="1.8"></label>
       </div>
+      <div class="quick-presets" aria-label="Быстрые размеры участка">
+        <div><span>Длина:</span><button type="button" data-preset-field="length" data-index="${index}" data-value="10">10 м</button><button type="button" data-preset-field="length" data-index="${index}" data-value="15">15 м</button><button type="button" data-preset-field="length" data-index="${index}" data-value="20">20 м</button></div>
+        <div><span>Высота:</span><button type="button" data-preset-field="height" data-index="${index}" data-value="1.5">1,5 м</button><button type="button" data-preset-field="height" data-index="${index}" data-value="1.8">1,8 м</button><button type="button" data-preset-field="height" data-index="${index}" data-value="2">2 м</button></div>
+      </div>
       <details class="section-openings">
         <summary>Есть ворота или калитка в этом участке?</summary>
         <div class="section-fields opening-fields">
@@ -834,6 +838,17 @@ manualDeliveryEnabled.addEventListener('change', () => {
 
 document.addEventListener('click', event => {
   if (!settlementResults.contains(event.target) && event.target !== settlementInput) hideSettlementResults();
+});
+
+sectionsList.addEventListener('click', event => {
+  const button = event.target.closest('[data-preset-field][data-index][data-value]');
+  if (!button) return;
+  const field = button.dataset.presetField;
+  const index = button.dataset.index;
+  const input = sectionsList.querySelector(`[data-field="${field}"][data-index="${index}"]`);
+  if (!input) return;
+  input.value = String(button.dataset.value || '');
+  calculate();
 });
 
 document.querySelectorAll('.type-card[data-type]').forEach(card => card.addEventListener('click', () => {
