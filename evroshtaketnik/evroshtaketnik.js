@@ -42,7 +42,12 @@ const includedBlock = $('includedBlock');
 const resultSummary = $('resultSummary');
 const quoteMainActions = $('quoteMainActions');
 const quoteMoreActions = $('quoteMoreActions');
+const hasSlopeInput = $('hasSlope');
+const hasHardSurfaceInput = $('hasHardSurface');
+const existingPostsHint = $('existingPostsHint');
+const quoteReference = $('quoteReference');
 const SAVED_QUOTE_KEY = 'kuzdvor:picket-saved-v1';
+const DRAFT_QUOTE_KEY = 'kuzdvor:picket-draft-v1';
 
 let visibleSections = 1;
 let deliveryRows = [];
@@ -51,6 +56,9 @@ let selectedColor = 'Графит';
 let lastResult = null;
 let runtimeSettings = {...FENCE_SETTINGS};
 let toastTimer = 0;
+let draftTimer = 0;
+let quoteNumber = '';
+let restoringState = false;
 
 function sectionMarkup(index) {
   const n = index + 1;
@@ -73,6 +81,7 @@ function sectionMarkup(index) {
         </div>
         <small>Проёмы вычитаются из длины забора. Стоимость самих ворот и калитки в этот расчёт не входит.</small>
       </details>
+      <div class="section-validation" data-section-validation="${index}" hidden></div>
       ${index < 3 ? `
       <label class="switch-field shared-row" data-shared-row="${index}">
         <span><b>Следующий участок начинается от этого же столба</b><small>Включите для угла или продолжения — один столб не посчитается дважды</small></span>
