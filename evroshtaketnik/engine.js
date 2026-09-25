@@ -62,6 +62,22 @@ export const POST_TYPES = Object.freeze({
 });
 
 const finite = value => Number.isFinite(Number(value)) ? Number(value) : 0;
+const positive = (value, fallback) => finite(value) > 0 ? finite(value) : fallback;
+const normalizedSettings = input => {
+  const settings = {...FENCE_SETTINGS, ...(input || {})};
+  settings.picketWidth = positive(settings.picketWidth, FENCE_SETTINGS.picketWidth);
+  settings.maxSpan = positive(settings.maxSpan, FENCE_SETTINGS.maxSpan);
+  settings.postLength = positive(settings.postLength, FENCE_SETTINGS.postLength);
+  settings.tubeStockLength = positive(settings.tubeStockLength, FENCE_SETTINGS.tubeStockLength);
+  settings.gapSingle = Math.max(0, finite(settings.gapSingle));
+  settings.gapDouble = Math.max(0, finite(settings.gapDouble));
+  settings.postDepth = Math.max(0, finite(settings.postDepth));
+  if (settings.postDepth >= settings.postLength) settings.postDepth = Math.min(FENCE_SETTINGS.postDepth, Math.max(0, settings.postLength - 0.1));
+  settings.screwVertical = Math.max(0, Math.floor(finite(settings.screwVertical)));
+  settings.screwHorizontal = Math.max(0, Math.floor(finite(settings.screwHorizontal)));
+  settings.picketReservePerSide = Math.max(0, Math.floor(finite(settings.picketReservePerSide)));
+  return settings;
+};
 const ceilDiv = (count, perStock) => count <= 0 ? 0 : Math.ceil(count / Math.max(1, perStock));
 const roundMoney = value => Math.round(Math.max(0, finite(value)));
 const round = (value, digits = 3) => {
@@ -118,7 +134,7 @@ function tubeStockPlan(spans, clearSpan, height, horizontalDouble, stockLength) 
 }
 
 export function calculateFence(input = {}) {
-  const settings = { ...FENCE_SETTINGS, ...(input.settings || {}) };
+  const settings = normalizedSettings(input.settings);
   const typeKey = FENCE_TYPES[input.type] ? input.type : 'vertical-double';
   const baseType = FENCE_TYPES[typeKey];
   const type = {
