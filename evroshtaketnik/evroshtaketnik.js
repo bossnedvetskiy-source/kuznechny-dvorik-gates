@@ -453,11 +453,13 @@ function renderLeadPreview(result) {
     target.textContent = 'Сначала укажите длину участка.';
     return;
   }
-  target.innerHTML = `<b>${money(result.summary.total)}${deliveryIsKnown() ? '' : ' · без доставки'}</b><br>${result.type.label} · ${number(result.summary.totalLength)} м · ${result.summary.totalSpans} пролётов · ${result.includeNewPosts ? 'новые столбы' : 'на готовые столбы'} · цвет: ${selectedColor}`;
+  const postText = result.includeNewPosts
+    ? `новых столбов: ${result.summary.newPosts}, готовых: ${result.summary.existingPostsUsed}`
+    : 'на готовые столбы';
+  target.innerHTML = `<b>${money(result.summary.total)}${deliveryIsKnown() ? '' : ' · без доставки'}</b><br>${result.type.label} · ${number(result.summary.totalLength)} м забора${result.summary.openingsWidth > 0 ? ` из линии ${number(result.summary.grossLineLength)} м` : ''} · ${result.summary.totalSpans} пролётов · ${postText} · цвет: ${selectedColor}`;
 }
 
 async function loadFencePrices() {
-  if (isDev) return;
   try {
     const response = await fetch('/api/fence-prices', {cache:'no-store',headers:{accept:'application/json'}});
     if (!response.ok) return;
@@ -468,11 +470,14 @@ async function loadFencePrices() {
 
 function quoteText() {
   if (!lastResult?.summary.activeSections) return '';
-  const sections = lastResult.sections.filter(item => item.active).map(item => `Участок ${item.index}: ${number(item.length)} × ${number(item.height)} м, ${item.spans} прол.`).join('\n');
+  const sections = lastResult.sections.filter(item => item.active).map(item => {
+    const opening = item.openingsWidth > 0 ? `, проёмы ${number(item.openingsWidth)} м, забор ${number(item.fenceLength)} м` : '';
+    return `Участок ${item.index}: линия ${number(item.grossLength)} × ${number(item.height)} м${opening}, ${item.spans} прол.`;
+  }).join('\n');
   return [
     'Кузнечный ДворикЪ — предварительный расчёт забора из металлического евроштакетника',
     `Тип: ${lastResult.type.label}`,
-    `Столбы: ${postInput.options[postInput.selectedIndex]?.textContent || postInput.value}; ${includePostsInput.checked ? 'нужны новые' : 'готовые'}`,
+    `Столбы: ${postInput.options[postInput.selectedIndex]?.textContent || postInput.value}; требуется ${lastResult.summary.postsByScheme}, готовых учтено ${lastResult.summary.existingPostsUsed}, новых ${lastResult.summary.newPosts}`,
     `Цвет: ${selectedColor}`,
     sections,
     `Общая длина: ${number(lastResult.summary.totalLength)} м`,
@@ -501,6 +506,7 @@ function leadPayload() {
       fenceTypeLabel:lastResult?.type.label || '',
       postType:postInput.value,
       includeNewPosts:includePostsInput.checked,
+      existingPostsCount:Number(existingPostsInput?.value || 0),
       color:selectedColor,
       sections:readSections().filter(item => item.length > 0),
       delivery:{known:deliveryIsKnown(),name:selectedDelivery?.name || settlementInput.value.trim(),price:deliveryCost()},
