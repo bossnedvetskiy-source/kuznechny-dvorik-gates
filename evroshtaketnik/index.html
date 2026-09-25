@@ -39,12 +39,13 @@
 
           <div class="field-grid">
             <label class="field field-wide">
-              <span>Тип забора</span>
+              <span>Тип заполнения</span>
               <select id="fenceType">
                 <option value="vertical-double">Вертикальный двусторонний — шахматка</option>
                 <option value="vertical-single">Вертикальный односторонний</option>
                 <option value="horizontal-double">Горизонтальный двусторонний</option>
               </select>
+              <small id="typeHelp" class="field-note">Штакетник с двух сторон в шахматном порядке — забор меньше просматривается.</small>
             </label>
 
             <label class="field">
@@ -57,7 +58,7 @@
             </label>
 
             <label class="switch-field">
-              <span><b>Новые столбы</b><small>Учесть материал, бетонирование и установку</small></span>
+              <span><b>Нужны новые столбы</b><small>Выключите, если подходящие столбы уже установлены</small></span>
               <input id="includePosts" type="checkbox" checked>
               <i aria-hidden="true"></i>
             </label>
@@ -103,18 +104,18 @@
 
       <aside class="result-card" aria-live="polite">
         <div class="result-sticky">
-          <small class="result-label">Предварительная стоимость</small>
+          <small id="totalLabel" class="result-label">Предварительная стоимость</small>
           <div id="totalPrice" class="total-price">0 ₽</div>
           <div id="resultStatus" class="result-status">Добавьте длину первого участка</div>
 
           <dl class="result-summary">
             <div><dt>Тип</dt><dd id="summaryType">Вертикальный двусторонний</dd></div>
             <div><dt>Общая длина</dt><dd id="summaryLength">0 м</dd></div>
-            <div><dt>Столбов по схеме</dt><dd id="summaryPosts">0</dd></div>
+            <div><dt>Столбов на схеме</dt><dd id="summaryPosts">0</dd></div>
             <div><dt>Доставка</dt><dd id="summaryDelivery">0 ₽</dd></div>
           </dl>
 
-          <div class="result-note">Это предварительный расчёт. Точные размеры и итоговую стоимость зафиксируем после бесплатного замера.</div>
+          <div id="resultNote" class="result-note">Это предварительный расчёт. Точные размеры и итоговую стоимость зафиксируем после бесплатного замера.</div>
           <a class="primary-button" href="tel:+79373296750">Позвонить и записаться на замер</a>
         </div>
       </aside>
@@ -131,12 +132,18 @@
     </section>
 
     <section id="internalPanel" class="internal shell" hidden>
-      <div class="section-title">
-        <div><small>Только DEV</small><h2>Производство и закупка</h2></div>
-        <p>Этот блок используется для проверки расчёта и не будет показываться клиентам на рабочем сайте.</p>
+      <div class="internal-heading">
+        <div class="section-title">
+          <div><small>Только DEV</small><h2>Производство и закупка</h2></div>
+          <p>Внутренняя детализация для проверки расчёта. На рабочем клиентском сайте этот блок не показывается.</p>
+        </div>
+        <div id="internalOverview" class="internal-overview" aria-live="polite"></div>
+        <button id="internalToggle" class="internal-toggle" type="button" aria-expanded="false" aria-controls="internalGrid">
+          <span>Показать детализацию</span><i aria-hidden="true">⌄</i>
+        </button>
       </div>
 
-      <div class="internal-grid">
+      <div id="internalGrid" class="internal-grid" hidden>
         <div class="internal-card">
           <h3>Спецификация по участкам</h3>
           <div class="table-wrap"><table id="specTable"></table></div>
