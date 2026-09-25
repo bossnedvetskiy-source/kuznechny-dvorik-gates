@@ -60,3 +60,12 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,su
 .saved-quote-bar span{color:#b9cbbb;font-size:9px;line-height:1.35}
 .saved-quote-bar button{flex:0 0 auto;min-height:34px;padding:0 9px;border:1px solid rgba(167,216,168,.28);border-radius:9px;background:transparent;color:#c8dfc9;font-size:9px;font-weight:800;cursor:pointer}
 @media(max-width:620px){.section-openings summary{font-size:10.5px}.section-openings>small{font-size:9.5px}.saved-quote-bar{align-items:flex-start;flex-direction:column}.saved-quote-bar button{width:100%}}
+
+.opening-warning{margin:-5px 0 14px;padding:10px 12px;border:1px solid rgba(239,200,111,.18);border-radius:11px;background:rgba(210,163,78,.055);color:#bcb7ae;font-size:10px;line-height:1.5}
+.opening-warning b{color:#e6c26d}
+.quick-presets{display:grid;gap:7px;margin-top:9px}
+.quick-presets>div{display:flex;align-items:center;flex-wrap:wrap;gap:6px}
+.quick-presets span{min-width:48px;color:#777b80;font-size:9px;font-weight:800}
+.quick-presets button{min-height:30px;padding:0 9px;border:1px solid rgba(255,255,255,.09);border-radius:9px;background:rgba(255,255,255,.025);color:#b9bbbe;font-size:9px;font-weight:800;cursor:pointer}
+.quick-presets button:hover,.quick-presets button:focus-visible{border-color:rgba(239,200,111,.4);color:#e7c46f;background:rgba(210,163,78,.07)}
+@media(max-width:620px){.opening-warning{font-size:10.5px}.quick-presets span{font-size:9.5px}.quick-presets button{min-height:34px;font-size:9.5px}}
