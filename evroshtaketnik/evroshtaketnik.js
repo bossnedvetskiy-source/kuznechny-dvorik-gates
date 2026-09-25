@@ -36,6 +36,7 @@ const leadSubmit = $('leadSubmit');
 const savedQuoteBar = $('savedQuoteBar');
 const resultLeadButton = $('resultLeadButton');
 const includedBlock = $('includedBlock');
+const resultSummary = $('resultSummary');
 const quoteMainActions = $('quoteMainActions');
 const quoteMoreActions = $('quoteMoreActions');
 const SAVED_QUOTE_KEY = 'kuzdvor:picket-saved-v1';
@@ -437,7 +438,8 @@ function renderResult(result) {
   if (mobileQuoteBar) mobileQuoteBar.hidden = !hasQuote;
   if (mobileBarPrice) mobileBarPrice.textContent = hasQuote ? money(summary.total) : '—';
   if (mobileBarNote) mobileBarNote.textContent = deliveryPending ? 'без доставки' : 'с доставкой';
-  if (includedBlock) includedBlock.classList.toggle('is-muted', !hasQuote);
+  if (resultSummary) resultSummary.hidden = !hasQuote;
+  if (includedBlock) includedBlock.hidden = !hasQuote;
   if (quoteMainActions) quoteMainActions.hidden = !hasQuote;
   if (quoteMoreActions) {
     quoteMoreActions.hidden = !hasQuote;
