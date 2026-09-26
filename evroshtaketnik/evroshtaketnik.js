@@ -814,10 +814,28 @@ function fencePostPositions(part) {
 function renderFencePattern(x, y, w, h, part, scale) {
   const safeW = Math.max(0, w);
   if (safeW <= 0) return '';
-  const picketGap = Math.max(5, Math.min(14, safeW / Math.max(4, Math.round(safeW / 9))));
-  let pickets = '';
-  for (let px=x+4; px<x+safeW-3; px+=picketGap) {
-    pickets += '<line x1="' + px.toFixed(1) + '" y1="' + (y+6).toFixed(1) + '" x2="' + px.toFixed(1) + '" y2="' + (y+h-5).toFixed(1) + '" class="visual-picket"/>';
+  const fillType = typeInput.value;
+  let fill = '';
+
+  if (fillType === 'horizontal-double') {
+    const slatStep = 10;
+    for (let py=y+7; py<y+h-5; py+=slatStep) {
+      fill += '<line x1="' + (x+3).toFixed(1) + '" y1="' + py.toFixed(1) + '" x2="' + (x+safeW-3).toFixed(1) + '" y2="' + py.toFixed(1) + '" class="visual-horizontal-slat"/>';
+    }
+    for (const ratio of [.2,.5,.8]) {
+      const rx=x+safeW*ratio;
+      fill += '<line x1="' + rx.toFixed(1) + '" y1="' + (y+5).toFixed(1) + '" x2="' + rx.toFixed(1) + '" y2="' + (y+h-5).toFixed(1) + '" class="visual-horizontal-support"/>';
+    }
+  } else {
+    const pitch = fillType === 'vertical-single' ? 13 : 11;
+    if (fillType === 'vertical-double') {
+      for (let px=x+4+pitch/2; px<x+safeW-3; px+=pitch) {
+        fill += '<line x1="' + px.toFixed(1) + '" y1="' + (y+7).toFixed(1) + '" x2="' + px.toFixed(1) + '" y2="' + (y+h-5).toFixed(1) + '" class="visual-picket-back"/>';
+      }
+    }
+    for (let px=x+4; px<x+safeW-3; px+=pitch) {
+      fill += '<line x1="' + px.toFixed(1) + '" y1="' + (y+6).toFixed(1) + '" x2="' + px.toFixed(1) + '" y2="' + (y+h-5).toFixed(1) + '" class="visual-picket-front"/>';
+    }
   }
 
   const internalPosts = fencePostPositions(part).map((meter, index) => {
@@ -828,11 +846,13 @@ function renderFencePattern(x, y, w, h, part, scale) {
     return '<rect x="' + postX.toFixed(1) + '" y="' + (y-7).toFixed(1) + '" width="' + pw.toFixed(1) + '" height="' + (h+14).toFixed(1) + '" rx="1.5" class="' + klass + '"><title>' + title + ' ' + (index+1) + '</title></rect>';
   }).join('');
 
+  const rails = fillType === 'horizontal-double'
+    ? ''
+    : '<line x1="' + x.toFixed(1) + '" y1="' + (y+11).toFixed(1) + '" x2="' + (x+safeW).toFixed(1) + '" y2="' + (y+11).toFixed(1) + '" class="visual-rail"/>' +
+      '<line x1="' + x.toFixed(1) + '" y1="' + (y+h-11).toFixed(1) + '" x2="' + (x+safeW).toFixed(1) + '" y2="' + (y+h-11).toFixed(1) + '" class="visual-rail"/>';
+
   return '<rect x="' + x.toFixed(1) + '" y="' + y + '" width="' + safeW.toFixed(1) + '" height="' + h + '" rx="4" class="visual-fence-bg"/>' +
-    pickets +
-    '<line x1="' + x.toFixed(1) + '" y1="' + (y+11).toFixed(1) + '" x2="' + (x+safeW).toFixed(1) + '" y2="' + (y+11).toFixed(1) + '" class="visual-rail"/>' +
-    '<line x1="' + x.toFixed(1) + '" y1="' + (y+h-11).toFixed(1) + '" x2="' + (x+safeW).toFixed(1) + '" y2="' + (y+h-11).toFixed(1) + '" class="visual-rail"/>' +
-    internalPosts;
+    fill + rails + internalPosts;
 }
 
 function renderVisualSvg(item, result) {
