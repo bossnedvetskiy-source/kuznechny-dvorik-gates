@@ -343,7 +343,7 @@ const uiSource = fs.readFileSync(new URL('../evroshtaketnik/evroshtaketnik.js', 
 assert.match(uiSource, /function renderVisualSvg\(/);
 assert.match(uiSource, /Забор между воротами и калиткой/);
 assert.match(uiSource, /visual-extra-post/);
-assert.match(uiSource, /Увеличить схему/);
+assert.match(uiSource, /Открыть схему крупно/);
 assert.match(uiSource, /is-suppressed/);
 assert.match(uiSource, /openingStartFence/);
 assert.match(uiSource, /точная привязка по линии/);
