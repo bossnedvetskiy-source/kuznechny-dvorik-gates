@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import { calculateFence, FENCE_SETTINGS } from '../evroshtaketnik/engine.js';
 
 const verticalDouble = calculateFence({
@@ -298,5 +299,10 @@ const customReserve = calculateFence({
 });
 assert.equal(customReserve.purchase.pickets[0].reserveFront, 3);
 assert.equal(customReserve.purchase.pickets[0].reserveRear, 3);
+
+const uiSource = fs.readFileSync(new URL('../evroshtaketnik/evroshtaketnik.js', import.meta.url), 'utf8');
+assert.match(uiSource, /function renderVisualSvg\(/);
+assert.match(uiSource, /Забор между воротами и калиткой/);
+assert.match(uiSource, /visual-extra-post/);
 
 console.log('Euro picket calculator matches Excel reference scenarios.');
