@@ -81,7 +81,7 @@ function sectionMarkup(index) {
         </div>
         <div class="opening-post-settings">
           <label class="field"><span>Столбы ворот / калитки</span><select data-field="openingPostType" data-index="${index}"><option value="60x60x2">60×60×2</option><option value="80x80x3">80×80×3</option><option value="100x100x3" selected>100×100×3</option></select></label>
-          <label class="switch-field compact opening-share-row">
+          <label class="switch-field compact opening-share-row" data-opening-share-row="${index}">
             <span><b>Общий средний столб</b><small>Включено, если ворота и калитка стоят рядом и используют один общий столб.</small></span>
             <input data-field="openingsSharePost" data-index="${index}" type="checkbox" checked>
             <i aria-hidden="true"></i>
@@ -476,10 +476,13 @@ function renderInputValidation(result) {
     const wicketInput = sectionsList.querySelector(`[data-field="wicketOpening"][data-index="${index}"]`);
     const betweenInput = sectionsList.querySelector(`[data-field="betweenOpeningFence"][data-index="${index}"]`);
     const betweenRow = sectionsList.querySelector(`[data-between-opening-row="${index}"]`);
+    const openingShareRow = sectionsList.querySelector(`[data-opening-share-row="${index}"]`);
     const hasGate = raw.gateOpening > 0;
     const hasWicket = raw.wicketOpening > 0;
-    const canSeparate = hasGate && hasWicket && !raw.openingsSharePost;
+    const hasBothOpenings = hasGate && hasWicket;
+    const canSeparate = hasBothOpenings && !raw.openingsSharePost;
 
+    if (openingShareRow) openingShareRow.hidden = !hasBothOpenings;
     if (betweenRow) betweenRow.hidden = !canSeparate;
     for (const input of [lengthInput,heightInput,gateInput,wicketInput,betweenInput]) input?.removeAttribute('aria-invalid');
 
