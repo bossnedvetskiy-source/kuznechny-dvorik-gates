@@ -46,6 +46,7 @@ const hasSlopeInput = $('hasSlope');
 const hasHardSurfaceInput = $('hasHardSurface');
 const existingPostsHint = $('existingPostsHint');
 const quoteReference = $('quoteReference');
+const schemeSection = document.querySelector('.scheme-section');
 const SAVED_QUOTE_KEY = 'kuzdvor:picket-saved-v1';
 const DRAFT_QUOTE_KEY = 'kuzdvor:picket-draft-v1';
 
@@ -846,7 +847,7 @@ function renderVisualSvg(item, result) {
     ? 'Проёмы ' + number(item.openingsWidth) + ' м · столбы ворот/калитки ' + item.openingSupportPosts + ' шт' + (item.betweenOpeningFence > 0 ? ' · между ними ' + number(item.betweenOpeningFence) + ' м' : '')
     : item.spans + ' прол. · чистый пролёт до ' + number(item.clearSpan) + ' м';
 
-  return '<div class="visual-line-scroll" tabindex="0" aria-label="Схема участка ' + item.index + '. На телефоне можно прокручивать по горизонтали.">' +
+  return '<div class="visual-line-scroll" tabindex="0" aria-label="Схема участка ' + item.index + '. Вся линия показана целиком.">' +
     '<svg class="visual-line-svg" viewBox="0 0 ' + svgWidth + ' 215" role="img" aria-label="Участок ' + item.index + ', общая длина ' + number(item.grossLength) + ' метра">' +
       '<line x1="' + left + '" y1="38" x2="' + totalX2 + '" y2="38" class="visual-dimension"/>' +
       '<path d="M' + left + ' 33 L' + left + ' 43 M' + totalX2 + ' 33 L' + totalX2 + ' 43" class="visual-dimension"/>' +
@@ -878,6 +879,7 @@ function renderScheme(result) {
     return '<article class="scheme-card visual-scheme-card">' +
       '<div class="scheme-top"><div><b>Участок ' + item.index + '</b><small>условная раскладка по линии</small></div><span>' + number(item.grossLength) + ' × ' + number(item.height) + ' м</span></div>' +
       renderVisualSvg(item, result) +
+      '<button class="scheme-zoom-button" type="button" data-scheme-zoom aria-pressed="false"><span>Увеличить схему</span><i aria-hidden="true">↔</i></button>' +
       '<div class="visual-summary">' +
         '<div><small>Забор всего</small><b>' + number(item.fenceLength) + ' м</b></div>' +
         (item.openingSupportPosts ? '<div><small>Ворота</small><b>' + (item.gateOpening > 0 ? number(item.gateOpening) + ' м' : '—') + '</b></div>' : '') +
@@ -891,6 +893,41 @@ function renderScheme(result) {
     '</article>';
   }).join('');
 }
+
+
+function initSchemeInteractions() {
+  const list = $('schemeList');
+  if (list && !list.dataset.zoomReady) {
+    list.dataset.zoomReady = '1';
+    list.addEventListener('click', event => {
+      const button = event.target.closest('[data-scheme-zoom]');
+      if (!button) return;
+      const card = button.closest('.visual-scheme-card');
+      const scroller = card?.querySelector('.visual-line-scroll');
+      if (!scroller) return;
+      const zoomed = scroller.classList.toggle('is-zoomed');
+      button.setAttribute('aria-pressed', String(zoomed));
+      const text = button.querySelector('span');
+      if (text) text.textContent = zoomed ? 'Показать целиком' : 'Увеличить схему';
+      if (!zoomed) scroller.scrollTo({left:0,behavior:'smooth'});
+    });
+  }
+
+  if (schemeSection && mobileQuoteBar && !schemeSection.dataset.quoteObserverReady && 'IntersectionObserver' in window) {
+    schemeSection.dataset.quoteObserverReady = '1';
+    const observer = new IntersectionObserver(entries => {
+      const entry = entries[0];
+      const mobile = window.matchMedia('(max-width:620px)').matches;
+      mobileQuoteBar.classList.toggle('is-suppressed', mobile && entry.isIntersecting && entry.intersectionRatio > 0.12);
+    }, {threshold:[0,0.12,0.35]});
+    observer.observe(schemeSection);
+    window.addEventListener('resize', () => {
+      if (!window.matchMedia('(max-width:620px)').matches) mobileQuoteBar.classList.remove('is-suppressed');
+    }, {passive:true});
+  }
+}
+
+initSchemeInteractions();
 
 function row(label, value) {
   return `<div><dt>${label}</dt><dd>${value}</dd></div>`;
