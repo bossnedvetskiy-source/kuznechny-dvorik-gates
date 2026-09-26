@@ -477,19 +477,33 @@ function renderInputValidation(result) {
     }
 
     const messages = [];
-    const openingWidth = Math.max(0, raw.gateOpening) + Math.max(0, raw.wicketOpening);
-    if (openingWidth > raw.length + 1e-9) {
-      messages.push({level:'error', text:`Проёмы ${number(openingWidth)} м больше длины участка ${number(raw.length)} м.`});
+    const calculated = result.sections[index] || {};
+    const openingWidth = Math.max(0, Number(calculated.openingsWidth) || 0);
+    const openingNodeWidth = Math.max(0, Number(calculated.openingNodeWidth) || 0);
+    const openingPostsWidth = Math.max(0, Number(calculated.openingPostsWidth) || 0);
+    const openingSupportPosts = Math.max(0, Number(calculated.openingSupportPosts) || 0);
+    const nodeSummary = sectionsList.querySelector(`[data-opening-node-summary="${index}"]`);
+
+    if (nodeSummary) {
+      nodeSummary.hidden = openingWidth <= 0;
+      if (openingWidth > 0) {
+        const postLabel = POST_LABELS[calculated.openingPostType] || calculated.openingPostType || '';
+        nodeSummary.innerHTML = `<b>По линии узел займёт ${number(openingNodeWidth)} м</b><span>Проёмы ${number(openingWidth)} м + ${openingSupportPosts} столб. ${postLabel} = ${number(openingPostsWidth)} м.</span>`;
+      }
+    }
+
+    if (openingNodeWidth > raw.length + 1e-9) {
+      messages.push({level:'error', text:`Узел ворот/калитки занимает ${number(openingNodeWidth)} м, а длина участка только ${number(raw.length)} м.`});
       lengthInput?.setAttribute('aria-invalid','true');
       gateInput?.setAttribute('aria-invalid','true');
       wicketInput?.setAttribute('aria-invalid','true');
     } else if (openingWidth > 0) {
-      const remaining = Math.max(0, raw.length - openingWidth);
+      const remaining = Math.max(0, raw.length - openingNodeWidth);
       messages.push({
         level: remaining < .5 ? 'warn' : 'info',
         text: remaining > 0
-          ? `После ворот и калитки останется ${number(remaining)} м заполнения забором.`
-          : 'После проёмов длины для заполнения забором не остаётся.'
+          ? `После чистых проёмов и их столбов останется ${number(remaining)} м линии под забор.`
+          : 'После узла ворот/калитки длины под забор не остаётся.'
       });
     }
 
