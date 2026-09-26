@@ -1171,7 +1171,7 @@ function quoteText() {
   if (!lastResult?.summary.activeSections) return '';
   const sections = lastResult.sections.filter(item => item.active).map(item => {
     const opening = item.openingNodeWidth > 0
-      ? `, узел ворот/калитки ${number(item.openingNodeWidth)} м (чистые проёмы ${number(item.openingsWidth)} м + ${item.openingSupportPosts} столб. ${POST_LABELS[item.openingPostType] || item.openingPostType}${item.betweenOpeningFence > 0 ? ` + забор между ними ${number(item.betweenOpeningFence)} м, доп. столбов ${item.bridgeExtraPosts}` : ''})`
+      ? `, узел ворот/калитки ${number(item.openingNodeWidth)} м (чистые проёмы ${number(item.openingsWidth)} м + ${item.openingSupportPosts} столб. ${POST_LABELS[item.openingPostType] || item.openingPostType}${item.betweenOpeningFence > 0 ? ` + забор между ними ${number(item.betweenOpeningFence)} м, доп. столбов ${item.bridgeExtraPosts}` : ''}${item.openingPositionKnown ? `; привязка: до узла ${number(item.openingStartFence)} м, после ${number(item.openingEndFence)} м` : '; привязка не указана'})`
       : '';
     return `Участок ${item.index}: линия ${number(item.grossLength ?? item.length)} × ${number(item.height)} м, заполнение ${number(item.fenceLength ?? item.length)} м${opening}, ${item.spans} прол.`;
   }).join('\n');
