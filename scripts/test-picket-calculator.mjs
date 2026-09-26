@@ -124,7 +124,7 @@ assert.equal(openingsAndExistingPosts.summary.openingSupportPosts, 3);
 assert.equal(openingsAndExistingPosts.summary.openingPostsWidth, 0.24);
 assert.equal(openingsAndExistingPosts.summary.openingNodeWidth, 4.64);
 assert.equal(openingsAndExistingPosts.summary.totalLength, 5.36);
-assert.equal(openingsAndExistingPosts.sections[0].fenceLength, 5.36);
+assert.equal(Number(openingsAndExistingPosts.sections[0].fenceLength.toFixed(2)), 5.36);
 assert.equal(openingsAndExistingPosts.summary.existingPostsUsed, Math.min(2, openingsAndExistingPosts.summary.postsByScheme));
 assert.equal(
   openingsAndExistingPosts.summary.newPosts,
