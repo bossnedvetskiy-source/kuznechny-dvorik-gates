@@ -358,7 +358,7 @@ assert.ok(fs.existsSync(new URL('../evroshtaketnik/assets/fence-single-sketch.sv
 assert.ok(fs.existsSync(new URL('../evroshtaketnik/assets/fence-double-sketch.svg', import.meta.url)));
 assert.match(pickerHtml, /fence-horizontal-sketch\.svg/);
 assert.ok(fs.existsSync(new URL('../evroshtaketnik/assets/fence-horizontal-sketch.svg', import.meta.url)));
-assert.match(uiSource, /visual-horizontal-connector/);
+assert.doesNotMatch(uiSource, /visual-horizontal-connector/);
 assert.match(uiSource, /visual-post-ball/);
 assert.match(uiSource, /visual-fence-bg-horizontal/);
 assert.match(uiSource, /visual-support-post-horizontal/);
