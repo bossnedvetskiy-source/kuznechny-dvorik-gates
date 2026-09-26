@@ -103,6 +103,7 @@ window.PRICE_DATA = {
     postLength: 3,
     postDepth: 0.7,
     maxSpan: 2.5,
+    openingBridgeMaxSpan: 2.4,
     screwVertical: 4,
     screwHorizontal: 6,
     tubeStockLength: 6,
