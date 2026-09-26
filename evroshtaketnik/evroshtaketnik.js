@@ -424,6 +424,12 @@ async function shareQuoteState() {
   }
 }
 
+const continueToSizes = $('continueToSizes');
+continueToSizes?.addEventListener('click', () => {
+  const panels = document.querySelectorAll('.calc-form > .panel');
+  panels[1]?.scrollIntoView({behavior:'smooth', block:'start'});
+});
+
 function syncTypePicker() {
   document.querySelectorAll('.type-card[data-type]').forEach(card => {
     const selected = card.dataset.type === typeInput.value;
