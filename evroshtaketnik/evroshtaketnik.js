@@ -485,7 +485,9 @@ function renderInputValidation(result) {
     const gateInput = sectionsList.querySelector(`[data-field="gateOpening"][data-index="${index}"]`);
     const wicketInput = sectionsList.querySelector(`[data-field="wicketOpening"][data-index="${index}"]`);
     const betweenInput = sectionsList.querySelector(`[data-field="betweenOpeningFence"][data-index="${index}"]`);
+    const positionInput = sectionsList.querySelector(`[data-field="openingStartFence"][data-index="${index}"]`);
     const betweenRow = sectionsList.querySelector(`[data-between-opening-row="${index}"]`);
+    const positionRow = sectionsList.querySelector(`[data-opening-position-row="${index}"]`);
     const openingShareRow = sectionsList.querySelector(`[data-opening-share-row="${index}"]`);
     const hasGate = raw.gateOpening > 0;
     const hasWicket = raw.wicketOpening > 0;
@@ -494,7 +496,8 @@ function renderInputValidation(result) {
 
     if (openingShareRow) openingShareRow.hidden = !hasBothOpenings;
     if (betweenRow) betweenRow.hidden = !canSeparate;
-    for (const input of [lengthInput,heightInput,gateInput,wicketInput,betweenInput]) input?.removeAttribute('aria-invalid');
+    if (positionRow) positionRow.hidden = !(hasGate || hasWicket);
+    for (const input of [lengthInput,heightInput,gateInput,wicketInput,betweenInput,positionInput]) input?.removeAttribute('aria-invalid');
 
     const calculated = result.sections[index] || {};
     const openingWidth = Math.max(0, Number(calculated.openingsWidth) || 0);
@@ -513,7 +516,10 @@ function renderInputValidation(result) {
         const bridgeText = betweenFence > 0
           ? ` Забор между ними: ${number(betweenFence)} м · ${bridgeSpans} прол. · ${bridgeExtraPosts ? `доп. столбов ${bridgeExtraPosts}` : 'без дополнительного столба'}.`
           : '';
-        nodeSummary.innerHTML = `<b>Узел по линии: ${number(openingNodeWidth)} м</b><span>Чистые проёмы ${number(openingWidth)} м + ${openingSupportPosts} столб. ${postLabel} (${number(openingPostsWidth)} м).${bridgeText}</span>`;
+        const positionText = calculated.openingPositionKnown
+          ? ` До узла: ${number(calculated.openingStartFence)} м · после узла: ${number(calculated.openingEndFence)} м.`
+          : ' Привязка по линии пока не указана.';
+        nodeSummary.innerHTML = `<b>Узел по линии: ${number(openingNodeWidth)} м</b><span>Чистые проёмы ${number(openingWidth)} м + ${openingSupportPosts} столб. ${postLabel} (${number(openingPostsWidth)} м).${bridgeText}${positionText}</span>`;
       }
     }
 
@@ -525,6 +531,13 @@ function renderInputValidation(result) {
     }
 
     const messages = [];
+    if (openingWidth > 0 && !calculated.openingPositionKnown && openingNodeWidth <= raw.length + 1e-9) {
+      messages.push({level:'info', text:'Для точного расположения на схеме укажите, сколько метров забора идёт от начала участка до первого столба ворот/калитки.'});
+    }
+    if (calculated.openingPositionInvalid) {
+      messages.push({level:'error', text:`До узла указано ${number(calculated.requestedOpeningStartFence)} м, но максимум здесь ${number(calculated.maxOpeningStartFence)} м.`});
+      positionInput?.setAttribute('aria-invalid','true');
+    }
     if (openingNodeWidth > raw.length + 1e-9) {
       messages.push({level:'error', text:`Узел ворот/калитки занимает ${number(openingNodeWidth)} м, а длина участка только ${number(raw.length)} м.`});
       lengthInput?.setAttribute('aria-invalid','true');
@@ -534,6 +547,9 @@ function renderInputValidation(result) {
     } else if (openingWidth > 0) {
       const totalFence = Math.max(0, Number(calculated.fenceLength) || 0);
       const outsideFence = Math.max(0, totalFence - betweenFence);
+      if (calculated.openingPositionKnown && !calculated.openingPositionInvalid) {
+        messages.push({level:'info', text:`Привязка: до первого столба узла ${number(calculated.openingStartFence)} м, после узла ${number(calculated.openingEndFence)} м.`});
+      }
       if (betweenFence > 0) {
         messages.push({
           level:'info',
