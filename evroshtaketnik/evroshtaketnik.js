@@ -82,6 +82,11 @@ function sectionMarkup(index) {
         </div>
         <div class="opening-post-settings">
           <label class="field"><span>Столбы ворот / калитки</span><select data-field="openingPostType" data-index="${index}"><option value="60x60x2">60×60×2</option><option value="80x80x3">80×80×3</option><option value="100x100x3" selected>100×100×3</option></select></label>
+          <label class="field opening-position-field" data-opening-position-row="${index}" hidden>
+            <span>Забор от начала участка до первого столба узла, м</span>
+            <input data-field="openingStartFence" data-index="${index}" type="number" min="0" max="200" step="0.05" inputmode="decimal" value="" placeholder="Например, 2,3">
+            <small>Укажите для точной схемы. 0 — если ворота или калитка начинаются сразу от начала линии.</small>
+          </label>
           <label class="switch-field compact opening-share-row" data-opening-share-row="${index}">
             <span><b>Общий средний столб</b><small>Включено, если ворота и калитка стоят рядом и используют один общий столб.</small></span>
             <input data-field="openingsSharePost" data-index="${index}" type="checkbox" checked>
@@ -130,6 +135,8 @@ function readSections() {
     const openingPostType = sectionsList.querySelector(`[data-field="openingPostType"][data-index="${index}"]`)?.value || postInput.value;
     const openingsSharePost = Boolean(sectionsList.querySelector(`[data-field="openingsSharePost"][data-index="${index}"]`)?.checked);
     const betweenOpeningFence = Number(sectionsList.querySelector(`[data-field="betweenOpeningFence"][data-index="${index}"]`)?.value || 0);
+    const openingStartRaw = String(sectionsList.querySelector(`[data-field="openingStartFence"][data-index="${index}"]`)?.value ?? '').trim();
+    const openingStartFence = openingStartRaw === '' ? null : Math.max(0, Number(openingStartRaw) || 0);
     const shared = Boolean(sectionsList.querySelector(`[data-field="shared"][data-index="${index}"]`)?.checked);
     return {
       length: index < visibleSections ? Math.max(0, length) : 0,
@@ -139,6 +146,7 @@ function readSections() {
       openingPostType,
       openingsSharePost,
       betweenOpeningFence: index < visibleSections ? Math.max(0, betweenOpeningFence) : 0,
+      openingStartFence: index < visibleSections ? openingStartFence : null,
       sharedWithNext: index < visibleSections - 1 ? shared : false
     };
   });
@@ -339,6 +347,7 @@ function restoreQuoteState(state, {fromLink = false, fromDraft = false} = {}) {
     setSectionValue(index, 'openingPostType', item.openingPostType || '100x100x3');
     setSectionValue(index, 'openingsSharePost', item.openingsSharePost !== false);
     setSectionValue(index, 'betweenOpeningFence', index < visibleSections ? Math.max(0, Number(item.betweenOpeningFence) || 0) : 0);
+    setSectionValue(index, 'openingStartFence', index < visibleSections && item.openingStartFence !== null && item.openingStartFence !== undefined ? Math.max(0, Number(item.openingStartFence) || 0) : '');
     setSectionValue(index, 'shared', index < visibleSections - 1 && Boolean(item.sharedWithNext));
   }
 
@@ -1292,6 +1301,7 @@ removeSectionButton.addEventListener('click', () => {
   setSectionValue(index, 'openingPostType', '100x100x3');
   setSectionValue(index, 'openingsSharePost', true);
   setSectionValue(index, 'betweenOpeningFence', 0);
+  setSectionValue(index, 'openingStartFence', '');
   if (sharedBefore) sharedBefore.checked = false;
   visibleSections -= 1;
   syncVisibleSections();
