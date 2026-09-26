@@ -705,7 +705,7 @@ function renderResult(result) {
 }
 
 
-function visualFenceSegment(segment, label, postWidth, extraPosts) {
+function visualFenceSegment(segment, label, postWidth, extraPosts, attachedSide) {
   if (!segment || segment.footprint <= 1e-9) return null;
   return {
     kind:'fence',
@@ -716,7 +716,8 @@ function visualFenceSegment(segment, label, postWidth, extraPosts) {
     clearSpan:segment.clearSpan,
     normalPosts:segment.normalPosts,
     postWidth:Number(postWidth || .08),
-    extraPosts:Boolean(extraPosts)
+    extraPosts:Boolean(extraPosts),
+    attachedSide:attachedSide || ''
   };
 }
 
@@ -737,7 +738,7 @@ function buildVisualLine(item, result) {
   }
 
   if (item.openingPositionKnown) {
-    const beforeFence = visualFenceSegment(before, 'До ворот/калитки', fencePostWidth, false);
+    const beforeFence = visualFenceSegment(before, 'До ворот/калитки', fencePostWidth, false, 'right');
     if (beforeFence) parts.push(beforeFence);
   } else {
     const outerFence = visualFenceSegment(outer, 'Остальной забор', fencePostWidth, false);
@@ -782,7 +783,7 @@ function buildVisualLine(item, result) {
   }
 
   if (item.openingPositionKnown) {
-    const afterFence = visualFenceSegment(after, 'После ворот/калитки', fencePostWidth, false);
+    const afterFence = visualFenceSegment(after, 'После ворот/калитки', fencePostWidth, false, 'left');
     if (afterFence) parts.push(afterFence);
   }
 
@@ -799,7 +800,11 @@ function fencePostPositions(part) {
   if (part.mode === 'normal') {
     for (let i=0; i<=spans; i+=1) positions.push(i * (clear + postWidth));
   } else if (part.mode === 'attached') {
-    for (let i=0; i<spans; i+=1) positions.push(i * (clear + postWidth));
+    if (part.attachedSide === 'left') {
+      for (let i=1; i<=spans; i+=1) positions.push(i * clear + (i - 1) * postWidth);
+    } else {
+      for (let i=0; i<spans; i+=1) positions.push(i * (clear + postWidth));
+    }
   } else if (part.mode === 'bridge') {
     for (let i=1; i<spans; i+=1) positions.push(i * clear + (i - 1) * postWidth);
   }
@@ -881,7 +886,9 @@ function renderVisualSvg(item, result) {
 
   const totalX2 = left + usable;
   const nodeInfo = item.openingSupportPosts
-    ? 'Проёмы ' + number(item.openingsWidth) + ' м · столбы ворот/калитки ' + item.openingSupportPosts + ' шт' + (item.betweenOpeningFence > 0 ? ' · между ними ' + number(item.betweenOpeningFence) + ' м' : '')
+    ? (item.openingPositionKnown
+        ? 'До узла ' + number(item.openingStartFence) + ' м · узел ' + number(item.openingNodeWidth) + ' м · после ' + number(item.openingEndFence) + ' м'
+        : 'Расположение узла условное · проёмы ' + number(item.openingsWidth) + ' м · столбы ' + item.openingSupportPosts + ' шт')
     : item.spans + ' прол. · чистый пролёт до ' + number(item.clearSpan) + ' м';
 
   return '<div class="visual-line-scroll" tabindex="0" aria-label="Схема участка ' + item.index + '. Вся линия показана целиком.">' +
