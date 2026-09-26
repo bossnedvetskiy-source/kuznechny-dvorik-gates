@@ -831,7 +831,8 @@ function renderFencePattern(x, y, w, h, part, scale) {
       if (leftEnd > x+3) fill += '<rect x="' + (x+3).toFixed(1) + '" y="' + py.toFixed(1) + '" width="' + Math.max(0,leftEnd-(x+3)).toFixed(1) + '" height="' + slatH.toFixed(1) + '" rx="1.5" class="visual-horizontal-slat"/>';
       if (x+safeW-3 > rightStart) fill += '<rect x="' + rightStart.toFixed(1) + '" y="' + py.toFixed(1) + '" width="' + Math.max(0,(x+safeW-3)-rightStart).toFixed(1) + '" height="' + slatH.toFixed(1) + '" rx="1.5" class="visual-horizontal-slat"/>';
       fill += '<rect x="' + (center-2).toFixed(1) + '" y="' + (py-2).toFixed(1) + '" width="4" height="' + (slatH+4).toFixed(1) + '" rx="1" class="visual-horizontal-connector"/>';
-      fill += '<line x1="' + (x+5).toFixed(1) + '" y1="' + (py+1.5).toFixed(1) + '" x2="' + Math.max(x+5,leftEnd-2).toFixed(1) + '" y2="' + (py+1.5).toFixed(1) + '" class="visual-horizontal-highlight"/>';
+      fill += '<line x1="' + (x+5).toFixed(1) + '" y1="' + (py+1.4).toFixed(1) + '" x2="' + Math.max(x+5,leftEnd-2).toFixed(1) + '" y2="' + (py+1.4).toFixed(1) + '" class="visual-horizontal-highlight"/>' +
+        '<line x1="' + (x+5).toFixed(1) + '" y1="' + (py+4.6).toFixed(1) + '" x2="' + Math.max(x+5,leftEnd-2).toFixed(1) + '" y2="' + (py+4.6).toFixed(1) + '" class="visual-horizontal-highlight visual-horizontal-highlight-low"/>';
     }
   } else {
     const pitch = fillType === 'vertical-single' ? 10.5 : 8.8;
@@ -842,10 +843,15 @@ function renderFencePattern(x, y, w, h, part, scale) {
       const right = centerX + half;
       const radius = half;
       const capY = topY + radius;
+      const ribTop = topY + radius + 2;
+      const ribBottom = bottomY - 2;
+      const ribOffset = Math.max(.9, width * .22);
       return '<path d="M' + left.toFixed(1) + ' ' + capY.toFixed(1) +
         ' A' + radius.toFixed(1) + ' ' + radius.toFixed(1) + ' 0 0 1 ' + right.toFixed(1) + ' ' + capY.toFixed(1) +
         ' V' + bottomY.toFixed(1) + ' H' + left.toFixed(1) + ' Z" class="' + klass + '"/>' +
-        '<line x1="' + centerX.toFixed(1) + '" y1="' + (topY+radius+2).toFixed(1) + '" x2="' + centerX.toFixed(1) + '" y2="' + (bottomY-2).toFixed(1) + '" class="visual-picket-rib"/>';
+        '<line x1="' + (centerX-ribOffset).toFixed(1) + '" y1="' + ribTop.toFixed(1) + '" x2="' + (centerX-ribOffset).toFixed(1) + '" y2="' + ribBottom.toFixed(1) + '" class="visual-picket-rib"/>' +
+        '<line x1="' + centerX.toFixed(1) + '" y1="' + (ribTop-1).toFixed(1) + '" x2="' + centerX.toFixed(1) + '" y2="' + ribBottom.toFixed(1) + '" class="visual-picket-rib visual-picket-rib-main"/>' +
+        '<line x1="' + (centerX+ribOffset).toFixed(1) + '" y1="' + ribTop.toFixed(1) + '" x2="' + (centerX+ribOffset).toFixed(1) + '" y2="' + ribBottom.toFixed(1) + '" class="visual-picket-rib"/>';
     };
     if (fillType === 'vertical-double') {
       for (let px=x+4+pitch/2; px<x+safeW-3; px+=pitch) {
@@ -862,7 +868,11 @@ function renderFencePattern(x, y, w, h, part, scale) {
     const pw = Math.max(3, (part.postWidth || .08) * scale);
     const klass = part.extraPosts ? 'visual-extra-post' : 'visual-fence-post';
     const title = part.extraPosts ? 'Дополнительный столб' : 'Столб забора';
-    return '<rect x="' + postX.toFixed(1) + '" y="' + (y-7).toFixed(1) + '" width="' + pw.toFixed(1) + '" height="' + (h+14).toFixed(1) + '" rx="1.5" class="' + klass + '"><title>' + title + ' ' + (index+1) + '</title></rect>';
+    const postRect = '<rect x="' + postX.toFixed(1) + '" y="' + (y-7).toFixed(1) + '" width="' + pw.toFixed(1) + '" height="' + (h+14).toFixed(1) + '" rx="1.5" class="' + klass + '"><title>' + title + ' ' + (index+1) + '</title></rect>';
+    const ball = fillType === 'horizontal-double'
+      ? '<circle cx="' + (postX+pw/2).toFixed(1) + '" cy="' + (y-10).toFixed(1) + '" r="' + Math.max(2.2,pw*.72).toFixed(1) + '" class="visual-post-ball"/>'
+      : '';
+    return postRect + ball;
   }).join('');
 
   const rails = fillType === 'horizontal-double'
