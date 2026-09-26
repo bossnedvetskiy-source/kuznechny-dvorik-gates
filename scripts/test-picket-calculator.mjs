@@ -348,6 +348,14 @@ assert.match(uiSource, /is-suppressed/);
 assert.match(uiSource, /openingStartFence/);
 assert.match(uiSource, /точная привязка по линии/);
 assert.match(uiSource, /drawInset/);
+assert.match(uiSource, /visual-picket-back/);
+assert.match(uiSource, /visual-picket-front/);
+assert.match(uiSource, /horizontal-double/);
+const pickerHtml = fs.readFileSync(new URL('../evroshtaketnik/index.html', import.meta.url), 'utf8');
+assert.match(pickerHtml, /fence-single-sketch\.svg/);
+assert.match(pickerHtml, /fence-double-sketch\.svg/);
+assert.ok(fs.existsSync(new URL('../evroshtaketnik/assets/fence-single-sketch.svg', import.meta.url)));
+assert.ok(fs.existsSync(new URL('../evroshtaketnik/assets/fence-double-sketch.svg', import.meta.url)));
 assert.doesNotMatch(uiSource, /<small>Остальной забор<\/small>/);
 
 console.log('Euro picket calculator matches Excel reference scenarios.');
