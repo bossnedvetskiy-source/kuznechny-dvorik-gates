@@ -170,7 +170,7 @@ const POST_LABELS = {
 const TYPE_HELP = {
   'vertical-double': 'Полукруглый ребристый евроштакетник ставится с двух сторон в шахматном порядке — забор меньше просматривается и выглядит плотнее.',
   'vertical-single': 'Полукруглый ребристый евроштакетник ставится с одной стороны — простой и экономичный вариант.',
-  'horizontal-double': 'Горизонтальный евроштакетник идёт в два ряда со смещением, как на нашем реальном объекте. Внутри пролёта учитываются вертикальные прожилины и короткие перемычки.'
+  'horizontal-double': 'Горизонтальный евроштакетник идёт в два ряда со смещением, как на нашем реальном объекте. На схеме показаны только ровные горизонтальные планки и основные столбы.'
 };
 
 function showToast(message) {
@@ -819,24 +819,14 @@ function renderFencePattern(x, y, w, h, part, scale) {
 
   if (fillType === 'horizontal-double') {
     const rowStep = 10.5;
-    let row = 0;
-    for (let py=y+7; py<y+h-7; py+=rowStep, row+=1) {
+    for (let py=y+7; py<y+h-7; py+=rowStep) {
       const slatH = 6.2;
-      const gapWidth = Math.min(13, Math.max(5, safeW * .08));
-      const ratios = [.28,.5,.72];
-      const center = x + safeW * ratios[row % ratios.length];
-      const leftEnd = Math.max(x+4, center-gapWidth/2);
-      const rightStart = Math.min(x+safeW-4, center+gapWidth/2);
-      fill += '<rect x="' + (x+3).toFixed(1) + '" y="' + (py-1.2).toFixed(1) + '" width="' + Math.max(0,safeW-6).toFixed(1) + '" height="' + (slatH+2.4).toFixed(1) + '" rx="1.5" class="visual-horizontal-back"/>';
-      if (leftEnd > x+3) fill += '<rect x="' + (x+3).toFixed(1) + '" y="' + py.toFixed(1) + '" width="' + Math.max(0,leftEnd-(x+3)).toFixed(1) + '" height="' + slatH.toFixed(1) + '" rx="1.5" class="visual-horizontal-slat"/>';
-      if (x+safeW-3 > rightStart) fill += '<rect x="' + rightStart.toFixed(1) + '" y="' + py.toFixed(1) + '" width="' + Math.max(0,(x+safeW-3)-rightStart).toFixed(1) + '" height="' + slatH.toFixed(1) + '" rx="1.5" class="visual-horizontal-slat"/>';
-      fill += '<rect x="' + (center-2).toFixed(1) + '" y="' + (py-2).toFixed(1) + '" width="4" height="' + (slatH+4).toFixed(1) + '" rx="1" class="visual-horizontal-connector"/>';
-      const leftHighlightEnd = Math.max(x+5,leftEnd-2);
-      const rightHighlightStart = Math.min(x+safeW-5,rightStart+2);
-      fill += '<line x1="' + (x+5).toFixed(1) + '" y1="' + (py+1.4).toFixed(1) + '" x2="' + leftHighlightEnd.toFixed(1) + '" y2="' + (py+1.4).toFixed(1) + '" class="visual-horizontal-highlight"/>' +
-        '<line x1="' + (x+5).toFixed(1) + '" y1="' + (py+4.6).toFixed(1) + '" x2="' + leftHighlightEnd.toFixed(1) + '" y2="' + (py+4.6).toFixed(1) + '" class="visual-horizontal-highlight visual-horizontal-highlight-low"/>' +
-        '<line x1="' + rightHighlightStart.toFixed(1) + '" y1="' + (py+1.4).toFixed(1) + '" x2="' + (x+safeW-5).toFixed(1) + '" y2="' + (py+1.4).toFixed(1) + '" class="visual-horizontal-highlight"/>' +
-        '<line x1="' + rightHighlightStart.toFixed(1) + '" y1="' + (py+4.6).toFixed(1) + '" x2="' + (x+safeW-5).toFixed(1) + '" y2="' + (py+4.6).toFixed(1) + '" class="visual-horizontal-highlight visual-horizontal-highlight-low"/>';
+      const fullX = x + 3;
+      const fullW = Math.max(0, safeW - 6);
+      fill += '<rect x="' + fullX.toFixed(1) + '" y="' + (py+1.8).toFixed(1) + '" width="' + fullW.toFixed(1) + '" height="' + (slatH+1.8).toFixed(1) + '" rx="1.5" class="visual-horizontal-back"/>';
+      fill += '<rect x="' + fullX.toFixed(1) + '" y="' + py.toFixed(1) + '" width="' + fullW.toFixed(1) + '" height="' + slatH.toFixed(1) + '" rx="1.5" class="visual-horizontal-slat"/>';
+      fill += '<line x1="' + (x+5).toFixed(1) + '" y1="' + (py+1.4).toFixed(1) + '" x2="' + (x+safeW-5).toFixed(1) + '" y2="' + (py+1.4).toFixed(1) + '" class="visual-horizontal-highlight"/>' +
+        '<line x1="' + (x+5).toFixed(1) + '" y1="' + (py+4.6).toFixed(1) + '" x2="' + (x+safeW-5).toFixed(1) + '" y2="' + (py+4.6).toFixed(1) + '" class="visual-horizontal-highlight visual-horizontal-highlight-low"/>';
     }
   } else {
     const pitch = fillType === 'vertical-single' ? 10.5 : 8.8;
