@@ -120,8 +120,11 @@ const openingsAndExistingPosts = calculateFence({
 });
 assert.equal(openingsAndExistingPosts.summary.grossLineLength, 10);
 assert.equal(openingsAndExistingPosts.summary.openingsWidth, 4.4);
-assert.equal(openingsAndExistingPosts.summary.totalLength, 5.6);
-assert.equal(openingsAndExistingPosts.sections[0].fenceLength, 5.6);
+assert.equal(openingsAndExistingPosts.summary.openingSupportPosts, 3);
+assert.equal(openingsAndExistingPosts.summary.openingPostsWidth, 0.24);
+assert.equal(openingsAndExistingPosts.summary.openingNodeWidth, 4.64);
+assert.equal(openingsAndExistingPosts.summary.totalLength, 5.36);
+assert.equal(openingsAndExistingPosts.sections[0].fenceLength, 5.36);
 assert.equal(openingsAndExistingPosts.summary.existingPostsUsed, Math.min(2, openingsAndExistingPosts.summary.postsByScheme));
 assert.equal(
   openingsAndExistingPosts.summary.newPosts,
@@ -135,17 +138,71 @@ const invalidOpenings = calculateFence({
   includeNewPosts: true,
   sections: [{length: 4, height: 1.8, gateOpening: 3.4, wicketOpening: 1}]
 });
-assert.match(invalidOpenings.summary.check, /ПРОЁМЫ/);
+assert.match(invalidOpenings.summary.check, /УЗЕЛ/);
 
 const allOpening = calculateFence({
   type: 'vertical-single',
   post: '80x80x3',
   includeNewPosts: true,
-  sections: [{length: 4.4, height: 1.8, gateOpening: 3.4, wicketOpening: 1}]
+  sections: [{length: 4.64, height: 1.8, gateOpening: 3.4, wicketOpening: 1}]
 });
 assert.equal(allOpening.summary.totalLength, 0);
 assert.equal(allOpening.summary.totalSpans, 0);
+assert.equal(allOpening.summary.openingNodeWidth, 4.64);
 assert.match(allOpening.summary.check, /НЕ ОСТАЛОСЬ/);
+
+const gateWicketNode100 = calculateFence({
+  type: 'vertical-double',
+  post: '80x80x3',
+  includeNewPosts: true,
+  sections: [{
+    length: 10,
+    height: 1.8,
+    gateOpening: 3.4,
+    wicketOpening: 1,
+    openingPostType: '100x100x3',
+    openingsSharePost: true
+  }]
+});
+assert.equal(gateWicketNode100.summary.openingsWidth, 4.4);
+assert.equal(gateWicketNode100.summary.openingSupportPosts, 3);
+assert.equal(gateWicketNode100.summary.openingPostsWidth, 0.3);
+assert.equal(gateWicketNode100.summary.openingNodeWidth, 4.7);
+assert.equal(gateWicketNode100.summary.totalLength, 5.3);
+assert.equal(gateWicketNode100.sections[0].openingPostType, '100x100x3');
+assert.equal(gateWicketNode100.sections[0].openingPostWidth, 0.1);
+
+const gateWicketSeparatePosts = calculateFence({
+  type: 'vertical-double',
+  post: '80x80x3',
+  includeNewPosts: true,
+  sections: [{
+    length: 10,
+    height: 1.8,
+    gateOpening: 3.4,
+    wicketOpening: 1,
+    openingPostType: '100x100x3',
+    openingsSharePost: false
+  }]
+});
+assert.equal(gateWicketSeparatePosts.summary.openingSupportPosts, 4);
+assert.equal(gateWicketSeparatePosts.summary.openingNodeWidth, 4.8);
+assert.equal(gateWicketSeparatePosts.summary.totalLength, 5.2);
+
+const gateOnlyNode = calculateFence({
+  type: 'vertical-single',
+  post: '80x80x3',
+  includeNewPosts: true,
+  sections: [{
+    length: 10,
+    height: 1.8,
+    gateOpening: 3.4,
+    openingPostType: '100x100x3'
+  }]
+});
+assert.equal(gateOnlyNode.summary.openingSupportPosts, 2);
+assert.equal(gateOnlyNode.summary.openingNodeWidth, 3.6);
+assert.equal(gateOnlyNode.summary.totalLength, 6.4);
 
 const techDefault = calculateFence({
   type: 'vertical-single',
