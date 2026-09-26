@@ -161,3 +161,14 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,su
   .site-conditions summary:after{float:none}.site-condition-options b{font-size:10px}.site-condition-options small{font-size:9px}
   .section-validation{font-size:9.5px}
 }
+
+.opening-post-settings{display:grid;gap:9px;margin-top:10px;padding:10px;border:1px solid rgba(239,200,111,.14);border-radius:11px;background:rgba(210,163,78,.035)}
+.opening-share-row{margin:0!important}
+.opening-node-summary{display:grid;gap:3px;padding:9px 10px;border-radius:9px;background:#0d1013;border:1px solid rgba(255,255,255,.07)}
+.opening-node-summary b{color:#e1bd69;font-size:10px}
+.opening-node-summary span{color:#8f9397;font-size:8.5px;line-height:1.45}
+@media(max-width:620px){
+  .opening-post-settings{padding:9px}
+  .opening-node-summary b{font-size:10.5px}
+  .opening-node-summary span{font-size:9px}
+}
