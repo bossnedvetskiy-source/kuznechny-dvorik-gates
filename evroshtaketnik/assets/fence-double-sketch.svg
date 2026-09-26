@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 420" role="img" aria-labelledby="t d">
+<title id="t">Вертикальный двусторонний евроштакетник</title><desc id="d">Два ряда металлического штакетника в шахматном порядке</desc>
+<rect width="640" height="420" rx="26" fill="#f3f0e8"/>
+<g transform="translate(45 32)" stroke="#3f4245" stroke-linejoin="round">
+  <rect x="8" y="30" width="18" height="305" rx="3" fill="#b8b7b0" stroke-width="3"/>
+  <rect x="524" y="30" width="18" height="305" rx="3" fill="#b8b7b0" stroke-width="3"/>
+  <rect x="20" y="105" width="510" height="16" rx="3" fill="#8e8f8b" stroke-width="2"/>
+  <rect x="20" y="255" width="510" height="16" rx="3" fill="#8e8f8b" stroke-width="2"/>
+  <g fill="#4f5357" stroke="#373a3d" stroke-width="2.5" opacity=".72">
+    <path d="M88 45 L107 30 L126 45 V322 H88 Z"/>
+    <path d="M164 45 L183 30 L202 45 V322 H164 Z"/>
+    <path d="M240 45 L259 30 L278 45 V322 H240 Z"/>
+    <path d="M316 45 L335 30 L354 45 V322 H316 Z"/>
+    <path d="M392 45 L411 30 L430 45 V322 H392 Z"/>
+    <path d="M468 45 L487 30 L506 45 V322 H468 Z"/>
+  </g>
+  <g fill="#7b7e82" stroke-width="3">
+    <path d="M50 45 L71 28 L92 45 V322 H50 Z"/>
+    <path d="M126 45 L147 28 L168 45 V322 H126 Z"/>
+    <path d="M202 45 L223 28 L244 45 V322 H202 Z"/>
+    <path d="M278 45 L299 28 L320 45 V322 H278 Z"/>
+    <path d="M354 45 L375 28 L396 45 V322 H354 Z"/>
+    <path d="M430 45 L451 28 L472 45 V322 H430 Z"/>
+  </g>
+</g>
+<text x="320" y="392" text-anchor="middle" font-family="Arial,sans-serif" font-size="25" font-weight="800" fill="#a87b32">2 РЯДА · ШАХМАТКА</text>
+</svg>
