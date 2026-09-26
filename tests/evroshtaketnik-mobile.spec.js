@@ -18,6 +18,13 @@ for (const viewport of viewports) {
       await expect.poll(async () => img.evaluate(el => el.complete && el.naturalWidth > 0 && el.naturalHeight > 0)).toBeTruthy();
     }
 
+    const firstCardBox = await cards.first().boundingBox();
+    const firstImageBox = await cards.first().locator('.type-image').boundingBox();
+    expect(firstCardBox).not.toBeNull();
+    expect(firstImageBox).not.toBeNull();
+    expect(firstImageBox.width / firstCardBox.width).toBeGreaterThan(0.42);
+    expect(firstCardBox.height).toBeLessThan(190);
+
     await expect(page.locator('.post-options')).not.toHaveAttribute('open', '');
     await page.locator('[data-field="length"][data-index="0"]').fill('10');
     await expect(page.locator('#mobileQuoteBar')).toBeVisible();

@@ -468,3 +468,67 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,su
   .type-copy b{font-size:20px!important}
   .type-copy>span:last-child{font-size:10.5px!important}
 }
+
+
+/* Stage 2 · compact real-photo fence cards */
+.type-card[data-type="vertical-double"] .type-image img{
+  object-position:52% 52%!important;
+  transform:scale(1.08)!important
+}
+.type-card[data-type="vertical-single"] .type-image img{
+  object-position:17% 50%!important;
+  transform:scale(1.12)!important
+}
+.type-card[data-type="horizontal-double"] .type-image img{
+  object-position:54% 50%!important;
+  transform:scale(1.06)!important
+}
+
+@media(max-width:620px){
+  .type-picker{gap:10px!important}
+  .type-card{
+    grid-template-columns:46% minmax(0,54%)!important;
+    min-height:164px!important;
+    border-radius:16px!important
+  }
+  .type-image{min-height:164px!important}
+  .type-copy{
+    gap:6px!important;
+    padding:13px 39px 13px 12px!important
+  }
+  .type-copy b{
+    font-size:19px!important;
+    line-height:1.06!important;
+    letter-spacing:-.015em!important
+  }
+  .type-copy>span:last-child{
+    font-size:10.5px!important;
+    line-height:1.38!important
+  }
+  .type-badge{
+    padding:4px 7px!important;
+    font-size:9px!important
+  }
+  .type-radio{
+    width:25px!important;
+    height:25px!important;
+    right:10px!important;
+    top:11px!important
+  }
+  .type-card.is-selected .type-radio{
+    box-shadow:inset 0 0 0 5px #111315,0 0 0 2px rgba(239,191,89,.18)!important
+  }
+}
+@media(max-width:390px){
+  .type-card{
+    grid-template-columns:44% minmax(0,56%)!important;
+    min-height:162px!important
+  }
+  .type-image{min-height:162px!important}
+  .type-copy{
+    padding-left:10px!important;
+    padding-right:36px!important
+  }
+  .type-copy b{font-size:18px!important}
+  .type-copy>span:last-child{font-size:10px!important}
+}
