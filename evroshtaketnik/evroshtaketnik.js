@@ -145,6 +145,12 @@ function deliveryIsKnown() {
   return manualDeliveryEnabled.checked || Boolean(selectedDelivery);
 }
 
+const POST_LABELS = {
+  '60x60x2':'60×60×2',
+  '80x80x3':'80×80×3',
+  '100x100x3':'100×100×3'
+};
+
 const TYPE_HELP = {
   'vertical-double': 'Штакетник с двух сторон в шахматном порядке — забор меньше просматривается.',
   'vertical-single': 'Штакетник устанавливается с одной стороны — самый простой и экономичный вариант.',
@@ -322,6 +328,8 @@ function restoreQuoteState(state, {fromLink = false, fromDraft = false} = {}) {
     setSectionValue(index, 'height', Math.max(.5, Number(item.height) || 1.8));
     setSectionValue(index, 'gateOpening', index < visibleSections ? Math.max(0, Number(item.gateOpening) || 0) : 0);
     setSectionValue(index, 'wicketOpening', index < visibleSections ? Math.max(0, Number(item.wicketOpening) || 0) : 0);
+    setSectionValue(index, 'openingPostType', item.openingPostType || '100x100x3');
+    setSectionValue(index, 'openingsSharePost', item.openingsSharePost !== false);
     setSectionValue(index, 'shared', index < visibleSections - 1 && Boolean(item.sharedWithNext));
   }
 
@@ -551,9 +559,9 @@ function renderResult(result) {
   $('summaryLength').textContent = summary.openingsWidth > 0
     ? `${number(summary.totalLength)} м из линии ${number(summary.grossLineLength)} м`
     : `${number(summary.totalLength)} м`;
-  $('summaryPosts').textContent = result.includeNewPosts
-    ? `${summary.postsByScheme} (новых ${summary.newPosts})`
-    : String(summary.postsByScheme);
+  $('summaryPosts').textContent = summary.openingSupportPosts > 0
+    ? `${summary.postsByScheme} забор + ${summary.openingSupportPosts} у ворот`
+    : (result.includeNewPosts ? `${summary.postsByScheme} (новых ${summary.newPosts})` : String(summary.postsByScheme));
   $('summaryDelivery').textContent = deliveryPending
     ? 'не указана'
     : (summary.deliveryCost === 0 ? '0 ₽' : money(summary.deliveryCost));
@@ -588,7 +596,7 @@ function renderResult(result) {
   ];
   if (result.includeNewPosts && summary.newPosts > 0) chips.push(`<span>новые столбы: ${summary.newPosts} шт + установка</span>`);
   if (summary.existingPostsUsed > 0) chips.push(`<span>готовые столбы: ${summary.existingPostsUsed} шт</span>`);
-  if (summary.openingsWidth > 0) chips.push(`<span>проёмы вычтены: ${number(summary.openingsWidth)} м</span>`);
+  if (summary.openingNodeWidth > 0) chips.push(`<span>узел ворот/калитки: ${number(summary.openingNodeWidth)} м по линии</span>`);
   if (hasSlopeInput?.checked || hasHardSurfaceInput?.checked) chips.push('<span class="warn">условия монтажа — проверить на замере</span>');
   if ($('includedChips')) $('includedChips').innerHTML = chips.join('');
 
@@ -596,8 +604,8 @@ function renderResult(result) {
     const caption = sectionsList.querySelector(`[data-section-caption="${index}"]`);
     if (!caption) return;
     caption.textContent = item.active
-      ? (item.openingsWidth > 0
-          ? `${item.spans} прол. · забор ${number(item.fenceLength)} из ${number(item.grossLength)} м`
+      ? (item.openingNodeWidth > 0
+          ? `${item.spans} прол. · узел ${number(item.openingNodeWidth)} м · забор ${number(item.fenceLength)} м`
           : `${item.spans} прол. · чистый ${number(item.clearSpan)} м`)
       : 'не заполнен';
   });
@@ -629,8 +637,8 @@ function renderScheme(result) {
     const line = Array.from({length:visibleSpans}, () => '<span class="scheme-post"></span><span class="scheme-span"></span>').join('') + '<span class="scheme-post"></span>';
     const compact = item.spans > visibleSpans ? `<div class="shared-note">На схеме показано ${visibleSpans} из ${item.spans} пролётов</div>` : '';
     const shared = item.sharedPost ? '<div class="shared-note">Последний столб общий со следующим участком</div>' : '';
-    const openings = item.openingsWidth > 0
-      ? `<div class="shared-note">Проёмы ворот/калитки: ${number(item.openingsWidth)} м · в заборе считается ${number(item.fenceLength)} м</div>`
+    const openings = item.openingNodeWidth > 0
+      ? `<div class="shared-note">Узел ворот/калитки: ${number(item.openingNodeWidth)} м по линии = проёмы ${number(item.openingsWidth)} м + ${item.openingSupportPosts} столб. × ${number(item.openingPostWidth)} м. В цену забора узел не включён.</div>`
       : '';
     return `
       <article class="scheme-card">
@@ -836,7 +844,9 @@ async function loadFencePrices() {
 function quoteText() {
   if (!lastResult?.summary.activeSections) return '';
   const sections = lastResult.sections.filter(item => item.active).map(item => {
-    const opening = item.openingsWidth > 0 ? `, проёмы ${number(item.openingsWidth)} м` : '';
+    const opening = item.openingNodeWidth > 0
+      ? `, узел ворот/калитки ${number(item.openingNodeWidth)} м (чистые проёмы ${number(item.openingsWidth)} м + ${item.openingSupportPosts} столб. ${POST_LABELS[item.openingPostType] || item.openingPostType})`
+      : '';
     return `Участок ${item.index}: линия ${number(item.grossLength ?? item.length)} × ${number(item.height)} м, заполнение ${number(item.fenceLength ?? item.length)} м${opening}, ${item.spans} прол.`;
   }).join('\n');
   const postMode = includePostsInput.checked
@@ -854,8 +864,10 @@ function quoteText() {
     `Цвет: ${selectedColor}`,
     sections,
     `Длина линии: ${number(lastResult.summary.grossLineLength ?? lastResult.summary.totalLength)} м`,
-    ...(lastResult.summary.openingsWidth > 0 ? [
-      `Проёмы: ${number(lastResult.summary.openingsWidth)} м`,
+    ...(lastResult.summary.openingNodeWidth > 0 ? [
+      `Чистые проёмы: ${number(lastResult.summary.openingsWidth)} м`,
+      `Столбы узлов ворот/калиток: ${lastResult.summary.openingSupportPosts} шт · занимают ${number(lastResult.summary.openingPostsWidth)} м`,
+      `Узлы ворот/калиток по линии: ${number(lastResult.summary.openingNodeWidth)} м`,
       `Длина заполнения евроштакетником: ${number(lastResult.summary.totalLength)} м`
     ] : []),
     ...(conditions.length ? [`Условия монтажа: ${conditions.join('; ')} — проверить на замере`] : []),
@@ -901,6 +913,9 @@ function leadPayload() {
       summary:lastResult ? {
         grossLineLength:lastResult.summary.grossLineLength,
         openingsWidth:lastResult.summary.openingsWidth,
+        openingSupportPosts:lastResult.summary.openingSupportPosts,
+        openingPostsWidth:lastResult.summary.openingPostsWidth,
+        openingNodeWidth:lastResult.summary.openingNodeWidth,
         totalLength:lastResult.summary.totalLength,
         totalSpans:lastResult.summary.totalSpans,
         postsByScheme:lastResult.summary.postsByScheme,
@@ -994,6 +1009,8 @@ removeSectionButton.addEventListener('click', () => {
   const wicketOpening = sectionsList.querySelector(`[data-field="wicketOpening"][data-index="${index}"]`);
   if (gateOpening) gateOpening.value = '0';
   if (wicketOpening) wicketOpening.value = '0';
+  setSectionValue(index, 'openingPostType', '100x100x3');
+  setSectionValue(index, 'openingsSharePost', true);
   if (sharedBefore) sharedBefore.checked = false;
   visibleSections -= 1;
   syncVisibleSections();
