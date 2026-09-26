@@ -1,27 +1,41 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 420" role="img" aria-labelledby="t d">
-<title id="t">Вертикальный двусторонний евроштакетник</title><desc id="d">Два ряда металлического штакетника в шахматном порядке</desc>
-<rect width="640" height="420" rx="26" fill="#f3f0e8"/>
-<g transform="translate(45 32)" stroke="#3f4245" stroke-linejoin="round">
-  <rect x="8" y="30" width="18" height="305" rx="3" fill="#b8b7b0" stroke-width="3"/>
-  <rect x="524" y="30" width="18" height="305" rx="3" fill="#b8b7b0" stroke-width="3"/>
-  <rect x="20" y="105" width="510" height="16" rx="3" fill="#8e8f8b" stroke-width="2"/>
-  <rect x="20" y="255" width="510" height="16" rx="3" fill="#8e8f8b" stroke-width="2"/>
-  <g fill="#4f5357" stroke="#373a3d" stroke-width="2.5" opacity=".72">
-    <path d="M88 45 L107 30 L126 45 V322 H88 Z"/>
-    <path d="M164 45 L183 30 L202 45 V322 H164 Z"/>
-    <path d="M240 45 L259 30 L278 45 V322 H240 Z"/>
-    <path d="M316 45 L335 30 L354 45 V322 H316 Z"/>
-    <path d="M392 45 L411 30 L430 45 V322 H392 Z"/>
-    <path d="M468 45 L487 30 L506 45 V322 H468 Z"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 520" role="img" aria-labelledby="title desc">
+<title id="title">Двусторонний металлический евроштакетник шахматкой с полукруглым верхом</title>
+<desc id="desc">Профессиональная фронтальная схема двух рядов металлического евроштакетника с полукруглыми верхними кромками, расположенных в шахматном порядке</desc>
+<defs>
+  <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#faf9f5"/><stop offset="1" stop-color="#ece9e0"/></linearGradient>
+  <linearGradient id="post" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#767d82"/><stop offset=".48" stop-color="#b2b6b9"/><stop offset="1" stop-color="#62696e"/></linearGradient>
+  <linearGradient id="rail" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#a8adb0"/><stop offset="1" stop-color="#71777c"/></linearGradient>
+  <linearGradient id="front" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#545b60"/><stop offset=".18" stop-color="#90969a"/><stop offset=".5" stop-color="#bec1c4"/><stop offset=".82" stop-color="#7c8388"/><stop offset="1" stop-color="#495055"/></linearGradient>
+  <linearGradient id="back" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#31373b"/><stop offset=".5" stop-color="#61686d"/><stop offset="1" stop-color="#282e32"/></linearGradient>
+  <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="6" stdDeviation="7" flood-color="#24282b" flood-opacity=".16"/></filter>
+</defs>
+<rect width="800" height="520" rx="28" fill="url(#bg)"/>
+<ellipse cx="400" cy="452" rx="315" ry="18" fill="#b8b3a8" opacity=".18"/>
+<g transform="translate(70 48)" filter="url(#shadow)">
+  <rect x="6" y="25" width="26" height="355" rx="4" fill="url(#post)" stroke="#555c61" stroke-width="2"/>
+  <rect x="628" y="25" width="26" height="355" rx="4" fill="url(#post)" stroke="#555c61" stroke-width="2"/>
+  <g fill="url(#back)" stroke="#343a3e" stroke-width="1.5" opacity=".92">
+    <path d="M105 84 A25 25 0 0 1 155 84 V360 H105 Z"/>
+    <path d="M195 84 A25 25 0 0 1 245 84 V360 H195 Z"/>
+    <path d="M285 84 A25 25 0 0 1 335 84 V360 H285 Z"/>
+    <path d="M375 84 A25 25 0 0 1 425 84 V360 H375 Z"/>
+    <path d="M465 84 A25 25 0 0 1 515 84 V360 H465 Z"/>
+    <path d="M555 84 A25 25 0 0 1 605 84 V360 H555 Z"/>
   </g>
-  <g fill="#7b7e82" stroke-width="3">
-    <path d="M50 45 L71 28 L92 45 V322 H50 Z"/>
-    <path d="M126 45 L147 28 L168 45 V322 H126 Z"/>
-    <path d="M202 45 L223 28 L244 45 V322 H202 Z"/>
-    <path d="M278 45 L299 28 L320 45 V322 H278 Z"/>
-    <path d="M354 45 L375 28 L396 45 V322 H354 Z"/>
-    <path d="M430 45 L451 28 L472 45 V322 H430 Z"/>
+  <rect x="24" y="128" width="612" height="20" rx="4" fill="url(#rail)" stroke="#666c71" stroke-width="1.5"/>
+  <rect x="24" y="286" width="612" height="20" rx="4" fill="url(#rail)" stroke="#666c71" stroke-width="1.5"/>
+  <g fill="url(#front)" stroke="#50565b" stroke-width="1.7">
+    <path d="M60 82 A27 27 0 0 1 114 82 V360 H60 Z"/>
+    <path d="M150 82 A27 27 0 0 1 204 82 V360 H150 Z"/>
+    <path d="M240 82 A27 27 0 0 1 294 82 V360 H240 Z"/>
+    <path d="M330 82 A27 27 0 0 1 384 82 V360 H330 Z"/>
+    <path d="M420 82 A27 27 0 0 1 474 82 V360 H420 Z"/>
+    <path d="M510 82 A27 27 0 0 1 564 82 V360 H510 Z"/>
+  </g>
+  <g fill="none" stroke="#d6d9db" stroke-width="1.1" opacity=".48">
+    <path d="M73 91V349M163 91V349M253 91V349M343 91V349M433 91V349M523 91V349"/>
+    <path d="M101 91V349M191 91V349M281 91V349M371 91V349M461 91V349M551 91V349"/>
   </g>
 </g>
-<text x="320" y="392" text-anchor="middle" font-family="Arial,sans-serif" font-size="25" font-weight="800" fill="#a87b32">2 РЯДА · ШАХМАТКА</text>
+<text x="400" y="472" text-anchor="middle" font-family="Arial,sans-serif" font-size="20" font-weight="700" letter-spacing="2" fill="#8c6b31">2 РЯДА · ШАХМАТКА · ПОЛУКРУГЛЫЙ ПРОФИЛЬ</text>
 </svg>
