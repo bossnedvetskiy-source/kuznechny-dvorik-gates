@@ -252,11 +252,11 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,su
   .opening-position-field>small{font-size:9px}
 }
 
-.type-image.is-sketch{background:#f3f0e8}
+.type-image.is-sketch{background:#f1eee6}
 .type-image.is-sketch:after{display:none}
-.type-image.is-sketch img{object-fit:contain;padding:4px;background:#f3f0e8}
+.type-image.is-sketch img{object-fit:contain;padding:0;background:#f1eee6;filter:saturate(.92) contrast(1.02)}
 
-.visual-picket-front{stroke:#858b90;stroke-width:4.2;stroke-linecap:round}
-.visual-picket-back{stroke:#444a4f;stroke-width:4.2;stroke-linecap:round;opacity:.9}
+.visual-picket-front{fill:#838a8f;stroke:#b4b9bd;stroke-width:.7}
+.visual-picket-back{fill:#41484d;stroke:#626a70;stroke-width:.65;opacity:.96}
 .visual-horizontal-slat{stroke:#70777c;stroke-width:5.5;stroke-linecap:round}
 .visual-horizontal-support{stroke:#454b50;stroke-width:3;opacity:.9}
