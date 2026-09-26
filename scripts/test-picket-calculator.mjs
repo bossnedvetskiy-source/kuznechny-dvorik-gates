@@ -189,6 +189,67 @@ assert.equal(gateWicketSeparatePosts.summary.openingSupportPosts, 4);
 assert.equal(gateWicketSeparatePosts.summary.openingNodeWidth, 4.8);
 assert.equal(gateWicketSeparatePosts.summary.totalLength, 5.2);
 
+const gateWicketWithFenceBetween = calculateFence({
+  type: 'vertical-double',
+  post: '80x80x3',
+  includeNewPosts: true,
+  sections: [{
+    length: 10,
+    height: 1.8,
+    gateOpening: 3.4,
+    wicketOpening: 1,
+    openingPostType: '100x100x3',
+    openingsSharePost: false,
+    betweenOpeningFence: 2
+  }]
+});
+assert.equal(gateWicketWithFenceBetween.summary.openingSupportPosts, 4);
+assert.equal(gateWicketWithFenceBetween.summary.betweenOpeningFence, 2);
+assert.equal(gateWicketWithFenceBetween.summary.bridgeSpans, 1);
+assert.equal(gateWicketWithFenceBetween.summary.bridgeExtraPosts, 0);
+assert.equal(gateWicketWithFenceBetween.summary.openingNodeWidth, 6.8);
+assert.equal(gateWicketWithFenceBetween.summary.totalLength, 5.2);
+assert.equal(gateWicketWithFenceBetween.sections[0].bridgeExtraPosts, 0);
+assert.equal(gateWicketWithFenceBetween.sections[0].segments.find(item => item.key === 'between-openings').clearSpan, 2);
+
+const gateWicketWithLongFenceBetween = calculateFence({
+  type: 'vertical-double',
+  post: '80x80x3',
+  includeNewPosts: true,
+  sections: [{
+    length: 10,
+    height: 1.8,
+    gateOpening: 3.4,
+    wicketOpening: 1,
+    openingPostType: '100x100x3',
+    openingsSharePost: false,
+    betweenOpeningFence: 2.5
+  }]
+});
+assert.equal(gateWicketWithLongFenceBetween.summary.bridgeSpans, 2);
+assert.equal(gateWicketWithLongFenceBetween.summary.bridgeExtraPosts, 1);
+assert.equal(gateWicketWithLongFenceBetween.sections[0].bridgeExtraPosts, 1);
+assert.ok(gateWicketWithLongFenceBetween.sections[0].segments.find(item => item.key === 'between-openings').clearSpan <= 2.4);
+
+const onlyFenceBetweenGateAndWicket = calculateFence({
+  type: 'vertical-single',
+  post: '80x80x3',
+  includeNewPosts: true,
+  sections: [{
+    length: 6.8,
+    height: 1.8,
+    gateOpening: 3.4,
+    wicketOpening: 1,
+    openingPostType: '100x100x3',
+    openingsSharePost: false,
+    betweenOpeningFence: 2
+  }]
+});
+assert.equal(onlyFenceBetweenGateAndWicket.summary.totalLength, 2);
+assert.equal(onlyFenceBetweenGateAndWicket.summary.bridgeExtraPosts, 0);
+assert.equal(onlyFenceBetweenGateAndWicket.summary.postsByScheme, 0);
+assert.equal(onlyFenceBetweenGateAndWicket.summary.totalSpans, 1);
+
 const gateOnlyNode = calculateFence({
   type: 'vertical-single',
   post: '80x80x3',
