@@ -831,8 +831,12 @@ function renderFencePattern(x, y, w, h, part, scale) {
       if (leftEnd > x+3) fill += '<rect x="' + (x+3).toFixed(1) + '" y="' + py.toFixed(1) + '" width="' + Math.max(0,leftEnd-(x+3)).toFixed(1) + '" height="' + slatH.toFixed(1) + '" rx="1.5" class="visual-horizontal-slat"/>';
       if (x+safeW-3 > rightStart) fill += '<rect x="' + rightStart.toFixed(1) + '" y="' + py.toFixed(1) + '" width="' + Math.max(0,(x+safeW-3)-rightStart).toFixed(1) + '" height="' + slatH.toFixed(1) + '" rx="1.5" class="visual-horizontal-slat"/>';
       fill += '<rect x="' + (center-2).toFixed(1) + '" y="' + (py-2).toFixed(1) + '" width="4" height="' + (slatH+4).toFixed(1) + '" rx="1" class="visual-horizontal-connector"/>';
-      fill += '<line x1="' + (x+5).toFixed(1) + '" y1="' + (py+1.4).toFixed(1) + '" x2="' + Math.max(x+5,leftEnd-2).toFixed(1) + '" y2="' + (py+1.4).toFixed(1) + '" class="visual-horizontal-highlight"/>' +
-        '<line x1="' + (x+5).toFixed(1) + '" y1="' + (py+4.6).toFixed(1) + '" x2="' + Math.max(x+5,leftEnd-2).toFixed(1) + '" y2="' + (py+4.6).toFixed(1) + '" class="visual-horizontal-highlight visual-horizontal-highlight-low"/>';
+      const leftHighlightEnd = Math.max(x+5,leftEnd-2);
+      const rightHighlightStart = Math.min(x+safeW-5,rightStart+2);
+      fill += '<line x1="' + (x+5).toFixed(1) + '" y1="' + (py+1.4).toFixed(1) + '" x2="' + leftHighlightEnd.toFixed(1) + '" y2="' + (py+1.4).toFixed(1) + '" class="visual-horizontal-highlight"/>' +
+        '<line x1="' + (x+5).toFixed(1) + '" y1="' + (py+4.6).toFixed(1) + '" x2="' + leftHighlightEnd.toFixed(1) + '" y2="' + (py+4.6).toFixed(1) + '" class="visual-horizontal-highlight visual-horizontal-highlight-low"/>' +
+        '<line x1="' + rightHighlightStart.toFixed(1) + '" y1="' + (py+1.4).toFixed(1) + '" x2="' + (x+safeW-5).toFixed(1) + '" y2="' + (py+1.4).toFixed(1) + '" class="visual-horizontal-highlight"/>' +
+        '<line x1="' + rightHighlightStart.toFixed(1) + '" y1="' + (py+4.6).toFixed(1) + '" x2="' + (x+safeW-5).toFixed(1) + '" y2="' + (py+4.6).toFixed(1) + '" class="visual-horizontal-highlight visual-horizontal-highlight-low"/>';
     }
   } else {
     const pitch = fillType === 'vertical-single' ? 10.5 : 8.8;
@@ -866,7 +870,9 @@ function renderFencePattern(x, y, w, h, part, scale) {
   const internalPosts = fencePostPositions(part).map((meter, index) => {
     const postX = x + meter * scale;
     const pw = Math.max(3, (part.postWidth || .08) * scale);
-    const klass = part.extraPosts ? 'visual-extra-post' : 'visual-fence-post';
+    const klass = part.extraPosts
+      ? 'visual-extra-post'
+      : (fillType === 'horizontal-double' ? 'visual-fence-post visual-fence-post-horizontal' : 'visual-fence-post');
     const title = part.extraPosts ? 'Дополнительный столб' : 'Столб забора';
     const postRect = '<rect x="' + postX.toFixed(1) + '" y="' + (y-7).toFixed(1) + '" width="' + pw.toFixed(1) + '" height="' + (h+14).toFixed(1) + '" rx="1.5" class="' + klass + '"><title>' + title + ' ' + (index+1) + '</title></rect>';
     const ball = fillType === 'horizontal-double'
@@ -880,7 +886,8 @@ function renderFencePattern(x, y, w, h, part, scale) {
     : '<line x1="' + x.toFixed(1) + '" y1="' + (y+11).toFixed(1) + '" x2="' + (x+safeW).toFixed(1) + '" y2="' + (y+11).toFixed(1) + '" class="visual-rail"/>' +
       '<line x1="' + x.toFixed(1) + '" y1="' + (y+h-11).toFixed(1) + '" x2="' + (x+safeW).toFixed(1) + '" y2="' + (y+h-11).toFixed(1) + '" class="visual-rail"/>';
 
-  return '<rect x="' + x.toFixed(1) + '" y="' + y + '" width="' + safeW.toFixed(1) + '" height="' + h + '" rx="4" class="visual-fence-bg"/>' +
+  const backgroundClass = fillType === 'horizontal-double' ? 'visual-fence-bg visual-fence-bg-horizontal' : 'visual-fence-bg';
+  return '<rect x="' + x.toFixed(1) + '" y="' + y + '" width="' + safeW.toFixed(1) + '" height="' + h + '" rx="4" class="' + backgroundClass + '"/>' +
     fill + rails + internalPosts;
 }
 
@@ -926,9 +933,15 @@ function renderVisualSvg(item, result) {
     } else if (part.kind === 'post') {
       const pw = Math.max(4, w);
       const x = cursor + (w-pw)/2;
-      const klass = part.role === 'extra' ? 'visual-extra-post' : 'visual-support-post';
+      const horizontalFence = typeInput.value === 'horizontal-double';
+      const klass = part.role === 'extra'
+        ? 'visual-extra-post'
+        : (horizontalFence ? 'visual-support-post visual-support-post-horizontal' : 'visual-support-post');
       const title = part.role === 'shared' ? 'Общий столб ворот и калитки' : 'Столб ворот/калитки';
       body += '<rect x="' + x.toFixed(1) + '" y="' + (top-9).toFixed(1) + '" width="' + pw.toFixed(1) + '" height="' + (objectHeight+18).toFixed(1) + '" rx="2" class="' + klass + '"><title>' + title + '</title></rect>';
+      if (horizontalFence && part.role !== 'extra') {
+        body += '<circle cx="' + (x+pw/2).toFixed(1) + '" cy="' + (top-12).toFixed(1) + '" r="' + Math.max(2.6,pw*.62).toFixed(1) + '" class="visual-post-ball"><title>Шаровое навершие столба</title></circle>';
+      }
     }
 
     const label = partLabel(part);
