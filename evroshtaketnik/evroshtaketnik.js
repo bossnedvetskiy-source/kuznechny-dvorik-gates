@@ -86,6 +86,11 @@ function sectionMarkup(index) {
             <input data-field="openingsSharePost" data-index="${index}" type="checkbox" checked>
             <i aria-hidden="true"></i>
           </label>
+          <label class="field between-openings-field" data-between-opening-row="${index}" hidden>
+            <span>Забор между воротами и калиткой, м</span>
+            <input data-field="betweenOpeningFence" data-index="${index}" type="number" min="0" max="50" step="0.05" inputmode="decimal" value="0" placeholder="Например, 2">
+            <small>Чистое расстояние между внутренними столбами. До 2,4 м дополнительный столб не нужен.</small>
+          </label>
           <div class="opening-node-summary" data-opening-node-summary="${index}">Укажите проём — здесь появится полный размер узла по линии.</div>
         </div>
         <small>В текущую цену забора ворота, калитка и их столбы не входят — их размеры учитываются только в геометрии линии.</small>
@@ -123,6 +128,7 @@ function readSections() {
     const wicketOpening = Number(sectionsList.querySelector(`[data-field="wicketOpening"][data-index="${index}"]`)?.value || 0);
     const openingPostType = sectionsList.querySelector(`[data-field="openingPostType"][data-index="${index}"]`)?.value || postInput.value;
     const openingsSharePost = Boolean(sectionsList.querySelector(`[data-field="openingsSharePost"][data-index="${index}"]`)?.checked);
+    const betweenOpeningFence = Number(sectionsList.querySelector(`[data-field="betweenOpeningFence"][data-index="${index}"]`)?.value || 0);
     const shared = Boolean(sectionsList.querySelector(`[data-field="shared"][data-index="${index}"]`)?.checked);
     return {
       length: index < visibleSections ? Math.max(0, length) : 0,
@@ -131,6 +137,7 @@ function readSections() {
       wicketOpening: index < visibleSections ? Math.max(0, wicketOpening) : 0,
       openingPostType,
       openingsSharePost,
+      betweenOpeningFence: index < visibleSections ? Math.max(0, betweenOpeningFence) : 0,
       sharedWithNext: index < visibleSections - 1 ? shared : false
     };
   });
@@ -330,6 +337,7 @@ function restoreQuoteState(state, {fromLink = false, fromDraft = false} = {}) {
     setSectionValue(index, 'wicketOpening', index < visibleSections ? Math.max(0, Number(item.wicketOpening) || 0) : 0);
     setSectionValue(index, 'openingPostType', item.openingPostType || '100x100x3');
     setSectionValue(index, 'openingsSharePost', item.openingsSharePost !== false);
+    setSectionValue(index, 'betweenOpeningFence', index < visibleSections ? Math.max(0, Number(item.betweenOpeningFence) || 0) : 0);
     setSectionValue(index, 'shared', index < visibleSections - 1 && Boolean(item.sharedWithNext));
   }
 
@@ -1025,6 +1033,7 @@ removeSectionButton.addEventListener('click', () => {
   if (wicketOpening) wicketOpening.value = '0';
   setSectionValue(index, 'openingPostType', '100x100x3');
   setSectionValue(index, 'openingsSharePost', true);
+  setSectionValue(index, 'betweenOpeningFence', 0);
   if (sharedBefore) sharedBefore.checked = false;
   visibleSections -= 1;
   syncVisibleSections();
