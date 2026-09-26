@@ -172,3 +172,9 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,su
   .opening-node-summary b{font-size:10.5px}
   .opening-node-summary span{font-size:9px}
 }
+
+.between-openings-field{margin-top:2px}
+.between-openings-field>small{display:block;margin-top:3px;color:#888c90;font-size:8.5px;line-height:1.4}
+@media(max-width:620px){
+  .between-openings-field>small{font-size:9px}
+}
