@@ -53,7 +53,6 @@ const DRAFT_QUOTE_KEY = 'kuzdvor:picket-draft-v1';
 let visibleSections = 1;
 let deliveryRows = [];
 let selectedDelivery = null;
-let selectedColor = 'Графит';
 let lastResult = null;
 let runtimeSettings = {...FENCE_SETTINGS};
 let toastTimer = 0;
@@ -220,7 +219,6 @@ function quoteState() {
     post: postInput.value,
     includeNewPosts: includePostsInput.checked,
     existingPostsCount: Math.max(0, Math.floor(Number(existingPostsInput?.value || 0))),
-    color: selectedColor,
     siteConditions: {
       slope: Boolean(hasSlopeInput?.checked),
       hardSurface: Boolean(hasHardSurfaceInput?.checked)
@@ -330,7 +328,6 @@ function restoreQuoteState(state, {fromLink = false, fromDraft = false} = {}) {
   if (state.post && [...postInput.options].some(option => option.value === state.post)) postInput.value = state.post;
   includePostsInput.checked = state.includeNewPosts !== false;
   if (existingPostsInput) existingPostsInput.value = String(Math.max(0, Math.floor(Number(state.existingPostsCount) || 0)));
-  selectedColor = String(state.color || 'Графит');
   quoteNumber = String(state.quoteNumber || quoteNumber || '');
   if (hasSlopeInput) hasSlopeInput.checked = Boolean(state.siteConditions?.slope);
   if (hasHardSurfaceInput) hasHardSurfaceInput.checked = Boolean(state.siteConditions?.hardSurface);
@@ -388,7 +385,6 @@ function restoreQuoteState(state, {fromLink = false, fromDraft = false} = {}) {
   syncVisibleSections();
   syncPostOptions();
   syncTypePicker();
-  syncColorPicker();
   calculate();
   restoringState = false;
   scheduleDraftSave();
@@ -442,14 +438,6 @@ function syncTypePicker() {
     card.setAttribute('aria-pressed', String(selected));
   });
   syncTypeHelp();
-}
-
-function syncColorPicker() {
-  document.querySelectorAll('.color-choice[data-color]').forEach(button => {
-    const selected = button.dataset.color === selectedColor;
-    button.classList.toggle('is-selected', selected);
-    button.setAttribute('aria-pressed', String(selected));
-  });
 }
 
 function setInternalOpen(open) {
@@ -1246,7 +1234,6 @@ function quoteText() {
     'Забор из металлического евроштакетника',
     `Тип: ${lastResult.type.label}`,
     `Столбы: ${postInput.options[postInput.selectedIndex]?.textContent || postInput.value}; ${postMode}`,
-    `Цвет: ${selectedColor}`,
     sections,
     `Длина линии: ${number(lastResult.summary.grossLineLength ?? lastResult.summary.totalLength)} м`,
     ...(lastResult.summary.openingNodeWidth > 0 ? [
@@ -1286,7 +1273,6 @@ function leadPayload() {
       postType:postInput.value,
       includeNewPosts:includePostsInput.checked,
       existingPostsCount:Number(existingPostsInput?.value || 0),
-      color:selectedColor,
       siteConditions:{
         slope:Boolean(hasSlopeInput?.checked),
         hardSurface:Boolean(hasHardSurfaceInput?.checked),
@@ -1473,11 +1459,6 @@ document.querySelectorAll('.type-card[data-type]').forEach(card => card.addEvent
   syncTypePicker();
   calculate();
 }));
-document.querySelectorAll('.color-choice[data-color]').forEach(button => button.addEventListener('click', () => {
-  selectedColor = button.dataset.color || 'Графит';
-  syncColorPicker();
-  calculate();
-}));
 resultLeadButton?.addEventListener('click', () => {
   if (lastResult?.summary.activeSections) {
     scrollToLead();
@@ -1515,7 +1496,6 @@ leadBackToCalc?.addEventListener('click', () => {
 
 syncVisibleSections();
 syncTypePicker();
-syncColorPicker();
 syncPostOptions();
 syncSavedQuoteBar();
 await Promise.all([loadDeliveryBase(), loadFencePrices()]);
