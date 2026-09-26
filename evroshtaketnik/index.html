@@ -28,7 +28,7 @@
       <h1>Забор из <em>металлического евроштакетника</em></h1>
       <p>Введите размеры — сразу покажем предварительную стоимость материалов и работ. Пролёты, количество штакетника и раскрой трубы калькулятор посчитает сам.</p>
       <div class="hero-pills">
-        <span>до 4 участков</span><span>пролёты до 2,5 м</span><span>ширина столбов учтена</span>
+        <span>несколько участков в одном расчёте</span><span>пролёты до 2,5 м</span><span>ширина столбов учтена</span>
       </div>
     </section>
 
@@ -50,7 +50,7 @@
             <button class="type-card is-selected" type="button" data-type="vertical-double" aria-pressed="true">
               <span class="type-image is-sketch"><img src="./assets/fence-double-sketch.svg" alt="Профессиональная схема двустороннего полукруглого евроштакетника в два ряда, шахматка" loading="eager"></span>
               <span class="type-copy">
-                <span class="type-badge">★ Самый популярный</span>
+                <span class="type-badge">Плотное заполнение</span>
                 <b>Шахматка <small>(двусторонний)</small></b>
                 <span>Полукруглый ребристый евроштакетник в два ряда — плотнее и меньше просматривается.</span>
               </span>
@@ -59,7 +59,7 @@
             <button class="type-card" type="button" data-type="vertical-single" aria-pressed="false">
               <span class="type-image is-sketch"><img src="./assets/fence-single-sketch.svg" alt="Профессиональная схема одностороннего полукруглого евроштакетника в один ряд" loading="lazy"></span>
               <span class="type-copy">
-                <span class="type-badge">Бюджетный</span>
+                <span class="type-badge">Один ряд</span>
                 <b>Односторонний</b>
                 <span>Полукруглый ребристый евроштакетник в один ряд — простой и экономичный вариант.</span>
               </span>
@@ -70,33 +70,34 @@
               <span class="type-copy">
                 <span class="type-badge">Современный стиль</span>
                 <b>Горизонтальный <small>двусторонний</small></b>
-                <span>Горизонтальный двусторонний евроштакетник — чертёж выполнен по конструкции нашего реального объекта.</span>
+                <span>Горизонтальное двустороннее заполнение — современный плотный вариант.</span>
               </span>
               <span class="type-radio" aria-hidden="true"></span>
             </button>
           </div>
-          <p id="typeHelp" class="type-help">Штакетник с двух сторон в шахматном порядке — забор меньше просматривается.</p>
-
-          <div class="field-grid post-grid">
-            <label class="field">
-              <span>Столбы</span>
-              <select id="postType">
-                <option value="60x60x2">60×60×2</option>
-                <option value="80x80x3" selected>80×80×3</option>
-                <option value="100x100x3">100×100×3</option>
-              </select>
-            </label>
-            <label class="switch-field">
-              <span><b>Нужны новые столбы</b><small>Выключите, если все подходящие столбы уже установлены</small></span>
-              <input id="includePosts" type="checkbox" checked>
-              <i aria-hidden="true"></i>
-            </label>
-            <label id="existingPostsWrap" class="field field-wide existing-posts-field">
-              <span>Сколько подходящих столбов уже есть</span>
-              <input id="existingPostsCount" type="number" min="0" max="200" step="1" value="0" inputmode="numeric">
-              <small id="existingPostsHint" class="field-note">Если часть столбов уже установлена, укажите количество — калькулятор добавит только недостающие.</small>
-            </label>
-          </div>
+          <details class="post-options">
+            <summary><span><b>Столбы секций забора</b><small>Рекомендуем 80×80×3 · при необходимости измените</small></span><i aria-hidden="true">⌄</i></summary>
+            <div class="field-grid post-grid">
+              <label class="field">
+                <span>Столбы секций забора</span>
+                <select id="postType">
+                  <option value="60x60x2">60×60×2</option>
+                  <option value="80x80x3" selected>80×80×3</option>
+                  <option value="100x100x3">100×100×3</option>
+                </select>
+              </label>
+              <label class="switch-field">
+                <span><b>Нужны новые столбы для забора</b><small>Выключите, если все подходящие столбы секций уже установлены</small></span>
+                <input id="includePosts" type="checkbox" checked>
+                <i aria-hidden="true"></i>
+              </label>
+              <label id="existingPostsWrap" class="field field-wide existing-posts-field">
+                <span>Сколько подходящих столбов забора уже есть</span>
+                <input id="existingPostsCount" type="number" min="0" max="200" step="1" value="0" inputmode="numeric">
+                <small id="existingPostsHint" class="field-note">Столбы ворот и калитки здесь не учитываются.</small>
+              </label>
+            </div>
+          </details>
         </div>
 
         <div class="panel">
@@ -152,11 +153,12 @@
           <div class="result-kicker"><small id="totalLabel" class="result-label">Предварительная стоимость без доставки</small><span id="quoteReference" class="quote-reference" hidden></span></div>
           <div id="totalPrice" class="total-price">0 ₽</div>
           <div id="resultStatus" class="result-status">Добавьте длину первого участка</div>
+          <div id="priceExclusions" class="price-exclusions" hidden></div>
 
           <dl id="resultSummary" class="result-summary">
             <div><dt>Тип заполнения</dt><dd id="summaryType">Вертикальный двусторонний</dd></div>
             <div><dt>Длина заполнения</dt><dd id="summaryLength">0 м</dd></div>
-            <div><dt>Столбов на схеме</dt><dd id="summaryPosts">0</dd></div>
+            <div><dt>Столбы забора</dt><dd id="summaryPosts">0</dd></div>
             <div><dt>Доставка</dt><dd id="summaryDelivery">не указана</dd></div>
           </dl>
 
@@ -218,7 +220,7 @@
       <div class="process-grid">
         <article><span>1</span><b>Расчёт</b><p>Вы указываете размеры и населённый пункт.</p></article>
         <article><span>2</span><b>Бесплатный замер</b><p>Проверяем размеры и условия установки на объекте.</p></article>
-        <article><span>3</span><b>Договор</b><p>Согласуем комплектацию, цвет и фиксируем стоимость.</p></article>
+        <article><span>3</span><b>Договор</b><p>Согласуем комплектацию и фиксируем стоимость.</p></article>
         <article><span>4</span><b>Изготовление и монтаж</b><p>Изготавливаем по размерам объекта и устанавливаем.</p></article>
       </div>
     </section>
@@ -243,7 +245,7 @@
           <form id="leadForm" class="lead-form lead-form-simple" novalidate>
             <label><span>Телефон *</span><input id="leadPhone" type="tel" autocomplete="tel" inputmode="tel" maxlength="24" placeholder="+7 999 000-00-00" required></label>
             <input id="leadCity" type="hidden" value="">
-            <label class="consent"><input id="leadConsent" type="checkbox" required><span>Согласен на обработку персональных данных для связи по заявке.</span></label>
+            <label class="consent"><input id="leadConsent" type="checkbox" required><span>Согласен на <a href="/privacy.html" target="_blank" rel="noopener">обработку персональных данных</a> для связи по заявке.</span></label>
             <button id="leadSubmit" class="primary-button" type="submit">Заказать замер</button>
             <div id="leadState" class="lead-state" role="status" aria-live="polite"></div>
           </form>
@@ -274,13 +276,18 @@
   <footer class="footer">
     <div class="shell footer-inner">
       <div><b>Кузнечный ДворикЪ</b><span>Мелеуз · изготовление по вашим размерам</span></div>
-      <a href="/napravleniya">Другие изделия</a>
+      <div class="footer-links"><a href="/napravleniya">Другие изделия</a><a href="/privacy.html">Политика обработки данных</a></div>
     </div>
   </footer>
 
+  <dialog id="schemeDialog" class="scheme-dialog" aria-labelledby="schemeDialogTitle">
+    <div class="scheme-dialog-head"><b id="schemeDialogTitle">Схема участка</b><button id="schemeDialogClose" type="button" aria-label="Закрыть схему">×</button></div>
+    <div id="schemeDialogBody" class="scheme-dialog-body"></div>
+  </dialog>
+
   <div id="mobileQuoteBar" class="mobile-quote-bar" hidden>
     <div><b id="mobileBarPrice">0 ₽</b><span id="mobileBarNote">без доставки</span></div>
-    <button id="mobileLeadButton" type="button">Оставить заявку</button>
+    <button id="mobileLeadButton" type="button">Замер</button>
   </div>
   <div id="pageToast" class="page-toast" role="status" aria-live="polite" hidden></div>
 
