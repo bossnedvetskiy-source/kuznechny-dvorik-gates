@@ -255,6 +255,10 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,su
 .type-image.is-sketch{background:#f3f0e8}
 .type-image.is-sketch:after{display:none}
 .type-image.is-sketch img{object-fit:contain;padding:0;background:#f3f0e8;filter:contrast(1.015)}
+.type-image.is-photo{background:#17191b}
+.type-image.is-photo:after{height:32%;background:linear-gradient(transparent,rgba(10,12,14,.38))}
+.type-image.is-photo img{object-fit:cover;object-position:52% 42%;filter:saturate(.92) contrast(1.04) brightness(.96)}
+
 
 .visual-picket-front{fill:#92999e;stroke:#c0c5c8;stroke-width:.55}
 .visual-picket-back{fill:#4b5257;stroke:#6a7176;stroke-width:.5;opacity:.97}
