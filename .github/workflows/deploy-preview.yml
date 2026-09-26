@@ -69,6 +69,16 @@ jobs:
           test -s timeweb-dist/evroshtaketnik/assets/fence-double.webp
           test -s timeweb-dist/evroshtaketnik/assets/fence-single.webp
           test -s timeweb-dist/evroshtaketnik/assets/fence-horizontal.webp
+          node - <<'NODE'
+          const fs = require('fs');
+          for (const name of ['fence-double.webp','fence-single.webp','fence-horizontal.webp']) {
+            const b = fs.readFileSync('timeweb-dist/evroshtaketnik/assets/' + name);
+            if (b.subarray(0,4).toString('ascii') !== 'RIFF' || b.subarray(8,12).toString('ascii') !== 'WEBP') {
+              throw new Error(name + ' is not a valid WebP file');
+            }
+          }
+          console.log('Fence card WebP files are valid');
+          NODE
           grep -Fq 'Выберите тип заполнения' timeweb-dist/evroshtaketnik/index.html
           grep -Fq 'Оставить заявку на бесплатный замер' timeweb-dist/evroshtaketnik/index.html
 
