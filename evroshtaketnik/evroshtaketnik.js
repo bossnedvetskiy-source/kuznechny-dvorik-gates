@@ -678,31 +678,217 @@ function renderResult(result) {
     : 'Перейти к размерам';
 }
 
+
+function visualFenceSegment(segment, label, postWidth, extraPosts) {
+  if (!segment || segment.footprint <= 1e-9) return null;
+  return {
+    kind:'fence',
+    label:label || 'Забор',
+    length:segment.footprint,
+    mode:segment.mode,
+    spans:segment.spans,
+    clearSpan:segment.clearSpan,
+    normalPosts:segment.normalPosts,
+    postWidth:Number(postWidth || .08),
+    extraPosts:Boolean(extraPosts)
+  };
+}
+
+function buildVisualLine(item, result) {
+  if (!item || !item.active || item.grossLength <= 0) return [];
+  const outer = item.segments && item.segments.find(segment => segment.key === 'outer');
+  const normal = item.segments && item.segments.find(segment => segment.key === 'main');
+  const bridge = item.segments && item.segments.find(segment => segment.key === 'between-openings');
+  const parts = [];
+  const fencePostWidth = Number(result && result.post && result.post.width || .08);
+
+  if (!item.openingSupportPosts) {
+    const fence = visualFenceSegment(normal || (item.segments && item.segments[0]), 'Забор', fencePostWidth, false);
+    if (fence) parts.push(fence);
+    return parts;
+  }
+
+  const outerFence = visualFenceSegment(outer, 'Остальной забор', fencePostWidth, false);
+  if (outerFence) parts.push(outerFence);
+
+  const supportPost = role => ({
+    kind:'post',
+    role:role || 'support',
+    label:role === 'extra' ? 'Доп. столб' : 'Столб',
+    length:item.openingPostWidth
+  });
+  const gate = () => ({kind:'gate',label:'Ворота',length:item.gateOpening});
+  const wicket = () => ({kind:'wicket',label:'Калитка',length:item.wicketOpening});
+
+  if (item.gateOpening > 0 && item.wicketOpening > 0) {
+    if (item.openingsSharePost) {
+      parts.push(supportPost());
+      parts.push(gate());
+      parts.push(supportPost('shared'));
+      parts.push(wicket());
+      parts.push(supportPost());
+    } else {
+      parts.push(supportPost());
+      parts.push(gate());
+      parts.push(supportPost());
+      if (bridge && bridge.footprint > 0) {
+        parts.push(visualFenceSegment(bridge, 'Забор между воротами и калиткой', fencePostWidth, true));
+      }
+      parts.push(supportPost());
+      parts.push(wicket());
+      parts.push(supportPost());
+    }
+  } else if (item.gateOpening > 0) {
+    parts.push(supportPost());
+    parts.push(gate());
+    parts.push(supportPost());
+  } else if (item.wicketOpening > 0) {
+    parts.push(supportPost());
+    parts.push(wicket());
+    parts.push(supportPost());
+  }
+
+  return parts.filter(part => part && part.length > 1e-9);
+}
+
+function fencePostPositions(part) {
+  const spans = Math.max(0, Number(part.spans) || 0);
+  const clear = Math.max(0, Number(part.clearSpan) || 0);
+  const postWidth = Math.max(0, Number(part.postWidth) || 0);
+  const positions = [];
+  if (!spans || !part.normalPosts) return positions;
+
+  if (part.mode === 'normal') {
+    for (let i=0; i<=spans; i+=1) positions.push(i * (clear + postWidth));
+  } else if (part.mode === 'attached') {
+    for (let i=0; i<spans; i+=1) positions.push(i * (clear + postWidth));
+  } else if (part.mode === 'bridge') {
+    for (let i=1; i<spans; i+=1) positions.push(i * clear + (i - 1) * postWidth);
+  }
+  return positions;
+}
+
+function renderFencePattern(x, y, w, h, part, scale) {
+  const safeW = Math.max(0, w);
+  if (safeW <= 0) return '';
+  const picketGap = Math.max(5, Math.min(14, safeW / Math.max(4, Math.round(safeW / 9))));
+  let pickets = '';
+  for (let px=x+4; px<x+safeW-3; px+=picketGap) {
+    pickets += '<line x1="' + px.toFixed(1) + '" y1="' + (y+6).toFixed(1) + '" x2="' + px.toFixed(1) + '" y2="' + (y+h-5).toFixed(1) + '" class="visual-picket"/>';
+  }
+
+  const internalPosts = fencePostPositions(part).map((meter, index) => {
+    const postX = x + meter * scale;
+    const pw = Math.max(3, (part.postWidth || .08) * scale);
+    const klass = part.extraPosts ? 'visual-extra-post' : 'visual-fence-post';
+    const title = part.extraPosts ? 'Дополнительный столб' : 'Столб забора';
+    return '<rect x="' + postX.toFixed(1) + '" y="' + (y-7).toFixed(1) + '" width="' + pw.toFixed(1) + '" height="' + (h+14).toFixed(1) + '" rx="1.5" class="' + klass + '"><title>' + title + ' ' + (index+1) + '</title></rect>';
+  }).join('');
+
+  return '<rect x="' + x.toFixed(1) + '" y="' + y + '" width="' + safeW.toFixed(1) + '" height="' + h + '" rx="4" class="visual-fence-bg"/>' +
+    pickets +
+    '<line x1="' + x.toFixed(1) + '" y1="' + (y+11).toFixed(1) + '" x2="' + (x+safeW).toFixed(1) + '" y2="' + (y+11).toFixed(1) + '" class="visual-rail"/>' +
+    '<line x1="' + x.toFixed(1) + '" y1="' + (y+h-11).toFixed(1) + '" x2="' + (x+safeW).toFixed(1) + '" y2="' + (y+h-11).toFixed(1) + '" class="visual-rail"/>' +
+    internalPosts;
+}
+
+function renderVisualSvg(item, result) {
+  const parts = buildVisualLine(item, result);
+  const total = Math.max(.01, Number(item.grossLength) || 1);
+  const svgWidth = 820;
+  const left = 36;
+  const right = 36;
+  const usable = svgWidth - left - right;
+  const scale = usable / total;
+  const top = 66;
+  const objectHeight = 72;
+  const baseline = top + objectHeight;
+  let cursor = left;
+  let body = '';
+  let labels = '';
+
+  const partLabel = part => part.kind === 'post' ? '' : part.label + ' · ' + number(part.length) + ' м';
+
+  for (const part of parts) {
+    const rawWidth = part.length * scale;
+    const w = Math.max(part.kind === 'post' ? 3 : 1, rawWidth);
+
+    if (part.kind === 'fence') {
+      body += renderFencePattern(cursor, top, w, objectHeight, part, scale);
+    } else if (part.kind === 'gate') {
+      const half = w / 2;
+      body += '<rect x="' + cursor.toFixed(1) + '" y="' + top + '" width="' + w.toFixed(1) + '" height="' + objectHeight + '" rx="4" class="visual-gate-bg"/>' +
+        '<line x1="' + (cursor+half).toFixed(1) + '" y1="' + top + '" x2="' + (cursor+half).toFixed(1) + '" y2="' + baseline + '" class="visual-gate-line"/>' +
+        '<line x1="' + (cursor+4).toFixed(1) + '" y1="' + (top+5).toFixed(1) + '" x2="' + (cursor+half-4).toFixed(1) + '" y2="' + (baseline-5).toFixed(1) + '" class="visual-gate-line"/>' +
+        '<line x1="' + (cursor+w-4).toFixed(1) + '" y1="' + (top+5).toFixed(1) + '" x2="' + (cursor+half+4).toFixed(1) + '" y2="' + (baseline-5).toFixed(1) + '" class="visual-gate-line"/>';
+    } else if (part.kind === 'wicket') {
+      body += '<rect x="' + cursor.toFixed(1) + '" y="' + top + '" width="' + w.toFixed(1) + '" height="' + objectHeight + '" rx="4" class="visual-wicket-bg"/>' +
+        '<line x1="' + (cursor+4).toFixed(1) + '" y1="' + (top+5).toFixed(1) + '" x2="' + (cursor+w-4).toFixed(1) + '" y2="' + (baseline-5).toFixed(1) + '" class="visual-gate-line"/>';
+    } else if (part.kind === 'post') {
+      const pw = Math.max(4, w);
+      const x = cursor + (w-pw)/2;
+      const klass = part.role === 'extra' ? 'visual-extra-post' : 'visual-support-post';
+      const title = part.role === 'shared' ? 'Общий столб ворот и калитки' : 'Столб ворот/калитки';
+      body += '<rect x="' + x.toFixed(1) + '" y="' + (top-9).toFixed(1) + '" width="' + pw.toFixed(1) + '" height="' + (objectHeight+18).toFixed(1) + '" rx="2" class="' + klass + '"><title>' + title + '</title></rect>';
+    }
+
+    const label = partLabel(part);
+    if (label && w >= 55) {
+      labels += '<text x="' + (cursor+w/2).toFixed(1) + '" y="' + (baseline+25).toFixed(1) + '" text-anchor="middle" class="visual-part-label">' + label + '</text>';
+    } else if (label && w >= 22) {
+      labels += '<text x="' + (cursor+w/2).toFixed(1) + '" y="' + (baseline+25).toFixed(1) + '" text-anchor="middle" class="visual-part-label">' + number(part.length) + ' м</text>';
+    }
+    cursor += w;
+  }
+
+  const totalX2 = left + usable;
+  const nodeInfo = item.openingSupportPosts
+    ? 'Проёмы ' + number(item.openingsWidth) + ' м · столбы ворот/калитки ' + item.openingSupportPosts + ' шт' + (item.betweenOpeningFence > 0 ? ' · между ними ' + number(item.betweenOpeningFence) + ' м' : '')
+    : item.spans + ' прол. · чистый пролёт до ' + number(item.clearSpan) + ' м';
+
+  return '<div class="visual-line-scroll" tabindex="0" aria-label="Схема участка ' + item.index + '. На телефоне можно прокручивать по горизонтали.">' +
+    '<svg class="visual-line-svg" viewBox="0 0 ' + svgWidth + ' 215" role="img" aria-label="Участок ' + item.index + ', общая длина ' + number(item.grossLength) + ' метра">' +
+      '<line x1="' + left + '" y1="38" x2="' + totalX2 + '" y2="38" class="visual-dimension"/>' +
+      '<path d="M' + left + ' 33 L' + left + ' 43 M' + totalX2 + ' 33 L' + totalX2 + ' 43" class="visual-dimension"/>' +
+      '<text x="' + (svgWidth/2) + '" y="27" text-anchor="middle" class="visual-total-label">Вся линия · ' + number(item.grossLength) + ' м</text>' +
+      body + labels +
+      '<line x1="' + left + '" y1="' + (baseline+42) + '" x2="' + totalX2 + '" y2="' + (baseline+42) + '" class="visual-ground"/>' +
+      '<text x="' + left + '" y="204" class="visual-note">' + nodeInfo + '</text>' +
+    '</svg></div>';
+}
+
 function renderScheme(result) {
   const active = result.sections.filter(item => item.active);
   if (!active.length) {
     $('schemeList').innerHTML = '<div class="empty-state">Добавьте длину участка, чтобы увидеть схему.</div>';
     return;
   }
+
   $('schemeList').innerHTML = active.map(item => {
-    const visibleSpans = Math.min(item.spans, 12);
-    const line = Array.from({length:visibleSpans}, () => '<span class="scheme-post"></span><span class="scheme-span"></span>').join('') + '<span class="scheme-post"></span>';
-    const compact = item.spans > visibleSpans ? `<div class="shared-note">На схеме показано ${visibleSpans} из ${item.spans} пролётов</div>` : '';
-    const shared = item.sharedPost ? '<div class="shared-note">Последний столб общий со следующим участком</div>' : '';
-    const openings = item.openingNodeWidth > 0
-      ? `<div class="shared-note">Узел ворот/калитки: ${number(item.openingNodeWidth)} м по линии = проёмы ${number(item.openingsWidth)} м + ${item.openingSupportPosts} столб. × ${number(item.openingPostWidth)} м${item.betweenOpeningFence > 0 ? ` + забор между ними ${number(item.betweenOpeningFence)} м` : ''}. ${item.betweenOpeningFence > 0 ? (item.bridgeExtraPosts > 0 ? `Между ними ${item.bridgeSpans} пролёта и ${item.bridgeExtraPosts} доп. столб.` : 'Между ними один пролёт без дополнительного столба.') : ''}</div>`
+    const outerFence = Math.max(0, item.fenceLength - (item.betweenOpeningFence || 0));
+    const bridgeText = item.betweenOpeningFence > 0
+      ? (item.bridgeExtraPosts > 0
+          ? number(item.betweenOpeningFence) + ' м · ' + item.bridgeSpans + ' прол. · +' + item.bridgeExtraPosts + ' столб'
+          : number(item.betweenOpeningFence) + ' м · без доп. столба')
       : '';
-    return `
-      <article class="scheme-card">
-        <div class="scheme-top"><b>Участок ${item.index}</b><span>${number(item.length)} × ${number(item.height)} м</span></div>
-        <div class="scheme-line">${line}</div>
-        <div class="scheme-data">
-          <div><small>Пролётов</small><b>${item.spans}</b></div>
-          <div><small>Чистый пролёт</small><b>${number(item.clearSpan)} м</b></div>
-          <div><small>Факт. зазор</small><b>${number(item.actualGap*1000,1)} мм</b></div>
-        </div>
-        ${openings}${shared}${compact}
-      </article>`;
+    const supportPostText = item.openingSupportPosts
+      ? item.openingSupportPosts + ' × ' + (POST_LABELS[item.openingPostType] || item.openingPostType)
+      : '—';
+
+    return '<article class="scheme-card visual-scheme-card">' +
+      '<div class="scheme-top"><div><b>Участок ' + item.index + '</b><small>условная раскладка по линии</small></div><span>' + number(item.grossLength) + ' × ' + number(item.height) + ' м</span></div>' +
+      renderVisualSvg(item, result) +
+      '<div class="visual-summary">' +
+        '<div><small>Забор всего</small><b>' + number(item.fenceLength) + ' м</b></div>' +
+        (item.openingSupportPosts ? '<div><small>Ворота</small><b>' + (item.gateOpening > 0 ? number(item.gateOpening) + ' м' : '—') + '</b></div>' : '') +
+        (item.openingSupportPosts ? '<div><small>Калитка</small><b>' + (item.wicketOpening > 0 ? number(item.wicketOpening) + ' м' : '—') + '</b></div>' : '') +
+        (item.openingSupportPosts ? '<div><small>Столбы узла</small><b>' + supportPostText + '</b></div>' : '') +
+        (bridgeText ? '<div class="visual-summary-wide"><small>Забор между воротами и калиткой</small><b>' + bridgeText + '</b></div>' : '') +
+        (outerFence > 0 && item.openingSupportPosts ? '<div><small>Остальной забор</small><b>' + number(outerFence) + ' м</b></div>' : '') +
+      '</div>' +
+      (item.sharedPost ? '<div class="shared-note">Последний столб забора общий со следующим участком.</div>' : '') +
+      '<div class="visual-layout-note">Порядок элементов показан условно; введённые размеры и количество столбов используются в расчёте.</div>' +
+    '</article>';
   }).join('');
 }
 
