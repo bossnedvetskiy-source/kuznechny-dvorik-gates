@@ -80,7 +80,7 @@ jobs:
           console.log('Fence card WebP files are valid');
           NODE
           grep -Fq 'Выберите тип заполнения' timeweb-dist/evroshtaketnik/index.html
-          grep -Fq 'Оставить заявку на бесплатный замер' timeweb-dist/evroshtaketnik/index.html
+          grep -Fq 'id="resultLeadButton"' timeweb-dist/evroshtaketnik/index.html
 
       - name: Install Chromium for mobile UX test
         run: npx playwright install --with-deps chromium
