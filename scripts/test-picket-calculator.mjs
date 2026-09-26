@@ -173,6 +173,45 @@ assert.equal(gateWicketNode100.summary.totalLength, 5.3);
 assert.equal(gateWicketNode100.sections[0].openingPostType, '100x100x3');
 assert.equal(gateWicketNode100.sections[0].openingPostWidth, 0.1);
 
+const gateWicketExactPosition = calculateFence({
+  type: 'vertical-double',
+  post: '80x80x3',
+  includeNewPosts: true,
+  sections: [{
+    length: 10,
+    height: 1.8,
+    gateOpening: 3.4,
+    wicketOpening: 1,
+    openingPostType: '100x100x3',
+    openingsSharePost: true,
+    openingStartFence: 2.3
+  }]
+});
+assert.equal(gateWicketExactPosition.sections[0].openingPositionKnown, true);
+assert.equal(gateWicketExactPosition.sections[0].openingStartFence, 2.3);
+assert.equal(Number(gateWicketExactPosition.sections[0].openingEndFence.toFixed(2)), 3);
+assert.equal(gateWicketExactPosition.sections[0].segments.find(item => item.key === 'before-opening').footprint, 2.3);
+assert.equal(Number(gateWicketExactPosition.sections[0].segments.find(item => item.key === 'after-opening').footprint.toFixed(2)), 3);
+assert.equal(gateWicketExactPosition.summary.totalLength, 5.3);
+
+const gateWicketInvalidPosition = calculateFence({
+  type: 'vertical-double',
+  post: '80x80x3',
+  includeNewPosts: true,
+  sections: [{
+    length: 10,
+    height: 1.8,
+    gateOpening: 3.4,
+    wicketOpening: 1,
+    openingPostType: '100x100x3',
+    openingsSharePost: true,
+    openingStartFence: 5.5
+  }]
+});
+assert.equal(gateWicketInvalidPosition.sections[0].openingPositionInvalid, true);
+assert.equal(gateWicketInvalidPosition.sections[0].maxOpeningStartFence, 5.3);
+assert.match(gateWicketInvalidPosition.summary.check, /ПРИВЯЗКУ/);
+
 const gateWicketSeparatePosts = calculateFence({
   type: 'vertical-double',
   post: '80x80x3',
@@ -306,5 +345,8 @@ assert.match(uiSource, /Забор между воротами и калитко
 assert.match(uiSource, /visual-extra-post/);
 assert.match(uiSource, /Увеличить схему/);
 assert.match(uiSource, /is-suppressed/);
+assert.match(uiSource, /openingStartFence/);
+assert.match(uiSource, /точная привязка по линии/);
+assert.doesNotMatch(uiSource, /<small>Остальной забор<\/small>/);
 
 console.log('Euro picket calculator matches Excel reference scenarios.');
