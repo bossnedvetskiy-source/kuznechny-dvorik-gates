@@ -12,7 +12,11 @@ for (const viewport of viewports) {
 
     const cards = page.locator('.type-card');
     await expect(cards).toHaveCount(3);
-    for (let i=0;i<3;i+=1) await expect(cards.nth(i).locator('img')).toBeVisible();
+    for (let i=0;i<3;i+=1) {
+      const img = cards.nth(i).locator('img');
+      await expect(img).toBeVisible();
+      await expect.poll(async () => img.evaluate(el => el.complete && el.naturalWidth > 0 && el.naturalHeight > 0)).toBeTruthy();
+    }
 
     await expect(page.locator('.post-options')).not.toHaveAttribute('open', '');
     await page.locator('[data-field="length"][data-index="0"]').fill('10');
