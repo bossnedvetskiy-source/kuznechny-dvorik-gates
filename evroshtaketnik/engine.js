@@ -167,6 +167,8 @@ export function calculateFence(input = {}) {
       height: Math.max(0, finite(item.height) || 1.8),
       gateOpening: Math.max(0, finite(item.gateOpening)),
       wicketOpening: Math.max(0, finite(item.wicketOpening)),
+      openingPostType: POST_TYPES[item.openingPostType] ? item.openingPostType : postKey,
+      openingsSharePost: item.openingsSharePost !== false,
       sharedWithNext: Boolean(item.sharedWithNext)
     };
   });
@@ -185,6 +187,12 @@ export function calculateFence(input = {}) {
         openingsWidth: 0,
         gateOpening: 0,
         wicketOpening: 0,
+        openingPostType: item.openingPostType,
+        openingPostWidth: POST_TYPES[item.openingPostType]?.width || post.width,
+        openingSupportPosts: 0,
+        openingPostsWidth: 0,
+        openingNodeWidth: 0,
+        openingsSharePost: item.openingsSharePost,
         height: item.height,
         sharedWithNext: false,
         spans: 0,
@@ -218,12 +226,30 @@ export function calculateFence(input = {}) {
     }
 
     const grossLength = item.length;
-    const openingsWidth = Math.min(grossLength, Math.max(0, item.gateOpening) + Math.max(0, item.wicketOpening));
-    const fenceLength = Math.max(0, grossLength - openingsWidth);
+    const gateOpening = Math.max(0, item.gateOpening);
+    const wicketOpening = Math.max(0, item.wicketOpening);
+    const openingsWidth = gateOpening + wicketOpening;
+    const openingPostType = POST_TYPES[item.openingPostType] ? item.openingPostType : postKey;
+    const openingPostWidth = POST_TYPES[openingPostType]?.width || post.width;
+    const hasGate = gateOpening > 0;
+    const hasWicket = wicketOpening > 0;
+    const openingSupportPosts = hasGate && hasWicket
+      ? (item.openingsSharePost ? 3 : 4)
+      : (hasGate || hasWicket ? 2 : 0);
+    const openingPostsWidth = openingSupportPosts * openingPostWidth;
+    const openingNodeWidth = openingsWidth + openingPostsWidth;
+    const fenceLength = Math.max(0, grossLength - openingNodeWidth);
+    const hasOpeningNode = openingSupportPosts > 0;
     const spans = fenceLength > 0
-      ? Math.max(1, Math.ceil(Math.max(0, fenceLength - post.width) / (settings.maxSpan + post.width)))
+      ? Math.max(
+          1,
+          hasOpeningNode
+            ? Math.ceil(fenceLength / (settings.maxSpan + post.width))
+            : Math.ceil(Math.max(0, fenceLength - post.width) / (settings.maxSpan + post.width))
+        )
       : 0;
-    const clearSpan = spans > 0 ? Math.max(0, (fenceLength - (spans + 1) * post.width) / spans) : 0;
+    const basePosts = spans > 0 ? spans + (hasOpeningNode ? 0 : 1) : 0;
+    const clearSpan = spans > 0 ? Math.max(0, (fenceLength - basePosts * post.width) / spans) : 0;
     const measure = type.isVertical ? clearSpan : item.height;
     const frontPerSpan = spans > 0
       ? Math.max(1, Math.ceil((measure + type.maxGap) / (settings.picketWidth + type.maxGap)))
@@ -238,7 +264,6 @@ export function calculateFence(input = {}) {
     const tubeUsed = type.isVertical
       ? spans * 2 * clearSpan
       : spans * (2 * clearSpan + 3 * item.height);
-    const basePosts = spans > 0 ? spans + 1 : 0;
     const sharedPost = basePosts > 0 && item.sharedWithNext && index < 3 && activeFlags[index + 1] ? 1 : 0;
     const requiredPosts = Math.max(0, basePosts - sharedPost);
     const cutting = tubeStockPlan(spans, clearSpan, item.height, !type.isVertical, settings.tubeStockLength);
@@ -265,8 +290,14 @@ export function calculateFence(input = {}) {
       grossLength,
       fenceLength,
       openingsWidth,
-      gateOpening: Math.min(grossLength, item.gateOpening),
-      wicketOpening: Math.min(Math.max(0, grossLength - Math.min(grossLength, item.gateOpening)), item.wicketOpening),
+      gateOpening,
+      wicketOpening,
+      openingPostType,
+      openingPostWidth,
+      openingSupportPosts,
+      openingPostsWidth,
+      openingNodeWidth,
+      openingsSharePost: item.openingsSharePost,
       height: item.height,
       sharedWithNext: Boolean(sharedPost),
       spans,
@@ -303,6 +334,9 @@ export function calculateFence(input = {}) {
   const sum = (key) => activeSections.reduce((acc, item) => acc + finite(item[key]), 0);
   const grossLineLength = sum('grossLength');
   const openingsWidth = sum('openingsWidth');
+  const openingSupportPosts = sum('openingSupportPosts');
+  const openingPostsWidth = sum('openingPostsWidth');
+  const openingNodeWidth = sum('openingNodeWidth');
   const totalLength = sum('fenceLength');
   const totalSpans = sum('spans');
   const sharedPosts = sum('sharedPost');
@@ -376,7 +410,7 @@ export function calculateFence(input = {}) {
 
   let check = 'ГОТОВО';
   if (!activeSections.length) check = 'Добавьте участок';
-  else if (sectionsInput.some(item => item.length > 0 && item.gateOpening + item.wicketOpening > item.length + 1e-9)) check = 'ПРОВЕРЬТЕ ПРОЁМЫ: ИХ ШИРИНА БОЛЬШЕ УЧАСТКА';
+  else if (activeSections.some(item => item.openingNodeWidth > item.grossLength + 1e-9)) check = 'ПРОВЕРЬТЕ УЗЕЛ ВОРОТ: ПРОЁМЫ СО СТОЛБАМИ БОЛЬШЕ УЧАСТКА';
   else if (totalLength <= 0) check = 'ПОСЛЕ ПРОЁМОВ НЕ ОСТАЛОСЬ ДЛИНЫ ЗАБОРА';
   else if (activeSections.some(item => item.clearSpan > settings.maxSpan + 1e-9)) check = 'ОШИБКА: ПРОЛЁТ > 2,5 м';
   else if (activeSections.some(item => item.height > settings.postLength - settings.postDepth)) check = 'ПРОВЕРЬТЕ ВЫСОТУ / ДЛИНУ СТОЛБА';
@@ -403,6 +437,9 @@ export function calculateFence(input = {}) {
       activeSections: activeSections.length,
       grossLineLength: round(grossLineLength),
       openingsWidth: round(openingsWidth),
+      openingSupportPosts,
+      openingPostsWidth: round(openingPostsWidth),
+      openingNodeWidth: round(openingNodeWidth),
       totalLength: round(totalLength),
       totalSpans,
       sharedPosts,
