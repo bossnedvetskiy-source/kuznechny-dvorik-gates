@@ -347,6 +347,7 @@ assert.match(uiSource, /Увеличить схему/);
 assert.match(uiSource, /is-suppressed/);
 assert.match(uiSource, /openingStartFence/);
 assert.match(uiSource, /точная привязка по линии/);
+assert.match(uiSource, /drawInset/);
 assert.doesNotMatch(uiSource, /<small>Остальной забор<\/small>/);
 
 console.log('Euro picket calculator matches Excel reference scenarios.');
