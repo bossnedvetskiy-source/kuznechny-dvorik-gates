@@ -36,9 +36,9 @@
       <form id="fenceForm" class="calc-form" novalidate>
         <div class="panel type-panel">
           <div class="panel-head">
-            <div><small>Шаг 1</small><h2>Выберите тип заполнения</h2></div>
+            <div><small>Шаг 1</small><h2>Выберите тип <em>заполнения</em></h2></div>
           </div>
-          <p class="help type-intro">Нажмите на вариант, который вам нравится. Цена сразу пересчитается под выбранный тип металлического евроштакетника.</p>
+          <p class="help type-intro">Визуально сравните варианты забора и выберите подходящий тип перед расчётом. Цена сразу пересчитается.</p>
 
           <select id="fenceType" class="visually-hidden" aria-label="Тип заполнения">
             <option value="vertical-double">Вертикальный двусторонний — шахматка</option>
@@ -52,7 +52,7 @@
               <span class="type-copy">
                 <span class="type-badge">Плотное заполнение</span>
                 <b>Шахматка <small>(двусторонний)</small></b>
-                <span>Полукруглый ребристый евроштакетник в два ряда — плотнее и меньше просматривается.</span>
+                <span>Вертикальный евроштакетник в два ряда со смещением — меньше просматривается.</span>
               </span>
               <span class="type-radio" aria-hidden="true"></span>
             </button>
@@ -60,8 +60,8 @@
               <span class="type-image is-photo"><img src="./assets/fence-single.webp" alt="Реальный установленный односторонний вертикальный евроштакетник" loading="eager"></span>
               <span class="type-copy">
                 <span class="type-badge">Один ряд</span>
-                <b>Односторонний</b>
-                <span>Полукруглый ребристый евроштакетник в один ряд — простой и экономичный вариант.</span>
+                <b>Вертикальный <small>односторонний</small></b>
+                <span>Вертикальный евроштакетник в один ряд — самый простой и экономичный вариант.</span>
               </span>
               <span class="type-radio" aria-hidden="true"></span>
             </button>
@@ -70,11 +70,16 @@
               <span class="type-copy">
                 <span class="type-badge">Современный стиль</span>
                 <b>Горизонтальный <small>двусторонний</small></b>
-                <span>Горизонтальное двустороннее заполнение — современный плотный вариант.</span>
+                <span>Горизонтальный евроштакетник в два ряда со смещением — плотное заполнение.</span>
               </span>
               <span class="type-radio" aria-hidden="true"></span>
             </button>
           </div>
+          <div class="type-choice-note">
+            <span class="type-choice-note-icon" aria-hidden="true">i</span>
+            <span>Тип заполнения влияет на внешний вид, приватность и стоимость забора. Выбор можно изменить в любой момент.</span>
+          </div>
+          <button id="continueToSizes" class="type-continue" type="button">Продолжить расчёт <span aria-hidden="true">→</span></button>
           <details class="post-options">
             <summary><span><b>Столбы секций забора</b><small>Рекомендуем 80×80×3 · при необходимости измените</small></span><i aria-hidden="true">⌄</i></summary>
             <div class="field-grid post-grid">
