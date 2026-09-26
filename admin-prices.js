@@ -165,6 +165,7 @@ const FENCE_PRICE_DEFINITIONS = [
   ['gapSingle','Макс. зазор: односторонний','м',0.005,'technology'],
   ['gapDouble','Макс. зазор: шахматка / двусторонний','м',0.005,'technology'],
   ['maxSpan','Максимальный чистый пролёт','м',0.05,'technology'],
+  ['openingBridgeMaxSpan','Макс. пролёт между воротами и калиткой без доп. столба','м',0.05,'technology'],
   ['postLength','Длина столба','м',0.1,'technology'],
   ['postDepth','Заглубление столба','м',0.05,'technology'],
   ['tubeStockLength','Длина хлыста 40×20×2','м',0.5,'technology'],
@@ -194,10 +195,10 @@ function renderFencePrices() {
     title.innerHTML = `<b>${labelText}</b><small>${unit}</small>`;
     const input = document.createElement('input');
     input.type = 'number';
-    input.min = ['picketWidth','maxSpan','postLength','tubeStockLength'].includes(key) ? '0.01' : '0';
+    input.min = ['picketWidth','maxSpan','openingBridgeMaxSpan','postLength','tubeStockLength'].includes(key) ? '0.01' : '0';
     input.max = key.includes('Percent')
       ? '100'
-      : ['picketWidth','gapSingle','gapDouble','maxSpan','postLength','postDepth','tubeStockLength'].includes(key)
+      : ['picketWidth','gapSingle','gapDouble','maxSpan','openingBridgeMaxSpan','postLength','postDepth','tubeStockLength'].includes(key)
         ? '20'
         : '10000000';
     input.step = String(step);
