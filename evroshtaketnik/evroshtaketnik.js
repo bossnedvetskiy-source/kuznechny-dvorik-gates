@@ -690,7 +690,7 @@ function renderScheme(result) {
     const compact = item.spans > visibleSpans ? `<div class="shared-note">На схеме показано ${visibleSpans} из ${item.spans} пролётов</div>` : '';
     const shared = item.sharedPost ? '<div class="shared-note">Последний столб общий со следующим участком</div>' : '';
     const openings = item.openingNodeWidth > 0
-      ? `<div class="shared-note">Узел ворот/калитки: ${number(item.openingNodeWidth)} м по линии = проёмы ${number(item.openingsWidth)} м + ${item.openingSupportPosts} столб. × ${number(item.openingPostWidth)} м. В цену забора узел не включён.</div>`
+      ? `<div class="shared-note">Узел ворот/калитки: ${number(item.openingNodeWidth)} м по линии = проёмы ${number(item.openingsWidth)} м + ${item.openingSupportPosts} столб. × ${number(item.openingPostWidth)} м${item.betweenOpeningFence > 0 ? ` + забор между ними ${number(item.betweenOpeningFence)} м` : ''}. ${item.betweenOpeningFence > 0 ? (item.bridgeExtraPosts > 0 ? `Между ними ${item.bridgeSpans} пролёта и ${item.bridgeExtraPosts} доп. столб.` : 'Между ними один пролёт без дополнительного столба.') : ''}</div>`
       : '';
     return `
       <article class="scheme-card">
@@ -897,7 +897,7 @@ function quoteText() {
   if (!lastResult?.summary.activeSections) return '';
   const sections = lastResult.sections.filter(item => item.active).map(item => {
     const opening = item.openingNodeWidth > 0
-      ? `, узел ворот/калитки ${number(item.openingNodeWidth)} м (чистые проёмы ${number(item.openingsWidth)} м + ${item.openingSupportPosts} столб. ${POST_LABELS[item.openingPostType] || item.openingPostType})`
+      ? `, узел ворот/калитки ${number(item.openingNodeWidth)} м (чистые проёмы ${number(item.openingsWidth)} м + ${item.openingSupportPosts} столб. ${POST_LABELS[item.openingPostType] || item.openingPostType}${item.betweenOpeningFence > 0 ? ` + забор между ними ${number(item.betweenOpeningFence)} м, доп. столбов ${item.bridgeExtraPosts}` : ''})`
       : '';
     return `Участок ${item.index}: линия ${number(item.grossLength ?? item.length)} × ${number(item.height)} м, заполнение ${number(item.fenceLength ?? item.length)} м${opening}, ${item.spans} прол.`;
   }).join('\n');
@@ -920,6 +920,7 @@ function quoteText() {
       `Чистые проёмы: ${number(lastResult.summary.openingsWidth)} м`,
       `Столбы узлов ворот/калиток: ${lastResult.summary.openingSupportPosts} шт · занимают ${number(lastResult.summary.openingPostsWidth)} м`,
       `Узлы ворот/калиток по линии: ${number(lastResult.summary.openingNodeWidth)} м`,
+      ...(lastResult.summary.betweenOpeningFence > 0 ? [`Забор между воротами и калиткой: ${number(lastResult.summary.betweenOpeningFence)} м · доп. столбов ${lastResult.summary.bridgeExtraPosts}`] : []),
       `Длина заполнения евроштакетником: ${number(lastResult.summary.totalLength)} м`
     ] : []),
     ...(conditions.length ? [`Условия монтажа: ${conditions.join('; ')} — проверить на замере`] : []),
@@ -967,7 +968,11 @@ function leadPayload() {
         openingsWidth:lastResult.summary.openingsWidth,
         openingSupportPosts:lastResult.summary.openingSupportPosts,
         openingPostsWidth:lastResult.summary.openingPostsWidth,
+        openingCoreWidth:lastResult.summary.openingCoreWidth,
         openingNodeWidth:lastResult.summary.openingNodeWidth,
+        betweenOpeningFence:lastResult.summary.betweenOpeningFence,
+        bridgeSpans:lastResult.summary.bridgeSpans,
+        bridgeExtraPosts:lastResult.summary.bridgeExtraPosts,
         totalLength:lastResult.summary.totalLength,
         totalSpans:lastResult.summary.totalSpans,
         postsByScheme:lastResult.summary.postsByScheme,
