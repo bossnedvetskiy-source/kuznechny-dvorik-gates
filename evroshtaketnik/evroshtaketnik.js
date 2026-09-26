@@ -723,6 +723,8 @@ function visualFenceSegment(segment, label, postWidth, extraPosts) {
 function buildVisualLine(item, result) {
   if (!item || !item.active || item.grossLength <= 0) return [];
   const outer = item.segments && item.segments.find(segment => segment.key === 'outer');
+  const before = item.segments && item.segments.find(segment => segment.key === 'before-opening');
+  const after = item.segments && item.segments.find(segment => segment.key === 'after-opening');
   const normal = item.segments && item.segments.find(segment => segment.key === 'main');
   const bridge = item.segments && item.segments.find(segment => segment.key === 'between-openings');
   const parts = [];
@@ -734,8 +736,13 @@ function buildVisualLine(item, result) {
     return parts;
   }
 
-  const outerFence = visualFenceSegment(outer, 'Остальной забор', fencePostWidth, false);
-  if (outerFence) parts.push(outerFence);
+  if (item.openingPositionKnown) {
+    const beforeFence = visualFenceSegment(before, 'До ворот/калитки', fencePostWidth, false);
+    if (beforeFence) parts.push(beforeFence);
+  } else {
+    const outerFence = visualFenceSegment(outer, 'Остальной забор', fencePostWidth, false);
+    if (outerFence) parts.push(outerFence);
+  }
 
   const supportPost = role => ({
     kind:'post',
@@ -758,7 +765,7 @@ function buildVisualLine(item, result) {
       parts.push(gate());
       parts.push(supportPost());
       if (bridge && bridge.footprint > 0) {
-        parts.push(visualFenceSegment(bridge, 'Забор между воротами и калиткой', fencePostWidth, true));
+        parts.push(visualFenceSegment(bridge, 'Между воротами и калиткой', fencePostWidth, true));
       }
       parts.push(supportPost());
       parts.push(wicket());
@@ -772,6 +779,11 @@ function buildVisualLine(item, result) {
     parts.push(supportPost());
     parts.push(wicket());
     parts.push(supportPost());
+  }
+
+  if (item.openingPositionKnown) {
+    const afterFence = visualFenceSegment(after, 'После ворот/калитки', fencePostWidth, false);
+    if (afterFence) parts.push(afterFence);
   }
 
   return parts.filter(part => part && part.length > 1e-9);
@@ -891,7 +903,6 @@ function renderScheme(result) {
   }
 
   $('schemeList').innerHTML = active.map(item => {
-    const outerFence = Math.max(0, item.fenceLength - (item.betweenOpeningFence || 0));
     const bridgeText = item.betweenOpeningFence > 0
       ? (item.bridgeExtraPosts > 0
           ? number(item.betweenOpeningFence) + ' м · ' + item.bridgeSpans + ' прол. · +' + item.bridgeExtraPosts + ' столб'
@@ -900,9 +911,17 @@ function renderScheme(result) {
     const supportPostText = item.openingSupportPosts
       ? item.openingSupportPosts + ' × ' + (POST_LABELS[item.openingPostType] || item.openingPostType)
       : '—';
+    const layoutLabel = item.openingSupportPosts
+      ? (item.openingPositionKnown ? 'точная привязка по линии' : 'расположение пока условное')
+      : 'раскладка по линии';
+    const layoutNote = item.openingSupportPosts
+      ? (item.openingPositionKnown
+          ? 'Положение ворот и калитки построено по указанной привязке от начала участка.'
+          : 'Укажите расстояние от начала участка до первого столба узла — и схема покажет точное положение ворот/калитки.')
+      : 'Размеры и количество пролётов построены по введённой длине участка.';
 
     return '<article class="scheme-card visual-scheme-card">' +
-      '<div class="scheme-top"><div><b>Участок ' + item.index + '</b><small>условная раскладка по линии</small></div><span>' + number(item.grossLength) + ' × ' + number(item.height) + ' м</span></div>' +
+      '<div class="scheme-top"><div><b>Участок ' + item.index + '</b><small>' + layoutLabel + '</small></div><span>' + number(item.grossLength) + ' × ' + number(item.height) + ' м</span></div>' +
       renderVisualSvg(item, result) +
       '<button class="scheme-zoom-button" type="button" data-scheme-zoom aria-pressed="false"><span>Увеличить схему</span><i aria-hidden="true">↔</i></button>' +
       '<div class="visual-summary">' +
@@ -911,14 +930,14 @@ function renderScheme(result) {
         (item.openingSupportPosts ? '<div><small>Калитка</small><b>' + (item.wicketOpening > 0 ? number(item.wicketOpening) + ' м' : '—') + '</b></div>' : '') +
         (item.openingSupportPosts ? '<div><small>Столбы узла</small><b>' + supportPostText + '</b></div>' : '') +
         (bridgeText ? '<div class="visual-summary-wide"><small>Забор между воротами и калиткой</small><b>' + bridgeText + '</b></div>' : '') +
-        (outerFence > 0 && item.openingSupportPosts ? '<div><small>Остальной забор</small><b>' + number(outerFence) + ' м</b></div>' : '') +
+        (item.openingPositionKnown && item.openingStartFence > 0 ? '<div><small>До узла</small><b>' + number(item.openingStartFence) + ' м</b></div>' : '') +
+        (item.openingPositionKnown && item.openingEndFence > 0 ? '<div><small>После узла</small><b>' + number(item.openingEndFence) + ' м</b></div>' : '') +
       '</div>' +
       (item.sharedPost ? '<div class="shared-note">Последний столб забора общий со следующим участком.</div>' : '') +
-      '<div class="visual-layout-note">Порядок элементов показан условно; введённые размеры и количество столбов используются в расчёте.</div>' +
+      '<div class="visual-layout-note">' + layoutNote + '</div>' +
     '</article>';
   }).join('');
 }
-
 
 function initSchemeInteractions() {
   const list = $('schemeList');
