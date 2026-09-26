@@ -260,3 +260,61 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,su
 .visual-fence-post-horizontal,.visual-support-post-horizontal{fill:#4d312a;stroke:#b18475;stroke-width:.75}
 .visual-post-ball{fill:#6b463c;stroke:#c09687;stroke-width:.65;filter:drop-shadow(0 1px .5px rgba(0,0,0,.32))}
 .visual-horizontal-support{stroke:#454b50;stroke-width:3;opacity:.9}
+
+
+/* UX audit improvements 2026-09-26 */
+.post-options{margin-top:14px;border:1px solid rgba(255,255,255,.08);border-radius:13px;background:rgba(255,255,255,.018);overflow:hidden}
+.post-options>summary{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px;cursor:pointer;list-style:none}
+.post-options>summary::-webkit-details-marker{display:none}
+.post-options>summary span{display:grid;gap:3px}
+.post-options>summary b{font-size:12px}
+.post-options>summary small{color:#8d9195;font-size:10px;line-height:1.4}
+.post-options>summary i{font-style:normal;color:var(--gold2);transition:transform .18s}
+.post-options[open]>summary i{transform:rotate(180deg)}
+.post-options .post-grid{margin:0;padding:0 13px 13px}
+.price-exclusions{margin:9px 0 2px;padding:10px 11px;border:1px solid rgba(229,174,78,.28);border-radius:10px;background:rgba(210,163,78,.08);color:#d7c8aa;font-size:11px;line-height:1.48}
+.price-exclusions b{color:#efc86f}
+.footer-links{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.consent a{color:#dcb65d;text-decoration:underline;text-underline-offset:2px}
+.scheme-dialog{width:min(96vw,980px);max-width:980px;height:min(90dvh,760px);padding:0;border:1px solid rgba(239,200,111,.24);border-radius:18px;background:#111417;color:#f4f0e8;box-shadow:0 26px 90px rgba(0,0,0,.65)}
+.scheme-dialog::backdrop{background:rgba(0,0,0,.72);backdrop-filter:blur(3px)}
+.scheme-dialog-head{position:sticky;top:0;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 15px;border-bottom:1px solid rgba(255,255,255,.08);background:#111417}
+.scheme-dialog-head b{font-size:15px}
+.scheme-dialog-head button{width:40px;height:40px;border:1px solid rgba(255,255,255,.12);border-radius:10px;background:#181c20;color:#fff;font-size:24px;line-height:1;cursor:pointer}
+.scheme-dialog-body{height:calc(100% - 67px);overflow:auto;padding:14px;-webkit-overflow-scrolling:touch}
+.scheme-dialog-canvas{min-width:820px}
+.scheme-dialog-canvas .visual-line-svg{width:820px!important;min-width:820px!important;max-width:none!important}
+.mobile-quote-bar.is-input-active{opacity:0!important;transform:translateY(calc(100% + 20px))!important;pointer-events:none!important}
+@media(max-width:900px){
+  .calculator{grid-template-columns:1fr}
+  .result-card{order:0}
+}
+@media(max-width:620px){
+  .help,.delivery-status,.opening-warning,.field-note,.site-conditions summary,.section-openings summary{font-size:12px!important;line-height:1.48}
+  .field>span,.switch-field b,.section-card-head b{font-size:13px!important}
+  .switch-field small,.section-openings>small,.site-condition-options small,.opening-position-field>small{font-size:11px!important;line-height:1.45}
+  .type-copy>span:last-child{font-size:12px!important;line-height:1.4}
+  .type-badge{font-size:9px!important}
+  .result-status,.result-note,.included-chips span,.result-call,.saved-quote-bar span{font-size:11px!important}
+  .result-summary dt,.result-summary dd{font-size:11px!important}
+  .scheme-disclaimer,.visual-layout-note,.visual-scheme-card .scheme-top small{font-size:10.5px!important}
+  .visual-summary small{font-size:10px!important}
+  .visual-summary b{font-size:12px!important}
+  .scheme-legend span{font-size:10px!important}
+  .consent span{font-size:11px!important;line-height:1.45!important}
+  .lead-empty-state p,.lead-copy-simple p{font-size:12px!important}
+  .lead-form-simple>label>span{font-size:12px!important}
+  .post-options{margin-top:11px}
+  .post-options>summary{padding:12px}
+  .post-options>summary b{font-size:13px}
+  .post-options>summary small{font-size:11px}
+  .scheme-zoom-button{display:flex;min-height:42px;font-size:11px}
+  .mobile-quote-bar{left:10px;right:10px;padding:7px 7px 7px 11px;border-radius:13px;gap:8px}
+  .mobile-quote-bar b{font-size:18px}
+  .mobile-quote-bar span{font-size:9px;max-width:190px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mobile-quote-bar button{height:38px;padding:0 12px;font-size:10px}
+  .footer{padding-bottom:82px}
+  .scheme-dialog{width:calc(100vw - 12px);height:calc(100dvh - 12px);border-radius:15px}
+  .scheme-dialog-body{padding:10px}
+  .scheme-dialog-canvas{min-width:820px}
+}
