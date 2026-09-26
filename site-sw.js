@@ -1,4 +1,4 @@
-const VERSION='kuzdvor-offline-2026-09-26-v31';
+const VERSION='kuzdvor-offline-2026-09-26-v32';
 const SHELL_CACHE=VERSION+'-shell';
 const MEDIA_CACHE=VERSION+'-media';
 const API_CACHE=VERSION+'-api';
