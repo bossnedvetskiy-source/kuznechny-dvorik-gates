@@ -859,14 +859,21 @@ function renderVisualSvg(item, result) {
     if (part.kind === 'fence') {
       body += renderFencePattern(cursor, top, w, objectHeight, part, scale);
     } else if (part.kind === 'gate') {
-      const half = w / 2;
-      body += '<rect x="' + cursor.toFixed(1) + '" y="' + top + '" width="' + w.toFixed(1) + '" height="' + objectHeight + '" rx="4" class="visual-gate-bg"/>' +
-        '<line x1="' + (cursor+half).toFixed(1) + '" y1="' + top + '" x2="' + (cursor+half).toFixed(1) + '" y2="' + baseline + '" class="visual-gate-line"/>' +
-        '<line x1="' + (cursor+4).toFixed(1) + '" y1="' + (top+5).toFixed(1) + '" x2="' + (cursor+half-4).toFixed(1) + '" y2="' + (baseline-5).toFixed(1) + '" class="visual-gate-line"/>' +
-        '<line x1="' + (cursor+w-4).toFixed(1) + '" y1="' + (top+5).toFixed(1) + '" x2="' + (cursor+half+4).toFixed(1) + '" y2="' + (baseline-5).toFixed(1) + '" class="visual-gate-line"/>';
+      // Keep the opening geometry exact, but draw the leaf slightly narrower so it reads naturally on a small screen.
+      const drawInset = Math.min(10, w * .06);
+      const drawX = cursor + drawInset;
+      const drawW = Math.max(1, w - drawInset * 2);
+      const half = drawW / 2;
+      body += '<rect x="' + drawX.toFixed(1) + '" y="' + top + '" width="' + drawW.toFixed(1) + '" height="' + objectHeight + '" rx="4" class="visual-gate-bg"/>' +
+        '<line x1="' + (drawX+half).toFixed(1) + '" y1="' + top + '" x2="' + (drawX+half).toFixed(1) + '" y2="' + baseline + '" class="visual-gate-line"/>' +
+        '<line x1="' + (drawX+4).toFixed(1) + '" y1="' + (top+5).toFixed(1) + '" x2="' + (drawX+half-4).toFixed(1) + '" y2="' + (baseline-5).toFixed(1) + '" class="visual-gate-line"/>' +
+        '<line x1="' + (drawX+drawW-4).toFixed(1) + '" y1="' + (top+5).toFixed(1) + '" x2="' + (drawX+half+4).toFixed(1) + '" y2="' + (baseline-5).toFixed(1) + '" class="visual-gate-line"/>';
     } else if (part.kind === 'wicket') {
-      body += '<rect x="' + cursor.toFixed(1) + '" y="' + top + '" width="' + w.toFixed(1) + '" height="' + objectHeight + '" rx="4" class="visual-wicket-bg"/>' +
-        '<line x1="' + (cursor+4).toFixed(1) + '" y1="' + (top+5).toFixed(1) + '" x2="' + (cursor+w-4).toFixed(1) + '" y2="' + (baseline-5).toFixed(1) + '" class="visual-gate-line"/>';
+      const drawInset = Math.min(6, w * .07);
+      const drawX = cursor + drawInset;
+      const drawW = Math.max(1, w - drawInset * 2);
+      body += '<rect x="' + drawX.toFixed(1) + '" y="' + top + '" width="' + drawW.toFixed(1) + '" height="' + objectHeight + '" rx="4" class="visual-wicket-bg"/>' +
+        '<line x1="' + (drawX+4).toFixed(1) + '" y1="' + (top+5).toFixed(1) + '" x2="' + (drawX+drawW-4).toFixed(1) + '" y2="' + (baseline-5).toFixed(1) + '" class="visual-gate-line"/>';
     } else if (part.kind === 'post') {
       const pw = Math.max(4, w);
       const x = cursor + (w-pw)/2;
