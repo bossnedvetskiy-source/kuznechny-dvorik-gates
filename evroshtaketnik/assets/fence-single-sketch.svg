@@ -1,32 +1,30 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 520" role="img" aria-labelledby="title desc">
-<title id="title">Односторонний металлический евроштакетник с полукруглым верхом</title>
-<desc id="desc">Профессиональная фронтальная схема одного ряда металлического евроштакетника с полукруглыми верхними кромками</desc>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 520" role="img" aria-labelledby="t d">
+<title id="t">Односторонний вертикальный металлический евроштакетник</title>
+<desc id="d">Профессиональная схема узкого ребристого евроштакетника с полукруглым верхом в один ряд</desc>
 <defs>
-  <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#faf9f5"/><stop offset="1" stop-color="#ece9e0"/></linearGradient>
-  <linearGradient id="post" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#7b8186"/><stop offset=".48" stop-color="#b5b9bc"/><stop offset="1" stop-color="#666d72"/></linearGradient>
-  <linearGradient id="rail" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#aeb2b5"/><stop offset="1" stop-color="#777d82"/></linearGradient>
-  <linearGradient id="picket" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#555c61"/><stop offset=".18" stop-color="#8d9397"/><stop offset=".5" stop-color="#b8bcc0"/><stop offset=".82" stop-color="#7c8388"/><stop offset="1" stop-color="#4b5257"/></linearGradient>
-  <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="6" stdDeviation="7" flood-color="#24282b" flood-opacity=".16"/></filter>
-</defs>
-<rect width="800" height="520" rx="28" fill="url(#bg)"/>
-<ellipse cx="400" cy="452" rx="315" ry="18" fill="#b8b3a8" opacity=".18"/>
-<g transform="translate(70 48)" filter="url(#shadow)">
-  <rect x="6" y="25" width="26" height="355" rx="4" fill="url(#post)" stroke="#555c61" stroke-width="2"/>
-  <rect x="628" y="25" width="26" height="355" rx="4" fill="url(#post)" stroke="#555c61" stroke-width="2"/>
-  <rect x="24" y="128" width="612" height="20" rx="4" fill="url(#rail)" stroke="#666c71" stroke-width="1.5"/>
-  <rect x="24" y="286" width="612" height="20" rx="4" fill="url(#rail)" stroke="#666c71" stroke-width="1.5"/>
-  <g fill="url(#picket)" stroke="#50565b" stroke-width="1.7">
-    <path d="M60 82 A27 27 0 0 1 114 82 V360 H60 Z"/>
-    <path d="M150 82 A27 27 0 0 1 204 82 V360 H150 Z"/>
-    <path d="M240 82 A27 27 0 0 1 294 82 V360 H240 Z"/>
-    <path d="M330 82 A27 27 0 0 1 384 82 V360 H330 Z"/>
-    <path d="M420 82 A27 27 0 0 1 474 82 V360 H420 Z"/>
-    <path d="M510 82 A27 27 0 0 1 564 82 V360 H510 Z"/>
+  <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#faf9f5"/><stop offset="1" stop-color="#ece9e1"/></linearGradient>
+  <linearGradient id="metal" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#d9dcde"/><stop offset=".18" stop-color="#f4f5f5"/><stop offset=".5" stop-color="#b8bdc0"/><stop offset=".78" stop-color="#f0f1f1"/><stop offset="1" stop-color="#9ca2a6"/></linearGradient>
+  <linearGradient id="post" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#555d62"/><stop offset=".5" stop-color="#899095"/><stop offset="1" stop-color="#444b50"/></linearGradient>
+  <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="5" stdDeviation="6" flood-color="#1e2326" flood-opacity=".13"/></filter>
+  <g id="picket">
+    <path d="M0 18 A12 12 0 0 1 24 18 V330 H0 Z" fill="url(#metal)" stroke="#8f969a" stroke-width="1.2"/>
+    <path d="M5 24V320M12 20V320M19 24V320" fill="none" stroke="#80878b" stroke-width=".9" opacity=".62"/>
   </g>
-  <g fill="none" stroke="#d4d7d9" stroke-width="1.2" opacity=".52">
-    <path d="M73 91V349M163 91V349M253 91V349M343 91V349M433 91V349M523 91V349"/>
-    <path d="M101 91V349M191 91V349M281 91V349M371 91V349M461 91V349M551 91V349"/>
+</defs>
+<rect width="800" height="520" rx="26" fill="url(#bg)"/>
+<ellipse cx="400" cy="444" rx="310" ry="16" fill="#777" opacity=".08"/>
+<g transform="translate(65 48)" filter="url(#shadow)">
+  <rect x="15" y="22" width="25" height="365" rx="3" fill="url(#post)" stroke="#474e53" stroke-width="1.5"/>
+  <rect x="630" y="22" width="25" height="365" rx="3" fill="url(#post)" stroke="#474e53" stroke-width="1.5"/>
+  <rect x="32" y="126" width="605" height="15" rx="2" fill="#8c9296" stroke="#6d7478"/>
+  <rect x="32" y="287" width="605" height="15" rx="2" fill="#8c9296" stroke="#6d7478"/>
+  <g>
+    <use href="#picket" x="60" y="12"/><use href="#picket" x="90" y="12"/><use href="#picket" x="120" y="12"/>
+    <use href="#picket" x="150" y="12"/><use href="#picket" x="180" y="12"/><use href="#picket" x="210" y="12"/>
+    <use href="#picket" x="240" y="12"/><use href="#picket" x="270" y="12"/><use href="#picket" x="300" y="12"/>
+    <use href="#picket" x="330" y="12"/><use href="#picket" x="360" y="12"/><use href="#picket" x="390" y="12"/>
+    <use href="#picket" x="420" y="12"/><use href="#picket" x="450" y="12"/><use href="#picket" x="480" y="12"/>
+    <use href="#picket" x="510" y="12"/><use href="#picket" x="540" y="12"/><use href="#picket" x="570" y="12"/>
   </g>
 </g>
-<text x="400" y="472" text-anchor="middle" font-family="Arial,sans-serif" font-size="20" font-weight="700" letter-spacing="2" fill="#8c6b31">1 РЯД · ПОЛУКРУГЛЫЙ ЕВРОШТАКЕТНИК</text>
 </svg>
