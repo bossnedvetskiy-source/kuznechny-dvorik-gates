@@ -304,5 +304,7 @@ const uiSource = fs.readFileSync(new URL('../evroshtaketnik/evroshtaketnik.js', 
 assert.match(uiSource, /function renderVisualSvg\(/);
 assert.match(uiSource, /Забор между воротами и калиткой/);
 assert.match(uiSource, /visual-extra-post/);
+assert.match(uiSource, /Увеличить схему/);
+assert.match(uiSource, /is-suppressed/);
 
 console.log('Euro picket calculator matches Excel reference scenarios.');
