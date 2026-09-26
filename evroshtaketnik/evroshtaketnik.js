@@ -827,14 +827,25 @@ function renderFencePattern(x, y, w, h, part, scale) {
       fill += '<line x1="' + rx.toFixed(1) + '" y1="' + (y+5).toFixed(1) + '" x2="' + rx.toFixed(1) + '" y2="' + (y+h-5).toFixed(1) + '" class="visual-horizontal-support"/>';
     }
   } else {
-    const pitch = fillType === 'vertical-single' ? 13 : 11;
+    const pitch = fillType === 'vertical-single' ? 14 : 11.5;
+    const picketWidth = fillType === 'vertical-single' ? 7.2 : 6.6;
+    const picketPath = (centerX, topY, bottomY, width, klass) => {
+      const half = width / 2;
+      const left = centerX - half;
+      const right = centerX + half;
+      const radius = half;
+      const capY = topY + radius;
+      return '<path d="M' + left.toFixed(1) + ' ' + capY.toFixed(1) +
+        ' A' + radius.toFixed(1) + ' ' + radius.toFixed(1) + ' 0 0 1 ' + right.toFixed(1) + ' ' + capY.toFixed(1) +
+        ' V' + bottomY.toFixed(1) + ' H' + left.toFixed(1) + ' Z" class="' + klass + '"/>';
+    };
     if (fillType === 'vertical-double') {
       for (let px=x+4+pitch/2; px<x+safeW-3; px+=pitch) {
-        fill += '<line x1="' + px.toFixed(1) + '" y1="' + (y+7).toFixed(1) + '" x2="' + px.toFixed(1) + '" y2="' + (y+h-5).toFixed(1) + '" class="visual-picket-back"/>';
+        fill += picketPath(px, y+6.5, y+h-5, picketWidth, 'visual-picket-back');
       }
     }
     for (let px=x+4; px<x+safeW-3; px+=pitch) {
-      fill += '<line x1="' + px.toFixed(1) + '" y1="' + (y+6).toFixed(1) + '" x2="' + px.toFixed(1) + '" y2="' + (y+h-5).toFixed(1) + '" class="visual-picket-front"/>';
+      fill += picketPath(px, y+5.5, y+h-5, picketWidth, 'visual-picket-front');
     }
   }
 
