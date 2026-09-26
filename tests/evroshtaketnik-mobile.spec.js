@@ -35,6 +35,10 @@ for (const viewport of viewports) {
     await page.locator('body').click({position:{x:10,y:10}});
     await page.waitForTimeout(120);
 
+    await page.locator('#settlement').scrollIntoViewIfNeeded();
+    await page.waitForTimeout(120);
+    await expect(page.locator('#mobileQuoteBar')).toHaveClass(/is-suppressed/);
+
     const zoom = page.locator('[data-scheme-zoom]').first();
     await zoom.scrollIntoViewIfNeeded();
     await zoom.click();
