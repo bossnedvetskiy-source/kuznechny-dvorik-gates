@@ -20,9 +20,9 @@ const settlementResults = $('settlementResults');
 const deliveryStatus = $('deliveryStatus');
 const manualDeliveryInput = $('manualDelivery');
 const manualDeliveryEnabled = $('manualDeliveryEnabled');
-const typeHelp = $('typeHelp');
 const totalLabel = $('totalLabel');
 const resultNote = $('resultNote');
+const priceExclusions = $('priceExclusions');
 const internalGrid = $('internalGrid');
 const internalToggle = $('internalToggle');
 const internalOverview = $('internalOverview');
@@ -47,6 +47,9 @@ const hasHardSurfaceInput = $('hasHardSurface');
 const existingPostsHint = $('existingPostsHint');
 const quoteReference = $('quoteReference');
 const schemeSection = document.querySelector('.scheme-section');
+const schemeDialog = $('schemeDialog');
+const schemeDialogBody = $('schemeDialogBody');
+const schemeDialogClose = $('schemeDialogClose');
 const SAVED_QUOTE_KEY = 'kuzdvor:picket-saved-v1';
 const DRAFT_QUOTE_KEY = 'kuzdvor:picket-draft-v1';
 
@@ -164,12 +167,6 @@ const POST_LABELS = {
   '60x60x2':'60×60×2',
   '80x80x3':'80×80×3',
   '100x100x3':'100×100×3'
-};
-
-const TYPE_HELP = {
-  'vertical-double': 'Полукруглый ребристый евроштакетник ставится с двух сторон в шахматном порядке — забор меньше просматривается и выглядит плотнее.',
-  'vertical-single': 'Полукруглый ребристый евроштакетник ставится с одной стороны — простой и экономичный вариант.',
-  'horizontal-double': 'Горизонтальный евроштакетник идёт в два ряда со смещением, как на нашем реальном объекте. На схеме показаны только ровные горизонтальные планки и основные столбы.'
 };
 
 function showToast(message) {
@@ -427,17 +424,12 @@ async function shareQuoteState() {
   }
 }
 
-function syncTypeHelp() {
-  if (typeHelp) typeHelp.textContent = TYPE_HELP[typeInput.value] || '';
-}
-
 function syncTypePicker() {
   document.querySelectorAll('.type-card[data-type]').forEach(card => {
     const selected = card.dataset.type === typeInput.value;
     card.classList.toggle('is-selected', selected);
     card.setAttribute('aria-pressed', String(selected));
   });
-  syncTypeHelp();
 }
 
 function setInternalOpen(open) {
@@ -625,9 +617,9 @@ function renderResult(result) {
   $('summaryLength').textContent = summary.openingsWidth > 0
     ? `${number(summary.totalLength)} м из линии ${number(summary.grossLineLength)} м`
     : `${number(summary.totalLength)} м`;
-  $('summaryPosts').textContent = summary.openingSupportPosts > 0
-    ? `${summary.postsByScheme} забор + ${summary.openingSupportPosts} у ворот`
-    : (result.includeNewPosts ? `${summary.postsByScheme} (новых ${summary.newPosts})` : String(summary.postsByScheme));
+  $('summaryPosts').textContent = result.includeNewPosts
+    ? `${summary.postsByScheme} по схеме · новых ${summary.newPosts}`
+    : `${summary.postsByScheme} по схеме · все готовые`;
   $('summaryDelivery').textContent = deliveryPending
     ? 'не указана'
     : (summary.deliveryCost === 0 ? '0 ₽' : money(summary.deliveryCost));
@@ -635,11 +627,22 @@ function renderResult(result) {
   if (totalLabel) totalLabel.textContent = !hasQuote
     ? 'Рассчитайте стоимость'
     : (deliveryPending ? 'Предварительная стоимость без доставки' : 'Предварительная стоимость с доставкой');
+  const hasOpenings = summary.openingSupportPosts > 0;
+  if (priceExclusions) {
+    priceExclusions.hidden = !hasQuote || !hasOpenings;
+    priceExclusions.innerHTML = hasOpenings
+      ? '<b>Важно:</b> цена относится к забору. Ворота, калитка и их опорные столбы показаны на схеме для размеров, но в эту сумму не входят.'
+      : '';
+  }
   if (resultNote) resultNote.textContent = !hasQuote
     ? 'Укажите длину участка — калькулятор сразу покажет предварительную стоимость.'
-    : (deliveryPending
-        ? 'Укажите населённый пункт, чтобы получить итог с доставкой. Точные размеры и цену зафиксируем после бесплатного замера.'
-        : 'Доставка учтена. Точные размеры и итоговую стоимость зафиксируем после бесплатного замера.');
+    : (hasOpenings
+        ? (deliveryPending
+            ? 'Укажите населённый пункт, чтобы добавить доставку. Ворота, калитка и их столбы рассчитываются отдельно.'
+            : 'Доставка учтена. Ворота, калитка и их столбы рассчитываются отдельно; итог зафиксируем после замера.')
+        : (deliveryPending
+            ? 'Укажите населённый пункт, чтобы получить итог с доставкой. Точные размеры и цену зафиксируем после бесплатного замера.'
+            : 'Доставка учтена. Точные размеры и итоговую стоимость зафиксируем после бесплатного замера.'));
 
   const status = $('resultStatus');
   status.className = 'result-status';
@@ -662,7 +665,7 @@ function renderResult(result) {
   ];
   if (result.includeNewPosts && summary.newPosts > 0) chips.push(`<span>новые столбы: ${summary.newPosts} шт + установка</span>`);
   if (summary.existingPostsUsed > 0) chips.push(`<span>готовые столбы: ${summary.existingPostsUsed} шт</span>`);
-  if (summary.openingNodeWidth > 0) chips.push(`<span>узел ворот/калитки: ${number(summary.openingNodeWidth)} м по линии</span>`);
+  if (summary.openingNodeWidth > 0) chips.push('<span class="warn">ворота, калитка и их столбы — отдельно</span>');
   if (hasSlopeInput?.checked || hasHardSurfaceInput?.checked) chips.push('<span class="warn">условия монтажа — проверить на замере</span>');
   if ($('includedChips')) $('includedChips').innerHTML = chips.join('');
 
@@ -678,7 +681,7 @@ function renderResult(result) {
 
   if (mobileQuoteBar) mobileQuoteBar.hidden = !hasQuote;
   if (mobileBarPrice) mobileBarPrice.textContent = hasQuote ? money(summary.total) : '—';
-  if (mobileBarNote) mobileBarNote.textContent = deliveryPending ? 'без доставки' : 'с доставкой';
+  if (mobileBarNote) mobileBarNote.textContent = hasOpenings ? 'ворота/калитка не входят' : (deliveryPending ? 'без доставки' : 'с доставкой');
   if (resultSummary) resultSummary.hidden = !hasQuote;
   if (includedBlock) includedBlock.hidden = !hasQuote;
   if (quoteMainActions) quoteMainActions.hidden = !hasQuote;
@@ -977,7 +980,7 @@ function renderScheme(result) {
     return '<article class="scheme-card visual-scheme-card">' +
       '<div class="scheme-top"><div><b>Участок ' + item.index + '</b><small>' + layoutLabel + '</small></div><span>' + number(item.grossLength) + ' × ' + number(item.height) + ' м</span></div>' +
       renderVisualSvg(item, result) +
-      '<button class="scheme-zoom-button" type="button" data-scheme-zoom aria-pressed="false"><span>Увеличить схему</span><i aria-hidden="true">↔</i></button>' +
+      '<button class="scheme-zoom-button" type="button" data-scheme-zoom><span>Открыть схему крупно</span><i aria-hidden="true">↗</i></button>' +
       '<div class="visual-summary">' +
         '<div><small>Забор всего</small><b>' + number(item.fenceLength) + ' м</b></div>' +
         (item.openingSupportPosts ? '<div><small>Ворота</small><b>' + (item.gateOpening > 0 ? number(item.gateOpening) + ' м' : '—') + '</b></div>' : '') +
@@ -1002,12 +1005,13 @@ function initSchemeInteractions() {
       if (!button) return;
       const card = button.closest('.visual-scheme-card');
       const scroller = card?.querySelector('.visual-line-scroll');
-      if (!scroller) return;
-      const zoomed = scroller.classList.toggle('is-zoomed');
-      button.setAttribute('aria-pressed', String(zoomed));
-      const text = button.querySelector('span');
-      if (text) text.textContent = zoomed ? 'Показать целиком' : 'Увеличить схему';
-      if (!zoomed) scroller.scrollTo({left:0,behavior:'smooth'});
+      if (!scroller || !schemeDialog || !schemeDialogBody) return;
+      const title = card?.querySelector('.scheme-top b')?.textContent || 'Схема участка';
+      const dialogTitle = $('schemeDialogTitle');
+      if (dialogTitle) dialogTitle.textContent = title;
+      schemeDialogBody.innerHTML = '<div class="scheme-dialog-canvas">' + scroller.innerHTML + '</div>';
+      if (typeof schemeDialog.showModal === 'function') schemeDialog.showModal();
+      else schemeDialog.setAttribute('open','');
     });
   }
 
@@ -1026,6 +1030,23 @@ function initSchemeInteractions() {
 }
 
 initSchemeInteractions();
+
+schemeDialogClose?.addEventListener('click', () => schemeDialog?.close());
+schemeDialog?.addEventListener('click', event => {
+  if (event.target === schemeDialog) schemeDialog.close();
+});
+
+document.addEventListener('focusin', event => {
+  if (!mobileQuoteBar || !window.matchMedia('(max-width:620px)').matches) return;
+  if (event.target?.matches?.('input, select, textarea')) mobileQuoteBar.classList.add('is-input-active');
+});
+document.addEventListener('focusout', () => {
+  if (!mobileQuoteBar) return;
+  setTimeout(() => {
+    const active = document.activeElement;
+    if (!active?.matches?.('input, select, textarea')) mobileQuoteBar.classList.remove('is-input-active');
+  }, 80);
+});
 
 function row(label, value) {
   return `<div><dt>${label}</dt><dd>${value}</dd></div>`;
@@ -1202,7 +1223,8 @@ function renderLeadPreview(result) {
   if (!target || !hasQuote) return;
 
   const locationText = selectedDelivery?.name || settlementInput.value.trim() || 'населённый пункт не выбран';
-  target.innerHTML = `<b>${money(result.summary.total)}${deliveryIsKnown() ? '' : ' · без доставки'}</b><span>${number(result.summary.totalLength)} м · ${result.type.label} · ${locationText}</span>`;
+  const exclusion = result.summary.openingSupportPosts > 0 ? ' · ворота/калитка отдельно' : '';
+  target.innerHTML = `<b>${money(result.summary.total)}${deliveryIsKnown() ? '' : ' · без доставки'}</b><span>${number(result.summary.totalLength)} м · ${result.type.label} · ${locationText}${exclusion}</span>`;
 }
 
 async function loadFencePrices() {
@@ -1233,8 +1255,9 @@ function quoteText() {
     `Кузнечный ДворикЪ — расчёт ${ensureQuoteNumber()}`,
     'Забор из металлического евроштакетника',
     `Тип: ${lastResult.type.label}`,
-    `Столбы: ${postInput.options[postInput.selectedIndex]?.textContent || postInput.value}; ${postMode}`,
+    `Столбы секций забора: ${postInput.options[postInput.selectedIndex]?.textContent || postInput.value}; ${postMode}`,
     sections,
+    ...(lastResult.summary.openingSupportPosts > 0 ? ['Важно: ворота, калитка и их опорные столбы в стоимость забора не входят.'] : []),
     `Длина линии: ${number(lastResult.summary.grossLineLength ?? lastResult.summary.totalLength)} м`,
     ...(lastResult.summary.openingNodeWidth > 0 ? [
       `Чистые проёмы: ${number(lastResult.summary.openingsWidth)} м`,
