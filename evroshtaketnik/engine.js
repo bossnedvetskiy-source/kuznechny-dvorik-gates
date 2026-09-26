@@ -172,6 +172,9 @@ export function calculateFence(input = {}) {
       openingPostType: POST_TYPES[item.openingPostType] ? item.openingPostType : postKey,
       openingsSharePost: item.openingsSharePost !== false,
       betweenOpeningFence: Math.max(0, finite(item.betweenOpeningFence)),
+      openingStartFence: item.openingStartFence === '' || item.openingStartFence === null || item.openingStartFence === undefined
+        ? null
+        : Math.max(0, finite(item.openingStartFence)),
       sharedWithNext: Boolean(item.sharedWithNext)
     };
   });
@@ -199,6 +202,12 @@ export function calculateFence(input = {}) {
         openingsSharePost: item.openingsSharePost,
         betweenOpeningFence: 0,
         requestedBetweenOpeningFence: item.betweenOpeningFence,
+        openingPositionKnown: false,
+        requestedOpeningStartFence: item.openingStartFence,
+        openingStartFence: 0,
+        openingEndFence: 0,
+        maxOpeningStartFence: 0,
+        openingPositionInvalid: false,
         bridgeSpans: 0,
         bridgeExtraPosts: 0,
         height: item.height,
@@ -257,6 +266,12 @@ export function calculateFence(input = {}) {
     const openingNodeWidth = openingCoreWidth + requestedBetweenOpeningFence;
     const fenceLength = availableFenceFootprint;
     const outerFenceFootprint = Math.max(0, fenceLength - betweenOpeningFence);
+    const openingPositionKnown = hasOpeningNode && item.openingStartFence !== null;
+    const requestedOpeningStartFence = openingPositionKnown ? Math.max(0, item.openingStartFence) : null;
+    const maxOpeningStartFence = Math.max(0, grossLength - openingNodeWidth);
+    const openingPositionInvalid = openingPositionKnown && requestedOpeningStartFence > maxOpeningStartFence + 1e-9;
+    const openingStartFence = openingPositionKnown ? Math.min(requestedOpeningStartFence, maxOpeningStartFence) : 0;
+    const openingEndFence = openingPositionKnown ? Math.max(0, outerFenceFootprint - openingStartFence) : 0;
 
     const segmentMetrics = (footprint, mode, maxSpan, key) => {
       if (footprint <= 1e-9) return null;
@@ -337,6 +352,13 @@ export function calculateFence(input = {}) {
     if (!hasOpeningNode) {
       const segment = segmentMetrics(grossLength, 'normal', settings.maxSpan, 'main');
       if (segment) segments.push(segment);
+    } else if (openingPositionKnown) {
+      const before = segmentMetrics(openingStartFence, 'attached', settings.maxSpan, 'before-opening');
+      if (before) segments.push(before);
+      const bridge = segmentMetrics(betweenOpeningFence, 'bridge', settings.openingBridgeMaxSpan, 'between-openings');
+      if (bridge) segments.push(bridge);
+      const after = segmentMetrics(openingEndFence, 'attached', settings.maxSpan, 'after-opening');
+      if (after) segments.push(after);
     } else {
       const outer = segmentMetrics(outerFenceFootprint, 'attached', settings.maxSpan, 'outer');
       if (outer) segments.push(outer);
@@ -347,8 +369,10 @@ export function calculateFence(input = {}) {
     const sumSegments = key => segments.reduce((total, segment) => total + finite(segment[key]), 0);
     const spans = sumSegments('spans');
     const basePosts = sumSegments('normalPosts');
-    const outerSegment = segments.find(segment => segment.key === 'outer') || segments.find(segment => segment.key === 'main');
-    const sharedPost = outerSegment?.normalPosts > 0 && item.sharedWithNext && index < 3 && activeFlags[index + 1] ? 1 : 0;
+    const rightmostSegment = openingPositionKnown
+      ? segments.find(segment => segment.key === 'after-opening')
+      : (segments.find(segment => segment.key === 'outer') || segments.find(segment => segment.key === 'main'));
+    const sharedPost = rightmostSegment?.normalPosts > 0 && item.sharedWithNext && index < 3 && activeFlags[index + 1] ? 1 : 0;
     const requiredPosts = Math.max(0, basePosts - sharedPost);
     const bridgeSegment = segments.find(segment => segment.key === 'between-openings');
     const bridgeSpans = bridgeSegment?.spans || 0;
@@ -391,6 +415,12 @@ export function calculateFence(input = {}) {
       openingsSharePost,
       betweenOpeningFence,
       requestedBetweenOpeningFence,
+      openingPositionKnown,
+      requestedOpeningStartFence,
+      openingStartFence,
+      openingEndFence,
+      maxOpeningStartFence,
+      openingPositionInvalid,
       bridgeSpans,
       bridgeExtraPosts,
       height: item.height,
@@ -531,6 +561,7 @@ export function calculateFence(input = {}) {
   let check = 'ГОТОВО';
   if (!activeSections.length) check = 'Добавьте участок';
   else if (activeSections.some(item => item.openingNodeWidth > item.grossLength + 1e-9)) check = 'ПРОВЕРЬТЕ УЗЕЛ ВОРОТ: ПРОЁМЫ, СТОЛБЫ И ЗАБОР МЕЖДУ НИМИ БОЛЬШЕ УЧАСТКА';
+  else if (activeSections.some(item => item.openingPositionInvalid)) check = 'ПРОВЕРЬТЕ ПРИВЯЗКУ ВОРОТ: УЗЕЛ НЕ ПОМЕЩАЕТСЯ В ЛИНИЮ';
   else if (totalLength <= 0) check = 'ПОСЛЕ ПРОЁМОВ НЕ ОСТАЛОСЬ ДЛИНЫ ЗАБОРА';
   else if (activeSections.some(item => item.segments.some(segment => segment.clearSpan > segment.maxSpan + 1e-9))) check = 'ОШИБКА: СЛИШКОМ БОЛЬШОЙ ПРОЛЁТ';
   else if (activeSections.some(item => item.height > settings.postLength - settings.postDepth)) check = 'ПРОВЕРЬТЕ ВЫСОТУ / ДЛИНУ СТОЛБА';
