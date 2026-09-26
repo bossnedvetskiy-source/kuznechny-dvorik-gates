@@ -1,22 +1,32 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 420" role="img" aria-labelledby="t d">
-<title id="t">Вертикальный односторонний евроштакетник</title><desc id="d">Один ряд металлического штакетника с просветами</desc>
-<rect width="640" height="420" rx="26" fill="#f3f0e8"/>
-<g transform="translate(45 32)" stroke="#3f4245" stroke-linejoin="round">
-  <rect x="8" y="30" width="18" height="305" rx="3" fill="#b8b7b0" stroke-width="3"/>
-  <rect x="524" y="30" width="18" height="305" rx="3" fill="#b8b7b0" stroke-width="3"/>
-  <rect x="20" y="105" width="510" height="16" rx="3" fill="#8e8f8b" stroke-width="2"/>
-  <rect x="20" y="255" width="510" height="16" rx="3" fill="#8e8f8b" stroke-width="2"/>
-  <g fill="#73767a" stroke-width="3">
-    <path d="M52 45 L73 28 L94 45 V322 H52 Z"/>
-    <path d="M128 45 L149 28 L170 45 V322 H128 Z"/>
-    <path d="M204 45 L225 28 L246 45 V322 H204 Z"/>
-    <path d="M280 45 L301 28 L322 45 V322 H280 Z"/>
-    <path d="M356 45 L377 28 L398 45 V322 H356 Z"/>
-    <path d="M432 45 L453 28 L474 45 V322 H432 Z"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 520" role="img" aria-labelledby="title desc">
+<title id="title">Односторонний металлический евроштакетник с полукруглым верхом</title>
+<desc id="desc">Профессиональная фронтальная схема одного ряда металлического евроштакетника с полукруглыми верхними кромками</desc>
+<defs>
+  <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#faf9f5"/><stop offset="1" stop-color="#ece9e0"/></linearGradient>
+  <linearGradient id="post" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#7b8186"/><stop offset=".48" stop-color="#b5b9bc"/><stop offset="1" stop-color="#666d72"/></linearGradient>
+  <linearGradient id="rail" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#aeb2b5"/><stop offset="1" stop-color="#777d82"/></linearGradient>
+  <linearGradient id="picket" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#555c61"/><stop offset=".18" stop-color="#8d9397"/><stop offset=".5" stop-color="#b8bcc0"/><stop offset=".82" stop-color="#7c8388"/><stop offset="1" stop-color="#4b5257"/></linearGradient>
+  <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="6" stdDeviation="7" flood-color="#24282b" flood-opacity=".16"/></filter>
+</defs>
+<rect width="800" height="520" rx="28" fill="url(#bg)"/>
+<ellipse cx="400" cy="452" rx="315" ry="18" fill="#b8b3a8" opacity=".18"/>
+<g transform="translate(70 48)" filter="url(#shadow)">
+  <rect x="6" y="25" width="26" height="355" rx="4" fill="url(#post)" stroke="#555c61" stroke-width="2"/>
+  <rect x="628" y="25" width="26" height="355" rx="4" fill="url(#post)" stroke="#555c61" stroke-width="2"/>
+  <rect x="24" y="128" width="612" height="20" rx="4" fill="url(#rail)" stroke="#666c71" stroke-width="1.5"/>
+  <rect x="24" y="286" width="612" height="20" rx="4" fill="url(#rail)" stroke="#666c71" stroke-width="1.5"/>
+  <g fill="url(#picket)" stroke="#50565b" stroke-width="1.7">
+    <path d="M60 82 A27 27 0 0 1 114 82 V360 H60 Z"/>
+    <path d="M150 82 A27 27 0 0 1 204 82 V360 H150 Z"/>
+    <path d="M240 82 A27 27 0 0 1 294 82 V360 H240 Z"/>
+    <path d="M330 82 A27 27 0 0 1 384 82 V360 H330 Z"/>
+    <path d="M420 82 A27 27 0 0 1 474 82 V360 H420 Z"/>
+    <path d="M510 82 A27 27 0 0 1 564 82 V360 H510 Z"/>
   </g>
-  <g stroke="#515459" stroke-width="1.4" opacity=".55">
-    <path d="M63 55V309M139 55V309M215 55V309M291 55V309M367 55V309M443 55V309"/>
+  <g fill="none" stroke="#d4d7d9" stroke-width="1.2" opacity=".52">
+    <path d="M73 91V349M163 91V349M253 91V349M343 91V349M433 91V349M523 91V349"/>
+    <path d="M101 91V349M191 91V349M281 91V349M371 91V349M461 91V349M551 91V349"/>
   </g>
 </g>
-<text x="320" y="392" text-anchor="middle" font-family="Arial,sans-serif" font-size="25" font-weight="800" fill="#a87b32">1 РЯД · ОДНОСТОРОННИЙ</text>
+<text x="400" y="472" text-anchor="middle" font-family="Arial,sans-serif" font-size="20" font-weight="700" letter-spacing="2" fill="#8c6b31">1 РЯД · ПОЛУКРУГЛЫЙ ЕВРОШТАКЕТНИК</text>
 </svg>
