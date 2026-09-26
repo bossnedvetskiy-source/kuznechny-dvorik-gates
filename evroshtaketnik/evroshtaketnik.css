@@ -251,3 +251,12 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,su
   .scheme-section .section-title p{font-size:10.5px;line-height:1.5}
   .opening-position-field>small{font-size:9px}
 }
+
+.type-image.is-sketch{background:#f3f0e8}
+.type-image.is-sketch:after{display:none}
+.type-image.is-sketch img{object-fit:contain;padding:4px;background:#f3f0e8}
+
+.visual-picket-front{stroke:#858b90;stroke-width:4.2;stroke-linecap:round}
+.visual-picket-back{stroke:#444a4f;stroke-width:4.2;stroke-linecap:round;opacity:.9}
+.visual-horizontal-slat{stroke:#70777c;stroke-width:5.5;stroke-linecap:round}
+.visual-horizontal-support{stroke:#454b50;stroke-width:3;opacity:.9}
