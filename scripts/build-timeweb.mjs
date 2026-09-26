@@ -186,6 +186,7 @@ await cp(path.join(root, 'timeweb/update'), path.join(output, 'update'), { recur
 for (const sitePwaFile of ['site-sw.js','site-manifest.webmanifest','site-icon.svg']) {
   await cp(path.join(root, 'dist/client', sitePwaFile), path.join(output, sitePwaFile));
 }
+await cp(path.join(root, 'privacy.html'), path.join(output, 'privacy.html'));
 
 const hubHtml = await render('/napravleniya');
 await mkdir(path.join(output, 'napravleniya'), { recursive: true });
