@@ -262,9 +262,12 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,su
 
 .visual-picket-front{fill:#92999e;stroke:#c0c5c8;stroke-width:.55}
 .visual-picket-back{fill:#4b5257;stroke:#6a7176;stroke-width:.5;opacity:.97}
-.visual-picket-rib{stroke:#d9dcde;stroke-width:.55;opacity:.72}
+.visual-picket-rib{stroke:#d9dcde;stroke-width:.42;opacity:.64}
+.visual-picket-rib-main{stroke-width:.65;opacity:.84}
 .visual-horizontal-back{fill:#2f211d;stroke:#574038;stroke-width:.45}
 .visual-horizontal-slat{fill:#6b463c;stroke:#9a7265;stroke-width:.45}
 .visual-horizontal-connector{fill:#4c312b;stroke:#ad7f70;stroke-width:.45}
-.visual-horizontal-highlight{stroke:#b99384;stroke-width:.55;opacity:.7}
+.visual-horizontal-highlight{stroke:#c49b8d;stroke-width:.5;opacity:.72}
+.visual-horizontal-highlight-low{stroke:#4c3029;opacity:.7}
+.visual-post-ball{fill:#6b463c;stroke:#b18475;stroke-width:.55}
 .visual-horizontal-support{stroke:#454b50;stroke-width:3;opacity:.9}
