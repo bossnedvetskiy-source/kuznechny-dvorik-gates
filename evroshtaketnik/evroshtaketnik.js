@@ -76,10 +76,19 @@ function sectionMarkup(index) {
       <details class="section-openings">
         <summary>Есть ворота или калитка в этом участке?</summary>
         <div class="section-fields opening-fields">
-          <label class="field"><span>Проём ворот, м</span><input data-field="gateOpening" data-index="${index}" type="number" min="0" max="10" step="0.05" inputmode="decimal" value="0"></label>
-          <label class="field"><span>Проём калитки, м</span><input data-field="wicketOpening" data-index="${index}" type="number" min="0" max="3" step="0.05" inputmode="decimal" value="0"></label>
+          <label class="field"><span>Чистый проём ворот, м</span><input data-field="gateOpening" data-index="${index}" type="number" min="0" max="10" step="0.05" inputmode="decimal" value="0"></label>
+          <label class="field"><span>Чистый проём калитки, м</span><input data-field="wicketOpening" data-index="${index}" type="number" min="0" max="3" step="0.05" inputmode="decimal" value="0"></label>
         </div>
-        <small>Проёмы вычитаются из длины забора. Стоимость самих ворот и калитки в этот расчёт не входит.</small>
+        <div class="opening-post-settings">
+          <label class="field"><span>Столбы ворот / калитки</span><select data-field="openingPostType" data-index="${index}"><option value="60x60x2">60×60×2</option><option value="80x80x3">80×80×3</option><option value="100x100x3" selected>100×100×3</option></select></label>
+          <label class="switch-field compact opening-share-row">
+            <span><b>Общий средний столб</b><small>Включено, если ворота и калитка стоят рядом и используют один общий столб.</small></span>
+            <input data-field="openingsSharePost" data-index="${index}" type="checkbox" checked>
+            <i aria-hidden="true"></i>
+          </label>
+          <div class="opening-node-summary" data-opening-node-summary="${index}">Укажите проём — здесь появится полный размер узла по линии.</div>
+        </div>
+        <small>В текущую цену забора ворота, калитка и их столбы не входят — их размеры учитываются только в геометрии линии.</small>
       </details>
       <div class="section-validation" data-section-validation="${index}" hidden></div>
       ${index < 3 ? `
@@ -112,12 +121,16 @@ function readSections() {
     const height = Number(sectionsList.querySelector(`[data-field="height"][data-index="${index}"]`)?.value || 1.8);
     const gateOpening = Number(sectionsList.querySelector(`[data-field="gateOpening"][data-index="${index}"]`)?.value || 0);
     const wicketOpening = Number(sectionsList.querySelector(`[data-field="wicketOpening"][data-index="${index}"]`)?.value || 0);
+    const openingPostType = sectionsList.querySelector(`[data-field="openingPostType"][data-index="${index}"]`)?.value || postInput.value;
+    const openingsSharePost = Boolean(sectionsList.querySelector(`[data-field="openingsSharePost"][data-index="${index}"]`)?.checked);
     const shared = Boolean(sectionsList.querySelector(`[data-field="shared"][data-index="${index}"]`)?.checked);
     return {
       length: index < visibleSections ? Math.max(0, length) : 0,
       height: Math.max(.5, height || 1.8),
       gateOpening: index < visibleSections ? Math.max(0, gateOpening) : 0,
       wicketOpening: index < visibleSections ? Math.max(0, wicketOpening) : 0,
+      openingPostType,
+      openingsSharePost,
       sharedWithNext: index < visibleSections - 1 ? shared : false
     };
   });
