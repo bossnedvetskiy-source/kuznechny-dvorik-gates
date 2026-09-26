@@ -243,3 +243,11 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,su
   .scheme-zoom-button{display:flex}
   .mobile-quote-bar.is-suppressed{opacity:0;transform:translateY(calc(100% + 20px));pointer-events:none}
 }
+
+.opening-position-field{margin-top:2px}
+.opening-position-field>small{display:block;margin-top:3px;color:#888c90;font-size:8.5px;line-height:1.4}
+@media(max-width:620px){
+  .scheme-section .section-title h2{font-size:26px!important;line-height:1.08}
+  .scheme-section .section-title p{font-size:10.5px;line-height:1.5}
+  .opening-position-field>small{font-size:9px}
+}
