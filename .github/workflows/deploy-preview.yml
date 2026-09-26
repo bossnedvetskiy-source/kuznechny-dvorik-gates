@@ -65,11 +65,18 @@ jobs:
           test -s timeweb-dist/evroshtaketnik/index.html
           test -s timeweb-dist/evroshtaketnik/engine.js
           test -s timeweb-dist/evroshtaketnik/evroshtaketnik.js
+          test -s timeweb-dist/privacy.html
           test -s timeweb-dist/evroshtaketnik/assets/fence-double.webp
           test -s timeweb-dist/evroshtaketnik/assets/fence-single.webp
           test -s timeweb-dist/evroshtaketnik/assets/fence-horizontal.webp
           grep -Fq 'Выберите тип заполнения' timeweb-dist/evroshtaketnik/index.html
           grep -Fq 'Оставить заявку на бесплатный замер' timeweb-dist/evroshtaketnik/index.html
+
+      - name: Install Chromium for mobile UX test
+        run: npx playwright install --with-deps chromium
+
+      - name: Test euro picket mobile UX
+        run: npx playwright test tests/evroshtaketnik-mobile.spec.js
 
       - name: Snapshot current production data
         continue-on-error: true
