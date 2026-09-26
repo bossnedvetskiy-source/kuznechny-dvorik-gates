@@ -474,8 +474,35 @@ function renderInputValidation(result) {
     const heightInput = sectionsList.querySelector(`[data-field="height"][data-index="${index}"]`);
     const gateInput = sectionsList.querySelector(`[data-field="gateOpening"][data-index="${index}"]`);
     const wicketInput = sectionsList.querySelector(`[data-field="wicketOpening"][data-index="${index}"]`);
+    const betweenInput = sectionsList.querySelector(`[data-field="betweenOpeningFence"][data-index="${index}"]`);
+    const betweenRow = sectionsList.querySelector(`[data-between-opening-row="${index}"]`);
+    const hasGate = raw.gateOpening > 0;
+    const hasWicket = raw.wicketOpening > 0;
+    const canSeparate = hasGate && hasWicket && !raw.openingsSharePost;
 
-    for (const input of [lengthInput,heightInput,gateInput,wicketInput]) input?.removeAttribute('aria-invalid');
+    if (betweenRow) betweenRow.hidden = !canSeparate;
+    for (const input of [lengthInput,heightInput,gateInput,wicketInput,betweenInput]) input?.removeAttribute('aria-invalid');
+
+    const calculated = result.sections[index] || {};
+    const openingWidth = Math.max(0, Number(calculated.openingsWidth) || 0);
+    const openingNodeWidth = Math.max(0, Number(calculated.openingNodeWidth) || 0);
+    const openingPostsWidth = Math.max(0, Number(calculated.openingPostsWidth) || 0);
+    const openingSupportPosts = Math.max(0, Number(calculated.openingSupportPosts) || 0);
+    const betweenFence = Math.max(0, Number(calculated.betweenOpeningFence) || 0);
+    const bridgeSpans = Math.max(0, Number(calculated.bridgeSpans) || 0);
+    const bridgeExtraPosts = Math.max(0, Number(calculated.bridgeExtraPosts) || 0);
+    const nodeSummary = sectionsList.querySelector(`[data-opening-node-summary="${index}"]`);
+
+    if (nodeSummary) {
+      nodeSummary.hidden = openingWidth <= 0;
+      if (openingWidth > 0) {
+        const postLabel = POST_LABELS[calculated.openingPostType] || calculated.openingPostType || '';
+        const bridgeText = betweenFence > 0
+          ? ` Забор между ними: ${number(betweenFence)} м · ${bridgeSpans} прол. · ${bridgeExtraPosts ? `доп. столбов ${bridgeExtraPosts}` : 'без дополнительного столба'}.`
+          : '';
+        nodeSummary.innerHTML = `<b>Узел по линии: ${number(openingNodeWidth)} м</b><span>Чистые проёмы ${number(openingWidth)} м + ${openingSupportPosts} столб. ${postLabel} (${number(openingPostsWidth)} м).${bridgeText}</span>`;
+      }
+    }
 
     if (index >= visibleSections || raw.length <= 0) {
       box.hidden = true;
@@ -485,34 +512,34 @@ function renderInputValidation(result) {
     }
 
     const messages = [];
-    const calculated = result.sections[index] || {};
-    const openingWidth = Math.max(0, Number(calculated.openingsWidth) || 0);
-    const openingNodeWidth = Math.max(0, Number(calculated.openingNodeWidth) || 0);
-    const openingPostsWidth = Math.max(0, Number(calculated.openingPostsWidth) || 0);
-    const openingSupportPosts = Math.max(0, Number(calculated.openingSupportPosts) || 0);
-    const nodeSummary = sectionsList.querySelector(`[data-opening-node-summary="${index}"]`);
-
-    if (nodeSummary) {
-      nodeSummary.hidden = openingWidth <= 0;
-      if (openingWidth > 0) {
-        const postLabel = POST_LABELS[calculated.openingPostType] || calculated.openingPostType || '';
-        nodeSummary.innerHTML = `<b>По линии узел займёт ${number(openingNodeWidth)} м</b><span>Проёмы ${number(openingWidth)} м + ${openingSupportPosts} столб. ${postLabel} = ${number(openingPostsWidth)} м.</span>`;
-      }
-    }
-
     if (openingNodeWidth > raw.length + 1e-9) {
       messages.push({level:'error', text:`Узел ворот/калитки занимает ${number(openingNodeWidth)} м, а длина участка только ${number(raw.length)} м.`});
       lengthInput?.setAttribute('aria-invalid','true');
       gateInput?.setAttribute('aria-invalid','true');
       wicketInput?.setAttribute('aria-invalid','true');
+      if (canSeparate) betweenInput?.setAttribute('aria-invalid','true');
     } else if (openingWidth > 0) {
-      const remaining = Math.max(0, raw.length - openingNodeWidth);
-      messages.push({
-        level: remaining < .5 ? 'warn' : 'info',
-        text: remaining > 0
-          ? `После чистых проёмов и их столбов останется ${number(remaining)} м линии под забор.`
-          : 'После узла ворот/калитки длины под забор не остаётся.'
-      });
+      const totalFence = Math.max(0, Number(calculated.fenceLength) || 0);
+      const outsideFence = Math.max(0, totalFence - betweenFence);
+      if (betweenFence > 0) {
+        messages.push({
+          level:'info',
+          text:`Забора всего ${number(totalFence)} м: между воротами и калиткой ${number(betweenFence)} м, остальная линия ${number(outsideFence)} м.`
+        });
+        messages.push({
+          level:'info',
+          text: bridgeExtraPosts > 0
+            ? `Между воротами и калиткой: ${bridgeSpans} пролёта, нужен ${bridgeExtraPosts} дополнительный столб.`
+            : `Между воротами и калиткой: один пролёт до ${number(runtimeSettings.openingBridgeMaxSpan || 2.4)} м, дополнительный столб не нужен.`
+        });
+      } else {
+        messages.push({
+          level: totalFence < .5 ? 'warn' : 'info',
+          text: totalFence > 0
+            ? `После чистых проёмов и их столбов останется ${number(totalFence)} м линии под забор.`
+            : 'После узла ворот/калитки длины под забор не остаётся.'
+        });
+      }
     }
 
     const availablePostHeight = Math.max(0, Number(runtimeSettings.postLength) - Number(runtimeSettings.postDepth));
@@ -540,10 +567,10 @@ function renderInputValidation(result) {
     const required = Math.max(0, Number(result.summary.postsByScheme) || 0);
     existingPostsHint.classList.remove('is-warn');
     if (includePostsInput.checked && requested > required && required > 0) {
-      existingPostsHint.textContent = `По схеме требуется ${required} столбов. Указано ${requested} готовых — в расчёте учтём только ${required}.`;
+      existingPostsHint.textContent = `По схеме требуется ${required} столбов забора. Указано ${requested} готовых — в расчёте учтём только ${required}.`;
       existingPostsHint.classList.add('is-warn');
     } else {
-      existingPostsHint.textContent = 'Если часть столбов уже установлена, укажите количество — калькулятор добавит только недостающие.';
+      existingPostsHint.textContent = 'Если часть столбов забора уже установлена, укажите количество — столбы ворот и калитки здесь не считаются.';
     }
   }
 }
