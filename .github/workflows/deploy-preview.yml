@@ -118,6 +118,8 @@ jobs:
           test -s _site/catalog-enhancements.bundle.js
           test -s _site/api/catalog-images
           test -s _site/api/fence-prices
+          test -s _site/api/offline-version
+          node -e "const x=JSON.parse(require('fs').readFileSync('_site/api/offline-version','utf8')); if(!x.version || !String(x.version).startsWith('dev-')) throw Error('DEV offline version missing'); console.log('DEV offline version OK:', x.version)"
           if grep -Fq '<script src="app.js"' _site/index.html; then
             echo 'Dev preview is still using raw source scripts' >&2
             exit 1
