@@ -1,4 +1,4 @@
-const VERSION='kuzdvor-offline-2026-09-26-v37';
+const VERSION='kuzdvor-offline-2026-09-27-v38';
 const SHELL_CACHE=VERSION+'-shell';
 const MEDIA_CACHE=VERSION+'-media';
 const API_CACHE=VERSION+'-api';
@@ -323,7 +323,7 @@ async function checkOfflineUpdate({auto=false,allowInitial=false}={}){
 
   const meta=await readOfflineMeta();
   const localVersion=String(meta?.contentVersion||'');
-  if(localVersion && localVersion===remote.version){
+  if(localVersion && localVersion===remote.version && status.current){
     await broadcast({
       type:'OFFLINE_UP_TO_DATE',
       updatedAt:meta?.updatedAt||null,
