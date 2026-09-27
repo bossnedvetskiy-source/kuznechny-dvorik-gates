@@ -126,7 +126,7 @@ fetch "$BASE_URL/site-manifest.webmanifest?deploy_health=$TARGET_SOURCE_SHA" "$T
 grep -q '"display":"standalone"' "$TMP_DIR/site-manifest.webmanifest" || grep -q '"display": "standalone"' "$TMP_DIR/site-manifest.webmanifest" || fail 'full-site PWA manifest invalid'
 grep -q '"start_url": "/app' "$TMP_DIR/site-manifest.webmanifest" || fail 'unified PWA start page is invalid'
 fetch "$BASE_URL/site-sw.js?deploy_health=$TARGET_SOURCE_SHA" "$TMP_DIR/site-sw.js"
-grep -q "kuzdvor-offline-2026-09-23-v10" "$TMP_DIR/site-sw.js" || fail 'full-site service worker build is stale'
+grep -q "kuzdvor-offline-2026-09-27-v38" "$TMP_DIR/site-sw.js" || fail 'full-site service worker build is stale'
 grep -q 'OFFLINE_READY' "$TMP_DIR/site-sw.js" || fail 'full-site offline service worker invalid'
 grep -q 'GET_OFFLINE_STATUS' "$TMP_DIR/site-sw.js" || fail 'manual offline status API missing'
 grep -q 'catalog-media' "$TMP_DIR/site-sw.js" || fail 'uploaded catalog media are not included in offline cache'
@@ -141,7 +141,7 @@ grep -q 'Каталог и расчёт' "$TMP_DIR/work-app.html" || fail 'catal
 grep -q 'Создать ссылку клиенту' "$TMP_DIR/work-app.html" || fail 'client-link entry missing from work app'
 grep -Eq 'Проверить обновления|Скачать офлайн-базу|Проверяем базу' "$TMP_DIR/work-app.html" || fail 'offline update control copy missing'
 grep -q 'updateBaseButton' "$TMP_DIR/work-app.html" || fail 'offline update control missing'
-grep -q "APP_BUILD='2026-09-23-v10'" "$TMP_DIR/work-app.html" || fail 'work app build marker is stale'
+grep -q "APP_BUILD='2026-09-27-v11'" "$TMP_DIR/work-app.html" || fail 'work app build marker is stale'
 fetch "$BASE_URL/force-update.html?deploy_health=$TARGET_SOURCE_SHA" "$TMP_DIR/force-update.html"
 grep -q 'Обновляем приложение' "$TMP_DIR/force-update.html" || fail 'force-update recovery page missing'
 grep -q 'force-update=2026-09-23-v10' "$TMP_DIR/force-update.html" || fail 'force-update recovery page is stale'
