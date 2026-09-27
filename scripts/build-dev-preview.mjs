@@ -56,6 +56,21 @@ try {
 }
 await writeFile(path.join(OUT, 'api', 'fence-prices'), fencePricesJson, 'utf8');
 
+// GitHub Pages cannot execute the Timeweb PHP endpoint. Publish the same
+// lightweight version contract as a static file so the DEV PWA can detect
+// every new dev deployment and refresh its offline snapshot.
+const devSourceVersion = String(process.env.GITHUB_SHA || process.env.KUZDVOR_DEV_SOURCE_SHA || 'dev-local').trim();
+await writeFile(
+  path.join(OUT, 'api', 'offline-version'),
+  JSON.stringify({
+    version:'dev-'+devSourceVersion,
+    source:devSourceVersion,
+    settingsUpdatedAt:'',
+    catalogUpdatedAt:''
+  }),
+  'utf8'
+);
+
 const access = await readFile(ACCESS_FILE, 'utf8');
 const hideStyle = '<style id="kuzdvor-dev-hide">html{background:#0c0d0f}body>*{visibility:hidden!important}#kuzdvor-dev-gate,#kuzdvor-dev-gate *{visibility:visible!important}</style>';
 const robotsMeta = '<meta name="robots" content="noindex,nofollow,noarchive">';
