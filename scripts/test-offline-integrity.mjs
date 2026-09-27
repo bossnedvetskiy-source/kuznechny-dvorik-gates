@@ -41,11 +41,11 @@ for (const required of [
   "url.pathname==='/api/catalog-images'"
 ]) assert(sw.includes(required), `Service worker missing: ${required}`);
 
-assert(app.includes('Обновить офлайн-базу'), 'Manual offline refresh button missing');
+assert(app.includes('id="updateBaseButton"'), 'Manual offline refresh button missing');
 assert(app.includes('navigator.storage.persist'), 'Persistent offline storage protection missing');
 assert(app.includes("post('CHECK_OFFLINE_UPDATE',{auto:true,allowInitial:true})"), 'Manual offline refresh must check the lightweight version before downloading');
 assert(app.includes("post('CHECK_OFFLINE_UPDATE',{auto:true,allowInitial:false})"), 'Work app must automatically check for site changes without forcing the first download');
-assert(app.includes('Полная офлайн-база скачивается автоматически только если на сайте изменились'), 'Work app must explain change-driven offline downloads');
+assert(app.includes('полная офлайн-база скачивается только если на сайте действительно что-то изменилось'), 'Work app must explain change-driven offline downloads');
 assert(app.includes('Предыдущая офлайн-база сохранена'), 'Partial refresh must explain that the previous offline base is preserved');
 assert(sw.includes("fetch('/api/offline-version'"), 'Service worker must use the lightweight offline version endpoint');
 assert(sw.includes("localVersion===remote.version"), 'Service worker must skip full downloads when the site version is unchanged');
