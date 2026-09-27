@@ -1,12 +1,14 @@
 import {readFile} from 'node:fs/promises';
 import assert from 'node:assert/strict';
 
-const [sw, app, manifest, delivery, htaccess] = await Promise.all([
+const [sw, app, offlineApp, manifest, delivery, htaccess, devPreviewBuilder] = await Promise.all([
   readFile('site-sw.js','utf8'),
   readFile('timeweb/work-app.html','utf8'),
+  readFile('offline-app.js','utf8'),
   readFile('site-manifest.webmanifest','utf8'),
   readFile('offline-delivery-200km.json','utf8'),
-  readFile('timeweb/.htaccess','utf8')
+  readFile('timeweb/.htaccess','utf8'),
+  readFile('scripts/build-dev-preview.mjs','utf8')
 ]);
 
 const db = JSON.parse(delivery);
@@ -62,7 +64,12 @@ assert(app.includes('Отдельные фотографии больше не �
 assert(app.includes('updateViaCache:\'none\''), 'Installed PWA must bypass the browser HTTP cache when checking its service worker');
 assert(app.includes("'/site-sw.js?build='"), 'Installed PWA must register a versioned service worker URL');
 assert(app.includes("navigator.serviceWorker.addEventListener('controllerchange'"), 'Installed PWA must reload once when the new service worker takes control');
-assert(htaccess.includes('work-app.html?app-build=2026-09-23-v10'), 'The /app route must force a fresh versioned work-app navigation');
+assert(offlineApp.includes("updateViaCache:'none'"), 'Direct catalog PWA must bypass HTTP cache when checking its service worker');
+assert(offlineApp.includes("'/site-sw.js?build='"), 'Direct catalog PWA must register a versioned service worker URL');
+assert(offlineApp.includes("navigator.serviceWorker.addEventListener('controllerchange'"), 'Direct catalog PWA must reload after a new worker takes control');
+assert(devPreviewBuilder.includes("path.join(OUT, 'api', 'offline-version')"), 'DEV preview must expose a lightweight offline version endpoint');
+assert(sw.includes("localVersion===remote.version && status.current"), 'Old cache generation must not be reported as up to date');
+assert(htaccess.includes('work-app.html?app-build=2026-09-27-v11'), 'The /app route must force a fresh versioned work-app navigation');
 assert(htaccess.includes('RewriteRule ^update/?$ force-update.html [L]'), 'A short /update recovery route must exist');
 assert(htaccess.includes('force-update\\.html'), 'Force-update page must bypass stale browser cache');
 assert(htaccess.includes('no-store, no-cache, must-revalidate, max-age=0'), 'Work app and service worker must be served without stale browser cache');
