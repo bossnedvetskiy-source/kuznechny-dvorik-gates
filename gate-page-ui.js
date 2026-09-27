@@ -88,7 +88,7 @@
     mobilePriceSummary.setAttribute('aria-disabled','true');
     mobilePriceSummary.removeAttribute('tabindex');
   }
-  if (mobilePriceHint) mobilePriceHint.textContent = 'Состав предварительной стоимости';
+  if (mobilePriceHint) mobilePriceHint.textContent = 'Что входит в расчёт';
   const mobilePriceBody = mobilePriceBreakdown?.querySelector('.mobile-price-breakdown-body');
   if (mobilePriceBody && !mobilePriceBody.querySelector('.mobile-payment-note')) {
     const paymentNote = document.createElement('div');
@@ -253,18 +253,17 @@
   });
 
   function syncMobileCta() {
-    const price = mobilePriceTotal?.textContent?.trim() || '';
     if (cta) {
       if (!calculator || calculator.hidden) cta.textContent = 'Выбрать ворота';
-      else if (leadOpen) cta.textContent = `Отправить заявку${price ? ` · ${price}` : ''}`;
-      else if (!dimensionsValid) cta.textContent = `Проверьте размеры${price ? ` · ${price}` : ''}`;
-      else if (!deliveryCanProceed) cta.textContent = `Указать место установки${price ? ` · ${price}` : ''}`;
-      else cta.textContent = `Заказать бесплатный замер${price ? ` · расчёт ${price}` : ''}`;
+      else if (leadOpen) cta.textContent = 'Отправить заявку';
+      else if (!dimensionsValid) cta.textContent = 'Проверьте размеры';
+      else if (!deliveryCanProceed) cta.textContent = 'Указать место установки';
+      else cta.textContent = 'Заказать бесплатный замер';
     }
     if (mobileMeasureButton) {
       if (!dimensionsValid) mobileMeasureButton.textContent = 'Проверьте размеры';
       else if (!deliveryCanProceed) mobileMeasureButton.textContent = 'Указать место установки';
-      else mobileMeasureButton.textContent = price ? `Заказать бесплатный замер · ${price}` : 'Заказать бесплатный замер';
+      else mobileMeasureButton.textContent = 'Заказать бесплатный замер';
     }
   }
 
