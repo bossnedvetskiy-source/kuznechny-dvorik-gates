@@ -2,6 +2,7 @@
   if (!('serviceWorker' in navigator)) return;
   const params=new URLSearchParams(location.search);
   const appMode=(window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches)||params.get('app')==='1';
+  const APP_BUILD='2026-09-27-v11';
   let installPrompt=null;
   let badge=null;
   let appMenuButton=null;
@@ -42,7 +43,21 @@
     }).catch(()=>{});
   }
   ensureAppMenuButton();
-  navigator.serviceWorker.register('/site-sw.js',{scope:'/'}).then(()=>{
+  if(appMode){
+    let controllerReloaded=false;
+    navigator.serviceWorker.addEventListener('controllerchange',()=>{
+      if(controllerReloaded)return;
+      controllerReloaded=true;
+      const key='kuzdvor-catalog-controller-reload-'+APP_BUILD;
+      try{
+        if(sessionStorage.getItem(key)==='1')return;
+        sessionStorage.setItem(key,'1');
+      }catch{}
+      location.reload();
+    });
+  }
+  navigator.serviceWorker.register('/site-sw.js?build='+encodeURIComponent(APP_BUILD),{scope:'/',updateViaCache:'none'}).then(async reg=>{
+    try{await reg.update()}catch{}
     setStatus(navigator.onLine?'Проверяем офлайн-базу…':'Проверяем сохранённую базу…');
     post('GET_OFFLINE_STATUS');
     // A tiny version request is allowed on every online launch. The heavy
