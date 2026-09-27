@@ -513,8 +513,7 @@
             mobileCta.textContent = 'К моделям';
             return;
           }
-          const total = String(document.getElementById('mobilePriceTotal')?.textContent || document.getElementById('estimateTotal')?.textContent || '').trim();
-          mobileCta.textContent = total ? `На замер · ${total}` : 'На бесплатный замер';
+          mobileCta.textContent = 'Заказать бесплатный замер';
         });
       };
       mobileCta.addEventListener('click', event => {
