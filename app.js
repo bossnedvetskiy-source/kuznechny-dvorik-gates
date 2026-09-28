@@ -633,7 +633,7 @@ function calcData() {
 
 function renderEstimateLines(lines,delivery) {
   return [...lines,{delivery:true,name:delivery.name,value:delivery.value,display:delivery.display}].map(item=>{
-    if(Array.isArray(item))return `<div class="estimate-line"><span>${escapeHTML(item[0])}</span><strong>Включено</strong></div>`;
+    if(Array.isArray(item))return `<div class="estimate-line"><span>${escapeHTML(item[0])}</span><strong>Входит в стоимость</strong></div>`;
     return `<div class="estimate-line"><span>${escapeHTML(item.name)}</span><strong class="${item.value===null?'pending':''}">${escapeHTML(item.display)}</strong></div>`;
   }).join('');
 }
