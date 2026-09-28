@@ -126,7 +126,7 @@ fetch "$BASE_URL/site-manifest.webmanifest?deploy_health=$TARGET_SOURCE_SHA" "$T
 grep -q '"display":"standalone"' "$TMP_DIR/site-manifest.webmanifest" || grep -q '"display": "standalone"' "$TMP_DIR/site-manifest.webmanifest" || fail 'full-site PWA manifest invalid'
 grep -q '"start_url": "/app' "$TMP_DIR/site-manifest.webmanifest" || fail 'unified PWA start page is invalid'
 fetch "$BASE_URL/site-sw.js?deploy_health=$TARGET_SOURCE_SHA" "$TMP_DIR/site-sw.js"
-grep -q "kuzdvor-offline-2026-09-27-v38" "$TMP_DIR/site-sw.js" || fail 'full-site service worker build is stale'
+grep -q "kuzdvor-offline-2026-09-28-v39" "$TMP_DIR/site-sw.js" || fail 'full-site service worker build is stale'
 grep -q 'OFFLINE_READY' "$TMP_DIR/site-sw.js" || fail 'full-site offline service worker invalid'
 grep -q 'GET_OFFLINE_STATUS' "$TMP_DIR/site-sw.js" || fail 'manual offline status API missing'
 grep -q 'catalog-media' "$TMP_DIR/site-sw.js" || fail 'uploaded catalog media are not included in offline cache'
