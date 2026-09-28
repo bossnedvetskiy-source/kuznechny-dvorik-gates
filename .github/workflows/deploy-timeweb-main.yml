@@ -73,6 +73,13 @@ jobs:
           test -s timeweb-dist/admin.html
           test -s timeweb-dist/site.css
           test -s timeweb-dist/site.bundle.js
+          test -s timeweb-dist/site-sw.js
+          test ! -e timeweb-dist/evroshtaketnik
+          if grep -Fq '/evroshtaketnik' timeweb-dist/site-sw.js; then
+            echo 'Unpublished euro picket leaked into production offline cache' >&2
+            exit 1
+          fi
+          grep -Fq 'kuzdvor-offline-2026-09-28-v39' timeweb-dist/site-sw.js
           grep -Fq 'KUZDVOR_FAVORITES' timeweb-dist/site.bundle.js
           test -s timeweb-dist/xlsx.bundle.js
           test -s timeweb-dist/deployment-version.json
