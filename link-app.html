@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#111214">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <title>Ссылки клиентам — Кузнечный ДворикЪ</title>
+  <link rel="manifest" href="/site-manifest.webmanifest">
+  <link rel="icon" href="/site-icon.svg" type="image/svg+xml">
+  <style>
+    :root{--bg:#0d0e10;--card:#151619;--card2:#1b1c20;--line:rgba(255,255,255,.10);--text:#f7f2e8;--muted:#a9a39a;--gold:#d3a044;--gold2:#f0c96f;--danger:#e88172}
+    *{box-sizing:border-box}html{background:var(--bg)}body{margin:0;min-height:100dvh;background:linear-gradient(180deg,#0d0e10,#141518);color:var(--text);font-family:Arial,Helvetica,sans-serif}
+    button,input{font:inherit}.app{width:min(100%,620px);margin:0 auto;padding:max(14px,env(safe-area-inset-top)) 14px calc(24px + env(safe-area-inset-bottom))}
+    .top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:4px 0 18px}.brand{display:grid;gap:2px}.brand small{color:var(--gold2);font-weight:800;font-size:11px;letter-spacing:.07em;text-transform:uppercase}.brand strong{font:28px/1.05 Georgia,serif}.top-actions{display:flex;gap:7px}.icon-btn{width:42px;height:42px;border:1px solid var(--line);border-radius:13px;background:var(--card);color:var(--text);font-size:18px;text-decoration:none;display:grid;place-items:center}
+    .card{padding:17px;border:1px solid var(--line);border-radius:20px;background:var(--card);box-shadow:0 18px 38px rgba(0,0,0,.22)}.card+.card{margin-top:12px}
+    h1{margin:0 0 7px;font:32px/1.05 Georgia,serif}p{margin:0;color:var(--muted);font-size:13px;line-height:1.5}
+    .login{display:grid;gap:12px;margin-top:18px}.login label,.field{display:grid;gap:7px;color:#d7d0c5;font-size:12px;font-weight:700}.input{width:100%;height:52px;border:1px solid var(--line);border-radius:13px;background:#0d0e10;color:#fff;padding:0 14px;font-size:16px;outline:none}.input:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(211,160,68,.14)}
+    .primary{width:100%;min-height:52px;border:0;border-radius:13px;background:linear-gradient(135deg,var(--gold2),var(--gold));color:#17120b;font-weight:900;font-size:15px}.primary:disabled{opacity:.45}.secondary{min-height:46px;border:1px solid var(--line);border-radius:12px;background:#202126;color:#fff;font-weight:800}.ghost{border:0;background:transparent;color:var(--gold2);font-weight:800}
+    .status{min-height:18px;margin-top:8px;color:var(--muted);font-size:11px;line-height:1.4}.status.error{color:var(--danger)}
+    .choices{display:grid;gap:7px;margin-top:8px}.choice{display:grid;gap:3px;width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:12px;background:#1c1d21;color:#fff;text-align:left}.choice b{font-size:14px}.choice small{color:var(--muted);font-size:11px}.choice.selected{border-color:var(--gold);background:#241f17}
+    .selected-place{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:9px;padding:11px;border:1px solid rgba(211,160,68,.35);border-radius:12px;background:rgba(211,160,68,.08)}.selected-place div{display:grid;gap:3px}.selected-place span{color:var(--muted);font-size:10px}.selected-place strong{font-size:13px}
+    .seg{display:grid;grid-template-columns:1fr 1fr;gap:8px}.seg label{position:relative}.seg input{position:absolute;opacity:0;pointer-events:none}.seg span{display:grid;gap:3px;min-height:62px;padding:10px;border:1px solid var(--line);border-radius:12px;background:#1b1c20}.seg b{font-size:13px}.seg small{color:var(--muted);font-size:10px}.seg input:checked+span{border-color:var(--gold);background:rgba(211,160,68,.10)}.seg input:checked+span b{color:var(--gold2)}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.section-title{margin:16px 0 8px;color:#d8d1c6;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.07em}
+    details{margin-top:12px;border:1px solid var(--line);border-radius:13px;background:#17181b}summary{padding:13px 14px;cursor:pointer;font-weight:800;font-size:13px}details .inside{padding:0 13px 13px}
+    .result{margin-top:14px;padding:13px;border:1px solid rgba(211,160,68,.32);border-radius:14px;background:#111214}.result label{display:grid;gap:7px;color:var(--muted);font-size:11px}.result input{font-size:14px}.actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:9px}
+    .hint{margin-top:9px;color:var(--muted);font-size:11px;line-height:1.45}.hidden{display:none!important}.install{margin-top:12px}
+    .toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));z-index:50;transform:translate(-50%,20px);opacity:0;pointer-events:none;padding:10px 14px;border-radius:12px;background:#fff;color:#111;font-weight:800;font-size:12px;transition:.2s}.toast.show{opacity:1;transform:translate(-50%,0)}
+    @media(max-width:390px){h1{font-size:29px}.brand strong{font-size:25px}.row{grid-template-columns:1fr}.actions{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="top">
+      <div class="brand"><small>Кузнечный ДворикЪ</small><strong>Создать ссылку</strong></div>
+      <div class="top-actions">
+        <a class="icon-btn" href="/app" aria-label="Рабочее меню">⌂</a>
+        <button id="logoutButton" class="icon-btn hidden" type="button" aria-label="Выйти">↪</button>
+      </div>
+    </header>
+
+    <section id="loginCard" class="card hidden">
+      <h1>Вход</h1>
+      <p>Один раз войдите — дальше приложение будет открываться сразу.</p>
+      <form id="loginForm" class="login">
+        <label>Логин<input id="username" class="input" autocomplete="username" required></label>
+        <label>Пароль<input id="password" class="input" type="password" autocomplete="current-password" required></label>
+        <button class="primary" type="submit">Войти</button>
+        <div id="loginStatus" class="status"></div>
+      </form>
+    </section>
+
+    <section id="generatorCard" class="card hidden">
+      <h1>Создать ссылку</h1>
+      <p>Выберите условия клиента — получите короткую ссылку для WhatsApp или сообщения.</p>
+
+      <div class="section-title">Населённый пункт</div>
+      <label class="field"><input id="cityInput" class="input" inputmode="search" autocomplete="off" placeholder="Например: Тамьян"></label>
+      <div id="cityStatus" class="status">Начните вводить название.</div>
+      <div id="choices" class="choices"></div>
+      <div id="selectedPlace" class="selected-place hidden"><div><span>Выбрано</span><strong id="selectedPlaceText"></strong></div><button id="changePlace" class="ghost" type="button">Изменить</button></div>
+
+      <div class="section-title">Столбы</div>
+      <div class="seg">
+        <label><input type="radio" name="posts" value="own" checked><span><b>Свои столбы</b><small>монтаж на готовые</small></span></label>
+        <label><input type="radio" name="posts" value="new"><span><b>Новые столбы</b><small>добавятся к цене</small></span></label>
+      </div>
+
+      <div class="section-title">Артикул — необязательно</div>
+      <input id="articleInput" class="input" placeholder="Например: 18 или 17С">
+
+      <details id="sizeDetails">
+        <summary>Задать размеры клиента</summary>
+        <div class="inside">
+          <div class="row">
+            <label class="field">Ворота, ширина<input id="gw" class="input" type="number" min=".8" max="8" step=".01" value="3.4"></label>
+            <label class="field">Ворота, высота<input id="gh" class="input" type="number" min="1" max="3" step=".01" value="1.8"></label>
+            <label class="field">Калитка, ширина<input id="ww" class="input" type="number" min=".7" max="2.5" step=".01" value="1"></label>
+            <label class="field">Калитка, высота<input id="wh" class="input" type="number" min="1" max="3" step=".01" value="1.8"></label>
+          </div>
+        </div>
+      </details>
+
+      <div class="result">
+        <label>Короткая ссылка<input id="output" class="input" readonly placeholder="Сначала выберите населённый пункт"></label>
+        <div class="actions">
+          <button id="copyButton" class="primary" type="button" disabled>Скопировать</button>
+          <button id="whatsappButton" class="secondary" type="button" disabled>WhatsApp</button>
+        </div>
+        <div id="resultHint" class="hint">Цены в ссылке не хранятся — клиент увидит актуальные цены сайта.</div>
+      </div>
+
+    </section>
+  </main>
+  <div id="toast" class="toast"></div>
+<script>
+(() => {
+  const $=id=>document.getElementById(id);
+  const loginCard=$('loginCard'), generatorCard=$('generatorCard'), logoutButton=$('logoutButton');
+  const loginForm=$('loginForm'), loginStatus=$('loginStatus');
+  const city=$('cityInput'), cityStatus=$('cityStatus'), choices=$('choices'), selectedPlace=$('selectedPlace'), selectedPlaceText=$('selectedPlaceText');
+  const article=$('articleInput'), sizeDetails=$('sizeDetails'), output=$('output'), copyButton=$('copyButton'), whatsappButton=$('whatsappButton');
+  const resultHint=$('resultHint');
+  const dims={gw:$('gw'),gh:$('gh'),ww:$('ww'),wh:$('wh')};
+  let place=null, searchTimer=0, searchSeq=0, linkTimer=0, linkSeq=0, offlinePlaces=[];
+
+  const toast=message=>{const t=$('toast');t.textContent=message;t.classList.add('show');clearTimeout(window.__toast);window.__toast=setTimeout(()=>t.classList.remove('show'),1800)};
+  const showLogin=(message='')=>{loginCard.classList.remove('hidden');generatorCard.classList.add('hidden');logoutButton.classList.add('hidden');loginStatus.textContent=message};
+  const showApp=()=>{loginCard.classList.add('hidden');generatorCard.classList.remove('hidden');logoutButton.classList.remove('hidden');setTimeout(()=>city.focus({preventScroll:true}),80);loadOfflinePlaces()};
+
+  async function authCheck(){
+    try{
+      const r=await fetch('/api/admin/site-settings',{cache:'no-store'});
+      if(r.ok){localStorage.setItem('kuzdvor-link-authorized','1');showApp();return}
+      showLogin();
+    }catch{
+      if(localStorage.getItem('kuzdvor-link-authorized')==='1'){
+        showApp();
+        cityStatus.textContent='Офлайн-режим. Населённые пункты доступны из сохранённой базы.';
+      }else{
+        showLogin('Для первого входа нужен интернет.');
+      }
+    }
+  }
+
+  loginForm.addEventListener('submit',async e=>{
+    e.preventDefault();loginStatus.textContent='Входим…';
+    const button=loginForm.querySelector('button');button.disabled=true;
+    try{
+      const r=await fetch('/api/admin/login',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({username:$('username').value,password:$('password').value})});
+      const data=await r.json().catch(()=>({}));
+      if(!r.ok)throw new Error(data.error||'Не удалось войти');
+      $('password').value='';localStorage.setItem('kuzdvor-link-authorized','1');showApp();
+    }catch(error){loginStatus.textContent=error.message||'Ошибка входа';loginStatus.className='status error'}
+    finally{button.disabled=false}
+  });
+
+  logoutButton.addEventListener('click',async()=>{localStorage.removeItem('kuzdvor-link-authorized');try{await fetch('/api/admin/logout',{method:'POST'})}catch{}showLogin()});
+
+  const selectedPosts=()=>document.querySelector('input[name="posts"]:checked')?.value||'own';
+  const articleValue=()=>String(article.value||'').trim().replace(/^арт\.?\s*/i,'');
+
+  function clearPlace(){
+    place=null;selectedPlace.classList.add('hidden');choices.replaceChildren();output.value='';copyButton.disabled=true;whatsappButton.disabled=true;
+  }
+
+  function selectPlace(item){
+    place={...item};
+    city.value=String(item.label||item.name||'').trim();
+    selectedPlaceText.textContent=[item.label||item.name,item.secondary].filter(Boolean).join(' · ');
+    choices.replaceChildren();selectedPlace.classList.remove('hidden');cityStatus.textContent='Готово. Можно копировать ссылку.';
+    scheduleLink();
+  }
+
+  const normalize=value=>String(value||'').toLocaleLowerCase('ru-RU').replace(/ё/g,'е').replace(/[^а-яa-z0-9]/gi,'');
+  const cleanSecondary=value=>String(value||'').replace(/\s*·\s*\d+\s*км\s*от\s*Мелеуза\s*$/iu,'').trim();
+
+  async function loadOfflinePlaces(){
+    if(offlinePlaces.length)return offlinePlaces;
+    try{
+      const r=await fetch('/offline-delivery-200km.json',{cache:'force-cache'});
+      const data=await r.json();
+      offlinePlaces=Array.isArray(data?.destinations)?data.destinations:[];
+    }catch{}
+    return offlinePlaces;
+  }
+
+  function localChoices(value){
+    const q=normalize(value);
+    if(!q)return [];
+    const matches=offlinePlaces.filter(item=>normalize(item?.name).includes(q));
+    const exact=matches.filter(item=>normalize(item?.name)===q);
+    return (exact.length?exact:matches).slice(0,exact.length?24:10).map(item=>({
+      name:String(item.name||''),
+      label:String(item.label||item.name||''),
+      secondary:cleanSecondary(item.secondary||'Доступно офлайн'),
+      query:String(item.query||item.label||item.name||'')
+    }));
+  }
+
+  function renderChoices(items){
+    choices.replaceChildren();
+    if(!items.length){cityStatus.textContent='Не нашли. Уточните название или район.';cityStatus.className='status error';return}
+    cityStatus.className='status';cityStatus.textContent=items.length>1?'Выберите нужный вариант:':'Найдено:';
+    items.forEach(item=>{
+      const b=document.createElement('button');b.type='button';b.className='choice';
+      const title=document.createElement('b');title.textContent=item.label||item.name||'';
+      const sub=document.createElement('small');sub.textContent=item.secondary||'';
+      b.append(title,sub);b.addEventListener('click',()=>selectPlace(item));choices.append(b);
+    });
+  }
+
+  async function searchPlaces(value,seq){
+    await loadOfflinePlaces();
+    const local=localChoices(value);
+    try{
+      const r=await fetch('/api/delivery-search?place='+encodeURIComponent(value),{cache:'no-store'});
+      const data=await r.json().catch(()=>null);
+      if(seq!==searchSeq||city.value.trim()!==value)return;
+      const remote=r.ok&&Array.isArray(data?.choices)?data.choices:[];
+      const seen=new Set();
+      const merged=[...local,...remote].filter(item=>{
+        const key=normalize(item.name)+'|'+normalize(cleanSecondary(item.secondary));
+        if(seen.has(key))return false;seen.add(key);return true;
+      });
+      renderChoices(merged);
+    }catch{
+      if(seq!==searchSeq)return;
+      if(local.length){
+        cityStatus.className='status';
+        cityStatus.textContent='Офлайн: выберите населённый пункт из сохранённой базы.';
+        renderChoices(local);
+      }else{
+        cityStatus.className='status error';
+        cityStatus.textContent='Нет связи и пункт не найден в офлайн-базе.';
+      }
+    }
+  }
+
+  city.addEventListener('input',()=>{
+    clearTimeout(searchTimer);searchSeq++;const seq=searchSeq;clearPlace();
+    const value=city.value.trim();
+    if(value.length<2){cityStatus.className='status';cityStatus.textContent='Введите минимум 2 буквы.';return}
+    cityStatus.className='status';cityStatus.textContent='Ищем…';
+    searchTimer=setTimeout(()=>searchPlaces(value,seq),260);
+  });
+  $('changePlace').addEventListener('click',()=>{const v=String(place?.name||city.value||'');clearPlace();city.value=v;city.focus();city.dispatchEvent(new Event('input'))});
+
+  function payload(){
+    if(!place)return null;
+    const p={city:String(place.label||place.name||'').trim(),name:String(place.name||'').trim(),place:String(place.query||place.label||place.name||'').trim(),posts:selectedPosts()};
+    if(sizeDetails.open)for(const [k,input] of Object.entries(dims)){const v=Number(input.value);if(Number.isFinite(v)&&v>0)p[k]=v}
+    const art=articleValue();if(art)p.art=art;
+    return p;
+  }
+
+  function fallbackUrl(p){
+    const params=new URLSearchParams({share:'1',city:p.city,posts:p.posts||'own'});
+    if(p.place&&p.place!==p.city)params.set('place',p.place);
+    for(const key of ['gw','gh','ww','wh','art'])if(p[key]!==undefined&&p[key]!==null&&String(p[key])!=='')params.set(key,String(p[key]));
+    return location.origin+'/?'+params.toString();
+  }
+
+  async function generate(seq){
+    const p=payload();if(!p)return;
+    output.value='';output.placeholder=navigator.onLine?'Создаём короткую ссылку…':'Создаём офлайн-ссылку…';copyButton.disabled=true;whatsappButton.disabled=true;
+    try{
+      if(!navigator.onLine)throw new Error('offline');
+      const r=await fetch('/api/admin/share-link',{method:'POST',headers:{'content-type':'application/json','accept':'application/json'},body:JSON.stringify(p)});
+      if(r.status===401){localStorage.removeItem('kuzdvor-link-authorized');showLogin('Сессия закончилась. Войдите ещё раз.');return}
+      const data=await r.json().catch(()=>null);if(seq!==linkSeq)return;
+      if(!r.ok||!data?.url)throw new Error(data?.error||'Не удалось создать ссылку');
+      output.value=data.url;copyButton.disabled=false;whatsappButton.disabled=false;resultHint.textContent='Готово. Клиент увидит актуальные цены и выбранные условия.';
+    }catch{
+      if(seq!==linkSeq)return;
+      output.value=fallbackUrl(p);
+      copyButton.disabled=false;whatsappButton.disabled=false;
+      resultHint.textContent='Нет сети — создана обычная ссылка. Когда связь появится, короткая ссылка снова будет создаваться автоматически.';
+    }
+  }
+
+  function scheduleLink(){
+    clearTimeout(linkTimer);linkSeq++;const seq=linkSeq;
+    if(!place){output.value='';output.placeholder='Сначала выберите населённый пункт';copyButton.disabled=true;whatsappButton.disabled=true;return}
+    linkTimer=setTimeout(()=>generate(seq),180);
+  }
+
+  document.querySelectorAll('input[name="posts"]').forEach(i=>i.addEventListener('change',scheduleLink));
+  article.addEventListener('input',scheduleLink);sizeDetails.addEventListener('toggle',scheduleLink);
+  Object.values(dims).forEach(i=>i.addEventListener('input',scheduleLink));
+
+  copyButton.addEventListener('click',async()=>{if(!output.value)return;try{await navigator.clipboard.writeText(output.value)}catch{output.select();document.execCommand('copy')}toast('Ссылка скопирована')});
+  whatsappButton.addEventListener('click',()=>{if(!output.value||!place)return;const cityName=place.label||place.name||'';const text='Посмотрите актуальные цены на ворота с калиткой для '+cityName+'. Я уже указал ваши условия:\n'+output.value;window.open('https://wa.me/?text='+encodeURIComponent(text),'_blank','noopener')});
+  output.addEventListener('click',()=>output.select());
+
+  if('serviceWorker' in navigator)navigator.serviceWorker.register('/site-sw.js',{scope:'/'}).catch(()=>{});
+  authCheck();
+})();
+</script>
+</body>
+</html>

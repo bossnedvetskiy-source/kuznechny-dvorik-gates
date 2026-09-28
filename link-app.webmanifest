@@ -1,0 +1,14 @@
+{
+  "name":"Кузнечный Дворик — рабочее приложение",
+  "short_name":"Кузнечный Дворик",
+  "id":"/links",
+  "start_url":"/app",
+  "scope":"/",
+  "display":"standalone",
+  "background_color":"#0c0d0f",
+  "theme_color":"#0c0d0f",
+  "description":"Каталог, расчёт и ссылки клиентам в одном приложении",
+  "icons":[
+    {"src":"/site-icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}
+  ]
+}
