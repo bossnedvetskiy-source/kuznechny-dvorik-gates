@@ -209,12 +209,6 @@ devSw = devSw
   .replaceAll('kuzdvor-offline-', 'kuzdvor-dev-offline-')
   .replaceAll('__kuzdvor_offline_meta__', '__kuzdvor_dev_offline_meta__')
   .replaceAll(`${BASE}/site-icon.svg`, `${BASE}/${DEV_ICON_NAME}`);
-const collectMediaMarker = "  if(typeof value==='string'){\\n";
-if (!devSw.includes(collectMediaMarker)) throw new Error('DEV collectMedia marker was not found');
-devSw = devSw.replace(
-  collectMediaMarker,
-  collectMediaMarker + `    if(/^\\/kuznechny-dvorik-gates\\/catalog\\/.*\\.(?:webp|jpe?g|png)$/i.test(value))set.add(value);\\n`
-);
 await writeFile(swPath, devSw, 'utf8');
 
 // A Pages project site lives under /kuznechny-dvorik-gates/.
@@ -274,10 +268,6 @@ if (devCatalogText.includes('"/catalog/')) throw new Error('DEV catalog still co
 if (!devCatalogText.includes(`"${BASE}/catalog/`) && !devCatalogText.includes('"https://kuzdvor.tw1.ru/catalog-media/')) {
   throw new Error('DEV catalog does not contain usable photo URLs');
 }
-if (!builtSw.includes('/kuznechny-dvorik-gates\\/catalog\\/')) {
-  throw new Error('DEV service worker does not collect project-subpath catalog photos');
-}
-
 const fencePrices = JSON.parse(await readFile(path.join(OUT, 'api', 'fence-prices'), 'utf8'));
 if (!fencePrices?.fence || typeof fencePrices.fence !== 'object') throw new Error('Dev preview fence prices are missing');
 
