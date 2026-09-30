@@ -662,18 +662,36 @@ function renderResult(result) {
     status.classList.add('is-warn');
   }
 
-  const chips = [
-    '<span class="accent">металлический евроштакетник</span>',
-    '<span>каркас 40×20×2</span>',
-    '<span>покраска каркаса</span>',
-    '<span>монтаж забора</span>',
-    '<span>крепёж</span>'
+  const includedItems = [
+    'металлический евроштакетник',
+    'каркас из профтрубы 40×20×2',
+    'покраска каркаса',
+    'крепёж',
+    'монтаж забора'
   ];
-  if (result.includeNewPosts && summary.newPosts > 0) chips.push(`<span>новые столбы: ${summary.newPosts} шт + установка</span>`);
-  if (summary.existingPostsUsed > 0) chips.push(`<span>готовые столбы: ${summary.existingPostsUsed} шт</span>`);
-  if (summary.openingNodeWidth > 0) chips.push('<span class="warn">ворота, калитка и их столбы — отдельно</span>');
-  if (hasSlopeInput?.checked || hasHardSurfaceInput?.checked) chips.push('<span class="warn">условия монтажа — проверить на замере</span>');
-  if ($('includedChips')) $('includedChips').innerHTML = chips.join('');
+  if (result.includeNewPosts && summary.newPosts > 0) {
+    includedItems.push(`новые столбы забора: ${summary.newPosts} шт + установка`);
+  }
+  if ($('includedChips')) {
+    $('includedChips').innerHTML = includedItems.map(item => `<span>${item}</span>`).join('');
+  }
+
+  const excludedItems = [];
+  if (summary.openingNodeWidth > 0) {
+    excludedItems.push('ворота, калитка и их опорные столбы — рассчитываются отдельно');
+  }
+  if (deliveryPending) {
+    excludedItems.push('доставка — пока не включена; укажите населённый пункт');
+  }
+  if (hasSlopeInput?.checked || hasHardSurfaceInput?.checked) {
+    excludedItems.push('сложные условия монтажа — стоимость уточним после замера');
+  }
+  const excludedBlock = $('excludedCostBlock');
+  const excludedList = $('excludedCostList');
+  if (excludedBlock && excludedList) {
+    excludedBlock.hidden = excludedItems.length === 0;
+    excludedList.innerHTML = excludedItems.map(item => `<span>${item}</span>`).join('');
+  }
 
   result.sections.forEach((item, index) => {
     const caption = sectionsList.querySelector(`[data-section-caption="${index}"]`);
