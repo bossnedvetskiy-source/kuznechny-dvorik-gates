@@ -42,7 +42,9 @@ try {
   if (!match) throw new Error('Could not create dev catalog snapshot');
   catalogJson = JSON.stringify({galleries:JSON.parse(match[1])});
 }
-catalogJson = catalogJson.replaceAll('"/catalog-media/', '"https://kuzdvor.tw1.ru/catalog-media/');
+catalogJson = catalogJson
+  .replaceAll('"/catalog/', `"${BASE}/catalog/`)
+  .replaceAll('"/catalog-media/', '"https://kuzdvor.tw1.ru/catalog-media/');
 await mkdir(path.join(OUT, 'api'), {recursive:true});
 await writeFile(path.join(OUT, 'api', 'catalog-images'), catalogJson, 'utf8');
 
@@ -169,6 +171,18 @@ async function patchDevHtml(dir) {
       html = html
         .replaceAll(`href="${BASE}/links"`, `href="${BASE}/link-app.html"`)
         .replaceAll(`href="${BASE}/admin"`, `href="${BASE}/admin.html"`);
+
+      const linksMarker = `      <a class="tile" href="${BASE}/link-app.html">`;
+      const euroTile = `      <a class="tile" href="${BASE}/evroshtaketnik/">
+        <span class="tile-icon">▥</span>
+        <span class="tile-copy"><b>Расчёт евроштакетника</b><span>Вертикальный и горизонтальный забор, материалы, столбы, пролёты и стоимость. Работает без сети.</span></span>
+        <span class="arrow">›</span>
+      </a>
+`;
+      if (!html.includes('Расчёт евроштакетника')) {
+        if (!html.includes(linksMarker)) throw new Error('DEV work app links tile marker was not found');
+        html = html.replace(linksMarker, euroTile + linksMarker);
+      }
     }
     await writeFile(full, html, 'utf8');
   }
@@ -195,6 +209,12 @@ devSw = devSw
   .replaceAll('kuzdvor-offline-', 'kuzdvor-dev-offline-')
   .replaceAll('__kuzdvor_offline_meta__', '__kuzdvor_dev_offline_meta__')
   .replaceAll(`${BASE}/site-icon.svg`, `${BASE}/${DEV_ICON_NAME}`);
+const collectMediaMarker = "  if(typeof value==='string'){\\n";
+if (!devSw.includes(collectMediaMarker)) throw new Error('DEV collectMedia marker was not found');
+devSw = devSw.replace(
+  collectMediaMarker,
+  collectMediaMarker + `    if(/^\\/kuznechny-dvorik-gates\\/catalog\\/.*\\.(?:webp|jpe?g|png)$/i.test(value))set.add(value);\\n`
+);
 await writeFile(swPath, devSw, 'utf8');
 
 // A Pages project site lives under /kuznechny-dvorik-gates/.
@@ -241,11 +261,22 @@ for (const required of [
   `${BASE}/site-manifest.webmanifest`,
   `${BASE}/${DEV_ICON_NAME}`,
   `href="${BASE}/link-app.html"`,
+  `href="${BASE}/evroshtaketnik/"`,
+  'Расчёт евроштакетника',
   `href="${BASE}/admin.html"`
 ]) {
   if (!builtWorkApp.includes(required)) throw new Error(`DEV work app missing: ${required}`);
 }
 if (!siteBundle.includes(devMenuTarget)) throw new Error('DEV standalone menu does not point to the static work app');
+
+const devCatalogText = await readFile(path.join(OUT, 'api', 'catalog-images'), 'utf8');
+if (devCatalogText.includes('"/catalog/')) throw new Error('DEV catalog still contains root-relative photo URLs');
+if (!devCatalogText.includes(`"${BASE}/catalog/`) && !devCatalogText.includes('"https://kuzdvor.tw1.ru/catalog-media/')) {
+  throw new Error('DEV catalog does not contain usable photo URLs');
+}
+if (!builtSw.includes('/kuznechny-dvorik-gates\\/catalog\\/')) {
+  throw new Error('DEV service worker does not collect project-subpath catalog photos');
+}
 
 const fencePrices = JSON.parse(await readFile(path.join(OUT, 'api', 'fence-prices'), 'utf8'));
 if (!fencePrices?.fence || typeof fencePrices.fence !== 'object') throw new Error('Dev preview fence prices are missing');
