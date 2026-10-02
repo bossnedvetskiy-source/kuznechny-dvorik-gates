@@ -41,15 +41,16 @@ test('canopy client page is simple, mobile and saves into DEV admin storage', as
   expect(saved[0].category).toBe('canopy');
   expect(saved[0].configuration.canopy.input.widthPostsM).toBe(4.2);
 
-  const overflow=await page.evaluate(()=>({
-    scrollWidth:document.documentElement.scrollWidth,
-    innerWidth:window.innerWidth,
-    offenders:[...document.querySelectorAll('body *')].map(el=>{
+  const overflow=await page.evaluate(()=>{
+    const offenders=[...document.querySelectorAll('body *')].map(el=>{
       const r=el.getBoundingClientRect();
       return {tag:el.tagName,id:el.id,cls:String(el.className||'').slice(0,100),left:Math.round(r.left),right:Math.round(r.right),width:Math.round(r.width)};
-    }).filter(x=>x.right>window.innerWidth+1||x.left<-1).sort((a,b)=>b.right-a.right).slice(0,12)
-  }));
-  expect(overflow.scrollWidth,JSON.stringify(overflow)).toBeLessThanOrEqual(overflow.innerWidth+1);
+    }).filter(x=>x.right>window.innerWidth+1||x.left<-1);
+    window.scrollTo(1000,window.scrollY);
+    return {offenders,scrollX:window.scrollX,innerWidth:window.innerWidth};
+  });
+  expect(overflow.offenders,JSON.stringify(overflow)).toHaveLength(0);
+  expect(overflow.scrollX,JSON.stringify(overflow)).toBe(0);
 
   await page.goto('/naves/admin.html',{waitUntil:'domcontentloaded'});
   await expect(page.locator('[data-admin-tab="canopy-orders"]')).toBeVisible();
