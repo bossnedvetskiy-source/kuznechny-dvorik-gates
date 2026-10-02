@@ -18,25 +18,35 @@
   <section class="hero">
     <div class="eyebrow">Арочные навесы · предварительный расчёт</div>
     <h1>Рассчитайте <em>навес по своим размерам</em></h1>
-    <p>Укажите размеры и условия — сразу покажем предварительную стоимость и объёмную схему будущего навеса.</p>
+    <p>Укажите основные параметры — сразу покажем ориентировочную стоимость и объёмную схему будущего навеса.</p>
   </section>
 
   <section class="workspace client-workspace">
     <form id="trussForm" class="panel controls client-controls" novalidate>
-      <div class="panel-head"><div><small>Размеры</small><h2>Параметры навеса</h2></div></div>
-      <div class="field-grid">
-        <label class="field"><span>Ширина по столбам, м</span><input id="widthPosts" type="number" min="1.5" max="8" step="0.1" value="3.4" inputmode="decimal"></label>
-        <label class="field"><span>Длина по столбам, м</span><input id="lengthPosts" type="number" min="1" max="30" step="0.1" value="8.4" inputmode="decimal"></label>
-        <label class="field"><span>Высота столбов, м</span><input id="visibleHeight" type="number" min="1.5" max="5" step="0.1" value="2.1" inputmode="decimal"></label>
+      <div class="panel-head"><div><small>Шаг 1</small><h2>Параметры навеса</h2></div></div>
+
+      <div class="field-grid client-main-fields">
+        <label class="field"><span>Ширина, м</span><input id="widthPosts" type="number" min="1.5" max="8" step="0.1" value="3.4" inputmode="decimal"><small>Расстояние между крайними столбами</small></label>
+        <label class="field"><span>Длина, м</span><input id="lengthPosts" type="number" min="1" max="30" step="0.1" value="8.4" inputmode="decimal"><small>По линии столбов</small></label>
+        <label class="field"><span>Высота, м</span><input id="visibleHeight" type="number" min="1.5" max="5" step="0.1" value="2.1" inputmode="decimal"><small>Высота столбов над землёй</small></label>
         <label class="field"><span>Покрытие</span><select id="coverage"><option>Поликарбонат</option><option>Профнастил</option><option>Без покрытия</option></select></label>
-        <label class="field"><span>Установка столбов</span><select id="installType"><option>Бетонирование</option><option>Закладные</option></select></label>
-        <label class="field"><span>Подъём дуги, мм</span><input id="rise" type="number" min="100" max="2000" step="10" value="567" inputmode="numeric"><small id="riseHint">Рекомендуемый: 567 мм</small></label>
-        <label class="switch-field"><span><b>Автоматический подъём дуги</b><small>1/6 ширины по столбам</small></span><input id="autoRise" type="checkbox" checked><i></i></label>
-        <label class="field"><span>Высота фермы, мм</span><input id="trussHeight" type="number" min="120" max="600" step="10" value="250" inputmode="numeric"></label>
-        <label class="field"><span>Уже есть подходящие столбы, шт</span><input id="existingPosts" type="number" min="0" max="50" step="1" value="0" inputmode="numeric"></label>
-        <label class="switch-field"><span><b>Продольные балки уже есть</b><small>Включите, если балки можно использовать</small></span><input id="beamsExisting" type="checkbox"><i></i></label>
-        <label class="switch-field"><span><b>Покраска металлоконструкции</b></span><input id="paint" type="checkbox" checked><i></i></label>
+        <label class="field"><span>Установка</span><select id="installType"><option>Бетонирование</option><option>Закладные</option></select><small>Способ установки новых столбов</small></label>
+        <label class="field"><span>Столбы уже есть, шт</span><input id="existingPosts" type="number" min="0" max="50" step="1" value="0" inputmode="numeric"><small>Укажите только подходящие существующие столбы</small></label>
       </div>
+
+      <div class="simple-options">
+        <label class="switch-field"><span><b>Продольные балки уже есть</b><small>Учтём существующие балки в расчёте</small></span><input id="beamsExisting" type="checkbox"><i></i></label>
+        <label class="switch-field"><span><b>Покраска металлоконструкции</b><small>Включена в пример по умолчанию</small></span><input id="paint" type="checkbox" checked><i></i></label>
+      </div>
+
+      <details class="advanced-settings">
+        <summary><span><b>Дополнительные настройки</b><small>Обычно менять не требуется</small></span><i>⌄</i></summary>
+        <div class="advanced-grid">
+          <label class="field"><span>Подъём дуги, мм</span><input id="rise" type="number" min="100" max="2000" step="10" value="567" inputmode="numeric"><small id="riseHint">Рекомендуемый: 567 мм</small></label>
+          <label class="field"><span>Высота фермы, мм</span><input id="trussHeight" type="number" min="120" max="600" step="10" value="250" inputmode="numeric"></label>
+          <label class="switch-field"><span><b>Автоматический подъём дуги</b><small>Рассчитывается как 1/6 ширины</small></span><input id="autoRise" type="checkbox" checked><i></i></label>
+        </div>
+      </details>
 
       <input id="overhang" type="hidden" value="150">
       <input id="endFlat" type="hidden" value="300">
@@ -52,9 +62,9 @@
       <section class="panel result-card client-result">
         <div class="result-kicker">ПРЕДВАРИТЕЛЬНАЯ СТОИМОСТЬ</div>
         <div id="totalPrice" class="total-price">0 ₽</div>
-        <div id="resultStatus" class="result-status">Расчёт...</div>
+        <div id="resultStatus" class="result-status">Пример расчёта — измените размеры под свой навес</div>
         <dl id="clientSummary" class="summary-list compact"></dl>
-        <p class="client-price-note">Точную комплектацию и итоговую стоимость фиксируем после проверки размеров и условий установки.</p>
+        <p class="client-price-note">Это предварительная стоимость. После замера проверим размеры, основание и окончательную комплектацию.</p>
         <button id="showSave" class="primary-button save-main-button" type="button">Сохранить расчёт</button>
       </section>
 
@@ -63,14 +73,14 @@
         <div class="drawing-wrap canopy-3d-wrap">
           <svg id="canopySvg" viewBox="0 0 1200 700" role="img" aria-label="Объёмная схема арочного навеса"></svg>
         </div>
-        <p class="preview-note">Схема помогает проверить пропорции будущего навеса. После сохранения расчёт будет доступен менеджеру.</p>
+        <p class="preview-note">Схема показывает пропорции, расположение опор и форму кровли. Это визуализация, а не монтажный чертёж.</p>
       </section>
     </div>
   </section>
 
   <section id="savePanel" class="panel save-panel" hidden>
-    <div class="panel-head"><div><small>Сохранить расчёт</small><h2>Отправить в работу</h2></div><button id="closeSave" class="icon-close" type="button" aria-label="Закрыть">×</button></div>
-    <p class="save-intro">Расчёт сохранится в системе и будет доступен менеджеру для дальнейшей работы.</p>
+    <div class="panel-head"><div><small>Шаг 2</small><h2>Сохранить расчёт</h2></div><button id="closeSave" class="icon-close" type="button" aria-label="Закрыть">×</button></div>
+    <p class="save-intro">Сохраним выбранные размеры и стоимость, чтобы менеджер мог продолжить работу с расчётом.</p>
     <div class="save-grid">
       <label class="field"><span>Телефон</span><input id="savePhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+7 900 000-00-00"></label>
       <label class="field"><span>Населённый пункт</span><input id="saveCity" type="text" autocomplete="address-level2" placeholder="Например, Мелеуз"></label>
