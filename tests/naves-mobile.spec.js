@@ -1,28 +1,39 @@
 import {test, expect} from '@playwright/test';
 
-test('canopy calculator mobile and pricing', async ({page}) => {
+test('canopy client page is simple, mobile and saves into DEV admin storage', async ({page}) => {
   await page.setViewportSize({width:390,height:844});
   await page.goto('/naves/index.html',{waitUntil:'domcontentloaded'});
 
-  await expect(page.locator('#trussSvg')).toBeVisible();
-  await expect(page.locator('#trussSvg path')).not.toHaveCount(0);
+  await expect(page.locator('#canopySvg')).toBeVisible();
+  await expect(page.locator('#canopySvg line')).not.toHaveCount(0);
   await expect(page.locator('#totalPrice')).toContainText('214');
-  await expect(page.locator('#materialsTableBody tr')).toHaveCount(4);
-  await expect(page.locator('#cutTableBody tr')).toHaveCount(13);
+  await expect(page.locator('#clientSummary')).toContainText('3,40 × 8,40 м');
   await expect(page.locator('#clientSummary')).toContainText('6 шт');
-  await expect(page.locator('#clientSummary')).toContainText('новых 8');
 
-  const before=await page.locator('#totalPrice').textContent();
-  await page.locator('#existingPosts').fill('2');
-  await page.locator('#beamsExisting').check();
-  await expect(page.locator('#clientSummary')).toContainText('новых 6');
-  await expect(page.locator('#clientSummary')).toContainText('уже есть');
-  const after=await page.locator('#totalPrice').textContent();
-  expect(after).not.toBe(before);
+  await expect(page.locator('#ownerSummary')).toHaveCount(0);
+  await expect(page.locator('#materialsTableBody')).toHaveCount(0);
+  await expect(page.locator('#cutTableBody')).toHaveCount(0);
+  await expect(page.locator('#trussSvg')).toHaveCount(0);
+  await expect(page.locator('body')).not.toContainText('Прибыль до налогов');
+  await expect(page.locator('body')).not.toContainText('Материалы и закупка');
+  await expect(page.locator('body')).not.toContainText('ТЗ сварщику');
 
   await page.locator('#widthPosts').fill('4.2');
-  await expect(page.locator('#compositionList')).toContainText('30×30×2');
-  await expect(page.locator('#compositionList')).toContainText('25×25×1,5');
+  await expect(page.locator('#rise')).toHaveValue(/700/);
+  await expect(page.locator('#canopySvg')).toBeVisible();
+
+  await page.locator('#showSave').click();
+  await expect(page.locator('#savePanel')).toBeVisible();
+  await page.locator('#savePhone').fill('8 937 329-67-50');
+  await page.locator('#saveCity').fill('Мелеуз');
+  await page.locator('#saveConsent').check();
+  await page.locator('#saveCalculation').click();
+  await expect(page.locator('#saveStatus')).toContainText('сохранён');
+
+  const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('kuzdvor-dev-canopy-saved-v1')||'[]'));
+  expect(saved.length).toBeGreaterThan(0);
+  expect(saved[0].category).toBe('canopy');
+  expect(saved[0].configuration.canopy.input.widthPostsM).toBe(4.2);
 
   const noHorizontalOverflow=await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1);
   expect(noHorizontalOverflow).toBeTruthy();
