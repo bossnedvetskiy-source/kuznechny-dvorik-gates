@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<title>Навесы — админ DEV</title>
+<link rel="stylesheet" href="./naves.css">
+<style>
+:root{--ink:#191713;--muted:#746f67;--line:#ded8cf;--gold:#c6933f}body{background:#f2eee7;color:var(--ink)}.admin-shell{width:min(1180px,calc(100% - 18px));margin:auto;padding:18px 0 60px}.admin-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px}.admin-head a{color:var(--ink);text-decoration:none;font-size:12px;font-weight:800}.admin-tabs{display:flex;gap:7px;margin-bottom:12px}.admin-tab{min-height:40px;padding:0 13px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);font-weight:800}.admin-tab.active{background:#191713;color:#fff}.editor-shell{color:var(--ink)}.admin-tab-panel{background:#fff;border:1px solid var(--line);border-radius:18px;padding:16px}.page-title{display:flex;justify-content:space-between;gap:16px;align-items:flex-start}.page-title h1{margin:3px 0;font-size:28px}.page-title p{color:var(--muted);font-size:11px}.eyebrow{color:#9a6d28!important;font-size:9px!important;text-transform:uppercase;font-weight:900}.reset-button{min-height:38px;padding:0 12px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--ink);font-weight:800;cursor:pointer}.empty-photos{color:var(--muted)}.toast{position:fixed;right:14px;bottom:14px;z-index:1000;max-width:360px;padding:10px 13px;border-radius:11px;background:#191713;color:#fff;opacity:0;pointer-events:none;transition:.2s}.toast.show{opacity:1}.toast.error{background:#8b352d}
+</style>
+</head>
+<body>
+<div class="admin-shell">
+  <div class="admin-head"><div><b>Кузнечный ДворикЪ</b><small style="display:block;color:#746f67">DEV · внутренний раздел навесов</small></div><a href="./">← К расчёту навеса</a></div>
+  <nav class="admin-tabs"></nav>
+  <main class="editor-shell"></main>
+</div>
+<div id="toast" class="toast"></div>
+<script>
+let toastTimer;
+window.showToast=function(message,error=false){clearTimeout(toastTimer);const e=document.getElementById('toast');e.textContent=message;e.className='toast show'+(error?' error':'');toastTimer=setTimeout(()=>e.className='toast',2600)};
+</script>
+<script src="../admin-canopy.js"></script>
+<script>setTimeout(()=>document.querySelector('[data-admin-tab="canopy-orders"]')?.click(),0);</script>
+</body>
+</html>
