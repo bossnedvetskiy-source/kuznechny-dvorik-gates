@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0d0f11">
   <meta name="robots" content="noindex,nofollow,noarchive">
-  <title>Расчёт арочного навеса и чертёж фермы — DEV</title>
+  <title>Расчёт арочного навеса — DEV</title>
   <link rel="stylesheet" href="./naves.css">
 </head>
 <body>
@@ -13,89 +13,82 @@
   <a class="brand" href="/work-app.html?app=1&environment=dev"><span class="brand-mark">К</span><span><b>Кузнечный ДворикЪ</b><small>DEV · навесы</small></span></a>
   <a class="back-link" href="/work-app.html?app=1&environment=dev">← Рабочее приложение</a>
 </header>
+
 <main class="shell page">
   <section class="hero">
-    <div class="eyebrow">Навесы · внутренний калькулятор</div>
-    <h1>Расчёт навеса + <em>чертёж фермы</em></h1>
-    <p>Один ввод размеров формирует стоимость, материалы, закупку, прибыль, векторный чертёж и ТЗ сварщику.</p>
+    <div class="eyebrow">Арочные навесы · предварительный расчёт</div>
+    <h1>Рассчитайте <em>навес по своим размерам</em></h1>
+    <p>Укажите размеры и условия — сразу покажем предварительную стоимость и объёмную схему будущего навеса.</p>
   </section>
 
-  <section class="workspace">
-    <form id="trussForm" class="panel controls" novalidate>
-      <div class="panel-head"><div><small>Шаг 1</small><h2>Размеры и условия</h2></div></div>
+  <section class="workspace client-workspace">
+    <form id="trussForm" class="panel controls client-controls" novalidate>
+      <div class="panel-head"><div><small>Размеры</small><h2>Параметры навеса</h2></div></div>
       <div class="field-grid">
         <label class="field"><span>Ширина по столбам, м</span><input id="widthPosts" type="number" min="1.5" max="8" step="0.1" value="3.4" inputmode="decimal"></label>
         <label class="field"><span>Длина по столбам, м</span><input id="lengthPosts" type="number" min="1" max="30" step="0.1" value="8.4" inputmode="decimal"></label>
-        <label class="field"><span>Видимая высота столбов, м</span><input id="visibleHeight" type="number" min="1.5" max="5" step="0.1" value="2.1" inputmode="decimal"></label>
-        <label class="field"><span>Установка столбов</span><select id="installType"><option>Бетонирование</option><option>Закладные</option></select></label>
+        <label class="field"><span>Высота столбов, м</span><input id="visibleHeight" type="number" min="1.5" max="5" step="0.1" value="2.1" inputmode="decimal"></label>
         <label class="field"><span>Покрытие</span><select id="coverage"><option>Поликарбонат</option><option>Профнастил</option><option>Без покрытия</option></select></label>
-        <label class="field"><span>Материал фермы</span><select id="materialMode"><option selected>Авто</option><option>25×25×1,5</option><option>30×30×2</option><option>40×20×2</option><option>40×40×2</option></select></label>
-        <label class="field"><span>Выпуск фермы с каждой стороны, мм</span><input id="overhang" type="number" min="0" max="600" step="10" value="150" inputmode="numeric"></label>
+        <label class="field"><span>Установка столбов</span><select id="installType"><option>Бетонирование</option><option>Закладные</option></select></label>
         <label class="field"><span>Подъём дуги, мм</span><input id="rise" type="number" min="100" max="2000" step="10" value="567" inputmode="numeric"><small id="riseHint">Рекомендуемый: 567 мм</small></label>
-        <label class="switch-field"><span><b>Автоподъём 1/6 ширины</b><small>Можно отключить и задать вручную</small></span><input id="autoRise" type="checkbox" checked><i></i></label>
-        <label class="field"><span>Высота фермы в коньке, мм</span><input id="trussHeight" type="number" min="120" max="600" step="10" value="250" inputmode="numeric"></label>
-        <label class="field"><span>Прямой край нижнего пояса, мм</span><input id="endFlat" type="number" min="0" max="800" step="10" value="300" inputmode="numeric"></label>
-        <label class="field"><span>Целевой шаг решётки, мм</span><input id="cellStep" type="number" min="250" max="700" step="10" value="400" inputmode="numeric"></label>
-        <label class="switch-field"><span><b>Столбы нужны</b><small>Выключите, если расчёт только на существующие опоры</small></span><input id="postsNeeded" type="checkbox" checked><i></i></label>
-        <label class="field"><span>Подходящих столбов уже есть, шт</span><input id="existingPosts" type="number" min="0" max="50" step="1" value="0" inputmode="numeric"></label>
-        <label class="switch-field"><span><b>Продольные балки уже есть</b><small>Если включено — две балки 80×80 не попадут в закупку</small></span><input id="beamsExisting" type="checkbox"><i></i></label>
-        <label class="switch-field"><span><b>Покраска</b><small>Покраска металлоконструкции</small></span><input id="paint" type="checkbox" checked><i></i></label>
-        <label class="field field-wide"><span>Доставка, ₽</span><input id="delivery" type="number" min="0" step="100" value="0" inputmode="numeric"></label>
+        <label class="switch-field"><span><b>Автоматический подъём дуги</b><small>1/6 ширины по столбам</small></span><input id="autoRise" type="checkbox" checked><i></i></label>
+        <label class="field"><span>Высота фермы, мм</span><input id="trussHeight" type="number" min="120" max="600" step="10" value="250" inputmode="numeric"></label>
+        <label class="field"><span>Уже есть подходящие столбы, шт</span><input id="existingPosts" type="number" min="0" max="50" step="1" value="0" inputmode="numeric"></label>
+        <label class="switch-field"><span><b>Продольные балки уже есть</b><small>Включите, если балки можно использовать</small></span><input id="beamsExisting" type="checkbox"><i></i></label>
+        <label class="switch-field"><span><b>Покраска металлоконструкции</b></span><input id="paint" type="checkbox" checked><i></i></label>
       </div>
+
+      <input id="overhang" type="hidden" value="150">
+      <input id="endFlat" type="hidden" value="300">
+      <input id="cellStep" type="hidden" value="400">
+      <input id="postsNeeded" type="hidden" value="1">
+      <input id="materialMode" type="hidden" value="Авто">
+      <input id="delivery" type="hidden" value="0">
+
       <div id="geometryWarning" class="warning" hidden></div>
-      <button id="resetDefaults" class="secondary-button" type="button">Вернуть пример 3,4 × 8,4 м</button>
     </form>
 
     <div class="right-column">
-      <section class="panel result-card">
-        <div class="result-kicker">ИТОГ ДЛЯ ЗАКАЗЧИКА</div>
+      <section class="panel result-card client-result">
+        <div class="result-kicker">ПРЕДВАРИТЕЛЬНАЯ СТОИМОСТЬ</div>
         <div id="totalPrice" class="total-price">0 ₽</div>
         <div id="resultStatus" class="result-status">Расчёт...</div>
         <dl id="clientSummary" class="summary-list compact"></dl>
-        <div class="result-actions"><button id="printCalc" class="primary-button" type="button">Печать расчёта / PDF</button></div>
+        <p class="client-price-note">Точную комплектацию и итоговую стоимость фиксируем после проверки размеров и условий установки.</p>
+        <button id="showSave" class="primary-button save-main-button" type="button">Сохранить расчёт</button>
       </section>
 
-      <section class="panel drawing-panel">
-        <div class="panel-head drawing-head"><div><small>Чертёж</small><h2>Ферма — вид сбоку</h2></div><span id="drawingStatus" class="status-pill">готово</span></div>
-        <div class="drawing-wrap"><svg id="trussSvg" viewBox="0 0 1200 640" role="img" aria-label="Технический чертёж арочной фермы"></svg></div>
-        <div class="action-grid"><button id="downloadSvg" class="primary-button" type="button">Скачать SVG</button><button id="printPdf" class="secondary-button" type="button">PDF ТЗ сварщику</button><button id="copyTz" class="secondary-button" type="button">Скопировать ТЗ</button></div>
+      <section class="panel canopy-preview-panel">
+        <div class="panel-head"><div><small>Визуализация</small><h2>Как будет выглядеть навес</h2></div><span id="drawingStatus" class="status-pill">готово</span></div>
+        <div class="drawing-wrap canopy-3d-wrap">
+          <svg id="canopySvg" viewBox="0 0 1200 700" role="img" aria-label="Объёмная схема арочного навеса"></svg>
+        </div>
+        <p class="preview-note">Схема помогает проверить пропорции. Рабочий 2D‑чертёж фермы формируется после сохранения расчёта и доступен в админ‑панели.</p>
       </section>
     </div>
   </section>
 
-  <section class="summary-grid">
-    <article class="panel summary-card"><div class="panel-head"><div><small>Геометрия</small><h2>Основные размеры</h2></div></div><dl id="summaryList" class="summary-list"></dl></article>
-    <article class="panel summary-card"><div class="panel-head"><div><small>Производство</small><h2>Состав одной фермы</h2></div></div><dl id="compositionList" class="summary-list"></dl></article>
+  <section id="savePanel" class="panel save-panel" hidden>
+    <div class="panel-head"><div><small>Сохранить расчёт</small><h2>Отправить в работу</h2></div><button id="closeSave" class="icon-close" type="button" aria-label="Закрыть">×</button></div>
+    <p class="save-intro">Расчёт сохранится в системе. В админ‑панели по нему можно будет открыть прибыль, материалы, ТЗ сварщику и 2D‑чертёж фермы.</p>
+    <div class="save-grid">
+      <label class="field"><span>Телефон</span><input id="savePhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+7 900 000-00-00"></label>
+      <label class="field"><span>Населённый пункт</span><input id="saveCity" type="text" autocomplete="address-level2" placeholder="Например, Мелеуз"></label>
+    </div>
+    <label class="consent-row"><input id="saveConsent" type="checkbox"><span>Согласен на обработку данных для сохранения расчёта и связи по заказу.</span></label>
+    <div class="save-actions"><button id="saveCalculation" class="primary-button" type="button">Сохранить расчёт</button><span id="saveStatus" class="save-status"></span></div>
   </section>
 
-  <section class="summary-grid finance-grid">
-    <article class="panel summary-card owner-card"><div class="panel-head"><div><small>Только для владельца</small><h2>Финансы</h2></div><span class="hint-badge">не клиенту</span></div><dl id="ownerSummary" class="summary-list"></dl></article>
-    <article class="panel summary-card"><div class="panel-head"><div><small>Отдельное изготовление</small><h2>Цена одной фермы</h2></div></div><dl id="trussPriceSummary" class="summary-list"></dl></article>
+  <section class="client-info-strip">
+    <article><b>Бесплатный замер</b><span>Проверим размеры и основание</span></article>
+    <article><b>Договор</b><span>Фиксируем комплектацию и цену</span></article>
+    <article><b>Гарантия 3 года</b><span>На изготовленную конструкцию</span></article>
   </section>
-
-  <section class="panel materials-panel">
-    <div class="panel-head"><div><small>Закупка</small><h2>Материалы и раскрой</h2></div><span id="metalTotal" class="hint-badge"></span></div>
-    <div class="table-scroll"><table><thead><tr><th>Материал</th><th>Используется</th><th>Хлыстов 6 м</th><th>Купить</th><th>Стоимость</th><th>Примечание</th></tr></thead><tbody id="materialsTableBody"></tbody></table></div>
-    <div id="coverageCut" class="cut-cards"></div>
-  </section>
-
-  <section id="welderTz" class="panel tz-panel">
-    <div class="panel-head"><div><small>ТЗ сварщику</small><h2>Раскрой фермы по геометрической оси</h2></div><span class="hint-badge">без цен</span></div>
-    <div class="table-scroll"><table><thead><tr><th>Поз.</th><th>Деталь</th><th>Профиль</th><th>Длина, мм</th><th>На 1 ферму</th><th>Всего</th><th>Угол оси</th></tr></thead><tbody id="cutTableBody"></tbody></table></div>
-    <p class="disclaimer">Длины D1…Dn рассчитаны по геометрической оси. Перед серийной резкой сварить одну контрольную ферму по шаблону и проверить фактическую посадку трубы и форму реза.</p>
-  </section>
-
-  <details class="panel settings-panel">
-    <summary><span><small>Настройки</small><b>Прайс и ставки</b></span><i>⌄</i></summary>
-    <p class="settings-note">Изменения сохраняются только на этом устройстве и используются в следующих расчётах.</p>
-    <div id="priceSettings" class="settings-grid"></div>
-    <button id="resetPrices" class="secondary-button" type="button">Сбросить прайс к значениям Excel</button>
-  </details>
 </main>
+
 <script src="./geometry.js"></script>
 <script src="./pricing.js"></script>
-<script src="./drawing.js"></script>
+<script src="./canopy-3d.js"></script>
 <script src="./naves.js"></script>
-<script src="./export.js"></script>
 </body>
 </html>
