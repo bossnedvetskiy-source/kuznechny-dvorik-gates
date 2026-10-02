@@ -300,7 +300,7 @@ for (const required of ['./naves.css','./geometry.js','./pricing.js','./canopy-3
   if (!navesIndex.includes(required)) throw new Error(`DEV canopy generator missing: ${required}`);
 }
 const navesAdminIndex = await readFile(path.join(OUT, 'naves', 'admin.html'), 'utf8');
-for (const required of ['admin-canopy.js','canopy-orders']) {
+for (const required of ['admin-canopy.js','admin-tabs','editor-shell']) {
   if (!navesAdminIndex.includes(required)) throw new Error(`DEV canopy admin missing: ${required}`);
 }
 
