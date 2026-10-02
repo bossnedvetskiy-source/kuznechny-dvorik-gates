@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0d0f11">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <title>Генератор чертежа арочной фермы — DEV</title>
+  <link rel="stylesheet" href="./naves.css">
+</head>
+<body>
+  <header class="topbar shell">
+    <a class="brand" href="/work-app.html?app=1&environment=dev">
+      <span class="brand-mark">К</span>
+      <span><b>Кузнечный ДворикЪ</b><small>DEV · генератор фермы</small></span>
+    </a>
+    <a class="back-link" href="/work-app.html?app=1&environment=dev">← Рабочее приложение</a>
+  </header>
+
+  <main class="shell page">
+    <section class="hero">
+      <div class="eyebrow">Навесы · производственный инструмент</div>
+      <h1>Генератор <em>чертежа арочной фермы</em></h1>
+      <p>Введите размеры — схема перестроится автоматически. Чертёж остаётся векторным SVG, поэтому не ломается при увеличении, печати и работе с телефона.</p>
+    </section>
+
+    <section class="workspace">
+      <form id="trussForm" class="panel controls" novalidate>
+        <div class="panel-head"><div><small>Геометрия</small><h2>Размеры фермы</h2></div></div>
+
+        <div class="field-grid">
+          <label class="field">
+            <span>Ширина по столбам, м</span>
+            <input id="widthPosts" type="number" min="1.5" max="8" step="0.1" value="3.4" inputmode="decimal">
+          </label>
+          <label class="field">
+            <span>Выпуск фермы с каждой стороны, мм</span>
+            <input id="overhang" type="number" min="0" max="600" step="10" value="150" inputmode="numeric">
+          </label>
+          <label class="field">
+            <span>Подъём дуги, мм</span>
+            <input id="rise" type="number" min="100" max="2000" step="10" value="567" inputmode="numeric">
+            <small id="riseHint">Рекомендуемый: 567 мм (ширина по столбам ÷ 6)</small>
+          </label>
+          <label class="switch-field">
+            <span><b>Автоподъём 1/6 ширины</b><small>При изменении ширины подъём пересчитается автоматически</small></span>
+            <input id="autoRise" type="checkbox" checked>
+            <i aria-hidden="true"></i>
+          </label>
+          <label class="field">
+            <span>Высота фермы в коньке, мм</span>
+            <input id="trussHeight" type="number" min="120" max="600" step="10" value="250" inputmode="numeric">
+          </label>
+          <label class="field">
+            <span>Прямой край нижнего пояса, мм</span>
+            <input id="endFlat" type="number" min="0" max="800" step="10" value="300" inputmode="numeric">
+            <small>Расстояние от края фермы до торцевой стойки</small>
+          </label>
+          <label class="field">
+            <span>Целевой шаг ячейки, мм</span>
+            <input id="cellStep" type="number" min="250" max="700" step="10" value="400" inputmode="numeric">
+          </label>
+          <label class="field">
+            <span>Количество ферм в заказе</span>
+            <input id="trussCount" type="number" min="1" max="30" step="1" value="6" inputmode="numeric">
+          </label>
+          <label class="field">
+            <span>Профиль поясов</span>
+            <select id="chordProfile">
+              <option value="25×25×1,5" selected>25×25×1,5</option>
+              <option value="30×30×2">30×30×2</option>
+              <option value="40×20×2">40×20×2</option>
+              <option value="40×40×2">40×40×2</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Профиль решётки</span>
+            <select id="webProfile">
+              <option value="20×20×1,5" selected>20×20×1,5</option>
+              <option value="25×25×1,5">25×25×1,5</option>
+              <option value="40×20×2">40×20×2</option>
+            </select>
+          </label>
+        </div>
+
+        <div id="geometryWarning" class="warning" hidden></div>
+        <button id="resetDefaults" class="secondary-button" type="button">Вернуть исходный пример 3,4 м</button>
+      </form>
+
+      <section class="panel drawing-panel">
+        <div class="panel-head drawing-head">
+          <div><small>Чертёж</small><h2>Ферма — вид сбоку</h2></div>
+          <span id="drawingStatus" class="status-pill">готово</span>
+        </div>
+
+        <div class="drawing-wrap">
+          <svg id="trussSvg" viewBox="0 0 1200 640" role="img" aria-label="Технический чертёж арочной фермы"></svg>
+        </div>
+
+        <div class="action-grid">
+          <button id="downloadSvg" class="primary-button" type="button">Скачать SVG</button>
+          <button id="printPdf" class="secondary-button" type="button">Печать / PDF</button>
+          <button id="copyTz" class="secondary-button" type="button">Скопировать ТЗ</button>
+        </div>
+      </section>
+    </section>
+
+    <section class="summary-grid">
+      <article class="panel summary-card">
+        <div class="panel-head"><div><small>Контроль</small><h2>Основные размеры</h2></div></div>
+        <dl id="summaryList" class="summary-list"></dl>
+      </article>
+
+      <article class="panel summary-card">
+        <div class="panel-head"><div><small>Производство</small><h2>Состав одной фермы</h2></div></div>
+        <dl id="compositionList" class="summary-list"></dl>
+      </article>
+    </section>
+
+    <section id="welderTz" class="panel tz-panel">
+      <div class="panel-head">
+        <div><small>ТЗ сварщику</small><h2>Раскрой по геометрической оси</h2></div>
+        <span class="hint-badge">без цен</span>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Поз.</th><th>Деталь</th><th>Профиль</th><th>Длина, мм</th><th>На 1 ферму</th><th>Всего</th><th>Угол оси</th></tr></thead>
+          <tbody id="cutTableBody"></tbody>
+        </table>
+      </div>
+      <p class="disclaimer">Длины D1…Dn рассчитаны по геометрической оси. Перед серийной резкой сварить одну контрольную ферму по шаблону и проверить фактическую посадку трубы и форму реза.</p>
+    </section>
+  </main>
+
+  <script src="./naves.js"></script>
+</body>
+</html>
