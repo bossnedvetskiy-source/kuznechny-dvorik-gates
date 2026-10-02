@@ -15,9 +15,17 @@
     return -(c.radius-sag)+Math.sqrt(Math.max(0,c.radius*c.radius-x*x));
   }
   function nearestEven(v){
-    let n=Math.max(4,Math.min(24,Math.round(v)));
+    let n=Math.max(4,Math.min(30,Math.round(v)));
     if(n%2)n+=1;
     return n;
+  }
+  function resolveProfiles(mode,widthM){
+    const selected=mode||'Авто';
+    const chord=selected==='Авто'?(widthM<4?'25×25×1,5':'30×30×2'):selected;
+    const web=chord==='25×25×1,5'?'20×20×1,5':
+      chord==='30×30×2'?'25×25×1,5':
+      chord==='40×20×2'?'20×20×1,5':'40×20×2';
+    return {chord,web};
   }
   function compute(raw){
     const widthPostsM=clamp(Number(raw.widthPostsM)||3.4,1.5,8);
@@ -28,7 +36,7 @@
     const heightM=clamp(Number(raw.heightMm)||250,120,600)/1000;
     const endFlatM=clamp(Number(raw.endFlatMm)||300,0,800)/1000;
     const targetCellM=clamp(Number(raw.cellStepMm)||400,250,700)/1000;
-    const trussCount=Math.round(clamp(Number(raw.trussCount)||6,1,30));
+    const trussCount=Math.round(clamp(Number(raw.trussCount)||1,1,40));
     const innerChordM=widthM-2*endFlatM;
     const lowerRiseM=riseM-heightM;
     const topCircle=circle(widthM,riseM);
@@ -39,7 +47,7 @@
     if(!topCircle)errors.push('Геометрия верхней дуги недопустима.');
     if(!lowerCircle)errors.push('Геометрия нижней дуги недопустима.');
     if(errors.length)return {ok:false,errors,recommendedRiseMm};
-    const diagonalCount=nearestEven(innerChordM/targetCellM);
+    const diagonalCount=nearestEven(topCircle.length/targetCellM);
     const stepM=innerChordM/diagonalCount;
     const nodes=[];
     for(let i=0;i<=diagonalCount;i++){
@@ -53,13 +61,14 @@
       const a=nodes[i],b=nodes[i+1],dx=b.x-a.x,dy=b.yWeb-a.yWeb;
       diagonals.push({index:i+1,lengthM:Math.hypot(dx,dy),angleDeg:Math.atan2(Math.abs(dy),Math.abs(dx))*180/Math.PI});
     }
+    const profiles=resolveProfiles(raw.materialMode,widthM);
     return {
       ok:true,widthPostsM,overhangM,widthM,riseM,recommendedRiseMm,heightM,endFlatM,targetCellM,
       projectedStepM:stepM,trussCount,innerChordM,lowerRiseM,topCircle,lowerCircle,
       lowerTotalM:lowerCircle.length+2*endFlatM,diagonalCount,nodes,diagonals,
       endPostM:arcY(innerChordM/2,widthM,riseM),
-      chordProfile:raw.chordProfile,webProfile:raw.webProfile
+      chordProfile:profiles.chord,webProfile:profiles.web,materialMode:raw.materialMode||'Авто'
     };
   }
-  window.TrussGeometry={compute,circle,arcY,mm,fmt};
+  window.TrussGeometry={compute,circle,arcY,mm,fmt,resolveProfiles};
 })();
