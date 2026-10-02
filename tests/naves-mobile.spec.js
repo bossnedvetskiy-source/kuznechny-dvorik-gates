@@ -37,4 +37,16 @@ test('canopy client page is simple, mobile and saves into DEV admin storage', as
 
   const noHorizontalOverflow=await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1);
   expect(noHorizontalOverflow).toBeTruthy();
+
+  await page.goto('/naves/admin.html',{waitUntil:'domcontentloaded'});
+  await expect(page.locator('[data-admin-tab="canopy-orders"]')).toBeVisible();
+  await page.locator('[data-admin-tab="canopy-orders"]').click();
+  await expect(page.locator('#canopyOrderList')).toContainText('Мелеуз');
+  await expect(page.locator('#canopyOrderList')).toContainText('4,20 × 8,40 м');
+  await page.locator('[data-open-canopy]').first().click();
+  await expect(page.locator('#canopyAdminDialog')).toBeVisible();
+  await expect(page.locator('#canopyAdminDialog')).toContainText('Прибыль до налогов');
+  await expect(page.locator('#canopyAdminDialog')).toContainText('ЗП / работы');
+  await expect(page.locator('#canopyAdminTrussSvg')).toBeVisible();
+  await expect(page.locator('#canopyAdminDialog')).toContainText('ТЗ сварщику');
 });
