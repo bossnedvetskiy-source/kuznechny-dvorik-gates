@@ -75,6 +75,8 @@ jobs:
           test -s timeweb-dist/evroshtaketnik/engine.js
           test -s timeweb-dist/evroshtaketnik/evroshtaketnik.js
           test -s timeweb-dist/naves/index.html
+          test -s timeweb-dist/naves/admin.html
+          test -s timeweb-dist/admin-canopy.js
           test -s timeweb-dist/naves/naves.css
           test -s timeweb-dist/naves/geometry.js
           test -s timeweb-dist/naves/pricing.js
