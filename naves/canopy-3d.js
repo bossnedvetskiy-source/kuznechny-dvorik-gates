@@ -14,8 +14,18 @@ function render(svg,g,c){
   svg.append(el('text',{x:48,y:75,fill:'#687078','font-size':14},'Предварительная визуализация по введённым размерам'));
 
   const width=g.widthM,length=c.lengthM,height=Math.max(1.6,c.visibleHeightM),roofRise=g.riseM;
-  const sx=Math.min(130,width?700/width:180), sy=Math.min(42,length?360/length:40), sz=125;
-  const ox=550,oy=545;
+  // Fit the complete isometric footprint inside the SVG instead of allowing the
+  // far side of a long/wide canopy to extend beyond the viewBox on mobile.
+  const side=70,rawSx=130,rawSy=42;
+  const footprint=Math.max(1,width*rawSx+length*rawSy);
+  const fit=Math.min(1,(W-side*2)/footprint);
+  const sx=rawSx*fit,sy=rawSy*fit;
+  const ox=side+width*sx/2+length*sy;
+  const groundVertical=width*sx*.08+length*sy*.52;
+  const groundBottom=H-80;
+  const oy=groundBottom-groundVertical;
+  const maxZ=Math.max(.1,height+roofRise);
+  const sz=Math.max(55,Math.min(125,(oy-width*sx*.08-105)/maxZ));
   const P=(x,y,z)=>({x:ox+(x-width/2)*sx-y*sy,y:oy+(x-width/2)*sx*.16+y*sy*.52-z*sz});
   const line=(a,b,attrs={})=>svg.append(el('line',{x1:a.x,y1:a.y,x2:b.x,y2:b.y,stroke:'#272b2e','stroke-width':4,'stroke-linecap':'round',...attrs}));
   const poly=(pts,attrs={})=>svg.append(el('polygon',{points:pts.map(p=>p.x.toFixed(1)+','+p.y.toFixed(1)).join(' '),...attrs}));
