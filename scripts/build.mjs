@@ -249,6 +249,7 @@ await writeFile('dist/client/.keep', '', 'utf8');
 await copyFile('assets/hero-gates.jpg', 'dist/client/hero-gates.jpg');
 await copyFile('storefront.css', 'dist/client/storefront.css');
 await cp('assets/catalog', 'dist/client/catalog', { recursive: true });
-await cp('evroshtaketnik', 'dist/client/evroshtaketnik', { recursive: true });\nawait cp('naves', 'dist/client/naves', { recursive: true });
+await cp('evroshtaketnik', 'dist/client/evroshtaketnik', { recursive: true });
+await cp('naves', 'dist/client/naves', { recursive: true });
 await copyFile('.openai/hosting.json', 'dist/.openai/hosting.json');
 await cp('drizzle', 'dist/.openai/drizzle', { recursive: true });
