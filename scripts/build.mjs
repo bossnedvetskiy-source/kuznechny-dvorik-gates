@@ -246,6 +246,7 @@ await writeFile('dist/client/xlsx.bundle.js', xlsxBrowserSource, 'utf8');
 await copyFile('site-sw.js', 'dist/client/site-sw.js');
 await copyFile('site-manifest.webmanifest', 'dist/client/site-manifest.webmanifest');
 await copyFile('site-icon.svg', 'dist/client/site-icon.svg');
+await copyFile('admin-canopy.js', 'dist/client/admin-canopy.js');
 await writeFile('dist/client/.keep', '', 'utf8');
 await copyFile('assets/hero-gates.jpg', 'dist/client/hero-gates.jpg');
 await copyFile('storefront.css', 'dist/client/storefront.css');
