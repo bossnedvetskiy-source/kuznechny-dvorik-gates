@@ -5,6 +5,7 @@ const PRICE_KEY='kuzdvor-canopy-admin-prices-v1';
 const DEV_SAVED_KEY='kuzdvor-dev-canopy-saved-v1';
 const INPUTS=['widthPosts','lengthPosts','visibleHeight','installType','coverage','rise','autoRise','trussHeight','existingPosts','beamsExisting','paint'];
 const row=(a,b)=>'<div><dt>'+a+'</dt><dd>'+b+'</dd></div>';
+let currentRaw=null,currentPublic=null;
 const rub=n=>Math.round(Number(n)||0).toLocaleString('ru-RU')+' ₽';
 const fmt=(n,d=2)=>G.fmt(Number(n)||0,d);
 const num=(id,fallback=0)=>{const v=Number($(id)?.value);return Number.isFinite(v)?v:fallback};
@@ -42,7 +43,9 @@ function render(){
     $('canopySvg').innerHTML='<text x="600" y="340" text-anchor="middle" fill="#9b3c2d" font-size="24">Проверьте размеры навеса</text>';
     return;
   }
-  const c=C.compute(raw,g,loadAdminPrices());window.__CANOPY_CURRENT=c;g.trussCount=c.trussCount;
+  const c=C.compute(raw,g,loadAdminPrices());g.trussCount=c.trussCount;
+  currentRaw={...raw};
+  currentPublic={total:Math.round(c.total),trussCount:c.trussCount,totalPosts:c.totalPosts,area:c.area,coverage:c.coverage,visibleHeightM:c.visibleHeightM,lengthM:c.lengthM,paint:c.paint};
   const warnings=[];
   if(Math.abs(num('rise')-g.recommendedRiseMm)>=15)warnings.push('Подъём дуги отличается от рекомендуемого '+Math.round(g.recommendedRiseMm)+' мм.');
   warnings.push(...c.warnings);
@@ -61,8 +64,9 @@ function normalizePhone(value){
   return d.length===11&&d.startsWith('7')?'+7 '+d.slice(1,4)+' '+d.slice(4,7)+'-'+d.slice(7,9)+'-'+d.slice(9):String(value||'').trim();
 }
 function snapshot(){
-  const raw=rawInput(),g=window.__TRUSS_CURRENT,c=window.__CANOPY_CURRENT;
-  if(!g?.ok||!c)throw new Error('Сначала заполните корректные размеры');
+  const g=window.__TRUSS_CURRENT;
+  if(!g?.ok||!currentRaw||!currentPublic)throw new Error('Сначала заполните корректные размеры');
+  const raw=currentRaw;
   return {
     version:2,
     savedAt:new Date().toISOString(),
@@ -73,7 +77,7 @@ function snapshot(){
       materialMode:raw.materialMode,existingPosts:raw.existingPosts,beamsExisting:raw.beamsExisting,
       postsNeeded:raw.postsNeeded,paint:raw.paint,delivery:raw.delivery
     },
-    publicSummary:{total:Math.round(c.total),trussCount:c.trussCount,totalPosts:c.totalPosts}
+    publicSummary:{total:currentPublic.total,trussCount:currentPublic.trussCount,totalPosts:currentPublic.totalPosts}
   };
 }
 function saveLocal(payload){
