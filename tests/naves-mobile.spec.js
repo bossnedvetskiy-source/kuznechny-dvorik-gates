@@ -22,6 +22,12 @@ test('canopy client page is simple, mobile and saves into DEV admin storage', as
   await expect(page.locator('#rise')).toHaveValue(/700/);
   await expect(page.locator('#canopySvg')).toBeVisible();
 
+  await page.route('**/api/leads', route => route.fulfill({
+    status:503,
+    contentType:'application/json',
+    body:JSON.stringify({error:'DEV backend unavailable'})
+  }));
+
   await page.locator('#showSave').click();
   await expect(page.locator('#savePanel')).toBeVisible();
   await page.locator('#savePhone').fill('8 937 329-67-50');
