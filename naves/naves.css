@@ -12,3 +12,6 @@
 .field input,.field select,.save-grid input{min-width:0;max-width:100%}
 .drawing-wrap svg,.canopy-3d-wrap svg{max-width:100%;overflow:hidden}
 @media(max-width:600px){.client-workspace,.right-column,.client-controls,.client-result,.canopy-preview-panel,.save-panel{width:100%;max-width:100%;min-width:0}}
+
+html,body{max-width:100%;overflow-x:clip}
+.canopy-3d-wrap{contain:paint;overflow:clip}
