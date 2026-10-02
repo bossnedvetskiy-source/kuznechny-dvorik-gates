@@ -6,7 +6,7 @@ await mkdir('dist/server', { recursive: true });
 await mkdir('dist/client', { recursive: true });
 await mkdir('dist/.openai', { recursive: true });
 
-const [htmlSource, homeHtmlSource, homeCss, productCategoriesSource, css, storefrontCss, gatePageCss, catalogImages, pricesSource, deliveryPricesSource, customerContextSource, deliverySharedSource, leadsSharedSource, favoritesSharedSource, lazyRuntimeSource, offlineAppSource, js, publicSiteJsSource, gatePageUiSource, colorPhotoSiteSource, gateFormulaPricesSiteSource, adminHtmlSource, adminCss, adminJsSource, adminColorsJsSource, adminPricesJsSource, adminSiteJsSource, adminLeadsJsSource, adminEnhancementsJsSource, adminExcelImportSource, workerSource, adminAuthSource, siteSettingsSource, excelPricingSource, catalogMediaSource, catalogColorsSource, gateQuoteSource, publicPricesRuntimeSource, leadAntispamSource, leadsSource, xlsxBrowserSource] = await Promise.all([
+const [htmlSource, homeHtmlSource, homeCss, productCategoriesSource, css, storefrontCss, gatePageCss, catalogImages, pricesSource, deliveryPricesSource, customerContextSource, deliverySharedSource, leadsSharedSource, favoritesSharedSource, lazyRuntimeSource, offlineAppSource, js, publicSiteJsSource, gatePageUiSource, colorPhotoSiteSource, gateFormulaPricesSiteSource, adminHtmlSource, adminCss, adminJsSource, adminColorsJsSource, adminPricesJsSource, adminSiteJsSource, adminLeadsJsSource, adminCanopyJsSource, adminEnhancementsJsSource, adminExcelImportSource, workerSource, adminAuthSource, siteSettingsSource, excelPricingSource, catalogMediaSource, catalogColorsSource, gateQuoteSource, publicPricesRuntimeSource, leadAntispamSource, leadsSource, xlsxBrowserSource] = await Promise.all([
   readFile('index.html', 'utf8'),
   readFile('home.html', 'utf8'),
   readFile('home.css', 'utf8'),
@@ -35,6 +35,7 @@ const [htmlSource, homeHtmlSource, homeCss, productCategoriesSource, css, storef
   readFile('admin-prices.js', 'utf8'),
   readFile('admin-site.js', 'utf8'),
   readFile('admin-leads.js', 'utf8'),
+  readFile('admin-canopy.js', 'utf8'),
   readFile('admin-enhancements.js', 'utf8'),
   readFile('admin-excel-import.js', 'utf8'),
   readFile('worker/runtime.js', 'utf8'),
@@ -204,7 +205,7 @@ const adminJs = adminJsSource;
 const adminHtml = adminHtmlSource
   .replace('<link rel="stylesheet" href="admin.css">', `<style>${adminCss}</style>`)
   .replace('<script src="admin.js"></script>', `<script>${adminJs}\n${adminColorsJsSource}</script>`)
-  .replace('<script src="admin-prices.js"></script>', `<script>${adminPricesJsSource}</script><script>${adminSiteJsSource}</script><script>${adminLeadsJsSource}</script><script>${adminEnhancementsJsSource}</script><script src="/xlsx.bundle.js"></script><script>${gateCalcModelLoaderBundle}</script><script>${adminExcelImportSource}\n${adminExcelCompatibilitySource}</script>`);
+  .replace('<script src="admin-prices.js"></script>', `<script>${adminPricesJsSource}</script><script>${adminSiteJsSource}</script><script>${adminLeadsJsSource}</script><script>${adminCanopyJsSource}</script><script>${adminEnhancementsJsSource}</script><script src="/xlsx.bundle.js"></script><script>${gateCalcModelLoaderBundle}</script><script>${adminExcelImportSource}\n${adminExcelCompatibilitySource}</script>`);
 
 const workerModules = [
   adminAuthSource,
