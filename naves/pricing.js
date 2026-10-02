@@ -13,7 +13,7 @@ const P={
 const round6=n=>Math.round((n+Number.EPSILON)*1e6)/1e6;
 const ceil100=n=>Math.ceil(n/100)*100;
 const mod=(a,b)=>((a%b)+b)%b;
-const profilePrice=(x,p)=>x==='25×25×1,5'?p.tube25:x==='30×30×2'?p.tube30:x==='40×20×2'?p.tube40x20:x==='40×40×2'?p.tube40x40:x==='20×20×1,5'?p.tube20:p.tube25web;
+const profilePrice=(x,p,role='chord')=>x==='25×25×1,5'?(role==='web'?p.tube25web:p.tube25):x==='30×30×2'?p.tube30:x==='40×20×2'?p.tube40x20:x==='40×40×2'?p.tube40x40:x==='20×20×1,5'?p.tube20:p.tube25web;
 const profilePerimeter=x=>x==='25×25×1,5'?0.10:x==='30×30×2'?0.12:x==='40×20×2'?0.12:x==='40×40×2'?0.16:x==='20×20×1,5'?0.08:0.10;
 function mergePrices(custom={}){const r={...P};for(const k of Object.keys(P)){const v=Number(custom[k]);if(Number.isFinite(v)&&v>=0)r[k]=v;}return r;}
 function autoTrussCount(lengthM,p=P){return lengthM>0?Math.ceil(lengthM/p.trussStep)+1:0;}
@@ -92,7 +92,7 @@ function compute(raw,g,custom={}){
   let chordSticks=0;for(const L of chordLengths)chordSticks+=L<=p.stick?1:Math.ceil(L/p.stick);
   const webPieces=[];for(let i=0;i<trussCount;i++){webPieces.push(g.endPostM,g.endPostM,...g.diagonals.map(d=>d.lengthM));}
   const webPack=binPack(webPieces,p.stick),lagsSticks=lagSticks(lagLines,lengthM,p.stick),tube80Sticks=sticks80(beamCount,lengthM,newPosts,postLen,p);
-  const chordCost=chordSticks*p.stick*profilePrice(g.chordProfile,p),webCost=webPack.sticks*p.stick*profilePrice(g.webProfile,p),lagCost=lagsSticks*p.stick*p.tube40x20,tube80Cost=tube80Sticks*p.stick*p.tube80;
+  const chordCost=chordSticks*p.stick*profilePrice(g.chordProfile,p),webCost=webPack.sticks*p.stick*profilePrice(g.webProfile,p,'web'),lagCost=lagsSticks*p.stick*p.tube40x20,tube80Cost=tube80Sticks*p.stick*p.tube80;
   const metalCost=chordCost+webCost+lagCost+tube80Cost;
   const coverWidthM=g.widthM+2*p.polyOverhang,coverRadius=g.topCircle.radius,coverArcM=2*coverRadius*Math.asin(Math.min(1,coverWidthM/(2*coverRadius))),coverLengthM=lengthM+2*p.endOverhang;
   let coverageCost=0,fittingsCost=0,coverageData={type:coverage,coverArcM,coverLengthM};
@@ -107,7 +107,7 @@ function compute(raw,g,custom={}){
   const consumables=trussCount*(p.wire+p.discs),weld=trussCount*p.weld4m*(g.widthM/4),mountRate=coverage==='Без покрытия'?p.mountNoCover:p.mountCover,mount=area*mountRate,postMount=newPosts*(installType==='Бетонирование'?p.postConcrete:p.postPlate);
   const paintArea=paint?chordUsedM*profilePerimeter(g.chordProfile)+webUsedM*profilePerimeter(g.webProfile)+lagUsedM*0.12+beamPostUsedM*0.32:0,paintCost=paintArea*p.paint;
   const base=metalCost+coverageCost+fittingsCost+consumables+weld+mount+postMount+paintCost,markup=base*p.markup/100,priceNoDelivery=base+markup,total=priceNoDelivery+delivery,ownerMount=area*p.ownerMount,actualExpenses=base-ownerMount,profit=markup+ownerMount,margin=priceNoDelivery?profit/priceNoDelivery*100:0;
-  const oneTrussMetal=(g.topCircle.length+g.lowerTotalM)*profilePrice(g.chordProfile,p)+webOneM*profilePrice(g.webProfile,p),oneTrussWeld=p.weld4m*(g.widthM/4),oneTrussConsumables=p.wire+p.discs,oneTrussPaintArea=(g.topCircle.length+g.lowerTotalM)*profilePerimeter(g.chordProfile)+webOneM*profilePerimeter(g.webProfile),oneTrussPaint=oneTrussPaintArea*p.paint,oneCost=oneTrussMetal+oneTrussWeld+oneTrussConsumables,oneNoPaint=ceil100(oneCost*(1+p.separateMarkup/100)),onePaint=ceil100((oneCost+oneTrussPaint)*(1+p.separateMarkup/100));
+  const oneTrussMetal=(g.topCircle.length+g.lowerTotalM)*profilePrice(g.chordProfile,p)+webOneM*profilePrice(g.webProfile,p,'web'),oneTrussWeld=p.weld4m*(g.widthM/4),oneTrussConsumables=p.wire+p.discs,oneTrussPaintArea=(g.topCircle.length+g.lowerTotalM)*profilePerimeter(g.chordProfile)+webOneM*profilePerimeter(g.webProfile),oneTrussPaint=oneTrussPaintArea*p.paint,oneCost=oneTrussMetal+oneTrussWeld+oneTrussConsumables,oneNoPaint=ceil100(oneCost*(1+p.separateMarkup/100)),onePaint=ceil100((oneCost+oneTrussPaint)*(1+p.separateMarkup/100));
   const warnings=[];
   if(g.widthPostsM>p.maxWidth)warnings.push('Ширина больше '+p.maxWidth+' м — нужна отдельная инженерная проверка.');
   if(lengthM>p.maxLength)warnings.push('Длина больше '+p.maxLength+' м — нужна отдельная инженерная проверка.');
