@@ -186,11 +186,11 @@ async function patchDevHtml(dir) {
 
       const navesTile = `      <a class="tile" href="${BASE}/naves/">
         <span class="tile-icon">⌁</span>
-        <span class="tile-copy"><b>Чертёж фермы навеса</b><span>Живой SVG-чертёж, D1…Dn, ТЗ сварщику и печать/PDF. Работает без сети.</span></span>
+        <span class="tile-copy"><b>Расчёт навеса и фермы</b><span>Стоимость, материалы, прибыль, SVG-чертёж, D1…Dn и ТЗ сварщику. Работает без сети.</span></span>
         <span class="arrow">›</span>
       </a>
 `;
-      if (!html.includes('Чертёж фермы навеса')) {
+      if (!html.includes('Расчёт навеса и фермы')) {
         if (!html.includes(linksMarker)) throw new Error('DEV work app links tile marker was not found for canopy generator');
         html = html.replace(linksMarker, navesTile + linksMarker);
       }
@@ -269,7 +269,7 @@ for (const required of [
   `href="${BASE}/evroshtaketnik/"`,
   'Расчёт евроштакетника',
   `href="${BASE}/naves/"`,
-  'Чертёж фермы навеса',
+  'Расчёт навеса и фермы',
   `href="${BASE}/admin.html"`
 ]) {
   if (!builtWorkApp.includes(required)) throw new Error(`DEV work app missing: ${required}`);
@@ -285,7 +285,7 @@ const fencePrices = JSON.parse(await readFile(path.join(OUT, 'api', 'fence-price
 if (!fencePrices?.fence || typeof fencePrices.fence !== 'object') throw new Error('Dev preview fence prices are missing');
 
 const navesIndex = await readFile(path.join(OUT, 'naves', 'index.html'), 'utf8');
-for (const required of ['./naves.css','./geometry.js','./drawing.js','./naves.js','./export.js','trussSvg','cutTableBody']) {
+for (const required of ['./naves.css','./geometry.js','./pricing.js','./drawing.js','./naves.js','./export.js','trussSvg','cutTableBody','totalPrice','materialsTableBody','ownerSummary']) {
   if (!navesIndex.includes(required)) throw new Error(`DEV canopy generator missing: ${required}`);
 }
 
