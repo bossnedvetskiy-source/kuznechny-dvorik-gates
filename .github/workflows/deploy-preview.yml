@@ -51,6 +51,7 @@ jobs:
           node --check evroshtaketnik/engine.js
           node --check evroshtaketnik/evroshtaketnik.js
           node --check naves/geometry.js
+          node --check naves/pricing.js
           node --check naves/drawing.js
           node --check naves/naves.js
           node --check naves/export.js
@@ -61,6 +62,7 @@ jobs:
           node --check scripts/build-dev-preview.mjs
           node scripts/test-offline-integrity.mjs
           node scripts/test-picket-calculator.mjs
+          node scripts/test-canopy-calculator.mjs
           npm run build
           node scripts/build-timeweb.mjs
           test -s timeweb-dist/index.html
@@ -73,6 +75,7 @@ jobs:
           test -s timeweb-dist/naves/index.html
           test -s timeweb-dist/naves/naves.css
           test -s timeweb-dist/naves/geometry.js
+          test -s timeweb-dist/naves/pricing.js
           test -s timeweb-dist/naves/drawing.js
           test -s timeweb-dist/naves/naves.js
           test -s timeweb-dist/naves/export.js
