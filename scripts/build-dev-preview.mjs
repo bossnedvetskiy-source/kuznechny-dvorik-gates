@@ -194,6 +194,17 @@ async function patchDevHtml(dir) {
         if (!html.includes(linksMarker)) throw new Error('DEV work app links tile marker was not found for canopy generator');
         html = html.replace(linksMarker, navesTile + linksMarker);
       }
+
+      const navesAdminTile = `      <a class="tile" href="${BASE}/naves/admin.html">
+        <span class="tile-icon">⚙</span>
+        <span class="tile-copy"><b>Навесы — админ DEV</b><span>Сохранённые расчёты, прибыль, ЗП, материалы, 2D‑ферма и ТЗ сварщику.</span></span>
+        <span class="arrow">›</span>
+      </a>
+`;
+      if (!html.includes('Навесы — админ DEV')) {
+        if (!html.includes(linksMarker)) throw new Error('DEV work app links tile marker was not found for canopy admin');
+        html = html.replace(linksMarker, navesAdminTile + linksMarker);
+      }
     }
     await writeFile(full, html, 'utf8');
   }
@@ -287,6 +298,10 @@ if (!fencePrices?.fence || typeof fencePrices.fence !== 'object') throw new Erro
 const navesIndex = await readFile(path.join(OUT, 'naves', 'index.html'), 'utf8');
 for (const required of ['./naves.css','./geometry.js','./pricing.js','./canopy-3d.js','./naves.js','canopySvg','totalPrice','saveCalculation']) {
   if (!navesIndex.includes(required)) throw new Error(`DEV canopy generator missing: ${required}`);
+}
+const navesAdminIndex = await readFile(path.join(OUT, 'naves', 'admin.html'), 'utf8');
+for (const required of ['admin-canopy.js','canopy-orders']) {
+  if (!navesAdminIndex.includes(required)) throw new Error(`DEV canopy admin missing: ${required}`);
 }
 
 console.log('Protected dev preview built as an independent installable offline PWA');
