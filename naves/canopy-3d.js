@@ -5,13 +5,23 @@ const el=(name,attrs={},text='')=>{const n=document.createElementNS(NS,name);for
 function render(svg,g,c){
   svg.innerHTML='';if(!g?.ok||!c)return;
   const W=1200,H=700;
-  svg.append(el('rect',{x:0,y:0,width:W,height:H,fill:'#f7f6f1'}));
+  svg.setAttribute('overflow','hidden');
+  svg.setAttribute('width','100%');
+  svg.style.overflow='hidden';
   const defs=el('defs');
+  const clip=el('clipPath',{id:'canopySceneClip'});
+  clip.append(el('rect',{x:0,y:0,width:W,height:H}));
+  defs.append(clip);
+  svg.append(defs);
+  const scene=el('g',{'clip-path':'url(#canopySceneClip)'});
+  svg.append(scene);
+  const add=node=>(scene.append(node),node);
+  add(el('rect',{x:0,y:0,width:W,height:H,fill:'#f7f6f1'}));
   const grad=el('linearGradient',{id:'roofGrad',x1:'0',y1:'0',x2:'1',y2:'1'});
   grad.append(el('stop',{offset:'0%','stop-color':'#d7eef4','stop-opacity':'.78'}),el('stop',{offset:'100%','stop-color':'#91bdc8','stop-opacity':'.38'}));
   defs.append(grad);svg.append(defs);
-  svg.append(el('text',{x:48,y:48,fill:'#141618','font-size':26,'font-weight':800},'АРОЧНЫЙ НАВЕС — ОБЪЁМНАЯ СХЕМА'));
-  svg.append(el('text',{x:48,y:75,fill:'#687078','font-size':14},'Предварительная визуализация по введённым размерам'));
+  add(el('text',{x:48,y:48,fill:'#141618','font-size':26,'font-weight':800},'АРОЧНЫЙ НАВЕС — ОБЪЁМНАЯ СХЕМА'));
+  add(el('text',{x:48,y:75,fill:'#687078','font-size':14},'Предварительная визуализация по введённым размерам'));
 
   const width=g.widthM,length=c.lengthM,height=Math.max(1.6,c.visibleHeightM),roofRise=g.riseM;
   // Fit the complete isometric footprint inside the SVG instead of allowing the
@@ -27,9 +37,9 @@ function render(svg,g,c){
   const maxZ=Math.max(.1,height+roofRise);
   const sz=Math.max(55,Math.min(125,(oy-width*sx*.08-105)/maxZ));
   const P=(x,y,z)=>({x:ox+(x-width/2)*sx-y*sy,y:oy+(x-width/2)*sx*.16+y*sy*.52-z*sz});
-  const line=(a,b,attrs={})=>svg.append(el('line',{x1:a.x,y1:a.y,x2:b.x,y2:b.y,stroke:'#272b2e','stroke-width':4,'stroke-linecap':'round',...attrs}));
-  const poly=(pts,attrs={})=>svg.append(el('polygon',{points:pts.map(p=>p.x.toFixed(1)+','+p.y.toFixed(1)).join(' '),...attrs}));
-  const path=(pts,attrs={})=>svg.append(el('path',{d:pts.map((p,i)=>(i?'L':'M')+' '+p.x.toFixed(1)+' '+p.y.toFixed(1)).join(' '),fill:'none',stroke:'#202427','stroke-width':3.2,'stroke-linejoin':'round','stroke-linecap':'round',...attrs}));
+  const line=(a,b,attrs={})=>add(el('line',{x1:a.x,y1:a.y,x2:b.x,y2:b.y,stroke:'#272b2e','stroke-width':4,'stroke-linecap':'round',...attrs}));
+  const poly=(pts,attrs={})=>add(el('polygon',{points:pts.map(p=>p.x.toFixed(1)+','+p.y.toFixed(1)).join(' '),...attrs}));
+  const path=(pts,attrs={})=>add(el('path',{d:pts.map((p,i)=>(i?'L':'M')+' '+p.x.toFixed(1)+' '+p.y.toFixed(1)).join(' '),fill:'none',stroke:'#202427','stroke-width':3.2,'stroke-linejoin':'round','stroke-linecap':'round',...attrs}));
 
   const postXs=[g.overhangM,g.widthM-g.overhangM];
   const postCount=Math.max(2,c.postsPerSide||2);
@@ -61,7 +71,7 @@ function render(svg,g,c){
 
   const ground=[P(0,0,0),P(width,0,0),P(width,length,0),P(0,length,0)];
   poly(ground,{fill:'#deded8','fill-opacity':'.48',stroke:'#b8bab6','stroke-width':1.2});
-  postYs.forEach(y=>postXs.forEach(x=>svg.append(el('circle',{cx:P(x,y,0).x,cy:P(x,y,0).y,r:4,fill:'#25292c'}))));
+  postYs.forEach(y=>postXs.forEach(x=>add(el('circle',{cx:P(x,y,0).x,cy:P(x,y,0).y,r:4,fill:'#25292c'}))));
 
   const info=[
     'Размер: '+window.TrussGeometry.fmt(g.widthPostsM,2)+' × '+window.TrussGeometry.fmt(c.lengthM,2)+' м',
@@ -70,8 +80,8 @@ function render(svg,g,c){
     'Опор: '+c.totalPosts+' шт',
     'Покрытие: '+c.coverage
   ];
-  info.forEach((t,i)=>svg.append(el('text',{x:48,y:620+i*18,fill:'#4c5358','font-size':12,'font-weight':i===0?800:600},t)));
-  svg.append(el('text',{x:1150,y:660,fill:'#8b9196','font-size':11,'text-anchor':'end'},'Схема не является монтажным чертежом'));
+  info.forEach((t,i)=>add(el('text',{x:48,y:620+i*18,fill:'#4c5358','font-size':12,'font-weight':i===0?800:600},t)));
+  add(el('text',{x:1150,y:660,fill:'#8b9196','font-size':11,'text-anchor':'end'},'Схема не является монтажным чертежом'));
 }
 window.Canopy3D={render};
 })();
