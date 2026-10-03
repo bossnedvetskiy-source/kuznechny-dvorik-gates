@@ -146,18 +146,34 @@ Object.assign(surveyorTestManifest, {
 await writeFile(surveyorTestManifestPath, JSON.stringify(surveyorTestManifest, null, 2)+'\n', 'utf8');
 
 const surveyorTestIndexPath = path.join(SURVEYOR_TEST_OUT, 'index.html');
+const surveyorTestAssetVersion = encodeURIComponent(devSourceVersion);
 let surveyorTestIndex = await readFile(surveyorTestIndexPath, 'utf8');
 surveyorTestIndex = surveyorTestIndex
   .replace('<title>КД Замерщик</title>', '<title>КД Замерщик Тест</title>')
   .replace('<h1>КД Замерщик</h1>', '<h1>КД Замерщик Тест</h1>')
-  .replace('<div class="eyebrow">КД Замерщик</div>', '<div class="eyebrow">КД Замерщик · Тест</div>');
+  .replace('<div class="eyebrow">КД Замерщик</div>', '<div class="eyebrow">КД Замерщик · Тест</div>')
+  .replace('href="./styles.css"', `href="./styles.css?v=${surveyorTestAssetVersion}"`)
+  .replace('src="./app.js"', `src="./app.js?v=${surveyorTestAssetVersion}"`)
+  .replace('href="./manifest.webmanifest"', `href="./manifest.webmanifest?v=${surveyorTestAssetVersion}"`);
 await writeFile(surveyorTestIndexPath, surveyorTestIndex, 'utf8');
+
+const surveyorTestAppPath = path.join(SURVEYOR_TEST_OUT, 'app.js');
+let surveyorTestApp = await readFile(surveyorTestAppPath, 'utf8');
+surveyorTestApp = surveyorTestApp.replace(
+  "from './line-builder.js';",
+  `from './line-builder.js?v=${surveyorTestAssetVersion}';`
+);
+await writeFile(surveyorTestAppPath, surveyorTestApp, 'utf8');
 
 const surveyorTestSwPath = path.join(SURVEYOR_TEST_OUT, 'sw.js');
 let surveyorTestSw = await readFile(surveyorTestSwPath, 'utf8');
 surveyorTestSw = surveyorTestSw
   .replace(/const CACHE = '[^']+';/, `const CACHE = 'kdz-test-pwa-${devSourceVersion}';`)
-  .replace("keys.filter(k => k.startsWith('kd-surveyor-') && k !== CACHE)", "keys.filter(k => k.startsWith('kdz-test-pwa-') && k !== CACHE)");
+  .replace("keys.filter(k => k.startsWith('kd-surveyor-') && k !== CACHE)", "keys.filter(k => k.startsWith('kdz-test-pwa-') && k !== CACHE)")
+  .replace(
+    "if (event.request.method !== 'GET') return;\n  event.respondWith((async () => {\n    const cached = await caches.match(event.request);\n    if (cached) return cached;",
+    "if (event.request.method !== 'GET') return;\n  event.respondWith((async () => {\n    if(event.request.mode==='navigate'){try{const fresh=await fetch(event.request,{cache:'no-store'});if(fresh&&fresh.ok)return fresh;}catch{}}\n    const cached = await caches.match(event.request);\n    if (cached) return cached;"
+  );
 await writeFile(surveyorTestSwPath, surveyorTestSw, 'utf8');
 
 // Give the GitHub Pages DEV build its own PWA identity. Production keeps the
