@@ -253,5 +253,10 @@ await copyFile('storefront.css', 'dist/client/storefront.css');
 await cp('assets/catalog', 'dist/client/catalog', { recursive: true });
 await cp('evroshtaketnik', 'dist/client/evroshtaketnik', { recursive: true });
 await cp('naves', 'dist/client/naves', { recursive: true });
+await mkdir('dist/client/naves/vendor', { recursive: true });
+await copyFile('node_modules/three/build/three.module.js', 'dist/client/naves/vendor/three.module.js');
+const orbitControlsSource = (await readFile('node_modules/three/examples/jsm/controls/OrbitControls.js', 'utf8'))
+  .replace("from 'three';", "from './three.module.js';");
+await writeFile('dist/client/naves/vendor/OrbitControls.js', orbitControlsSource, 'utf8');
 await copyFile('.openai/hosting.json', 'dist/.openai/hosting.json');
 await cp('drizzle', 'dist/.openai/drizzle', { recursive: true });
