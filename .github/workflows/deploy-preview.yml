@@ -117,6 +117,9 @@ jobs:
       - name: Test surveyor app mobile/offline
         run: npx playwright test tests/surveyor-mobile.spec.js
 
+      - name: Test surveyor test PWA installability
+        run: npx playwright test tests/surveyor-test-pwa.spec.js
+
       - name: Snapshot current production data
         continue-on-error: true
         shell: bash
@@ -154,6 +157,9 @@ jobs:
           test -s _site/surveyor-app/app.js
           test -s _site/surveyor-app/line-builder.js
           test -s _site/surveyor-app/sw.js
+          test -s _site/surveyor-test/index.html
+          test -s _site/surveyor-test/manifest.webmanifest
+          test -s _site/surveyor-test/sw.js
           node -e "const x=JSON.parse(require('fs').readFileSync('_site/api/offline-version','utf8')); if(!x.version || !String(x.version).startsWith('dev-')) throw Error('DEV offline version missing'); console.log('DEV offline version OK:', x.version)"
           if grep -Fq '<script src="app.js"' _site/index.html; then
             echo 'Dev preview is still using raw source scripts' >&2

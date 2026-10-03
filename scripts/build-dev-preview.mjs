@@ -4,6 +4,8 @@ import path from 'node:path';
 const ROOT = process.cwd();
 const SOURCE = path.join(ROOT, 'timeweb-dist');
 const SURVEYOR_SOURCE = path.join(ROOT, 'surveyor-app');
+const SURVEYOR_TEST_DIR = 'surveyor-test';
+const SURVEYOR_TEST_OUT = path.join(ROOT, '_site', SURVEYOR_TEST_DIR);
 const OUT = path.join(ROOT, '_site');
 const BASE = '/kuznechny-dvorik-gates';
 const ACCESS_FILE = path.join(ROOT, 'dev-access.js');
@@ -122,6 +124,41 @@ async function walk(dir) {
   }
 }
 await walk(OUT);
+
+// Build an un-gated standalone test PWA *after* the protected DEV tree is
+// rewritten. This keeps the test app installable on a phone without sending
+// every launch through the DEV access gate.
+await rm(SURVEYOR_TEST_OUT, {recursive:true, force:true});
+await cp(SURVEYOR_SOURCE, SURVEYOR_TEST_OUT, {recursive:true});
+
+const surveyorTestManifestPath = path.join(SURVEYOR_TEST_OUT, 'manifest.webmanifest');
+const surveyorTestManifest = JSON.parse(await readFile(surveyorTestManifestPath, 'utf8'));
+Object.assign(surveyorTestManifest, {
+  name:'КД Замерщик Тест',
+  short_name:'КД Замер Тест',
+  id:`${BASE}/${SURVEYOR_TEST_DIR}`,
+  start_url:`${BASE}/${SURVEYOR_TEST_DIR}/`,
+  scope:`${BASE}/${SURVEYOR_TEST_DIR}/`,
+  description:'Тестовая PWA КД Замерщик. Обновляется автоматически из DEV.',
+  background_color:'#f4f4f2',
+  theme_color:'#151515'
+});
+await writeFile(surveyorTestManifestPath, JSON.stringify(surveyorTestManifest, null, 2)+'\n', 'utf8');
+
+const surveyorTestIndexPath = path.join(SURVEYOR_TEST_OUT, 'index.html');
+let surveyorTestIndex = await readFile(surveyorTestIndexPath, 'utf8');
+surveyorTestIndex = surveyorTestIndex
+  .replace('<title>КД Замерщик</title>', '<title>КД Замерщик Тест</title>')
+  .replace('<h1>КД Замерщик</h1>', '<h1>КД Замерщик Тест</h1>')
+  .replace('<div class="eyebrow">КД Замерщик</div>', '<div class="eyebrow">КД Замерщик · Тест</div>');
+await writeFile(surveyorTestIndexPath, surveyorTestIndex, 'utf8');
+
+const surveyorTestSwPath = path.join(SURVEYOR_TEST_OUT, 'sw.js');
+let surveyorTestSw = await readFile(surveyorTestSwPath, 'utf8');
+surveyorTestSw = surveyorTestSw
+  .replace(/const CACHE = '[^']+';/, "const CACHE = 'kdz-test-pwa-v1';")
+  .replace("keys.filter(k => k.startsWith('kd-surveyor-') && k !== CACHE)", "keys.filter(k => k.startsWith('kdz-test-pwa-') && k !== CACHE)");
+await writeFile(surveyorTestSwPath, surveyorTestSw, 'utf8');
 
 // Give the GitHub Pages DEV build its own PWA identity. Production keeps the
 // normal site manifest, icon, service worker cache names and IndexedDB.
@@ -315,4 +352,18 @@ for (const required of ['КД Замерщик','noindex,nofollow,noarchive','ku
   if (!surveyorIndex.includes(required)) throw new Error(`DEV surveyor preview missing: ${required}`);
 }
 
-console.log('Protected dev preview built as an independent installable offline PWA');
+// Ungated surveyor test PWA must remain independent from the protected preview.
+const surveyorTestIndexBuilt = await readFile(path.join(SURVEYOR_TEST_OUT, 'index.html'), 'utf8');
+if (surveyorTestIndexBuilt.includes('kuzdvor-dev-gate')) throw new Error('Surveyor test PWA still contains DEV access gate');
+if (!surveyorTestIndexBuilt.includes('КД Замерщик Тест')) throw new Error('Surveyor test PWA title is missing');
+const surveyorTestManifestBuilt = JSON.parse(await readFile(path.join(SURVEYOR_TEST_OUT, 'manifest.webmanifest'), 'utf8'));
+if (
+  surveyorTestManifestBuilt.name !== 'КД Замерщик Тест' ||
+  surveyorTestManifestBuilt.id !== `${BASE}/${SURVEYOR_TEST_DIR}` ||
+  surveyorTestManifestBuilt.start_url !== `${BASE}/${SURVEYOR_TEST_DIR}/` ||
+  surveyorTestManifestBuilt.scope !== `${BASE}/${SURVEYOR_TEST_DIR}/`
+) throw new Error('Surveyor test PWA identity is not isolated');
+const surveyorTestSwBuilt = await readFile(path.join(SURVEYOR_TEST_OUT, 'sw.js'), 'utf8');
+if (!surveyorTestSwBuilt.includes('kdz-test-pwa-v1')) throw new Error('Surveyor test PWA cache namespace is not isolated');
+
+console.log('Protected dev preview plus ungated surveyor test PWA built successfully');
