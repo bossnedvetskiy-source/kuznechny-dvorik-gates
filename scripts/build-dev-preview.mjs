@@ -156,7 +156,7 @@ await writeFile(surveyorTestIndexPath, surveyorTestIndex, 'utf8');
 const surveyorTestSwPath = path.join(SURVEYOR_TEST_OUT, 'sw.js');
 let surveyorTestSw = await readFile(surveyorTestSwPath, 'utf8');
 surveyorTestSw = surveyorTestSw
-  .replace(/const CACHE = '[^']+';/, "const CACHE = 'kdz-test-pwa-v1';")
+  .replace(/const CACHE = '[^']+';/, `const CACHE = 'kdz-test-pwa-${devSourceVersion}';`)
   .replace("keys.filter(k => k.startsWith('kd-surveyor-') && k !== CACHE)", "keys.filter(k => k.startsWith('kdz-test-pwa-') && k !== CACHE)");
 await writeFile(surveyorTestSwPath, surveyorTestSw, 'utf8');
 
@@ -364,6 +364,6 @@ if (
   surveyorTestManifestBuilt.scope !== `${BASE}/${SURVEYOR_TEST_DIR}/`
 ) throw new Error('Surveyor test PWA identity is not isolated');
 const surveyorTestSwBuilt = await readFile(path.join(SURVEYOR_TEST_OUT, 'sw.js'), 'utf8');
-if (!surveyorTestSwBuilt.includes('kdz-test-pwa-v1')) throw new Error('Surveyor test PWA cache namespace is not isolated');
+if (!surveyorTestSwBuilt.includes(`kdz-test-pwa-${devSourceVersion}`)) throw new Error('Surveyor test PWA cache/version is not isolated');
 
 console.log('Protected dev preview plus ungated surveyor test PWA built successfully');
