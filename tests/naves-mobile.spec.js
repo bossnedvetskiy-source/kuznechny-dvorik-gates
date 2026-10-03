@@ -13,8 +13,12 @@ test('canopy client is simple and saved order keeps production/finance in admin'
   await expect(page.locator('#farmTypeCaption')).toHaveText('Арочный');
   await expect(page.locator('[data-farm-type]')).toHaveCount(7);
   await expect(page.locator('[data-farm-type="Арочный"]')).toHaveClass(/is-selected/);
-  await expect(page.locator('[data-farm-type="Двухскатный"] img')).toBeVisible();
-  await expect(page.locator('[data-farm-type="Двухскатный арочный"] img')).toBeVisible();
+  await expect(page.locator('.farm-sprite')).toHaveCount(7);
+  const spriteOk=await page.locator('.farm-sprite').evaluateAll(nodes=>nodes.every(n=>getComputedStyle(n).backgroundImage.includes('original-farms.webp')));
+  expect(spriteOk).toBeTruthy();
+  await expect(page.locator('#farmPreset')).toHaveValue('Стандарт');
+  await expect(page.locator('[data-preset-option]')).toHaveCount(4);
+  await expect(page.locator('[data-preset-option="Стандарт"]')).toHaveClass(/is-selected/);
   await expect(page.locator('#trussType')).toHaveValue('Треугольная');
   await expect(page.locator('[data-truss-option]')).toHaveCount(4);
   await expect(page.locator('[data-truss-option="Треугольная"]')).toHaveClass(/is-selected/);
