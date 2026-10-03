@@ -114,6 +114,9 @@ jobs:
       - name: Test canopy calculator mobile UX
         run: npx playwright test tests/naves-mobile.spec.js
 
+      - name: Test surveyor app mobile/offline
+        run: npx playwright test tests/surveyor-mobile.spec.js
+
       - name: Snapshot current production data
         continue-on-error: true
         shell: bash
