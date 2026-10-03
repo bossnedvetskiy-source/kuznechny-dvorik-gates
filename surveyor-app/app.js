@@ -340,12 +340,14 @@ function serverSurveyToLocal(server, existing = {}) {
   };
 }
 
-async function applyServerClient(server) {
+async function applyServerClient(server, { force = false } = {}) {
   const existing = await idbGet('clients', server.id);
+  if (!force && existing && ['pending','conflict'].includes(existing.syncState)) return;
   await idbPut('clients', serverClientToLocal(server, existing || {}));
 }
-async function applyServerSurvey(server) {
+async function applyServerSurvey(server, { force = false } = {}) {
   const existing = await idbGet('surveys', server.id);
+  if (!force && existing && ['pending','conflict'].includes(existing.syncState)) return;
   await idbPut('surveys', serverSurveyToLocal(server, existing || {}));
 }
 
@@ -389,10 +391,15 @@ async function syncNow({ silent = false } = {}) {
     };
     const data = await apiRequest('/sync', { method:'POST', body:JSON.stringify(payload) });
 
-    for (const item of data.acks?.clients || []) await applyServerClient(item);
-    for (const item of data.acks?.surveys || []) await applyServerSurvey(item);
-    for (const item of data.pull?.clients || []) await applyServerClient(item);
-    for (const item of data.pull?.surveys || []) await applyServerSurvey(item);
+    for (const item of data.acks?.clients || []) await applyServerClient(item, { force:true });
+    for (const item of data.acks?.surveys || []) await applyServerSurvey(item, { force:true });
+    const conflictIds = new Set((data.conflicts || []).map(item => item.entity + ':' + item.id));
+    for (const item of data.pull?.clients || []) {
+      if (!conflictIds.has('client:' + item.id)) await applyServerClient(item);
+    }
+    for (const item of data.pull?.surveys || []) {
+      if (!conflictIds.has('survey:' + item.id)) await applyServerSurvey(item);
+    }
 
     for (const conflict of data.conflicts || []) {
       const store = conflict.entity === 'client' ? 'clients' : 'surveys';
