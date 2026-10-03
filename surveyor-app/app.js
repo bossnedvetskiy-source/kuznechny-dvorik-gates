@@ -6,8 +6,10 @@ const DB_VERSION = 1;
 const STORE_NAMES = ['employees', 'clients', 'surveys', 'meta'];
 const IS_ANDROID_APP = location.hostname === 'appassets.androidplatform.net';
 const IS_PREVIEW = location.hostname.endsWith('github.io') || ['localhost','127.0.0.1'].includes(location.hostname);
-const FORCE_SERVER = new URLSearchParams(location.search).get('server') === '1';
-const API_ENABLED = IS_ANDROID_APP || !IS_PREVIEW || FORCE_SERVER;
+const URL_PARAMS = new URLSearchParams(location.search);
+const FORCE_SERVER = URL_PARAMS.get('server') === '1';
+const APK_LOCAL_MODE = IS_ANDROID_APP && URL_PARAMS.get('mode') !== 'server';
+const API_ENABLED = FORCE_SERVER || (!IS_PREVIEW && !APK_LOCAL_MODE);
 const API_BASE = (IS_PREVIEW || IS_ANDROID_APP) ? 'https://kuzdvor.tw1.ru/api/surveyor' : '/api/surveyor';
 
 const WORK_TYPES = {
