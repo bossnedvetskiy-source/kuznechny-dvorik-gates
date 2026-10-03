@@ -3,6 +3,7 @@ import path from 'node:path';
 
 const ROOT = process.cwd();
 const SOURCE = path.join(ROOT, 'timeweb-dist');
+const SURVEYOR_SOURCE = path.join(ROOT, 'surveyor-app');
 const OUT = path.join(ROOT, '_site');
 const BASE = '/kuznechny-dvorik-gates';
 const ACCESS_FILE = path.join(ROOT, 'dev-access.js');
@@ -13,6 +14,7 @@ const DEV_APP_START = `${BASE}/work-app.html?app=1&environment=dev`;
 
 await rm(OUT, {recursive:true, force:true});
 await cp(SOURCE, OUT, {recursive:true});
+await cp(SURVEYOR_SOURCE, path.join(OUT, 'surveyor-app'), {recursive:true});
 
 for (const target of [
   '.htaccess',
@@ -302,6 +304,15 @@ for (const required of ['./naves.css','./geometry.js','./pricing.js','./canopy-t
 const navesAdminIndex = await readFile(path.join(OUT, 'naves', 'admin.html'), 'utf8');
 for (const required of ['admin-canopy.js','admin-tabs','editor-shell']) {
   if (!navesAdminIndex.includes(required)) throw new Error(`DEV canopy admin missing: ${required}`);
+}
+
+for (const required of ['index.html','styles.css','app.js','manifest.webmanifest','sw.js','icon.svg']) {
+  try { await readFile(path.join(OUT, 'surveyor-app', required)); }
+  catch { throw new Error(`DEV surveyor app missing: ${required}`); }
+}
+const surveyorIndex = await readFile(path.join(OUT, 'surveyor-app', 'index.html'), 'utf8');
+for (const required of ['КД Замерщик','noindex,nofollow,noarchive','kuzdvor-dev-gate']) {
+  if (!surveyorIndex.includes(required)) throw new Error(`DEV surveyor preview missing: ${required}`);
 }
 
 console.log('Protected dev preview built as an independent installable offline PWA');
