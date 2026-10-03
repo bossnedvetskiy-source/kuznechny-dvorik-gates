@@ -71,3 +71,58 @@ test('owner can manage employee access', async ({page}) => {
 
   await expect(page.locator('#employeeList')).toContainText('Второй замерщик');
 });
+
+
+test('surveyor builds an editable fence and gate line', async ({page}) => {
+  await page.goto('/surveyor-app/index.html');
+  await page.locator('#loginInput').fill('zamer');
+  await page.locator('#passwordInput').fill('1234');
+  await page.locator('#loginForm button[type="submit"]').click();
+
+  await page.locator('#newSurveyBtn').click();
+  await page.locator('#surveyClientName').fill('Клиент схема');
+  await page.locator('#surveyClientPhone').fill('89371111111');
+  await page.locator('#surveyAddress').fill('Мелеуз, линия забора');
+  await page.locator('#toSurveyStep2').click();
+  await page.locator('input[name="workType"][value="gates"]').check();
+  await page.locator('input[name="workType"][value="fence"]').check();
+  await page.locator('#saveSurveyBtn').click();
+
+  await page.locator('.survey-card').first().click();
+  await page.locator('[data-open-layout]').click();
+  await expect(page.locator('#layoutDialog')).toBeVisible();
+
+  await page.locator('[data-add-type="fence"]').click();
+  await page.locator('#segmentWidthInput').fill('5000');
+  await page.locator('#segmentMaterialInput').selectOption('profsheet');
+  await page.locator('#saveSegmentBtn').click();
+
+  const endAdd = page.locator('[data-insert-line]').last();
+  await endAdd.click();
+  await page.locator('#segmentTypeInput').selectOption('gate');
+  await page.locator('#segmentWidthInput').fill('3400');
+  await page.locator('#segmentMaterialInput').selectOption('forged');
+  await page.locator('#saveSegmentBtn').click();
+
+  await page.locator('[data-insert-line]').last().click();
+  await page.locator('#segmentTypeInput').selectOption('wicket');
+  await page.locator('#segmentWidthInput').fill('1000');
+  await page.locator('#segmentMaterialInput').selectOption('forged');
+  await page.locator('#saveSegmentBtn').click();
+
+  const line = page.locator('.layout-line').first();
+  await expect(line).toContainText('Забор');
+  await expect(line).toContainText('Ворота');
+  await expect(line).toContainText('Калитка');
+  await expect(line).toContainText('9,4 м');
+
+  const middlePost = line.locator('[data-edit-post]').nth(1);
+  await middlePost.click();
+  await page.locator('#postKindInput').selectOption('existing');
+  await page.locator('#savePostBtn').click();
+  await expect(line).toContainText('Существ.');
+
+  await page.locator('#closeLayoutBtn').click();
+  await expect(page.locator('#surveyDetailsContent')).toContainText('3 элементов');
+  await expect(page.locator('.layout-preview-mini')).toBeVisible();
+});
