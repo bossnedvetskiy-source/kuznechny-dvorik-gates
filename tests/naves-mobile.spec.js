@@ -9,14 +9,15 @@ test('canopy client is simple and saved order keeps production/finance in admin'
   await expect(page.locator('#reset3dView')).toBeVisible();
   await expect(page.locator('#totalPrice')).toContainText('₽');
   await expect(page.locator('#totalPrice')).not.toHaveText('0 ₽');
+  await expect(page.locator('#farmType')).toHaveValue('Арочный');
+  await expect(page.locator('#farmTypeCaption')).toHaveText('Арочный');
+  await expect(page.locator('[data-farm-type]')).toHaveCount(5);
+  await expect(page.locator('[data-farm-type="Арочный"]')).toHaveClass(/is-selected/);
   await expect(page.locator('#trussType')).toHaveValue('Треугольная');
+  await expect(page.locator('[data-truss-option]')).toHaveCount(4);
+  await expect(page.locator('[data-truss-option="Треугольная"]')).toHaveClass(/is-selected/);
   await expect(page.locator('#materialMode')).toHaveValue('30×30×2');
   await expect(page.locator('#lagMode')).toHaveValue('Стандарт');
-  await expect(page.locator('[data-truss-option]')).toHaveCount(3);
-  await expect(page.locator('.truss-option-art img')).toHaveCount(3);
-  const trussImagesLoaded=await page.locator('.truss-option-art img').evaluateAll(imgs=>imgs.every(img=>img.complete&&img.naturalWidth>0));
-  expect(trussImagesLoaded).toBeTruthy();
-  await expect(page.locator('[data-truss-option="Треугольная"]')).toHaveClass(/is-selected/);
   await expect(page.locator('#resultStatus')).toContainText('Пример расчёта');
   await expect(page.locator('#clientSummary')).toContainText('3,40 × 8,40 м');
   await expect(page.locator('#clientSummary')).toContainText('Поликарбонат');
@@ -57,11 +58,10 @@ test('canopy client is simple and saved order keeps production/finance in admin'
 
   // Visual truss cards and material buttons.
   await page.locator('[data-truss-option="Усиленная"]').click();
-  await page.locator('[data-material-option="40×20×2"]').click();
+  await page.locator('#materialMode').selectOption({label:'40×20×2'});
   await expect(page.locator('#trussType')).toHaveValue('Усиленная');
   await expect(page.locator('#materialMode')).toHaveValue('40×20×2');
   await expect(page.locator('[data-truss-option="Усиленная"]')).toHaveClass(/is-selected/);
-  await expect(page.locator('[data-material-option="40×20×2"]')).toHaveClass(/is-selected/);
   await expect(page.locator('#clientSummary')).toContainText('Усиленная');
   await expect(page.locator('#clientSummary')).toContainText('40×20×2');
   await expect(page.locator('#clientSummary')).toContainText('Эконом · 8 линий');
@@ -95,6 +95,7 @@ test('canopy client is simple and saved order keeps production/finance in admin'
   expect(saved[0].category).toBe('canopy');
   expect(saved[0].configuration.canopy.input.widthPostsM).toBe(3);
   expect(saved[0].configuration.canopy.input.lengthM).toBe(5.9);
+  expect(saved[0].configuration.canopy.input.farmType).toBe('Арочный');
   expect(saved[0].configuration.canopy.input.trussType).toBe('Усиленная');
   expect(saved[0].configuration.canopy.input.materialMode).toBe('40×20×2');
   expect(saved[0].configuration.canopy.input.lagMode).toBe('Эконом');
