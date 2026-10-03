@@ -257,7 +257,6 @@ function kd_surveyor_work_types(mixed $value): array
     $allowed = ['gates','fence','canopy'];
     $types = is_array($value) ? array_values(array_unique(array_map('strval', $value))) : [];
     $types = array_values(array_filter($types, static fn(string $type): bool => in_array($type, $allowed, true)));
-    if (!$types) kd_surveyor_json(['error' => 'Не указан вид работ'], 400);
     return $types;
 }
 
@@ -295,7 +294,7 @@ function kd_surveyor_sync_client(array $item, array $session): array
     $address = mb_substr(trim((string)($item['address'] ?? '')), 0, 500);
     $updatedAt = mb_substr(trim((string)($item['updatedAt'] ?? '')), 0, 40);
     $incomingRevision = max(0, (int)($item['serverRevision'] ?? 0));
-    if ($name === '' || strlen(preg_replace('/\D/', '', $phone) ?? '') < 10) kd_surveyor_json(['error' => 'У клиента не заполнены имя или телефон'], 400);
+    if (strlen(preg_replace('/\D/', '', $phone) ?? '') < 10) kd_surveyor_json(['error' => 'У клиента не заполнен телефон'], 400);
     $key = kd_surveyor_principal_key($session);
 
     $stmt = kd_db()->prepare('SELECT * FROM surveyor_clients WHERE uuid=? LIMIT 1');
@@ -333,7 +332,7 @@ function kd_surveyor_sync_order(array $item, array $session): array
     $updatedAt = mb_substr(trim((string)($item['updatedAt'] ?? '')),0,40);
     $incomingRevision = max(0,(int)($item['serverRevision'] ?? 0));
     $key = kd_surveyor_principal_key($session);
-    if ($name === '' || strlen(preg_replace('/\D/', '', $phone) ?? '') < 10 || $address === '') kd_surveyor_json(['error' => 'Заказ заполнен не полностью'],400);
+    if (strlen(preg_replace('/\D/', '', $phone) ?? '') < 10 || $address === '') kd_surveyor_json(['error' => 'Для замера нужны телефон и адрес объекта'],400);
 
     $stmt = kd_db()->prepare('SELECT * FROM surveyor_orders WHERE uuid=? LIMIT 1');
     $stmt->execute([$uuid]);
