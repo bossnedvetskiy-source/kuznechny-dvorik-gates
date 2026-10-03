@@ -178,6 +178,55 @@ surveyorTestSw = surveyorTestSw
   );
 await writeFile(surveyorTestSwPath, surveyorTestSw, 'utf8');
 
+// Build a completely fresh V2 surveyor PWA on a new path.
+await rm(SURVEYOR_V2_OUT, {recursive:true, force:true});
+await cp(SURVEYOR_SOURCE, SURVEYOR_V2_OUT, {recursive:true});
+
+const surveyorV2ManifestPath = path.join(SURVEYOR_V2_OUT, 'manifest.webmanifest');
+const surveyorV2Manifest = JSON.parse(await readFile(surveyorV2ManifestPath, 'utf8'));
+Object.assign(surveyorV2Manifest, {
+  name:'КД Замерщик V2',
+  short_name:'КД Замер V2',
+  id:`${BASE}/${SURVEYOR_V2_DIR}`,
+  start_url:`${BASE}/${SURVEYOR_V2_DIR}/`,
+  scope:`${BASE}/${SURVEYOR_V2_DIR}/`,
+  description:'Чистая тестовая PWA КД Замерщик V2.',
+  background_color:'#f4f4f2',
+  theme_color:'#151515'
+});
+await writeFile(surveyorV2ManifestPath, JSON.stringify(surveyorV2Manifest, null, 2)+'\n', 'utf8');
+
+const surveyorV2AssetVersion = encodeURIComponent(devSourceVersion);
+const surveyorV2IndexPath = path.join(SURVEYOR_V2_OUT, 'index.html');
+let surveyorV2Index = await readFile(surveyorV2IndexPath, 'utf8');
+surveyorV2Index = surveyorV2Index
+  .replace('<title>КД Замерщик</title>', '<title>КД Замерщик V2</title>')
+  .replace('<h1>КД Замерщик</h1>', '<h1>КД Замерщик V2</h1>')
+  .replace('<div class="eyebrow">КД Замерщик</div>', '<div class="eyebrow">КД Замерщик · V2</div>')
+  .replace('href="./styles.css"', `href="./styles.css?v=${surveyorV2AssetVersion}"`)
+  .replace('src="./app.js"', `src="./app.js?v=${surveyorV2AssetVersion}"`)
+  .replace('href="./manifest.webmanifest"', `href="./manifest.webmanifest?v=${surveyorV2AssetVersion}"`);
+await writeFile(surveyorV2IndexPath, surveyorV2Index, 'utf8');
+
+const surveyorV2AppPath = path.join(SURVEYOR_V2_OUT, 'app.js');
+let surveyorV2App = await readFile(surveyorV2AppPath, 'utf8');
+surveyorV2App = surveyorV2App.replace(
+  "from './line-builder.js';",
+  `from './line-builder.js?v=${surveyorV2AssetVersion}';`
+);
+await writeFile(surveyorV2AppPath, surveyorV2App, 'utf8');
+
+const surveyorV2SwPath = path.join(SURVEYOR_V2_OUT, 'sw.js');
+let surveyorV2Sw = await readFile(surveyorV2SwPath, 'utf8');
+surveyorV2Sw = surveyorV2Sw
+  .replace(/const CACHE = '[^']+';/, `const CACHE = 'kdz-v2-${devSourceVersion}';`)
+  .replace("keys.filter(k => k.startsWith('kd-surveyor-') && k !== CACHE)", "keys.filter(k => k.startsWith('kdz-v2-') && k !== CACHE)")
+  .replace(
+    "if (event.request.method !== 'GET') return;\n  event.respondWith((async () => {\n    const cached = await caches.match(event.request);\n    if (cached) return cached;",
+    "if (event.request.method !== 'GET') return;\n  event.respondWith((async () => {\n    if(event.request.mode==='navigate'){try{const fresh=await fetch(event.request,{cache:'no-store'});if(fresh&&fresh.ok)return fresh;}catch{}}\n    const cached = await caches.match(event.request);\n    if (cached) return cached;"
+  );
+await writeFile(surveyorV2SwPath, surveyorV2Sw, 'utf8');
+
 // Give the GitHub Pages DEV build its own PWA identity. Production keeps the
 // normal site manifest, icon, service worker cache names and IndexedDB.
 const devIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
