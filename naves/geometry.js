@@ -89,6 +89,23 @@
     };
   }
 
+  function buildStrengthenedMembers(innerChordM,lowerRiseM,widthM,riseM,targetCellM){
+    const tri=buildTriangularMembers(innerChordM,lowerRiseM,widthM,riseM,targetCellM);
+    const verticals=tri.nodes.slice(1,-1).map((n,i)=>({
+      index:i+1,
+      x:n.x,
+      yLower:n.yLower,
+      yUpper:n.yUpper,
+      lengthM:Math.max(0,n.yUpper-n.yLower),
+      angleDeg:90
+    }));
+    return {
+      ...tri,
+      verticals,
+      verticalCount:verticals.length
+    };
+  }
+
   function compute(raw){
     const widthPostsM=clamp(Number(raw.widthPostsM)||3.4,1.5,8);
     const overhangM=clamp(Number(raw.overhangMm)||150,0,600)/1000;
@@ -99,7 +116,11 @@
     const endFlatM=clamp(Number(raw.endFlatMm)||300,0,800)/1000;
     const targetCellM=clamp(Number(raw.cellStepMm)||400,250,700)/1000;
     const trussCount=Math.round(clamp(Number(raw.trussCount)||1,1,40));
-    const trussType=raw.trussType==='Вертикальная'?'Вертикальная':'Треугольная';
+    const trussType=raw.trussType==='Вертикальная'
+      ?'Вертикальная'
+      :raw.trussType==='Усиленная'
+        ?'Усиленная'
+        :'Треугольная';
 
     const innerChordM=widthM-2*endFlatM;
     const lowerRiseM=riseM-heightM;
@@ -115,7 +136,9 @@
 
     const members=trussType==='Вертикальная'
       ? buildVerticalMembers(innerChordM,lowerRiseM,widthM,riseM,targetCellM)
-      : buildTriangularMembers(innerChordM,lowerRiseM,widthM,riseM,targetCellM);
+      :trussType==='Усиленная'
+        ? buildStrengthenedMembers(innerChordM,lowerRiseM,widthM,riseM,targetCellM)
+        : buildTriangularMembers(innerChordM,lowerRiseM,widthM,riseM,targetCellM);
 
     const profiles=resolveProfiles(raw.materialMode,widthM);
     const endPostM=arcY(innerChordM/2,widthM,riseM);
