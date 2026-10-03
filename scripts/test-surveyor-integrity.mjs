@@ -25,7 +25,7 @@ for (const marker of [
 for (const marker of ['syncNowBtn','syncStatusText','КД Замерщик']) {
   if (!html.includes(marker)) throw new Error('Surveyor HTML missing: '+marker);
 }
-if (!sw.includes('kd-surveyor-stage1-v3')) throw new Error('Surveyor service worker cache was not bumped');
+if (!sw.includes('kd-surveyor-stage2-v1')) throw new Error('Surveyor service worker cache was not bumped');
 
 for (const marker of [
   'function kd_surveyor_handle',
