@@ -808,7 +808,7 @@ function renderLayoutSummaryCard(survey) {
   const mini = lines[0]?.segments?.length ? `<div class="layout-preview-mini">${renderMiniLine(lines[0])}</div>` : '';
   return `<div class="layout-section-card">
     <div class="card-top">
-      <div><h3>Схема ворот и забора</h3><div class="muted" style="font-size:12px">${segmentCount ? `${segmentCount} элементов · ${formatMeters(total)}` : 'Схема пока не собрана'}</div></div>
+      <div><h3>Схема ворот и забора</h3><div class="muted" style="font-size:12px">${segmentCount ? `${segmentCount} ${plural(segmentCount,['элемент','элемента','элементов'])} · ${formatMeters(total)}` : 'Схема пока не собрана'}</div></div>
       <button class="btn btn-secondary" data-open-layout type="button">${segmentCount ? 'Изменить' : 'Собрать схему'}</button>
     </div>
     ${mini}
@@ -865,8 +865,8 @@ function renderLayoutLine(line,index,totalLines) {
   }
   return `<section class="layout-line" data-layout-line="${line.id}">
     <div class="layout-line-head">
-      <div class="layout-line-title"><b>${escapeHtml(line.name)}</b><small>${line.segments.length ? `Общая длина ${formatMeters(total)}` : 'Пустая линия'}</small></div>
-      <div class="layout-line-actions"><button class="mini-btn" data-rename-line="${line.id}" type="button">Название</button>${totalLines > 1 ? `<button class="mini-btn danger" data-delete-line="${line.id}" type="button">Удалить</button>` : ''}</div>
+      <div class="layout-line-title"><input class="layout-line-name" data-line-name="${line.id}" value="${escapeHtml(line.name)}" aria-label="Название линии" /><small>${line.segments.length ? `Общая длина ${formatMeters(total)}` : 'Пустая линия'}</small></div>
+      <div class="layout-line-actions">${totalLines > 1 ? `<button class="mini-btn danger" data-delete-line="${line.id}" type="button">Удалить</button>` : ''}</div>
     </div>
     <div class="layout-canvas-scroll"><div class="layout-canvas">${canvas}</div></div>
     <div class="layout-summary"><span><b>${line.segments.length}</b> пролётов</span><span>Новых столбов: <b>${newPosts}</b></span><span>Существующих: <b>${existingPosts}</b></span></div>
@@ -1037,17 +1037,14 @@ async function deleteLayoutLine(lineId) {
   await saveLayoutSurvey(survey);
   await renderLayoutEditor();
 }
-async function renameLayoutLine(lineId) {
+async function saveLayoutLineName(lineId,value) {
   const survey = await idbGet('surveys',activeLayoutSurveyId);
   const line = survey ? findLayoutLine(survey,lineId) : null;
   if (!line) return;
-  const name = prompt('Название линии или участка',line.name);
-  if (name === null) return;
-  const cleaned = name.trim().slice(0,60);
-  if (!cleaned) return;
+  const cleaned = String(value || '').trim().slice(0,60);
+  if (!cleaned || cleaned === line.name) return;
   line.name = cleaned;
   await saveLayoutSurvey(survey);
-  await renderLayoutEditor();
 }
 
 function resetSurveyWizard() {
@@ -1163,6 +1160,10 @@ function bindEvents() {
   $('#moveSegmentLeftBtn')?.addEventListener('click', () => moveActiveSegment(-1));
   $('#moveSegmentRightBtn')?.addEventListener('click', () => moveActiveSegment(1));
   $('#savePostBtn')?.addEventListener('click', savePostFromDialog);
+  $('#layoutLines')?.addEventListener('change', event => {
+    const input = event.target.closest('[data-line-name]');
+    if (input) saveLayoutLineName(input.dataset.lineName,input.value);
+  });
   $('#layoutLines')?.addEventListener('click', event => {
     const add = event.target.closest('[data-add-type]');
     if (add) return openSegmentDialog(add.dataset.lineId,'',0,add.dataset.addType);
@@ -1172,8 +1173,6 @@ function bindEvents() {
     if (segment) return openSegmentDialog(segment.dataset.lineId,segment.dataset.editSegment);
     const post = event.target.closest('[data-edit-post]');
     if (post) return openPostDialog(post.dataset.lineId,post.dataset.editPost);
-    const rename = event.target.closest('[data-rename-line]');
-    if (rename) return renameLayoutLine(rename.dataset.renameLine);
     const remove = event.target.closest('[data-delete-line]');
     if (remove) return deleteLayoutLine(remove.dataset.deleteLine);
   });
