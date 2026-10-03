@@ -62,7 +62,7 @@ public class MainActivity extends Activity {
         });
 
         if (savedInstanceState == null) {
-            webView.loadUrl("https://appassets.androidplatform.net/assets/index.html");
+            webView.loadUrl("https://appassets.androidplatform.net/assets/index.html?mode=local");
         } else {
             webView.restoreState(savedInstanceState);
         }
