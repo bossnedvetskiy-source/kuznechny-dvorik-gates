@@ -29,6 +29,53 @@ function rawInput(){
     beamsExisting:$('beamsExisting').checked,paint:$('paint').checked,delivery:0
   };
 }
+function renderTrussPreviews(raw){
+  const NS='http://www.w3.org/2000/svg';
+  const make=(name,attrs={})=>{
+    const node=document.createElementNS(NS,name);
+    for(const [k,v] of Object.entries(attrs))node.setAttribute(k,String(v));
+    return node;
+  };
+  for(const type of ['Вертикальная','Треугольная','Усиленная']){
+    const svg=document.querySelector('[data-truss-preview="'+type+'"]');
+    if(!svg)continue;
+    const g=G.compute({...raw,trussType:type});
+    svg.replaceChildren();
+    if(!g.ok)continue;
+
+    const W=220,H=100,padX=15,padTop=8,padBottom=11;
+    const scale=Math.min((W-padX*2)/g.widthM,(H-padTop-padBottom)/Math.max(g.riseM,.12));
+    const X=x=>W/2+x*scale;
+    const Y=y=>H-padBottom-y*scale;
+    const arc=(chord,sag,n=64)=>Array.from({length:n+1},(_,i)=>{
+      const x=-chord/2+chord*i/n;
+      return {x,y:G.arcY(x,chord,sag)};
+    });
+    const path=pts=>pts.map((p,i)=>(i?'L':'M')+X(p.x).toFixed(2)+' '+Y(p.y).toFixed(2)).join(' ');
+
+    svg.append(make('path',{d:path(arc(g.widthM,g.riseM,72)),class:'truss-chord'}));
+    svg.append(make('line',{x1:X(-g.widthM/2),y1:Y(0),x2:X(-g.innerChordM/2),y2:Y(0),class:'truss-chord'}));
+    svg.append(make('path',{d:path(arc(g.innerChordM,g.lowerRiseM,60)),class:'truss-chord'}));
+    svg.append(make('line',{x1:X(g.innerChordM/2),y1:Y(0),x2:X(g.widthM/2),y2:Y(0),class:'truss-chord'}));
+
+    const leftTop=G.arcY(-g.innerChordM/2,g.widthM,g.riseM);
+    const rightTop=G.arcY(g.innerChordM/2,g.widthM,g.riseM);
+    svg.append(make('line',{x1:X(-g.innerChordM/2),y1:Y(0),x2:X(-g.innerChordM/2),y2:Y(leftTop),class:'truss-web'}));
+    svg.append(make('line',{x1:X(g.innerChordM/2),y1:Y(0),x2:X(g.innerChordM/2),y2:Y(rightTop),class:'truss-web'}));
+
+    if(type==='Вертикальная'||type==='Усиленная'){
+      for(const v of g.verticals){
+        svg.append(make('line',{x1:X(v.x),y1:Y(v.yLower),x2:X(v.x),y2:Y(v.yUpper),class:'truss-web'}));
+      }
+    }
+    if(type==='Треугольная'||type==='Усиленная'){
+      for(const d of g.diagonals){
+        svg.append(make('line',{x1:X(d.x1),y1:Y(d.y1),x2:X(d.x2),y2:Y(d.y2),class:'truss-web'}));
+      }
+    }
+  }
+}
+
 function clientSummary(g,c){
   $('clientSummary').innerHTML=[
     row('Размер',fmt(g.widthPostsM)+' × '+fmt(c.lengthM)+' м'),
@@ -43,7 +90,9 @@ function clientSummary(g,c){
 }
 function render(){
   syncRise();
-  const raw=rawInput(),g=G.compute(raw);
+  const raw=rawInput();
+  renderTrussPreviews(raw);
+  const g=G.compute(raw);
   window.__TRUSS_CURRENT=g;
   if(!g.ok){
     $('geometryWarning').hidden=false;
