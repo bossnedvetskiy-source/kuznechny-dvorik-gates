@@ -138,6 +138,9 @@ jobs:
       - name: Test surveyor test PWA installability
         run: npx playwright test tests/surveyor-test-pwa.spec.js
 
+      - name: Test clean surveyor V2
+        run: npx playwright test tests/surveyor-v2.spec.js
+
       - name: Test DEV calculators PWA install start
         run: npx playwright test tests/dev-pwa.spec.js
 
@@ -163,6 +166,9 @@ jobs:
           test -s _site/surveyor-test/index.html
           test -s _site/surveyor-test/manifest.webmanifest
           test -s _site/surveyor-test/sw.js
+          test -s _site/zamer-app-v2/index.html
+          test -s _site/zamer-app-v2/manifest.webmanifest
+          test -s _site/zamer-app-v2/sw.js
           node -e "const x=JSON.parse(require('fs').readFileSync('_site/api/offline-version','utf8')); if(!x.version || !String(x.version).startsWith('dev-')) throw Error('DEV offline version missing'); console.log('DEV offline version OK:', x.version)"
           if grep -Fq '<script src="app.js"' _site/index.html; then
             echo 'Dev preview is still using raw source scripts' >&2
