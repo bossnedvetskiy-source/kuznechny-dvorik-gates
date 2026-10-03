@@ -13,6 +13,9 @@ test('canopy client is simple and saved order keeps production/finance in admin'
   await expect(page.locator('#materialMode')).toHaveValue('30×30×2');
   await expect(page.locator('#lagMode')).toHaveValue('Стандарт');
   await expect(page.locator('[data-truss-option]')).toHaveCount(3);
+  await expect(page.locator('.truss-option-art img')).toHaveCount(3);
+  const trussImagesLoaded=await page.locator('.truss-option-art img').evaluateAll(imgs=>imgs.every(img=>img.complete&&img.naturalWidth>0));
+  expect(trussImagesLoaded).toBeTruthy();
   await expect(page.locator('[data-truss-option="Треугольная"]')).toHaveClass(/is-selected/);
   await expect(page.locator('#resultStatus')).toContainText('Пример расчёта');
   await expect(page.locator('#clientSummary')).toContainText('3,40 × 8,40 м');
