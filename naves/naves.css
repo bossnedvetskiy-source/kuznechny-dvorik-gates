@@ -76,7 +76,7 @@ html,body{max-width:100%;overflow-x:clip}
 .truss-option:active{transform:scale(.99)}
 .truss-option.is-selected{border-color:var(--gold2);background:linear-gradient(180deg,rgba(226,184,97,.10),rgba(226,184,97,.03)),#171b20;box-shadow:0 0 0 2px rgba(226,184,97,.08)}
 .truss-option-art{display:grid;place-items:center;aspect-ratio:1.9/1;border-radius:10px;background:#f2f0eb;overflow:hidden}
-.truss-option-art svg{display:block;width:100%;height:100%;padding:6px}
+.truss-option-art svg,.truss-option-art img{display:block;width:100%;height:100%;padding:6px;object-fit:contain}
 .truss-chord,.truss-web{fill:none;stroke:#202326;stroke-linecap:round;stroke-linejoin:round}
 .truss-chord{stroke-width:5}
 .truss-web{stroke-width:3.4}
@@ -98,8 +98,21 @@ html,body{max-width:100%;overflow-x:clip}
 .lag-choice.is-auto .segment-option{opacity:.45;pointer-events:none}
 @media(max-width:600px){
   .construction-picker{padding:11px}
-  .truss-visual-grid{grid-template-columns:1fr 1fr}
-  .truss-option:nth-child(3){grid-column:1/-1}
-  .truss-option:nth-child(3) .truss-option-art{aspect-ratio:2.5/1}
+  .truss-visual-grid{
+    display:flex;
+    gap:9px;
+    overflow-x:auto;
+    overscroll-behavior-x:contain;
+    scroll-snap-type:x mandatory;
+    scrollbar-width:none;
+    margin-right:-11px;
+    padding-right:20px
+  }
+  .truss-visual-grid::-webkit-scrollbar{display:none}
+  .truss-option{
+    flex:0 0 min(44vw,168px);
+    scroll-snap-align:start
+  }
+  .truss-option-art{aspect-ratio:1.9/1}
   .segment-choice{grid-template-columns:1fr 1fr}
 }
