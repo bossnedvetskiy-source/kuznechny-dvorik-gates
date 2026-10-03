@@ -11,6 +11,9 @@ test('canopy client is simple and saved order keeps production/finance in admin'
   await expect(page.locator('#totalPrice')).not.toHaveText('0 ₽');
   await expect(page.locator('#trussType')).toHaveValue('Треугольная');
   await expect(page.locator('#materialMode')).toHaveValue('30×30×2');
+  await expect(page.locator('#lagMode')).toHaveValue('Стандарт');
+  await expect(page.locator('[data-truss-option]')).toHaveCount(3);
+  await expect(page.locator('[data-truss-option="Треугольная"]')).toHaveClass(/is-selected/);
   await expect(page.locator('#resultStatus')).toContainText('Пример расчёта');
   await expect(page.locator('#clientSummary')).toContainText('3,40 × 8,40 м');
   await expect(page.locator('#clientSummary')).toContainText('Поликарбонат');
@@ -38,16 +41,30 @@ test('canopy client is simple and saved order keeps production/finance in admin'
   const resultBox=await page.locator('.client-result').boundingBox();
   expect(formBox.y).toBeLessThan(resultBox.y);
 
-  // Both truss type and material are explicit client choices.
-  await page.locator('#trussType').selectOption({label:'Вертикальная'});
-  await page.locator('#materialMode').selectOption({label:'40×20×2'});
-  await expect(page.locator('#clientSummary')).toContainText('Вертикальная');
+  // 3 m canopy: standard vs economy purlin layout.
+  await page.locator('#widthPosts').fill('3');
+  await page.locator('#lengthPosts').fill('5.9');
+  await page.locator('#coverage').selectOption({label:'Без покрытия'});
+  await expect(page.locator('#rise')).toHaveValue(/500/);
+  await expect(page.locator('#lagModeInfo')).toContainText('10 линий');
+
+  await page.locator('[data-lag-option="Эконом"]').click();
+  await expect(page.locator('#lagMode')).toHaveValue('Эконом');
+  await expect(page.locator('#lagModeInfo')).toContainText('8 линий');
+
+  // Visual truss cards and material buttons.
+  await page.locator('[data-truss-option="Усиленная"]').click();
+  await page.locator('[data-material-option="40×20×2"]').click();
+  await expect(page.locator('#trussType')).toHaveValue('Усиленная');
+  await expect(page.locator('#materialMode')).toHaveValue('40×20×2');
+  await expect(page.locator('[data-truss-option="Усиленная"]')).toHaveClass(/is-selected/);
+  await expect(page.locator('[data-material-option="40×20×2"]')).toHaveClass(/is-selected/);
+  await expect(page.locator('#clientSummary')).toContainText('Усиленная');
   await expect(page.locator('#clientSummary')).toContainText('40×20×2');
+  await expect(page.locator('#clientSummary')).toContainText('Эконом · 8 линий');
   await expect(page.locator('#canopyViewport canvas')).toBeVisible();
 
-  // Changing width turns the example into a real preliminary calculation.
-  await page.locator('#widthPosts').fill('4.2');
-  await expect(page.locator('#rise')).toHaveValue(/700/);
+  // Changed parameters turn the example into a real preliminary calculation.
   await expect(page.locator('#resultStatus')).toContainText('Предварительный расчёт готов');
   await expect(page.locator('#canopyViewport canvas')).toBeVisible();
   const canvasSize=await page.locator('#canopyViewport canvas').boundingBox();
@@ -73,9 +90,11 @@ test('canopy client is simple and saved order keeps production/finance in admin'
   const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('kuzdvor-dev-canopy-saved-v1')||'[]'));
   expect(saved.length).toBeGreaterThan(0);
   expect(saved[0].category).toBe('canopy');
-  expect(saved[0].configuration.canopy.input.widthPostsM).toBe(4.2);
-  expect(saved[0].configuration.canopy.input.trussType).toBe('Вертикальная');
+  expect(saved[0].configuration.canopy.input.widthPostsM).toBe(3);
+  expect(saved[0].configuration.canopy.input.lengthM).toBe(5.9);
+  expect(saved[0].configuration.canopy.input.trussType).toBe('Усиленная');
   expect(saved[0].configuration.canopy.input.materialMode).toBe('40×20×2');
+  expect(saved[0].configuration.canopy.input.lagMode).toBe('Эконом');
   expect(saved[0].configuration.canopy.pricingSnapshot.rates.tube30).toBeGreaterThan(0);
   expect(saved[0].configuration.canopy.pricingSnapshot.rates.tube40x20).toBeGreaterThan(0);
 
@@ -93,7 +112,7 @@ test('canopy client is simple and saved order keeps production/finance in admin'
   await expect(page.locator('[data-admin-tab="canopy-orders"]')).toBeVisible();
   await page.locator('[data-admin-tab="canopy-orders"]').click();
   await expect(page.locator('#canopyOrderList')).toContainText('Мелеуз');
-  await expect(page.locator('#canopyOrderList')).toContainText('4,20 × 8,40 м');
+  await expect(page.locator('#canopyOrderList')).toContainText('3,00 × 5,90 м');
   await page.locator('[data-open-canopy]').first().click();
 
   await expect(page.locator('#canopyAdminDialog')).toBeVisible();
@@ -104,8 +123,10 @@ test('canopy client is simple and saved order keeps production/finance in admin'
   await expect(page.locator('[data-canopy-panel="production"]')).toBeVisible();
   await expect(page.locator('#canopyAdminTrussSvg')).toBeVisible();
   await expect(page.locator('#canopyAdminTrussSvg')).toContainText('V1');
-  await expect(page.locator('[data-canopy-panel="production"]')).toContainText('Вертикальная');
+  await expect(page.locator('#canopyAdminTrussSvg')).toContainText('D1');
+  await expect(page.locator('[data-canopy-panel="production"]')).toContainText('Усиленная');
   await expect(page.locator('[data-canopy-panel="production"]')).toContainText('40×20×2');
+  await expect(page.locator('[data-canopy-panel="production"]')).toContainText('Эконом');
   await expect(page.locator('[data-canopy-panel="production"]')).toContainText('Раскрой фермы');
   await expect(page.locator('[data-canopy-panel="production"]')).toContainText('Материалы и закупка');
   await expect(page.locator('#canopyPrintDrawing')).toContainText('Распечатать ТЗ сварщику');
