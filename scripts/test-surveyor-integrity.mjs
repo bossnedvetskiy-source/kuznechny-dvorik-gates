@@ -3,6 +3,7 @@ import {readFile} from 'node:fs/promises';
 const app = await readFile('surveyor-app/app.js','utf8');
 const html = await readFile('surveyor-app/index.html','utf8');
 const sw = await readFile('surveyor-app/sw.js','utf8');
+const lineBuilder = await readFile('surveyor-app/line-builder.js','utf8');
 const api = await readFile('timeweb/backend/surveyor.php','utf8');
 const router = await readFile('timeweb/local-api.php','utf8');
 const schema = await readFile('timeweb/backend/schema.mysql.sql','utf8');
@@ -14,14 +15,20 @@ for (const marker of [
   "async function syncNow",
   "serverRevision",
   "syncState: API_ENABLED ? 'pending' : 'local'",
-  "API_BASE + path"
+  "API_BASE + path",
+  "async function openPlanEditor",
+  "function addPlanItem",
+  "configuration:x.configuration || {}"
 ]) {
   if (!app.includes(marker)) throw new Error('Surveyor app missing: '+marker);
 }
-for (const marker of ['syncNowBtn','syncStatusText','КД Замерщик']) {
+for (const marker of ['syncNowBtn','syncStatusText','КД Замерщик','planDialog','planCanvas','data-add-plan-item']) {
   if (!html.includes(marker)) throw new Error('Surveyor HTML missing: '+marker);
 }
-if (!sw.includes('kd-surveyor-stage1-v3')) throw new Error('Surveyor service worker cache was not bumped');
+if (!sw.includes('kd-surveyor-stage2-v1') || !sw.includes('./line-builder.js')) throw new Error('Surveyor service worker cache was not bumped');
+for (const marker of ['ensureSitePlan','newItem','newLine','lineWidth','PLAN_ITEM_TYPES']) {
+  if (!lineBuilder.includes(marker)) throw new Error('Line builder missing: '+marker);
+}
 
 for (const marker of [
   'function kd_surveyor_handle',
@@ -31,7 +38,9 @@ for (const marker of [
   'surveyor_sessions',
   'surveyor_orders',
   "password_hash($password,PASSWORD_DEFAULT)",
-  "Bearer"
+  "Bearer",
+  "configuration_json",
+  "Схема объекта слишком большая"
 ]) {
   if (!api.includes(marker)) throw new Error('Surveyor server API missing: '+marker);
 }

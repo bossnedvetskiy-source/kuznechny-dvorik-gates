@@ -31,6 +31,26 @@ test('surveyor can create a mixed survey and reopen it offline', async ({page, c
   await expect(card).toContainText('Забор');
   await expect(card).toContainText('Навес');
 
+  await card.click();
+  await expect(page.locator('#surveyDetailsDialog')).toBeVisible();
+  await page.locator('[data-edit-plan]').click();
+  await expect(page.locator('#planDialog')).toBeVisible();
+  await expect(page.locator('#planCanvas .plan-part')).toHaveCount(5);
+
+  // Insert a fence span between the middle post and wicket.
+  await page.locator('[data-plan-insert="3"]').click();
+  await page.locator('[data-add-plan-item="fence"]').click();
+  await expect(page.locator('#planEditor')).toBeVisible();
+  await page.locator('[data-plan-field="width"]').fill('1.7');
+  await page.locator('[data-plan-field="width"]').blur();
+  await page.locator('[data-plan-field="material"]').selectOption('euro_vertical');
+  await page.locator('#savePlanBtn').click();
+
+  await expect(page.locator('#surveyDetailsDialog')).toBeVisible();
+  await expect(page.locator('.plan-mini-preview')).toBeVisible();
+  await expect(page.locator('#surveyDetailsContent')).toContainText('6,1 м');
+  await page.locator('#closeDetailsBtn').click();
+
   await expect.poll(
     () => page.evaluate(async () => Boolean(await navigator.serviceWorker?.getRegistration('./'))),
     {timeout:7000}
@@ -50,6 +70,10 @@ test('surveyor can create a mixed survey and reopen it offline', async ({page, c
   await expect(page.locator('#mainView')).toBeVisible();
   await expect(page.locator('.survey-card').first()).toContainText('Тестовый клиент');
   await expect(page.locator('#networkBadge')).toContainText('Офлайн');
+
+  await page.locator('.survey-card').first().click();
+  await expect(page.locator('.plan-mini-preview')).toBeVisible();
+  await expect(page.locator('#surveyDetailsContent')).toContainText('6,1 м');
 });
 
 test('owner can manage employee access', async ({page}) => {

@@ -152,6 +152,7 @@ jobs:
           test -s _site/api/offline-version
           test -s _site/surveyor-app/index.html
           test -s _site/surveyor-app/app.js
+          test -s _site/surveyor-app/line-builder.js
           test -s _site/surveyor-app/sw.js
           node -e "const x=JSON.parse(require('fs').readFileSync('_site/api/offline-version','utf8')); if(!x.version || !String(x.version).startsWith('dev-')) throw Error('DEV offline version missing'); console.log('DEV offline version OK:', x.version)"
           if grep -Fq '<script src="app.js"' _site/index.html; then

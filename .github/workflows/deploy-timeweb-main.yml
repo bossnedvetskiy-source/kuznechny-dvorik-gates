@@ -74,6 +74,7 @@ jobs:
           test -s timeweb-dist/admin.html
           test -s timeweb-dist/surveyor-app/index.html
           test -s timeweb-dist/surveyor-app/app.js
+          test -s timeweb-dist/surveyor-app/line-builder.js
           test -s timeweb-dist/surveyor-app/sw.js
           test -s timeweb-dist/site.css
           test -s timeweb-dist/site.bundle.js
