@@ -3,7 +3,7 @@
 const $=id=>document.getElementById(id),G=window.TrussGeometry,C=window.CanopyPricing;
 const PRICE_KEY='kuzdvor-canopy-admin-prices-v1';
 const DEV_SAVED_KEY='kuzdvor-dev-canopy-saved-v1';
-const INPUTS=['widthPosts','lengthPosts','visibleHeight','installType','coverage','trussType','materialMode','rise','autoRise','trussHeight','existingPosts','beamsExisting','paint'];
+const INPUTS=['widthPosts','lengthPosts','visibleHeight','installType','coverage','rise','autoRise','trussHeight','existingPosts','beamsExisting','paint'];
 const row=(a,b)=>'<div><dt>'+a+'</dt><dd>'+b+'</dd></div>';
 let currentRaw=null,currentPublic=null,userTouched=false;
 const rub=n=>Math.round(Number(n)||0).toLocaleString('ru-RU')+' ₽';
@@ -23,7 +23,7 @@ function rawInput(){
   const p=loadAdminPrices(),lengthM=num('lengthPosts',8.4);
   return {
     widthPostsM:num('widthPosts',3.4),lengthM,visibleHeightM:num('visibleHeight',2.1),
-    installType:$('installType').value,coverage:$('coverage').value,trussType:$('trussType').value,materialMode:$('materialMode').value,
+    installType:$('installType').value,coverage:$('coverage').value,trussType:$('trussType').value,materialMode:$('materialMode').value,lagMode:$('lagMode').value,
     overhangMm:150,riseMm:num('rise',567),heightMm:num('trussHeight',250),endFlatMm:300,cellStepMm:400,
     trussCount:C.autoTrussCount(lengthM,p),postsNeeded:true,existingPosts:num('existingPosts',0),
     beamsExisting:$('beamsExisting').checked,paint:$('paint').checked,delivery:0
@@ -36,6 +36,7 @@ function clientSummary(g,c){
     row('Покрытие',c.coverage),
     row('Ферма',g.trussType),
     row('Материал фермы',g.materialMode),
+    row('Лаги 40×20',c.coverage==='Профнастил'?('авто · '+c.lagLines+' линий'):(c.lagMode+' · '+c.lagLines+' линий')),
     row('Установка',c.installType),
     row('Покраска',c.paint?'включена':'без покраски')
   ].join('');
@@ -82,6 +83,18 @@ function render(){
     status.classList.remove('has-warning','example');
   }
   clientSummary(g,c);
+  const lagInfo=$('lagModeInfo');
+  const lagChoice=document.querySelector('.lag-choice');
+  const lagHint=$('lagModeHint');
+  if(c.coverage==='Профнастил'){
+    lagChoice?.classList.add('is-auto');
+    if(lagHint) lagHint.textContent='Для профнастила шаг считается автоматически 80–100 см';
+    if(lagInfo) lagInfo.innerHTML='<strong>'+c.lagLines+' линий</strong> · фактический шаг '+fmt(c.lagStep*100,1)+' см · режим Стандарт/Эконом не применяется';
+  }else{
+    lagChoice?.classList.remove('is-auto');
+    if(lagHint) lagHint.textContent='Выберите баланс жёсткости и стоимости';
+    if(lagInfo) lagInfo.innerHTML='<strong>'+c.lagLines+' линий</strong> · фактический шаг '+fmt(c.lagStep*100,1)+' см · '+(c.lagMode==='Эконом'?'не более 50 см':'около 40 см');
+  }
   const viewport=$('canopyViewport');
   if(window.Canopy3D?.render) window.Canopy3D.render(viewport,g,c);
 }
@@ -97,11 +110,11 @@ function snapshot(){
   const raw=currentRaw;
   const rates={...loadAdminPrices()};
   return {
-    version:4,
+    version:5,
     savedAt:new Date().toISOString(),
     input:{
       widthPostsM:raw.widthPostsM,lengthM:raw.lengthM,visibleHeightM:raw.visibleHeightM,
-      installType:raw.installType,coverage:raw.coverage,trussType:raw.trussType,riseMm:raw.riseMm,heightMm:raw.heightMm,
+      installType:raw.installType,coverage:raw.coverage,trussType:raw.trussType,lagMode:raw.lagMode,riseMm:raw.riseMm,heightMm:raw.heightMm,
       overhangMm:raw.overhangMm,endFlatMm:raw.endFlatMm,cellStepMm:raw.cellStepMm,
       materialMode:raw.materialMode,existingPosts:raw.existingPosts,beamsExisting:raw.beamsExisting,
       postsNeeded:raw.postsNeeded,paint:raw.paint,delivery:raw.delivery
@@ -162,6 +175,27 @@ INPUTS.forEach(id=>{
   e.addEventListener('input',markAndRender);
   e.addEventListener('change',markAndRender);
 });
+
+function bindVisualChoice(buttonSelector,dataKey,inputId){
+  const input=$(inputId);
+  const buttons=[...document.querySelectorAll(buttonSelector)];
+  buttons.forEach(button=>button.addEventListener('click',()=>{
+    const value=button.dataset[dataKey];
+    if(!value||!input||input.value===value)return;
+    input.value=value;
+    buttons.forEach(x=>{
+      const selected=x===button;
+      x.classList.toggle('is-selected',selected);
+      x.setAttribute('aria-checked',selected?'true':'false');
+    });
+    userTouched=true;
+    render();
+  }));
+}
+
+bindVisualChoice('[data-truss-option]','trussOption','trussType');
+bindVisualChoice('[data-material-option]','materialOption','materialMode');
+bindVisualChoice('[data-lag-option]','lagOption','lagMode');
 $('savePhone').addEventListener('blur',()=>{$('savePhone').value=normalizePhone($('savePhone').value)});
 $('trussForm').addEventListener('submit',e=>e.preventDefault());
 $('showSave').addEventListener('click',()=>{
