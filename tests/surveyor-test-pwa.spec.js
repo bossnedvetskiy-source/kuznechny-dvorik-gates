@@ -3,7 +3,7 @@ import {test, expect} from '@playwright/test';
 test.use({viewport:{width:390,height:844}});
 
 test('ungated surveyor test PWA is independently installable', async ({page}) => {
-  await page.goto('/surveyor-test/');
+  await page.goto('/kuznechny-dvorik-gates/surveyor-test/');
   await expect(page).toHaveTitle('КД Замерщик Тест');
   await expect(page.locator('#loginView')).toBeVisible();
   await expect(page.locator('#kuzdvor-dev-gate')).toHaveCount(0);
