@@ -60,7 +60,15 @@ function render(){
     ].join('');
     currentRaw=null;currentPublic=null;
     const viewport=$('canopyViewport');
-    if(viewport) viewport.innerHTML='<div class="three-fallback"><b>Вариант ещё не настроен</b><span>'+reason+'</span></div>';
+    if(viewport){
+      let notice=viewport.querySelector('.three-config-notice');
+      if(!notice){
+        notice=document.createElement('div');
+        notice.className='three-config-notice';
+        viewport.append(notice);
+      }
+      notice.innerHTML='<b>Вариант ещё не настроен</b><span>'+reason+'</span>';
+    }
     return;
   }
   const g=G.compute(raw);
@@ -116,6 +124,7 @@ function render(){
     if(lagInfo) lagInfo.innerHTML='<strong>'+c.lagLines+' линий</strong> · фактический шаг '+fmt(c.lagStep*100,1)+' см · '+(c.lagMode==='Эконом'?'не более 50 см':'около 40 см');
   }
   const viewport=$('canopyViewport');
+  viewport?.querySelector('.three-config-notice')?.remove();
   if(window.Canopy3D?.render) window.Canopy3D.render(viewport,g,c);
 }
 function normalizePhone(value){
@@ -130,7 +139,7 @@ function snapshot(){
   const raw=currentRaw;
   const rates={...loadAdminPrices()};
   return {
-    version:5,
+    version:6,
     savedAt:new Date().toISOString(),
     input:{
       widthPostsM:raw.widthPostsM,lengthM:raw.lengthM,visibleHeightM:raw.visibleHeightM,
