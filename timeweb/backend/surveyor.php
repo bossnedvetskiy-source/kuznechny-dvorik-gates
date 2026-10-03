@@ -7,7 +7,7 @@ function kd_surveyor_allowed_origin(): string
 {
     $origin = trim((string)($_SERVER['HTTP_ORIGIN'] ?? ''));
     if ($origin === '') return '';
-    $allowed = [kd_current_origin(), 'https://bossnedvetskiy-source.github.io'];
+    $allowed = [kd_current_origin(), 'https://bossnedvetskiy-source.github.io', 'https://appassets.androidplatform.net'];
     return in_array($origin, $allowed, true) ? $origin : '';
 }
 
