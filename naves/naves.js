@@ -23,7 +23,7 @@ function rawInput(){
   const p=loadAdminPrices(),lengthM=num('lengthPosts',8.4);
   return {
     widthPostsM:num('widthPosts',3.4),lengthM,visibleHeightM:num('visibleHeight',2.1),
-    installType:$('installType').value,coverage:$('coverage').value,farmType:$('farmType').value,trussType:$('trussType').value,materialMode:$('materialMode').value,lagMode:$('lagMode').value,
+    installType:$('installType').value,coverage:$('coverage').value,farmType:$('farmType').value,farmPreset:$('farmPreset').value,trussType:$('trussType').value,materialMode:$('materialMode').value,lagMode:$('lagMode').value,
     overhangMm:150,riseMm:num('rise',567),heightMm:num('trussHeight',250),endFlatMm:300,cellStepMm:400,
     trussCount:C.autoTrussCount(lengthM,p),postsNeeded:true,existingPosts:num('existingPosts',0),
     beamsExisting:$('beamsExisting').checked,paint:$('paint').checked,delivery:0
@@ -143,7 +143,7 @@ function snapshot(){
     savedAt:new Date().toISOString(),
     input:{
       widthPostsM:raw.widthPostsM,lengthM:raw.lengthM,visibleHeightM:raw.visibleHeightM,
-      installType:raw.installType,coverage:raw.coverage,farmType:raw.farmType,trussType:raw.trussType,lagMode:raw.lagMode,riseMm:raw.riseMm,heightMm:raw.heightMm,
+      installType:raw.installType,coverage:raw.coverage,farmType:raw.farmType,farmPreset:raw.farmPreset,trussType:raw.trussType,lagMode:raw.lagMode,riseMm:raw.riseMm,heightMm:raw.heightMm,
       overhangMm:raw.overhangMm,endFlatMm:raw.endFlatMm,cellStepMm:raw.cellStepMm,
       materialMode:raw.materialMode,existingPosts:raw.existingPosts,beamsExisting:raw.beamsExisting,
       postsNeeded:raw.postsNeeded,paint:raw.paint,delivery:raw.delivery
@@ -222,6 +222,7 @@ function bindVisualChoice(buttonSelector,dataKey,inputId){
   }));
 }
 
+bindVisualChoice('[data-preset-option]','presetOption','farmPreset');
 bindVisualChoice('[data-truss-option]','trussOption','trussType');
 bindVisualChoice('[data-lag-option]','lagOption','lagMode');
 
