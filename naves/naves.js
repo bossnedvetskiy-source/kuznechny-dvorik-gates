@@ -3,7 +3,7 @@
 const $=id=>document.getElementById(id),G=window.TrussGeometry,C=window.CanopyPricing;
 const PRICE_KEY='kuzdvor-canopy-admin-prices-v1';
 const DEV_SAVED_KEY='kuzdvor-dev-canopy-saved-v1';
-const INPUTS=['widthPosts','lengthPosts','visibleHeight','installType','coverage','rise','autoRise','trussHeight','existingPosts','beamsExisting','paint'];
+const INPUTS=['widthPosts','lengthPosts','visibleHeight','installType','coverage','trussType','materialMode','rise','autoRise','trussHeight','existingPosts','beamsExisting','paint'];
 const row=(a,b)=>'<div><dt>'+a+'</dt><dd>'+b+'</dd></div>';
 let currentRaw=null,currentPublic=null,userTouched=false;
 const rub=n=>Math.round(Number(n)||0).toLocaleString('ru-RU')+' ₽';
@@ -23,7 +23,7 @@ function rawInput(){
   const p=loadAdminPrices(),lengthM=num('lengthPosts',8.4);
   return {
     widthPostsM:num('widthPosts',3.4),lengthM,visibleHeightM:num('visibleHeight',2.1),
-    installType:$('installType').value,coverage:$('coverage').value,materialMode:'Авто',
+    installType:$('installType').value,coverage:$('coverage').value,trussType:$('trussType').value,materialMode:$('materialMode').value,
     overhangMm:150,riseMm:num('rise',567),heightMm:num('trussHeight',250),endFlatMm:300,cellStepMm:400,
     trussCount:C.autoTrussCount(lengthM,p),postsNeeded:true,existingPosts:num('existingPosts',0),
     beamsExisting:$('beamsExisting').checked,paint:$('paint').checked,delivery:0
@@ -34,6 +34,8 @@ function clientSummary(g,c){
     row('Размер',fmt(g.widthPostsM)+' × '+fmt(c.lengthM)+' м'),
     row('Площадь',fmt(c.area,1)+' м²'),
     row('Покрытие',c.coverage),
+    row('Ферма',g.trussType),
+    row('Материал фермы',g.materialMode),
     row('Установка',c.installType),
     row('Покраска',c.paint?'включена':'без покраски')
   ].join('');
@@ -95,11 +97,11 @@ function snapshot(){
   const raw=currentRaw;
   const rates={...loadAdminPrices()};
   return {
-    version:3,
+    version:4,
     savedAt:new Date().toISOString(),
     input:{
       widthPostsM:raw.widthPostsM,lengthM:raw.lengthM,visibleHeightM:raw.visibleHeightM,
-      installType:raw.installType,coverage:raw.coverage,riseMm:raw.riseMm,heightMm:raw.heightMm,
+      installType:raw.installType,coverage:raw.coverage,trussType:raw.trussType,riseMm:raw.riseMm,heightMm:raw.heightMm,
       overhangMm:raw.overhangMm,endFlatMm:raw.endFlatMm,cellStepMm:raw.cellStepMm,
       materialMode:raw.materialMode,existingPosts:raw.existingPosts,beamsExisting:raw.beamsExisting,
       postsNeeded:raw.postsNeeded,paint:raw.paint,delivery:raw.delivery
