@@ -117,9 +117,6 @@ jobs:
       - name: Test surveyor app mobile/offline
         run: npx playwright test tests/surveyor-mobile.spec.js
 
-      - name: Test surveyor test PWA installability
-        run: npx playwright test tests/surveyor-test-pwa.spec.js
-
       - name: Snapshot current production data
         continue-on-error: true
         shell: bash
@@ -137,6 +134,9 @@ jobs:
 
       - name: Prepare protected dev preview
         run: node scripts/build-dev-preview.mjs
+
+      - name: Test surveyor test PWA installability
+        run: npx playwright test tests/surveyor-test-pwa.spec.js
 
       - name: Verify dev mirrors production frontend
         shell: bash
