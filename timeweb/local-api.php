@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require __DIR__ . '/backend/bootstrap.php';
 require __DIR__ . '/backend/manager-push.php';
+require __DIR__ . '/backend/surveyor.php';
 
 $route = trim((string)($_GET['__route'] ?? ''), '/');
 unset($_GET['__route']);
@@ -26,6 +27,15 @@ if ($route === 'health') {
 if (!kd_is_configured()) kd_json(['error' => 'PHP/MySQL backend ещё не настроен', 'backend' => 'timeweb-php'], 503);
 
 try {
+    if (str_starts_with($route, 'surveyor/')) {
+        try {
+            kd_surveyor_handle($route, $method);
+        } catch (Throwable $e) {
+            error_log('Kuzdvor surveyor API: ' . $e->getMessage());
+            kd_surveyor_json(['error' => 'Ошибка синхронизации приложения замерщика'], 500);
+        }
+    }
+
     if ($route === 'offline-version' && $method === 'GET') {
         header('Cache-Control: no-store, max-age=0');
         kd_json(kd_offline_version());
