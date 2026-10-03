@@ -42,6 +42,14 @@ const server = http.createServer(async (req, res) => {
     return send(res, 201, JSON.stringify({ok:true,id:1,quote:{verified:true,total:Number(payload.total)||0}}), mime['.json']);
   }
   if (url.pathname === '/api/delivery') return send(res, 502, JSON.stringify({error:'Маршрут не настроен в тестовом сервере'}), mime['.json']);
+  if (url.pathname === '/naves/vendor/three.module.js') {
+    return send(res, 200, await readFile(join(root, 'node_modules/three/build/three.module.js')), mime['.js']);
+  }
+  if (url.pathname === '/naves/vendor/OrbitControls.js') {
+    const source = (await readFile(join(root, 'node_modules/three/examples/jsm/controls/OrbitControls.js'), 'utf8'))
+      .replace("from 'three';", "from './three.module.js';");
+    return send(res, 200, source, mime['.js']);
+  }
 
   try {
     if (url.pathname === '/' || url.pathname === '/index.html' || url.pathname === '/vorota' || url.pathname === '/vorota/') {
