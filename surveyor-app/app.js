@@ -19,6 +19,8 @@ let currentUser = null;
 let currentSurveyFilter = 'all';
 let syncInFlight = false;
 let lastSyncMessage = '';
+let activeLayoutSurveyId = '';
+let pendingInsertIndex = 0;
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
@@ -292,7 +294,7 @@ async function createSurvey(data) {
     address: data.address.trim(), note: data.note.trim(), workTypes: [...data.workTypes],
     status: 'draft', createdBy: currentUser.id, createdByName: currentUser.name,
     createdAt: now, updatedAt: now, syncState: API_ENABLED ? 'pending' : 'local',
-    serverRevision: 0, archived: false, schemaVersion: 2
+    serverRevision: 0, archived: false, layout: null, schemaVersion: 3
   };
   await idbPut('surveys', survey);
   if (API_ENABLED && navigator.onLine) queueMicrotask(() => syncNow({ silent: true }));
@@ -334,6 +336,7 @@ function serverSurveyToLocal(server, existing = {}) {
     updatedAt: server.updatedAt || existing.updatedAt || new Date().toISOString(),
     createdAt: parseServerDate(server.createdAt) || existing.createdAt || new Date().toISOString(),
     serverUpdatedAt: parseServerDate(server.serverUpdatedAt),
+    layout: server.layout || existing.layout || null,
     syncState: 'synced',
     serverConflict: null,
     schemaVersion: 2
@@ -381,7 +384,7 @@ async function syncNow({ silent = false } = {}) {
     const payload = {
       since,
       clients: pendingClients.map(x => ({
-        id:x.id,name:x.name,phone:x.phone,address:x.address,updatedAt:x.updatedAt,serverRevision:Number(x.serverRevision||0)
+        id:x.id,name:x.name,phone:x.phone,address:x.address,updatedAt:x.updatedAt,serverRevision:Number(x.serverRevision||0),layout:x.layout || null
       })),
       surveys: pendingSurveys.map(x => ({
         id:x.id,clientId:x.clientId,clientName:x.clientName,clientPhone:x.clientPhone,address:x.address,note:x.note,
@@ -593,10 +596,12 @@ async function openSurveyDetails(id) {
     <div class="details-section"><h3>Что замеряем</h3><div class="badge-row">${survey.workTypes.map(type => `<span class="type-badge ${WORK_TYPES[type]?.className || ''}">${WORK_TYPES[type]?.label || type}</span>`).join('')}</div></div>
     ${survey.note ? `<div class="details-section"><h3>Комментарий</h3><div class="details-note">${escapeHtml(survey.note)}</div></div>` : ''}
     ${survey.syncState === 'conflict' ? '<div class="details-section"><div class="notice notice-lock">Есть более новая версия этого замера на сервере. Пока данные не затираются автоматически.</div></div>' : ''}
-    <div class="details-section"><div class="notice notice-lock">Следующий этап добавит сюда визуальный конструктор линии: столбы, пролёты, ворота, калитки и их свободное редактирование.</div></div>
+    ${survey.workTypes.some(type => type === 'gates' || type === 'fence') ? renderLayoutSummaryCard(survey) : ''}
+    ${survey.workTypes.includes('canopy') ? '<div class="details-section"><div class="notice notice-lock">Навес сохранён в этом же заказе. Его отдельный замер подключим следующим модулем конструктора.</div></div>' : ''}
     ${currentUser.role === 'owner' ? `<button class="btn btn-danger btn-block" data-archive-survey="${survey.id}" type="button">Архивировать заказ</button>` : ''}`;
   $('#surveyDetailsDialog').showModal();
   $('[data-archive-survey]')?.addEventListener('click', () => archiveSurvey(survey.id));
+  $('[data-open-layout]')?.addEventListener('click', () => openLayoutEditor(survey.id));
 }
 
 async function archiveSurvey(id) {
@@ -715,6 +720,336 @@ async function toggleEmployee(id) {
   }
 }
 
+
+const SEGMENT_LABELS = { fence:'Забор', gate:'Ворота', wicket:'Калитка', opening:'Проём' };
+const MATERIAL_LABELS = { profsheet:'Профнастил', picket:'Евроштакетник', forged:'Кованые', frame:'Каркас', other:'Другое' };
+
+function newBoundary() {
+  return { id:makeId('post'), kind:'new', profile:'100×100×3', note:'' };
+}
+function newLayoutLine(index = 0) {
+  return { id:makeId('line'), name:`Линия ${index + 1}`, segments:[], boundaries:[newBoundary()] };
+}
+function defaultSegment(type = 'fence') {
+  const presets = {
+    fence:{widthMm:2500,heightMm:1800,material:'profsheet'},
+    gate:{widthMm:3400,heightMm:1800,material:'forged',gateType:'swing'},
+    wicket:{widthMm:1000,heightMm:1800,material:'forged'},
+    opening:{widthMm:1000,heightMm:0,material:''}
+  };
+  return {
+    id:makeId('seg'), type, ...(presets[type] || presets.fence),
+    fillColor:'', frameColor:'', note:''
+  };
+}
+function normalizeLayoutLine(line, index) {
+  const normalized = line && typeof line === 'object' ? line : newLayoutLine(index);
+  normalized.id ||= makeId('line');
+  normalized.name ||= `Линия ${index + 1}`;
+  normalized.segments = Array.isArray(normalized.segments) ? normalized.segments : [];
+  normalized.boundaries = Array.isArray(normalized.boundaries) ? normalized.boundaries : [];
+  while (normalized.boundaries.length < normalized.segments.length + 1) normalized.boundaries.push(newBoundary());
+  if (normalized.boundaries.length > normalized.segments.length + 1) normalized.boundaries.length = normalized.segments.length + 1;
+  if (!normalized.boundaries.length) normalized.boundaries.push(newBoundary());
+  for (const boundary of normalized.boundaries) {
+    boundary.id ||= makeId('post');
+    boundary.kind = ['new','existing','none'].includes(boundary.kind) ? boundary.kind : 'new';
+    boundary.profile ||= '100×100×3';
+    boundary.note ||= '';
+  }
+  for (const segment of normalized.segments) {
+    segment.id ||= makeId('seg');
+    segment.type = ['fence','gate','wicket','opening'].includes(segment.type) ? segment.type : 'fence';
+    segment.widthMm = Math.max(100, Number(segment.widthMm) || 1000);
+    segment.heightMm = segment.type === 'opening' ? 0 : Math.max(100, Number(segment.heightMm) || 1800);
+    segment.material ||= segment.type === 'opening' ? '' : 'profsheet';
+    segment.fillColor ||= '';
+    segment.frameColor ||= '';
+    segment.note ||= '';
+  }
+  return normalized;
+}
+function ensureSurveyLayout(survey) {
+  if (!survey.layout || typeof survey.layout !== 'object') survey.layout = {version:1,lines:[newLayoutLine(0)]};
+  survey.layout.version = 1;
+  survey.layout.lines = Array.isArray(survey.layout.lines) && survey.layout.lines.length ? survey.layout.lines : [newLayoutLine(0)];
+  survey.layout.lines = survey.layout.lines.map(normalizeLayoutLine);
+  return survey.layout;
+}
+function layoutTotalMm(line) {
+  return (line.segments || []).reduce((sum, segment) => sum + Math.max(0, Number(segment.widthMm) || 0), 0);
+}
+function formatMeters(mm) {
+  const value = Math.round((Number(mm) || 0) / 10) / 100;
+  return value.toLocaleString('ru-RU',{maximumFractionDigits:2}) + ' м';
+}
+function boundaryLabel(boundary) {
+  if (boundary.kind === 'none') return 'Без столба';
+  if (boundary.kind === 'existing') return 'Существ.';
+  return boundary.profile || 'Столб';
+}
+function renderMiniLine(line) {
+  if (!line?.segments?.length) return '<div class="muted" style="font-size:12px">Схема ещё не собрана</div>';
+  let html = '';
+  line.segments.forEach((segment,index) => {
+    const boundary = line.boundaries[index];
+    html += `<span class="layout-mini-post ${boundary?.kind === 'none' ? 'none' : ''}" title="${escapeHtml(boundaryLabel(boundary || {}))}"></span>`;
+    html += `<span class="layout-mini-segment ${segment.type}" style="flex:${Math.max(1,Number(segment.widthMm)||1000)}" title="${escapeHtml(SEGMENT_LABELS[segment.type] || segment.type)}">${escapeHtml(SEGMENT_LABELS[segment.type]?.slice(0,1) || '')}</span>`;
+  });
+  const last = line.boundaries[line.boundaries.length - 1];
+  html += `<span class="layout-mini-post ${last?.kind === 'none' ? 'none' : ''}" title="${escapeHtml(boundaryLabel(last || {}))}"></span>`;
+  return html;
+}
+function renderLayoutSummaryCard(survey) {
+  const layout = survey.layout && Array.isArray(survey.layout.lines) ? survey.layout : null;
+  const lines = layout?.lines || [];
+  const segmentCount = lines.reduce((sum,line) => sum + (line.segments?.length || 0),0);
+  const total = lines.reduce((sum,line) => sum + layoutTotalMm(line),0);
+  const mini = lines[0]?.segments?.length ? `<div class="layout-preview-mini">${renderMiniLine(lines[0])}</div>` : '';
+  return `<div class="layout-section-card">
+    <div class="card-top">
+      <div><h3>Схема ворот и забора</h3><div class="muted" style="font-size:12px">${segmentCount ? `${segmentCount} элементов · ${formatMeters(total)}` : 'Схема пока не собрана'}</div></div>
+      <button class="btn btn-secondary" data-open-layout type="button">${segmentCount ? 'Изменить' : 'Собрать схему'}</button>
+    </div>
+    ${mini}
+  </div>`;
+}
+async function saveLayoutSurvey(survey, {sync = true} = {}) {
+  survey.updatedAt = new Date().toISOString();
+  survey.schemaVersion = Math.max(3,Number(survey.schemaVersion)||0);
+  if (survey.syncState !== 'conflict') survey.syncState = API_ENABLED ? 'pending' : 'local';
+  await idbPut('surveys',survey);
+  if (sync && API_ENABLED && navigator.onLine && survey.syncState !== 'conflict') queueMicrotask(() => syncNow({silent:true}));
+}
+function findLayoutLine(survey,lineId) {
+  return ensureSurveyLayout(survey).lines.find(line => line.id === lineId) || null;
+}
+function segmentVisualWidth(segment) {
+  return Math.max(76,Math.min(230,Math.round((Number(segment.widthMm)||1000)/20)));
+}
+function renderBoundary(boundary,lineId) {
+  const cls = boundary.kind === 'existing' ? 'existing' : boundary.kind === 'none' ? 'none' : 'new';
+  return `<button class="layout-boundary ${cls}" data-edit-post="${boundary.id}" data-line-id="${lineId}" type="button" title="${escapeHtml(boundaryLabel(boundary))}">
+    <span class="layout-post-shape"></span><span class="layout-post-label">${escapeHtml(boundaryLabel(boundary))}</span>
+  </button>`;
+}
+function renderSegment(segment,lineId,index) {
+  const material = segment.type === 'opening' ? '' : (MATERIAL_LABELS[segment.material] || '');
+  return `<button class="layout-segment ${segment.type}" data-edit-segment="${segment.id}" data-line-id="${lineId}" type="button" style="width:${segmentVisualWidth(segment)}px">
+    <span class="layout-segment-size">${formatMeters(segment.widthMm)}</span>
+    <span class="layout-segment-visual"><span class="layout-segment-label">${escapeHtml(SEGMENT_LABELS[segment.type] || segment.type)}${material ? `<br><small>${escapeHtml(material)}</small>` : ''}</span></span>
+  </button>`;
+}
+function addButton(lineId,index) {
+  return `<button class="layout-insert" data-insert-line="${lineId}" data-insert-index="${index}" type="button" aria-label="Добавить элемент">+</button>`;
+}
+function renderLayoutLine(line,index,totalLines) {
+  const total = layoutTotalMm(line);
+  const newPosts = line.boundaries.filter(x => x.kind === 'new').length;
+  const existingPosts = line.boundaries.filter(x => x.kind === 'existing').length;
+  let canvas = '';
+  if (!line.segments.length) {
+    canvas = `<div class="layout-empty"><div>Добавьте первый элемент этой линии</div><div class="layout-add-grid">
+      <button class="layout-add-type" data-add-type="fence" data-line-id="${line.id}" type="button"><span>▥</span>Забор</button>
+      <button class="layout-add-type" data-add-type="gate" data-line-id="${line.id}" type="button"><span>▥▥</span>Ворота</button>
+      <button class="layout-add-type" data-add-type="wicket" data-line-id="${line.id}" type="button"><span>▯</span>Калитка</button>
+      <button class="layout-add-type" data-add-type="opening" data-line-id="${line.id}" type="button"><span>↔</span>Проём</button>
+    </div></div>`;
+  } else {
+    canvas += renderBoundary(line.boundaries[0],line.id) + addButton(line.id,0);
+    line.segments.forEach((segment,segmentIndex) => {
+      canvas += renderSegment(segment,line.id,segmentIndex);
+      canvas += renderBoundary(line.boundaries[segmentIndex + 1],line.id);
+      canvas += addButton(line.id,segmentIndex + 1);
+    });
+  }
+  return `<section class="layout-line" data-layout-line="${line.id}">
+    <div class="layout-line-head">
+      <div class="layout-line-title"><b>${escapeHtml(line.name)}</b><small>${line.segments.length ? `Общая длина ${formatMeters(total)}` : 'Пустая линия'}</small></div>
+      <div class="layout-line-actions"><button class="mini-btn" data-rename-line="${line.id}" type="button">Название</button>${totalLines > 1 ? `<button class="mini-btn danger" data-delete-line="${line.id}" type="button">Удалить</button>` : ''}</div>
+    </div>
+    <div class="layout-canvas-scroll"><div class="layout-canvas">${canvas}</div></div>
+    <div class="layout-summary"><span><b>${line.segments.length}</b> пролётов</span><span>Новых столбов: <b>${newPosts}</b></span><span>Существующих: <b>${existingPosts}</b></span></div>
+  </section>`;
+}
+async function renderLayoutEditor() {
+  const survey = await idbGet('surveys',activeLayoutSurveyId);
+  if (!survey) return;
+  const layout = ensureSurveyLayout(survey);
+  $('#layoutSurveyNumber').textContent = displaySurveyNumber(survey);
+  $('#layoutLines').innerHTML = layout.lines.map((line,index) => renderLayoutLine(line,index,layout.lines.length)).join('');
+}
+async function openLayoutEditor(surveyId) {
+  const survey = await idbGet('surveys',surveyId);
+  if (!survey) return;
+  if (!survey.workTypes.some(type => type === 'gates' || type === 'fence')) return;
+  const hadLayout = !!survey.layout;
+  ensureSurveyLayout(survey);
+  if (!hadLayout) await saveLayoutSurvey(survey,{sync:false});
+  activeLayoutSurveyId = surveyId;
+  await renderLayoutEditor();
+  $('#surveyDetailsDialog').close();
+  $('#layoutDialog').showModal();
+}
+async function reopenSurveyDetailsAfterLayout() {
+  const id = activeLayoutSurveyId;
+  $('#layoutDialog').close();
+  activeLayoutSurveyId = '';
+  if (id) await openSurveyDetails(id);
+}
+function updateSegmentFields() {
+  const type = $('#segmentTypeInput').value;
+  $('#segmentGateTypeField').classList.toggle('hidden',type !== 'gate');
+  $('#segmentMaterialField').classList.toggle('hidden',type === 'opening');
+  $('#segmentColorFields').classList.toggle('hidden',type === 'opening');
+  const height = $('#segmentHeightInput');
+  height.disabled = type === 'opening';
+  if (type === 'opening') height.value = '0';
+}
+async function openSegmentDialog(lineId,segmentId = '',insertIndex = 0,type = 'fence') {
+  const survey = await idbGet('surveys',activeLayoutSurveyId);
+  const line = survey ? findLayoutLine(survey,lineId) : null;
+  if (!line) return;
+  pendingInsertIndex = Math.max(0,Math.min(line.segments.length,Number(insertIndex)||0));
+  const segment = segmentId ? line.segments.find(x => x.id === segmentId) : defaultSegment(type);
+  if (!segment) return;
+  $('#segmentLineId').value = lineId;
+  $('#segmentId').value = segmentId || '';
+  $('#segmentDialogTitle').textContent = segmentId ? (SEGMENT_LABELS[segment.type] || 'Пролёт') : 'Новый элемент';
+  $('#segmentTypeInput').value = segment.type;
+  $('#segmentWidthInput').value = segment.widthMm || 1000;
+  $('#segmentHeightInput').value = segment.heightMm || 0;
+  $('#segmentGateTypeInput').value = segment.gateType || 'swing';
+  $('#segmentMaterialInput').value = segment.material || 'profsheet';
+  $('#segmentFillColorInput').value = segment.fillColor || '';
+  $('#segmentFrameColorInput').value = segment.frameColor || '';
+  $('#segmentNoteInput').value = segment.note || '';
+  $('#deleteSegmentBtn').classList.toggle('hidden',!segmentId);
+  $('#segmentMoveRow').classList.toggle('hidden',!segmentId);
+  if (segmentId) {
+    const idx = line.segments.findIndex(x => x.id === segmentId);
+    $('#moveSegmentLeftBtn').disabled = idx <= 0;
+    $('#moveSegmentRightBtn').disabled = idx < 0 || idx >= line.segments.length - 1;
+  }
+  updateSegmentFields();
+  $('#segmentDialog').showModal();
+}
+async function saveSegmentFromDialog() {
+  const survey = await idbGet('surveys',activeLayoutSurveyId);
+  const line = survey ? findLayoutLine(survey,$('#segmentLineId').value) : null;
+  if (!line) return;
+  const type = $('#segmentTypeInput').value;
+  const widthMm = Math.round(Number($('#segmentWidthInput').value));
+  const heightMm = type === 'opening' ? 0 : Math.round(Number($('#segmentHeightInput').value));
+  if (!Number.isFinite(widthMm) || widthMm < 100 || widthMm > 50000) return showToast('Проверьте ширину элемента');
+  if (type !== 'opening' && (!Number.isFinite(heightMm) || heightMm < 100 || heightMm > 5000)) return showToast('Проверьте высоту элемента');
+  const values = {
+    type,widthMm,heightMm,gateType:type === 'gate' ? $('#segmentGateTypeInput').value : '',
+    material:type === 'opening' ? '' : $('#segmentMaterialInput').value,
+    fillColor:type === 'opening' ? '' : $('#segmentFillColorInput').value.trim(),
+    frameColor:type === 'opening' ? '' : $('#segmentFrameColorInput').value.trim(),
+    note:$('#segmentNoteInput').value.trim()
+  };
+  const id = $('#segmentId').value;
+  if (id) {
+    const segment = line.segments.find(x => x.id === id);
+    if (!segment) return;
+    Object.assign(segment,values);
+  } else {
+    const segment = {...defaultSegment(type),...values};
+    const index = Math.max(0,Math.min(line.segments.length,pendingInsertIndex));
+    line.segments.splice(index,0,segment);
+    line.boundaries.splice(index + 1,0,newBoundary());
+  }
+  await saveLayoutSurvey(survey);
+  $('#segmentDialog').close();
+  await renderLayoutEditor();
+}
+async function deleteSegmentFromDialog() {
+  const survey = await idbGet('surveys',activeLayoutSurveyId);
+  const line = survey ? findLayoutLine(survey,$('#segmentLineId').value) : null;
+  const id = $('#segmentId').value;
+  if (!line || !id) return;
+  const index = line.segments.findIndex(x => x.id === id);
+  if (index < 0) return;
+  line.segments.splice(index,1);
+  line.boundaries.splice(index + 1,1);
+  normalizeLayoutLine(line,0);
+  await saveLayoutSurvey(survey);
+  $('#segmentDialog').close();
+  await renderLayoutEditor();
+}
+async function moveActiveSegment(direction) {
+  const survey = await idbGet('surveys',activeLayoutSurveyId);
+  const line = survey ? findLayoutLine(survey,$('#segmentLineId').value) : null;
+  const id = $('#segmentId').value;
+  if (!line || !id) return;
+  const index = line.segments.findIndex(x => x.id === id);
+  const target = index + direction;
+  if (index < 0 || target < 0 || target >= line.segments.length) return;
+  [line.segments[index],line.segments[target]] = [line.segments[target],line.segments[index]];
+  await saveLayoutSurvey(survey);
+  $('#segmentDialog').close();
+  await renderLayoutEditor();
+  showToast(direction < 0 ? 'Элемент сдвинут левее' : 'Элемент сдвинут правее');
+}
+async function openPostDialog(lineId,postId) {
+  const survey = await idbGet('surveys',activeLayoutSurveyId);
+  const line = survey ? findLayoutLine(survey,lineId) : null;
+  const post = line?.boundaries.find(x => x.id === postId);
+  if (!post) return;
+  $('#postLineId').value = lineId;
+  $('#postId').value = postId;
+  $('#postKindInput').value = post.kind || 'new';
+  $('#postProfileInput').value = ['100×100×3','80×80×3','60×60×2','other'].includes(post.profile) ? post.profile : 'other';
+  $('#postNoteInput').value = post.note || '';
+  $('#postProfileField').classList.toggle('hidden',post.kind === 'none');
+  $('#postDialog').showModal();
+}
+async function savePostFromDialog() {
+  const survey = await idbGet('surveys',activeLayoutSurveyId);
+  const line = survey ? findLayoutLine(survey,$('#postLineId').value) : null;
+  const post = line?.boundaries.find(x => x.id === $('#postId').value);
+  if (!post) return;
+  post.kind = $('#postKindInput').value;
+  post.profile = $('#postProfileInput').value;
+  post.note = $('#postNoteInput').value.trim();
+  await saveLayoutSurvey(survey);
+  $('#postDialog').close();
+  await renderLayoutEditor();
+}
+async function addLayoutLine() {
+  const survey = await idbGet('surveys',activeLayoutSurveyId);
+  if (!survey) return;
+  const layout = ensureSurveyLayout(survey);
+  layout.lines.push(newLayoutLine(layout.lines.length));
+  await saveLayoutSurvey(survey);
+  await renderLayoutEditor();
+}
+async function deleteLayoutLine(lineId) {
+  const survey = await idbGet('surveys',activeLayoutSurveyId);
+  if (!survey) return;
+  const layout = ensureSurveyLayout(survey);
+  if (layout.lines.length <= 1) return;
+  const line = layout.lines.find(x => x.id === lineId);
+  if (line?.segments?.length && !confirm('Удалить эту линию вместе со всеми её элементами?')) return;
+  layout.lines = layout.lines.filter(x => x.id !== lineId);
+  await saveLayoutSurvey(survey);
+  await renderLayoutEditor();
+}
+async function renameLayoutLine(lineId) {
+  const survey = await idbGet('surveys',activeLayoutSurveyId);
+  const line = survey ? findLayoutLine(survey,lineId) : null;
+  if (!line) return;
+  const name = prompt('Название линии или участка',line.name);
+  if (name === null) return;
+  const cleaned = name.trim().slice(0,60);
+  if (!cleaned) return;
+  line.name = cleaned;
+  await saveLayoutSurvey(survey);
+  await renderLayoutEditor();
+}
+
 function resetSurveyWizard() {
   $('#surveyForm').reset();
   $('#surveyStep1').classList.add('active');
@@ -819,6 +1154,29 @@ function bindEvents() {
   $('#newEmployeeBtn').addEventListener('click', () => openEmployeeDialog());
   $('#saveEmployeeBtn').addEventListener('click', saveEmployee);
   $('#closeDetailsBtn').addEventListener('click', () => $('#surveyDetailsDialog').close());
+  $('#closeLayoutBtn')?.addEventListener('click', reopenSurveyDetailsAfterLayout);
+  $('#addLayoutLineBtn')?.addEventListener('click', addLayoutLine);
+  $('#segmentTypeInput')?.addEventListener('change', updateSegmentFields);
+  $('#postKindInput')?.addEventListener('change', () => $('#postProfileField').classList.toggle('hidden',$('#postKindInput').value === 'none'));
+  $('#saveSegmentBtn')?.addEventListener('click', saveSegmentFromDialog);
+  $('#deleteSegmentBtn')?.addEventListener('click', deleteSegmentFromDialog);
+  $('#moveSegmentLeftBtn')?.addEventListener('click', () => moveActiveSegment(-1));
+  $('#moveSegmentRightBtn')?.addEventListener('click', () => moveActiveSegment(1));
+  $('#savePostBtn')?.addEventListener('click', savePostFromDialog);
+  $('#layoutLines')?.addEventListener('click', event => {
+    const add = event.target.closest('[data-add-type]');
+    if (add) return openSegmentDialog(add.dataset.lineId,'',0,add.dataset.addType);
+    const insert = event.target.closest('[data-insert-line]');
+    if (insert) return openSegmentDialog(insert.dataset.insertLine,'',Number(insert.dataset.insertIndex),'fence');
+    const segment = event.target.closest('[data-edit-segment]');
+    if (segment) return openSegmentDialog(segment.dataset.lineId,segment.dataset.editSegment);
+    const post = event.target.closest('[data-edit-post]');
+    if (post) return openPostDialog(post.dataset.lineId,post.dataset.editPost);
+    const rename = event.target.closest('[data-rename-line]');
+    if (rename) return renameLayoutLine(rename.dataset.renameLine);
+    const remove = event.target.closest('[data-delete-line]');
+    if (remove) return deleteLayoutLine(remove.dataset.deleteLine);
+  });
   $$('[data-survey-filter]').forEach(btn => btn.addEventListener('click', () => {
     currentSurveyFilter = btn.dataset.surveyFilter;
     $$('[data-survey-filter]').forEach(x => x.classList.toggle('active', x === btn));
