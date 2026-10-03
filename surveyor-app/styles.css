@@ -54,3 +54,6 @@
 @media(max-width:520px){.form-grid-2{grid-template-columns:1fr}.layout-add-grid{grid-template-columns:1fr 1fr}.layout-sheet{padding-left:12px;padding-right:12px}.layout-canvas{height:178px}.layout-post-shape{height:103px}.layout-segment{height:104px}.layout-segment-visual{height:74px}}
 
 .segment-move-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}.segment-move-row .mini-btn{padding:10px}
+
+.layout-line-name{border:0;background:transparent;font-weight:900;font-size:15px;color:var(--text);padding:3px 4px;margin-left:-4px;min-width:0;width:min(220px,52vw);border-radius:8px;outline:none}
+.layout-line-name:focus{background:#fff;border:1px solid var(--gold);padding:2px 3px}
