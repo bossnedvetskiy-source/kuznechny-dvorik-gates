@@ -48,11 +48,13 @@ function render(){
     $('drawingStatus').textContent='проверьте размеры';
     $('totalPrice').textContent='—';
     $('clientSummary').innerHTML='';
-    $('canopySvg').innerHTML='<text x="600" y="340" text-anchor="middle" fill="#9b3c2d" font-size="24">Проверьте размеры навеса</text>';
+    const viewport=$('canopyViewport');
+    if(viewport) viewport.innerHTML='<div class="three-fallback"><b>Проверьте размеры навеса</b><span>После исправления параметров 3D перестроится автоматически.</span></div>';
     return;
   }
   const c=C.compute(raw,g,loadAdminPrices());
   g.trussCount=c.trussCount;
+  window.__CANOPY_PUBLIC=c;
   currentRaw={...raw};
   currentPublic={total:Math.round(c.total),area:c.area,coverage:c.coverage,visibleHeightM:c.visibleHeightM,lengthM:c.lengthM,paint:c.paint};
 
@@ -78,7 +80,8 @@ function render(){
     status.classList.remove('has-warning','example');
   }
   clientSummary(g,c);
-  window.Canopy3D.render($('canopySvg'),g,c);
+  const viewport=$('canopyViewport');
+  if(window.Canopy3D?.render) window.Canopy3D.render(viewport,g,c);
 }
 function normalizePhone(value){
   let d=String(value||'').replace(/\D/g,'');
@@ -166,6 +169,11 @@ $('showSave').addEventListener('click',()=>{
 });
 $('closeSave').addEventListener('click',()=>{$('savePanel').hidden=true});
 $('saveCalculation').addEventListener('click',saveCalculation);
+$('reset3dView')?.addEventListener('click',()=>window.Canopy3D?.resetView?.());
+window.addEventListener('canopy3d-ready',()=>{
+  const g=window.__TRUSS_CURRENT,c=window.__CANOPY_PUBLIC,viewport=$('canopyViewport');
+  if(g?.ok&&c&&viewport) window.Canopy3D.render(viewport,g,c);
+},{once:true});
 window.TrussApp={render,rawInput,loadAdminPrices,snapshot};
 render();
 })();
