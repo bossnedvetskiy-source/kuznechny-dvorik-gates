@@ -169,3 +169,30 @@ html,body{max-width:100%;overflow-x:clip}
     font-size:10px!important;
   }
 }
+
+/* Original calculator-style farm selector */
+.original-picker{grid-column:1/-1;display:grid;gap:18px;padding:0 0 16px;border-bottom:1px solid var(--line)}
+.original-picker-group{display:grid;gap:9px}
+.original-label,.original-field-label{display:block;font-size:12px;font-weight:800;color:var(--text)}
+.original-label strong{font-weight:800}
+.farm-type-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;border-bottom:1px solid var(--line);padding-bottom:10px}
+.farm-type-option{min-width:0;height:66px;border:1px solid transparent;background:transparent;padding:7px;cursor:pointer;border-radius:0}
+.farm-type-option img{display:block;width:100%;height:100%;object-fit:contain;background:#fff}
+.farm-type-option.is-selected{border-color:#2f6f9d;background:rgba(47,111,157,.08)}
+.original-segment{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border:1px solid #2f6f9d;border-radius:0;overflow:hidden}
+.original-segment button{min-width:0;min-height:42px;border:0;border-right:1px solid #2f6f9d;background:transparent;color:#dce7ef;padding:8px 10px;font-size:11px;font-weight:700;cursor:pointer}
+.original-segment button:last-child{border-right:0}
+.original-segment button.is-selected{background:#2f6f9d;color:#fff}
+.original-picker-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.original-compact-field{display:grid;gap:7px;min-width:0}
+.original-compact-field .field{margin:0}
+.original-inline-info{display:block;margin-top:5px;color:var(--muted);font-size:9.5px;line-height:1.35}
+.original-segment-two{grid-template-columns:1fr 1fr}
+.original-compact-field select{min-height:42px;width:100%;border:1px solid #3a4149;border-radius:0;background:#101317;color:var(--text);padding:0 11px}
+@media(max-width:600px){
+  .original-picker{gap:16px}
+  .farm-type-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .farm-type-option{height:58px;padding:5px}
+  .original-segment button{min-height:40px;padding:7px 5px;font-size:10px}
+  .original-picker-row{grid-template-columns:1fr}
+}
