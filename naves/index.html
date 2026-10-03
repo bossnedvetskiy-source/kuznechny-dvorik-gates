@@ -31,9 +31,76 @@
         <label class="field"><span>Высота, м</span><input id="visibleHeight" type="number" min="1.5" max="5" step="0.1" value="2.1" inputmode="decimal"><small>Высота столбов над землёй</small></label>
         <label class="field"><span>Покрытие</span><select id="coverage"><option>Поликарбонат</option><option>Профнастил</option><option>Без покрытия</option></select></label>
         <label class="field"><span>Установка</span><select id="installType"><option>Бетонирование</option><option>Закладные</option></select><small>Способ установки новых столбов</small></label>
-        <label class="field"><span>Тип фермы</span><select id="trussType"><option selected>Треугольная</option><option>Вертикальная</option></select><small>Треугольная решётка или вертикальные стойки</small></label>
-        <label class="field"><span>Материал фермы</span><select id="materialMode"><option selected>30×30×2</option><option>40×20×2</option></select><small>Профиль обоих поясов и внутренней решётки</small></label>
         <label class="field"><span>Столбы уже есть, шт</span><input id="existingPosts" type="number" min="0" max="50" step="1" value="0" inputmode="numeric"><small>Укажите только подходящие существующие столбы</small></label>
+
+        <section class="construction-picker field-wide" aria-labelledby="trussPickerTitle">
+          <div class="choice-head">
+            <div><span id="trussPickerTitle">Форма фермы</span><small>Выберите по внешнему виду — 3D перестроится сразу</small></div>
+          </div>
+          <input id="trussType" type="hidden" value="Треугольная">
+          <div class="truss-visual-grid" role="radiogroup" aria-label="Тип фермы">
+            <button class="truss-option" type="button" data-truss-option="Вертикальная" role="radio" aria-checked="false">
+              <span class="truss-option-art">
+                <svg viewBox="0 0 180 90" aria-hidden="true">
+                  <path class="truss-chord" d="M12 69 Q90 5 168 69"/>
+                  <path class="truss-chord" d="M24 69 Q90 26 156 69"/>
+                  <path class="truss-web" d="M40 56 L40 59 M61 37 L61 45 M83 27 L83 36 M105 29 L105 38 M127 43 L127 50 M147 60 L147 63"/>
+                </svg>
+              </span>
+              <span class="truss-option-copy"><b>Вертикальная</b><small>Вертикальные стойки</small></span>
+              <i class="choice-check">✓</i>
+            </button>
+
+            <button class="truss-option is-selected" type="button" data-truss-option="Треугольная" role="radio" aria-checked="true">
+              <span class="truss-option-art">
+                <svg viewBox="0 0 180 90" aria-hidden="true">
+                  <path class="truss-chord" d="M12 69 Q90 5 168 69"/>
+                  <path class="truss-chord" d="M24 69 Q90 26 156 69"/>
+                  <path class="truss-web" d="M25 67 L43 54 L58 44 L72 32 L88 36 L103 29 L118 44 L135 50 L155 67"/>
+                  <path class="truss-web" d="M43 54 L58 44 M72 32 L88 36 M103 29 L118 44 M135 50 L155 67"/>
+                </svg>
+              </span>
+              <span class="truss-option-copy"><b>Треугольная</b><small>Диагональная решётка</small></span>
+              <i class="choice-check">✓</i>
+            </button>
+
+            <button class="truss-option" type="button" data-truss-option="Усиленная" role="radio" aria-checked="false">
+              <span class="truss-option-art">
+                <svg viewBox="0 0 180 90" aria-hidden="true">
+                  <path class="truss-chord" d="M12 69 Q90 5 168 69"/>
+                  <path class="truss-chord" d="M24 69 Q90 26 156 69"/>
+                  <path class="truss-web" d="M25 67 L43 54 L58 44 L72 32 L88 36 L103 29 L118 44 L135 50 L155 67"/>
+                  <path class="truss-web" d="M43 54 L43 50 M61 42 L61 44 M83 28 L83 36 M105 29 L105 37 M127 43 L127 48 M147 60 L147 63"/>
+                </svg>
+              </span>
+              <span class="truss-option-copy"><b>Усиленная</b><small>Диагонали + стойки</small></span>
+              <i class="choice-check">✓</i>
+            </button>
+          </div>
+
+          <div class="choice-subsection">
+            <div class="choice-head compact"><div><span>Материал фермы</span><small>Профиль поясов и внутренней решётки</small></div></div>
+            <input id="materialMode" type="hidden" value="30×30×2">
+            <div class="segment-choice material-choice" role="radiogroup" aria-label="Материал фермы">
+              <button class="segment-option is-selected" type="button" data-material-option="30×30×2" role="radio" aria-checked="true"><b>30×30×2</b><small>профильная труба</small></button>
+              <button class="segment-option" type="button" data-material-option="40×20×2" role="radio" aria-checked="false"><b>40×20×2</b><small>профильная труба</small></button>
+            </div>
+          </div>
+
+          <div class="choice-subsection">
+            <div class="choice-head compact"><div><span>Лаги кровли 40×20×2</span><small id="lagModeHint">Выберите баланс жёсткости и стоимости</small></div></div>
+            <input id="lagMode" type="hidden" value="Стандарт">
+            <div class="segment-choice lag-choice" role="radiogroup" aria-label="Шаг лаг 40 на 20">
+              <button class="segment-option is-selected" type="button" data-lag-option="Стандарт" role="radio" aria-checked="true">
+                <b>Стандарт</b><span>≈40 см</span><small>больше лаг · жёстче</small>
+              </button>
+              <button class="segment-option" type="button" data-lag-option="Эконом" role="radio" aria-checked="false">
+                <b>Эконом</b><span>≤50 см</span><small>меньше металла</small>
+              </button>
+            </div>
+            <div id="lagModeInfo" class="choice-result">Считаем количество лаг…</div>
+          </div>
+        </section>
       </div>
 
       <div class="simple-options">
