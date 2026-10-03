@@ -13,10 +13,9 @@ test('canopy client is simple and saved order keeps production/finance in admin'
   await expect(page.locator('#farmTypeCaption')).toHaveText('Арочный');
   await expect(page.locator('[data-farm-type]')).toHaveCount(7);
   await expect(page.locator('[data-farm-type="Арочный"]')).toHaveClass(/is-selected/);
-  await expect(page.locator('.farm-sprite')).toHaveCount(5);
-  await expect(page.locator('.farm-exact-crop')).toHaveCount(2);
-  const exactCropsOk=await page.locator('.farm-exact-crop').evaluateAll(imgs=>imgs.every(img=>img.complete&&img.naturalWidth>0));
-  expect(exactCropsOk).toBeTruthy();
+  await expect(page.locator('[data-farm-type] img')).toHaveCount(7);
+  const farmImagesLoaded=await page.locator('[data-farm-type] img').evaluateAll(imgs=>imgs.length===7&&imgs.every(img=>img.complete&&img.naturalWidth>0&&img.naturalHeight>0));
+  expect(farmImagesLoaded).toBeTruthy();
   await expect(page.locator('#farmPreset')).toHaveValue('Стандарт');
   await expect(page.locator('[data-preset-option]')).toHaveCount(4);
   await expect(page.locator('[data-preset-option="Стандарт"]')).toHaveClass(/is-selected/);
