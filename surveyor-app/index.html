@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <meta name="theme-color" content="#121212" />
-  <meta name="description" content="КД Замерщик — мобильное приложение для выездных замеров" />
+  <meta name="description" content="КД Замерщик — мобильное приложение для выездных замеров" />\n  <meta name="robots" content="noindex,nofollow,noarchive" />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="styles.css" />
@@ -32,8 +32,8 @@
         </form>
         <details class="demo-access">
           <summary>Тестовый доступ</summary>
-          <div><b>Собственник:</b> admin / 1234</div>
-          <div><b>Замерщик:</b> zamer / 1234</div>
+          <div><b>Только DEV:</b> admin / 1234 и zamer / 1234</div>
+          <div>В рабочей версии используются серверные учётные записи.</div>
         </details>
       </div>
     </section>
@@ -119,13 +119,13 @@
               <div><b>Офлайн-режим</b><span>Замеры сохраняются на этом устройстве</span></div>
               <span class="status-pill success">Включён</span>
             </div>
-            <div class="settings-row">
-              <div><b>Синхронизация</b><span>Серверный обмен будет подключён следующим подэтапом</span></div>
-              <span class="status-pill warning">Локально</span>
+            <div class="settings-row sync-settings-row">
+              <div><b id="syncStatusText">Синхронизация</b><span id="syncStatusDetail">Проверяем состояние…</span></div>
+              <button id="syncNowBtn" class="btn btn-secondary" type="button">Синхронизировать</button>
             </div>
             <div class="settings-row">
-              <div><b>Версия</b><span>Этап 1 · foundation</span></div>
-              <span>0.1.0</span>
+              <div><b>Версия</b><span>Этап 1 · сервер + офлайн</span></div>
+              <span>0.2.0</span>
             </div>
           </div>
           <button id="logoutBtn" class="btn btn-danger btn-block" type="button">Выйти из аккаунта</button>
