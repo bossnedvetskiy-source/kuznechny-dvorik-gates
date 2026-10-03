@@ -57,7 +57,7 @@
             <div>
               <div class="eyebrow">Выездной замер</div>
               <h2>Новый замер</h2>
-              <p>Создайте клиента, выберите сразу несколько видов работ и сохраните всё одной заявкой.</p>
+              <p>Создайте выезд по телефону и адресу. Что именно замеряем, можно определить уже на объекте.</p>
             </div>
             <button id="newSurveyBtn" class="btn btn-primary btn-lg" type="button">+ Новый замер</button>
           </div>
@@ -91,7 +91,7 @@
           </div>
           <label class="searchbox">
             <span>⌕</span>
-            <input id="clientSearch" type="search" placeholder="Имя, телефон или адрес" />
+            <input id="clientSearch" type="search" placeholder="Телефон, адрес или имя" />
           </label>
           <div id="clientList" class="card-list"></div>
           <div id="clientEmpty" class="empty-state" hidden>
@@ -153,38 +153,13 @@
         <button class="icon-btn" value="cancel" type="submit" aria-label="Закрыть">×</button>
       </div>
 
-      <div class="progress-line"><span class="active"></span><span></span></div>
       <section id="surveyStep1" class="wizard-step active">
-        <h3>1. Клиент и объект</h3>
-        <label class="field"><span>Имя клиента</span><input id="surveyClientName" required placeholder="Например, Иван" /></label>
+        <h3>Куда едем на замер?</h3>
+        <p class="muted">Имя клиента и вид работ сейчас не нужны. Их можно добавить позже.</p>
         <label class="field"><span>Телефон</span><input id="surveyClientPhone" inputmode="tel" required placeholder="+7 937 000-00-00" /></label>
         <label class="field"><span>Адрес объекта</span><textarea id="surveyAddress" rows="2" required placeholder="Населённый пункт, улица, дом"></textarea></label>
         <label class="field"><span>Комментарий</span><textarea id="surveyNote" rows="2" placeholder="Например: позвонить за час"></textarea></label>
-        <button id="toSurveyStep2" class="btn btn-primary btn-lg btn-block" type="button">Дальше: что замеряем</button>
-      </section>
-
-      <section id="surveyStep2" class="wizard-step">
-        <h3>2. Что нужно замерить?</h3>
-        <p class="muted">Можно выбрать сразу несколько пунктов.</p>
-        <div class="work-grid">
-          <label class="work-option">
-            <input type="checkbox" name="workType" value="gates" />
-            <span class="work-icon">▥</span><b>Ворота / калитка</b><small>Распашные, откатные, кованые и под зашивку</small>
-          </label>
-          <label class="work-option">
-            <input type="checkbox" name="workType" value="fence" />
-            <span class="work-icon">▥▥</span><b>Забор</b><small>Профнастил, евроштакетник и участки без ворот</small>
-          </label>
-          <label class="work-option">
-            <input type="checkbox" name="workType" value="canopy" />
-            <span class="work-icon">⌒</span><b>Навес</b><small>Размеры, столбы, фермы и покрытие</small>
-          </label>
-        </div>
-        <div id="workTypeError" class="form-error" hidden>Выберите хотя бы один вид работ.</div>
-        <div class="button-row">
-          <button id="backSurveyStep1" class="btn btn-secondary" type="button">Назад</button>
-          <button id="saveSurveyBtn" class="btn btn-primary" type="button">Сохранить замер</button>
-        </div>
+        <button id="saveSurveyBtn" class="btn btn-primary btn-lg btn-block" type="button">Создать замер</button>
       </section>
     </form>
   </dialog>
@@ -193,7 +168,7 @@
     <form id="clientForm" method="dialog" class="sheet">
       <div class="sheet-handle"></div>
       <div class="sheet-head"><h2>Новый клиент</h2><button class="icon-btn" value="cancel" type="submit">×</button></div>
-      <label class="field"><span>Имя</span><input id="clientNameInput" required /></label>
+      <label class="field"><span>Имя <small class="muted">необязательно до договора</small></span><input id="clientNameInput" /></label>
       <label class="field"><span>Телефон</span><input id="clientPhoneInput" inputmode="tel" required /></label>
       <label class="field"><span>Адрес</span><textarea id="clientAddressInput" rows="2"></textarea></label>
       <button id="saveClientBtn" class="btn btn-primary btn-block" type="button">Сохранить клиента</button>
