@@ -4,10 +4,11 @@ const APP_VERSION = '0.3.0';
 const DB_NAME = 'kd-surveyor-stage1';
 const DB_VERSION = 1;
 const STORE_NAMES = ['employees', 'clients', 'surveys', 'meta'];
+const IS_ANDROID_APP = location.hostname === 'appassets.androidplatform.net';
 const IS_PREVIEW = location.hostname.endsWith('github.io') || ['localhost','127.0.0.1'].includes(location.hostname);
 const FORCE_SERVER = new URLSearchParams(location.search).get('server') === '1';
-const API_ENABLED = !IS_PREVIEW || FORCE_SERVER;
-const API_BASE = IS_PREVIEW ? 'https://kuzdvor.tw1.ru/api/surveyor' : '/api/surveyor';
+const API_ENABLED = IS_ANDROID_APP || !IS_PREVIEW || FORCE_SERVER;
+const API_BASE = (IS_PREVIEW || IS_ANDROID_APP) ? 'https://kuzdvor.tw1.ru/api/surveyor' : '/api/surveyor';
 
 const WORK_TYPES = {
   gates: { label: 'Ворота / калитка', short: 'Ворота', className: 'gates' },
@@ -1106,7 +1107,7 @@ function bindEvents() {
 }
 
 async function registerServiceWorker() {
-  if (!('serviceWorker' in navigator)) return;
+  if (IS_ANDROID_APP || !('serviceWorker' in navigator)) return;
   try { await navigator.serviceWorker.register('./sw.js'); } catch (e) { console.warn('SW registration failed', e); }
 }
 
