@@ -31,9 +31,21 @@ test('surveyor can create a mixed survey and reopen it offline', async ({page, c
   await expect(card).toContainText('Забор');
   await expect(card).toContainText('Навес');
 
-  await page.evaluate(() => navigator.serviceWorker?.ready);
-  await context.setOffline(true);
+  await expect.poll(
+    () => page.evaluate(async () => Boolean(await navigator.serviceWorker?.getRegistration('./'))),
+    {timeout:7000}
+  ).toBe(true);
+
+  // A service worker starts controlling an already-open page only after the
+  // next navigation. Reload once online, then verify a real offline reload.
   await page.reload();
+  await expect.poll(
+    () => page.evaluate(() => Boolean(navigator.serviceWorker?.controller)),
+    {timeout:7000}
+  ).toBe(true);
+
+  await context.setOffline(true);
+  await page.reload({waitUntil:'domcontentloaded'});
 
   await expect(page.locator('#mainView')).toBeVisible();
   await expect(page.locator('.survey-card').first()).toContainText('Тестовый клиент');
