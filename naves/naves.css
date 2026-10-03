@@ -116,3 +116,12 @@ html,body{max-width:100%;overflow-x:clip}
   .truss-option-art{aspect-ratio:1.9/1}
   .segment-choice{grid-template-columns:1fr 1fr}
 }
+
+/* Keep swipeable truss catalog from expanding the mobile form grid. */
+.construction-picker,.truss-visual-grid,.choice-subsection,.segment-choice{min-width:0;max-width:100%}
+.construction-picker{width:100%;box-sizing:border-box}
+.truss-visual-grid{width:100%;box-sizing:border-box}
+@media(max-width:600px){
+  .truss-visual-grid{max-width:100%;min-width:0}
+  .truss-option{min-width:0}
+}
