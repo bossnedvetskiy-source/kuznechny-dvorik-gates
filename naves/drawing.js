@@ -44,12 +44,25 @@
     const rightPostTop=window.TrussGeometry.arcY(g.innerChordM/2,g.widthM,g.riseM);
     svg.append(el('line',{x1:X(-g.innerChordM/2),y1:Y(0),x2:X(-g.innerChordM/2),y2:Y(leftPostTop),...common}));
     svg.append(el('line',{x1:X(g.innerChordM/2),y1:Y(0),x2:X(g.innerChordM/2),y2:Y(rightPostTop),...common}));
-    g.diagonals.forEach((d,i)=>{
-      const a=g.nodes[i],b=g.nodes[i+1];
-      svg.append(el('line',{x1:X(a.x),y1:Y(a.yWeb),x2:X(b.x),y2:Y(b.yWeb),stroke:'#252a2f','stroke-width':3.5,'stroke-linecap':'round'}));
-      const mx=(X(a.x)+X(b.x))/2,my=(Y(a.yWeb)+Y(b.yWeb))/2-8;
-      svg.append(el('text',{x:mx,y:my,fill:'#575e65','font-size':12,'font-weight':700,'text-anchor':'middle'},'D'+d.index));
-    });
+    if(g.trussType==='Вертикальная'){
+      g.verticals.forEach(v=>{
+        svg.append(el('line',{
+          x1:X(v.x),y1:Y(v.yLower),x2:X(v.x),y2:Y(v.yUpper),
+          stroke:'#252a2f','stroke-width':3.5,'stroke-linecap':'round'
+        }));
+        svg.append(el('text',{
+          x:X(v.x)+8,y:(Y(v.yLower)+Y(v.yUpper))/2+4,
+          fill:'#575e65','font-size':11,'font-weight':700
+        },'V'+v.index));
+      });
+    }else{
+      g.diagonals.forEach((d,i)=>{
+        const a=g.nodes[i],b=g.nodes[i+1];
+        svg.append(el('line',{x1:X(a.x),y1:Y(a.yWeb),x2:X(b.x),y2:Y(b.yWeb),stroke:'#252a2f','stroke-width':3.5,'stroke-linecap':'round'}));
+        const mx=(X(a.x)+X(b.x))/2,my=(Y(a.yWeb)+Y(b.yWeb))/2-8;
+        svg.append(el('text',{x:mx,y:my,fill:'#575e65','font-size':12,'font-weight':700,'text-anchor':'middle'},'D'+d.index));
+      });
+    }
     const dim='#59616a';
     const dimLine=(x1,y1,x2,y2)=>el('line',{x1,y1,x2,y2,stroke:dim,'stroke-width':1.5,'marker-start':'url(#arrow)','marker-end':'url(#arrow)'});
     const guide=(x1,y1,x2,y2)=>el('line',{x1,y1,x2,y2,stroke:'#9da4aa','stroke-width':1});
@@ -75,7 +88,11 @@
       svg.append(dimLine(X(a),flatY,X(b),flatY));
       svg.append(el('text',{x:(X(a)+X(b))/2,y:flatY-8,fill:'#59616a','font-size':11,'text-anchor':'middle'},window.TrussGeometry.mm(g.endFlatM)));
     }
-    svg.append(el('text',{x:55,y:H-34,fill:'#454c52','font-size':14,'font-weight':700},'Пояса: '+g.chordProfile+'   •   Решётка: '+g.webProfile+'   •   D1…D'+g.diagonalCount));
+    const memberLabel=g.trussType==='Вертикальная'
+      ?('V1…V'+g.verticalCount)
+      :('D1…D'+g.diagonalCount);
+    svg.append(el('text',{x:55,y:H-34,fill:'#454c52','font-size':14,'font-weight':700},
+      'Тип: '+g.trussType+'   •   Материал: '+g.materialMode+'   •   '+memberLabel));
     svg.append(el('text',{x:W-55,y:H-34,fill:'#454c52','font-size':14,'font-weight':700,'text-anchor':'end'},'Ферм в заказе: '+g.trussCount));
   }
   function serialize(svg){
