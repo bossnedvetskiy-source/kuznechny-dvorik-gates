@@ -1,6 +1,6 @@
 import {PLAN_ITEM_TYPES,MATERIAL_LABELS,ensureSitePlan,newItem,newLine,lineWidth,itemDescription,trimNumber} from './line-builder.js';
 
-const APP_VERSION = '0.3.0';
+const APP_VERSION = '0.3.1';
 const DB_NAME = 'kd-surveyor-stage1';
 const DB_VERSION = 1;
 const STORE_NAMES = ['employees', 'clients', 'surveys', 'meta'];
@@ -600,6 +600,7 @@ function workTypesEditorHtml(survey) {
         <b>${escapeHtml(meta.label)}</b>
       </label>`).join('')}
     </div>
+    <button class="btn btn-secondary btn-block work-types-save" data-save-work-types="${survey.id}" type="button">Сохранить состав замера</button>
   </div>`;
 }
 
@@ -860,7 +861,7 @@ async function openSurveyDetails(id) {
   $('#surveyDetailsDialog').showModal();
   $('[data-archive-survey]')?.addEventListener('click', () => archiveSurvey(survey.id));
   $('[data-edit-plan]')?.addEventListener('click', () => openPlanEditor(survey.id));
-  $('[data-survey-work-types]')?.addEventListener('change', () => saveSurveyWorkTypes(survey.id));
+  $('[data-save-work-types]')?.addEventListener('click', () => saveSurveyWorkTypes(survey.id));
 }
 
 async function archiveSurvey(id) {
