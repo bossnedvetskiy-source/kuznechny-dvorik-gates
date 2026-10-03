@@ -14,7 +14,11 @@ for (const marker of [
   "async function syncNow",
   "serverRevision",
   "syncState: API_ENABLED ? 'pending' : 'local'",
-  "API_BASE + path"
+  "API_BASE + path",
+  "const SEGMENT_LABELS",
+  "openLayoutEditor",
+  "saveSegmentFromDialog",
+  "layout:x.layout || null"
 ]) {
   if (!app.includes(marker)) throw new Error('Surveyor app missing: '+marker);
 }
@@ -31,13 +35,16 @@ for (const marker of [
   'surveyor_sessions',
   'surveyor_orders',
   "password_hash($password,PASSWORD_DEFAULT)",
-  "Bearer"
+  "Bearer",
+  "layout_json",
+  "'layout' => is_array($layout) ? $layout : null"
 ]) {
   if (!api.includes(marker)) throw new Error('Surveyor server API missing: '+marker);
 }
 if (!router.includes("backend/surveyor.php") || !router.includes("str_starts_with($route, 'surveyor/')")) {
   throw new Error('Surveyor API is not routed by Timeweb');
 }
+if (!schema.includes('layout_json MEDIUMTEXT')) throw new Error('MySQL schema missing visual layout column');
 for (const table of ['surveyor_users','surveyor_sessions','surveyor_clients','surveyor_orders']) {
   if (!schema.includes('CREATE TABLE IF NOT EXISTS '+table)) throw new Error('MySQL schema missing '+table);
 }
