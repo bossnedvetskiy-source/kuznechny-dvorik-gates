@@ -96,6 +96,7 @@ function kd_surveyor_ensure_schema(): void
       address VARCHAR(500) NOT NULL,
       note TEXT NOT NULL,
       work_types_json TEXT NOT NULL,
+      layout_json MEDIUMTEXT NOT NULL,
       status VARCHAR(32) NOT NULL DEFAULT 'draft',
       archived TINYINT(1) NOT NULL DEFAULT 0,
       created_by VARCHAR(160) NOT NULL,
@@ -112,6 +113,8 @@ function kd_surveyor_ensure_schema(): void
       KEY idx_surveyor_order_archived (archived)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
+    $layoutColumn = $db->query("SHOW COLUMNS FROM surveyor_orders LIKE 'layout_json'")->fetch();
+    if (!$layoutColumn) $db->exec("ALTER TABLE surveyor_orders ADD COLUMN layout_json MEDIUMTEXT NOT NULL AFTER work_types_json");
     $db->exec('DELETE FROM surveyor_sessions WHERE expires_at <= UTC_TIMESTAMP()');
     $ready = true;
 }
@@ -267,12 +270,13 @@ function kd_surveyor_row_to_client(array $row): array
 function kd_surveyor_row_to_order(array $row): array
 {
     $types = json_decode((string)$row['work_types_json'], true);
+    $layout = json_decode((string)($row['layout_json'] ?? ''), true);
     return [
         'id' => (string)$row['uuid'], 'number' => (string)($row['order_number'] ?? ''),
         'clientId' => (string)($row['client_uuid'] ?? ''), 'clientName' => (string)$row['client_name'],
         'clientPhone' => (string)$row['client_phone'], 'address' => (string)$row['address'],
         'note' => (string)$row['note'], 'workTypes' => is_array($types) ? $types : [],
-        'status' => (string)$row['status'], 'archived' => (bool)$row['archived'],
+        'status' => (string)$row['status'], 'archived' => (bool)$row['archived'], 'layout' => is_array($layout) ? $layout : null,
         'createdBy' => (string)$row['created_by'], 'createdByName' => (string)$row['created_by_name'],
         'serverRevision' => (int)$row['revision'], 'updatedAt' => (string)$row['client_updated_at'],
         'createdAt' => (string)$row['created_at'], 'serverUpdatedAt' => (string)$row['updated_at']
@@ -318,6 +322,9 @@ function kd_surveyor_sync_order(array $item, array $session): array
     $address = mb_substr(trim((string)($item['address'] ?? '')),0,500);
     $note = mb_substr(trim((string)($item['note'] ?? '')),0,5000);
     $types = kd_surveyor_work_types($item['workTypes'] ?? []);
+    $layout = is_array($item['layout'] ?? null) ? $item['layout'] : null;
+    $layoutJson = json_encode($layout, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    if ($layoutJson === false || strlen($layoutJson) > 262144) kd_surveyor_json(['error' => 'Схема объекта слишком большая'], 413);
     $status = in_array((string)($item['status'] ?? ''), ['draft','ready'], true) ? (string)$item['status'] : 'draft';
     $updatedAt = mb_substr(trim((string)($item['updatedAt'] ?? '')),0,40);
     $incomingRevision = max(0,(int)($item['serverRevision'] ?? 0));
@@ -332,8 +339,8 @@ function kd_surveyor_sync_order(array $item, array $session): array
     if (!$existing) {
         $createdBy = $key;
         $createdByName = mb_substr(trim((string)($item['createdByName'] ?? $session['display_name'])),0,120);
-        kd_db()->prepare('INSERT INTO surveyor_orders (uuid,client_uuid,client_name,client_phone,address,note,work_types_json,status,archived,created_by,created_by_name,revision,client_updated_at,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,1,?,UTC_TIMESTAMP(),UTC_TIMESTAMP())')
-            ->execute([$uuid,$clientUuid !== '' ? $clientUuid : null,$name,$phone,$address,$note,json_encode($types),$status,$archived,$createdBy,$createdByName,$updatedAt]);
+        kd_db()->prepare('INSERT INTO surveyor_orders (uuid,client_uuid,client_name,client_phone,address,note,work_types_json,layout_json,status,archived,created_by,created_by_name,revision,client_updated_at,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,1,?,UTC_TIMESTAMP(),UTC_TIMESTAMP())')
+            ->execute([$uuid,$clientUuid !== '' ? $clientUuid : null,$name,$phone,$address,$note,json_encode($types),$layoutJson,$status,$archived,$createdBy,$createdByName,$updatedAt]);
         $seq = (int)kd_db()->lastInsertId();
         $number = 'ЗМ-' . str_pad((string)$seq, 6, '0', STR_PAD_LEFT);
         kd_db()->prepare('UPDATE surveyor_orders SET order_number=? WHERE seq_id=?')->execute([$number,$seq]);
@@ -343,8 +350,8 @@ function kd_surveyor_sync_order(array $item, array $session): array
         }
         if ($incomingRevision === (int)$existing['revision']) {
             $nextArchived = (string)$session['role'] === 'owner' ? $archived : (int)$existing['archived'];
-            kd_db()->prepare('UPDATE surveyor_orders SET client_uuid=?,client_name=?,client_phone=?,address=?,note=?,work_types_json=?,status=?,archived=?,revision=revision+1,client_updated_at=?,updated_at=UTC_TIMESTAMP() WHERE uuid=?')
-                ->execute([$clientUuid !== '' ? $clientUuid : null,$name,$phone,$address,$note,json_encode($types),$status,$nextArchived,$updatedAt,$uuid]);
+            kd_db()->prepare('UPDATE surveyor_orders SET client_uuid=?,client_name=?,client_phone=?,address=?,note=?,work_types_json=?,layout_json=?,status=?,archived=?,revision=revision+1,client_updated_at=?,updated_at=UTC_TIMESTAMP() WHERE uuid=?')
+                ->execute([$clientUuid !== '' ? $clientUuid : null,$name,$phone,$address,$note,json_encode($types),$layoutJson,$status,$nextArchived,$updatedAt,$uuid]);
         } elseif ($incomingRevision === 0 && (string)$existing['client_updated_at'] === $updatedAt) {
             // Idempotent create retry.
         } else {
