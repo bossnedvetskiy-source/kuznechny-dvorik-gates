@@ -138,6 +138,9 @@ jobs:
       - name: Test surveyor test PWA installability
         run: npx playwright test tests/surveyor-test-pwa.spec.js
 
+      - name: Test DEV calculators PWA install start
+        run: npx playwright test tests/dev-pwa.spec.js
+
       - name: Verify dev mirrors production frontend
         shell: bash
         run: |
