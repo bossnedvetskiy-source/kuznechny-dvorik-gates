@@ -144,12 +144,13 @@ function cutTable(g,c){
     ['P2','Нижний пояс',g.chordProfile,window.TrussGeometry.mm(g.lowerTotalM),1,c.trussCount,'дуга + края'],
     ['T','Торцевая стойка',g.webProfile,window.TrussGeometry.mm(g.endPostM),2,2*c.trussCount,'90°']
   ];
-  if(g.trussType==='Вертикальная'){
+  if(g.trussType==='Вертикальная'||g.trussType==='Усиленная'){
     g.verticals.forEach(v=>rows.push([
       'V'+v.index,'Вертикальная стойка '+v.index,g.webProfile,
       window.TrussGeometry.mm(v.lengthM),1,c.trussCount,'90°'
     ]));
-  }else{
+  }
+  if(g.trussType==='Треугольная'||g.trussType==='Усиленная'){
     g.diagonals.forEach(d=>rows.push([
       'D'+d.index,'Диагональ '+d.index,g.webProfile,
       window.TrussGeometry.mm(d.lengthM),1,c.trussCount,fmt(d.angleDeg,1)+'°'
@@ -188,7 +189,7 @@ async function openItem(lead){
           ])}</section>
           <section class="canopy-admin-box"><h3>Что учитывать</h3>${dl([
             ['Столбов нужно',savedC.totalPosts+' шт'],['Уже есть',savedC.existingPosts+' шт'],['Новых столбов',savedC.newPosts+' шт'],
-            ['Продольные балки',savedC.beamsExisting?'есть у заказчика':'изготовить 2 шт'],['Ферм',savedC.trussCount+' шт'],['Линий лаг',savedC.lagLines+' шт']
+            ['Продольные балки',savedC.beamsExisting?'есть у заказчика':'изготовить 2 шт'],['Ферм',savedC.trussCount+' шт'],['Лаги 40×20',savedC.lagLines+' линий · '+(savedC.coverage==='Профнастил'?'авто 80–100 см':savedC.lagMode)]
           ])}</section>
         </div>
       </section>
@@ -201,8 +202,8 @@ async function openItem(lead){
         <h3 class="canopy-section-title">Материалы и закупка</h3>${materialTable(savedC)}
         <div class="canopy-admin-grid" style="margin-top:12px">
           <section class="canopy-admin-box"><h3>Сборка навеса</h3>${dl([
-            ['Ферм',savedC.trussCount+' шт'],['Линий лаг',savedC.lagLines+' шт'],['Шаг лаг',fmt(savedC.lagStep*100,1)+' см'],
-            ['Новых столбов',savedC.newPosts+' шт'],['Продольных балок',savedC.beamCount+' шт'],['Тип фермы',g.trussType],['Материал фермы',g.materialMode],['Внутренних элементов',(g.trussType==='Вертикальная'?g.verticalCount:g.diagonalCount)+' шт']
+            ['Ферм',savedC.trussCount+' шт'],['Режим лаг',savedC.coverage==='Профнастил'?'Авто 80–100 см':savedC.lagMode],['Линий лаг',savedC.lagLines+' шт'],['Шаг лаг',fmt(savedC.lagStep*100,1)+' см'],
+            ['Новых столбов',savedC.newPosts+' шт'],['Продольных балок',savedC.beamCount+' шт'],['Тип фермы',g.trussType],['Материал фермы',g.materialMode],['Внутренних элементов',(g.trussType==='Усиленная'?(g.verticalCount+g.diagonalCount):g.trussType==='Вертикальная'?g.verticalCount:g.diagonalCount)+' шт']
           ])}</section>
           <section class="canopy-admin-box"><h3>Покрытие</h3>${dl([
             ['Тип',savedC.coverage],['Длина покрытия по дуге',fmt(savedC.coverageData.coverArcM)+' м'],['Длина навеса с выпуском',fmt(savedC.coverageData.coverLengthM)+' м'],
@@ -248,7 +249,7 @@ async function openItem(lead){
     body.querySelector('#canopyPrintDrawing').onclick=()=>printDoc(
       'ТЗ навеса '+lead.id,
       '<h1>ТЗ сварщику · навес #'+escape(lead.id)+'</h1>'+
-      '<p>Размер навеса: '+fmt(g.widthPostsM)+' × '+fmt(savedC.lengthM)+' м · ферм: '+savedC.trussCount+' шт. · тип: '+escape(g.trussType)+' · материал: '+escape(g.materialMode)+'</p>'+
+      '<p>Размер навеса: '+fmt(g.widthPostsM)+' × '+fmt(savedC.lengthM)+' м · ферм: '+savedC.trussCount+' шт. · тип: '+escape(g.trussType)+' · материал: '+escape(g.materialMode)+' · лаги: '+escape(savedC.coverage==='Профнастил'?'авто 80–100 см':savedC.lagMode)+'</p>'+
       new XMLSerializer().serializeToString(svg)+
       '<h2>Раскрой фермы</h2>'+cutTable(g,savedC)+
       '<h2>Материалы</h2>'+materialTable(savedC)+
