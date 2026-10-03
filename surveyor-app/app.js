@@ -384,12 +384,12 @@ async function syncNow({ silent = false } = {}) {
     const payload = {
       since,
       clients: pendingClients.map(x => ({
-        id:x.id,name:x.name,phone:x.phone,address:x.address,updatedAt:x.updatedAt,serverRevision:Number(x.serverRevision||0),layout:x.layout || null
+        id:x.id,name:x.name,phone:x.phone,address:x.address,updatedAt:x.updatedAt,serverRevision:Number(x.serverRevision||0)
       })),
       surveys: pendingSurveys.map(x => ({
         id:x.id,clientId:x.clientId,clientName:x.clientName,clientPhone:x.clientPhone,address:x.address,note:x.note,
         workTypes:x.workTypes,status:x.status,archived:!!x.archived,createdByName:x.createdByName,
-        updatedAt:x.updatedAt,serverRevision:Number(x.serverRevision||0)
+        updatedAt:x.updatedAt,serverRevision:Number(x.serverRevision||0),layout:x.layout || null
       }))
     };
     const data = await apiRequest('/sync', { method:'POST', body:JSON.stringify(payload) });
