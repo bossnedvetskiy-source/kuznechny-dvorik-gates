@@ -111,9 +111,12 @@ test('surveyor builds an editable fence and gate line', async ({page}) => {
   await page.locator('#saveSegmentBtn').click();
 
   const line = page.locator('.layout-line').first();
+  await line.locator('[data-line-name]').fill('Фасад');
+  await line.locator('[data-line-name]').blur();
   await expect(line).toContainText('Забор');
   await expect(line).toContainText('Ворота');
   await expect(line).toContainText('Калитка');
+  await expect(line.locator('[data-line-name]')).toHaveValue('Фасад');
   await expect(line).toContainText('9,4 м');
 
   const middlePost = line.locator('[data-edit-post]').nth(1);
@@ -123,6 +126,6 @@ test('surveyor builds an editable fence and gate line', async ({page}) => {
   await expect(line).toContainText('Существ.');
 
   await page.locator('#closeLayoutBtn').click();
-  await expect(page.locator('#surveyDetailsContent')).toContainText('3 элементов');
+  await expect(page.locator('#surveyDetailsContent')).toContainText('3 элемента');
   await expect(page.locator('.layout-preview-mini')).toBeVisible();
 });
