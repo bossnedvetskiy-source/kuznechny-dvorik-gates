@@ -39,6 +39,7 @@ jobs:
           test -s timeweb/local-api.php
           test -s timeweb/backend/bootstrap.php
           test -s timeweb/backend/schema.mysql.sql
+          test -s timeweb/backend/surveyor.php
           test -s timeweb/deploy-timeweb.sh
           test -s timeweb/health-check.sh
 
@@ -71,6 +72,9 @@ jobs:
           set -euo pipefail
           test -s timeweb-dist/index.html
           test -s timeweb-dist/admin.html
+          test -s timeweb-dist/surveyor-app/index.html
+          test -s timeweb-dist/surveyor-app/app.js
+          test -s timeweb-dist/surveyor-app/sw.js
           test -s timeweb-dist/site.css
           test -s timeweb-dist/site.bundle.js
           grep -Fq 'KUZDVOR_FAVORITES' timeweb-dist/site.bundle.js
@@ -107,6 +111,7 @@ jobs:
           grep -Fq '$healthy ? 200 : 503' timeweb-dist/local-api.php
           php -l timeweb-dist/local-api.php
           php -l timeweb-dist/backend/bootstrap.php
+          php -l timeweb-dist/backend/surveyor.php
           echo "Prepared $(find timeweb-dist -type f | wc -l) files for Timeweb"
 
       - name: Publish generated files to timeweb-public
