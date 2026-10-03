@@ -4,8 +4,9 @@ test('canopy client is simple and saved order keeps production/finance in admin'
   await page.setViewportSize({width:390,height:844});
   await page.goto('/naves/index.html',{waitUntil:'domcontentloaded'});
 
-  await expect(page.locator('#canopySvg')).toBeVisible();
-  await expect(page.locator('#canopySvg line')).not.toHaveCount(0);
+  await expect(page.locator('#canopyViewport')).toBeVisible();
+  await expect(page.locator('#canopyViewport canvas')).toBeVisible({timeout:15000});
+  await expect(page.locator('#reset3dView')).toBeVisible();
   await expect(page.locator('#totalPrice')).toContainText('214');
   await expect(page.locator('#resultStatus')).toContainText('Пример расчёта');
   await expect(page.locator('#clientSummary')).toContainText('3,40 × 8,40 м');
@@ -38,8 +39,11 @@ test('canopy client is simple and saved order keeps production/finance in admin'
   await page.locator('#widthPosts').fill('4.2');
   await expect(page.locator('#rise')).toHaveValue(/700/);
   await expect(page.locator('#resultStatus')).toContainText('Предварительный расчёт готов');
-  await expect(page.locator('#canopySvg')).toBeVisible();
-  await expect(page.locator('#canopySvg')).toContainText('4,20');
+  await expect(page.locator('#canopyViewport canvas')).toBeVisible();
+  const canvasSize=await page.locator('#canopyViewport canvas').boundingBox();
+  expect(canvasSize.width).toBeGreaterThan(300);
+  expect(canvasSize.height).toBeGreaterThan(300);
+  await page.locator('#reset3dView').click();
 
   // DEV has no backend: force the local saved-order route.
   await page.route('**/api/leads', route => route.fulfill({
