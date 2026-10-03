@@ -52,6 +52,19 @@ const server = http.createServer(async (req, res) => {
   }
 
   try {
+    const surveyorTestPrefixes = ['/surveyor-test/', '/kuznechny-dvorik-gates/surveyor-test/'];
+    const surveyorTestPrefix = surveyorTestPrefixes.find(prefix => url.pathname === prefix.slice(0,-1) || url.pathname.startsWith(prefix));
+    if (surveyorTestPrefix) {
+      const suffix = url.pathname === surveyorTestPrefix.slice(0,-1)
+        ? ''
+        : url.pathname.slice(surveyorTestPrefix.length);
+      const relativeTest = suffix === '' ? 'index.html' : normalize(decodeURIComponent(suffix)).replace(/^[/\\]+/, '');
+      const testPath = join(root, '_site', 'surveyor-test', relativeTest);
+      const info = await stat(testPath);
+      if (!info.isFile()) return send(res, 404, 'Not found');
+      return send(res, 200, await readFile(testPath), mime[extname(testPath).toLowerCase()] || 'application/octet-stream');
+    }
+
     if (url.pathname === '/' || url.pathname === '/index.html' || url.pathname === '/vorota' || url.pathname === '/vorota/') {
       let html = await readFile(join(root, 'index.html'), 'utf8');
       html = html.replace('<script id="deliveryData" type="application/json">{}</script>', `<script id="deliveryData" type="application/json">${delivery.replace(/</g,'\\u003c')}</script>`);
