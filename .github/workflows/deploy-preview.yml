@@ -52,7 +52,7 @@ jobs:
           node --check evroshtaketnik/evroshtaketnik.js
           node --check naves/geometry.js
           node --check naves/pricing.js
-          node --check naves/canopy-3d.js
+          node --check naves/canopy-three.js
           node --check naves/drawing.js
           node --check naves/naves.js
           node --check naves/export.js
@@ -80,7 +80,9 @@ jobs:
           test -s timeweb-dist/naves/naves.css
           test -s timeweb-dist/naves/geometry.js
           test -s timeweb-dist/naves/pricing.js
-          test -s timeweb-dist/naves/canopy-3d.js
+          test -s timeweb-dist/naves/canopy-three.js
+          test -s timeweb-dist/naves/vendor/three.module.js
+          test -s timeweb-dist/naves/vendor/OrbitControls.js
           test -s timeweb-dist/naves/drawing.js
           test -s timeweb-dist/naves/naves.js
           test -s timeweb-dist/naves/export.js
