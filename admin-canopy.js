@@ -109,7 +109,7 @@ function renderList(){
     const s=snapOf(lead),inp=s?.input||{},local=lead._local?' · DEV локально':'';
     return `<article class="canopy-order-card">
       <div class="canopy-order-card-head"><div><b>#${escape(lead.id)} · ${escape(lead.city||'Без населённого пункта')}</b><small>${escape(date(lead.created_at))} · ${escape(lead.phone||'')}${local}</small></div><strong class="canopy-order-price">${money(lead.total)}</strong></div>
-      <div class="canopy-order-meta"><span>Размер <b>${escape(fmt(inp.widthPostsM))} × ${escape(fmt(inp.lengthM))} м</b></span><span>Покрытие <b>${escape(inp.coverage||'—')}</b></span><span>Высота <b>${escape(fmt(inp.visibleHeightM))} м</b></span></div>
+      <div class="canopy-order-meta"><span>Размер <b>${escape(fmt(inp.widthPostsM))} × ${escape(fmt(inp.lengthM))} м</b></span><span>Ферма <b>${escape(inp.trussType||'Треугольная')}</b></span><span>Материал <b>${escape(inp.materialMode||'Авто')}</b></span></div>
       <div class="canopy-order-actions"><button class="reset-button" data-open-canopy="${index}" type="button">Открыть заказ</button></div>
     </article>`
   }).join('');
@@ -138,7 +138,25 @@ function calculate(lead){
 }
 const dl=rows=>'<dl class="canopy-admin-dl">'+rows.map(([a,b])=>'<div><dt>'+escape(a)+'</dt><dd>'+escape(b)+'</dd></div>').join('')+'</dl>';
 function materialTable(c){return '<div class="canopy-admin-table"><table><thead><tr><th>Материал</th><th>Используется</th><th>Хлыстов</th><th>Купить</th><th>Стоимость</th></tr></thead><tbody>'+c.materialRows.map(x=>'<tr><td>'+escape(x.name)+'</td><td>'+fmt(x.used)+' м</td><td>'+x.sticks+'</td><td>'+fmt(x.buy,0)+' м</td><td>'+money(x.cost)+'</td></tr>').join('')+'</tbody></table></div>'}
-function cutTable(g,c){const rows=[['P1','Верхний пояс',g.chordProfile,window.TrussGeometry.mm(g.topCircle.length),1,c.trussCount,'дуга'],['P2','Нижний пояс',g.chordProfile,window.TrussGeometry.mm(g.lowerTotalM),1,c.trussCount,'дуга + края'],['V','Торцевая стойка',g.webProfile,window.TrussGeometry.mm(g.endPostM),2,2*c.trussCount,'90°']];g.diagonals.forEach(d=>rows.push(['D'+d.index,'Диагональ '+d.index,g.webProfile,window.TrussGeometry.mm(d.lengthM),1,c.trussCount,fmt(d.angleDeg,1)+'°']));return '<div class="canopy-admin-table"><table><thead><tr><th>Поз.</th><th>Деталь</th><th>Профиль</th><th>Длина, мм</th><th>На 1</th><th>Всего</th><th>Угол</th></tr></thead><tbody>'+rows.map(r=>'<tr>'+r.map(x=>'<td>'+escape(x)+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>'}
+function cutTable(g,c){
+  const rows=[
+    ['P1','Верхний пояс',g.chordProfile,window.TrussGeometry.mm(g.topCircle.length),1,c.trussCount,'дуга'],
+    ['P2','Нижний пояс',g.chordProfile,window.TrussGeometry.mm(g.lowerTotalM),1,c.trussCount,'дуга + края'],
+    ['T','Торцевая стойка',g.webProfile,window.TrussGeometry.mm(g.endPostM),2,2*c.trussCount,'90°']
+  ];
+  if(g.trussType==='Вертикальная'){
+    g.verticals.forEach(v=>rows.push([
+      'V'+v.index,'Вертикальная стойка '+v.index,g.webProfile,
+      window.TrussGeometry.mm(v.lengthM),1,c.trussCount,'90°'
+    ]));
+  }else{
+    g.diagonals.forEach(d=>rows.push([
+      'D'+d.index,'Диагональ '+d.index,g.webProfile,
+      window.TrussGeometry.mm(d.lengthM),1,c.trussCount,fmt(d.angleDeg,1)+'°'
+    ]));
+  }
+  return '<div class="canopy-admin-table"><table><thead><tr><th>Поз.</th><th>Деталь</th><th>Профиль</th><th>Длина, мм</th><th>На 1</th><th>Всего</th><th>Угол</th></tr></thead><tbody>'+rows.map(r=>'<tr>'+r.map(x=>'<td>'+escape(x)+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>'
+}
 function printDoc(title,html){const w=window.open('','_blank');if(!w)return toast('Браузер заблокировал печать',true);w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>'+escape(title)+'</title><style>body{font:12px Arial,sans-serif;color:#111;margin:22px}h1{font-size:20px}h2{font-size:15px;margin-top:18px}svg{width:100%;height:auto}table{width:100%;border-collapse:collapse}th,td{border:1px solid #aaa;padding:5px;text-align:left}dl div{display:flex;justify-content:space-between;border-bottom:1px solid #ddd;padding:4px}dd{font-weight:bold}.note{margin-top:12px;font-size:10px}</style></head><body>'+html+'</body></html>');w.document.close();setTimeout(()=>{w.focus();w.print()},250)}
 function bindInnerTabs(){
   const buttons=[...body.querySelectorAll('[data-canopy-inner]')],panels=[...body.querySelectorAll('[data-canopy-panel]')];
@@ -166,7 +184,7 @@ async function openItem(lead){
           <section class="canopy-admin-box"><h3>Клиент и расчёт</h3>${dl([
             ['Телефон',lead.phone||'—'],['Населённый пункт',lead.city||'—'],['Сохранён',date(lead.created_at)],
             ['Цена клиенту',money(lead.total)],['Размер',fmt(g.widthPostsM)+' × '+fmt(savedC.lengthM)+' м'],['Площадь',fmt(savedC.area,1)+' м²'],
-            ['Высота',fmt(savedC.visibleHeightM)+' м'],['Покрытие',savedC.coverage],['Установка',savedC.installType],['Покраска',savedC.paint?'да':'нет']
+            ['Высота',fmt(savedC.visibleHeightM)+' м'],['Покрытие',savedC.coverage],['Тип фермы',g.trussType],['Материал фермы',g.materialMode],['Установка',savedC.installType],['Покраска',savedC.paint?'да':'нет']
           ])}</section>
           <section class="canopy-admin-box"><h3>Что учитывать</h3>${dl([
             ['Столбов нужно',savedC.totalPosts+' шт'],['Уже есть',savedC.existingPosts+' шт'],['Новых столбов',savedC.newPosts+' шт'],
@@ -184,7 +202,7 @@ async function openItem(lead){
         <div class="canopy-admin-grid" style="margin-top:12px">
           <section class="canopy-admin-box"><h3>Сборка навеса</h3>${dl([
             ['Ферм',savedC.trussCount+' шт'],['Линий лаг',savedC.lagLines+' шт'],['Шаг лаг',fmt(savedC.lagStep*100,1)+' см'],
-            ['Новых столбов',savedC.newPosts+' шт'],['Продольных балок',savedC.beamCount+' шт'],['Профиль поясов',g.chordProfile],['Профиль решётки',g.webProfile]
+            ['Новых столбов',savedC.newPosts+' шт'],['Продольных балок',savedC.beamCount+' шт'],['Тип фермы',g.trussType],['Материал фермы',g.materialMode],['Внутренних элементов',(g.trussType==='Вертикальная'?g.verticalCount:g.diagonalCount)+' шт']
           ])}</section>
           <section class="canopy-admin-box"><h3>Покрытие</h3>${dl([
             ['Тип',savedC.coverage],['Длина покрытия по дуге',fmt(savedC.coverageData.coverArcM)+' м'],['Длина навеса с выпуском',fmt(savedC.coverageData.coverLengthM)+' м'],
@@ -230,7 +248,7 @@ async function openItem(lead){
     body.querySelector('#canopyPrintDrawing').onclick=()=>printDoc(
       'ТЗ навеса '+lead.id,
       '<h1>ТЗ сварщику · навес #'+escape(lead.id)+'</h1>'+
-      '<p>Размер навеса: '+fmt(g.widthPostsM)+' × '+fmt(savedC.lengthM)+' м · ферм: '+savedC.trussCount+' шт.</p>'+
+      '<p>Размер навеса: '+fmt(g.widthPostsM)+' × '+fmt(savedC.lengthM)+' м · ферм: '+savedC.trussCount+' шт. · тип: '+escape(g.trussType)+' · материал: '+escape(g.materialMode)+'</p>'+
       new XMLSerializer().serializeToString(svg)+
       '<h2>Раскрой фермы</h2>'+cutTable(g,savedC)+
       '<h2>Материалы</h2>'+materialTable(savedC)+
