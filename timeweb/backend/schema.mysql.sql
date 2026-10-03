@@ -173,6 +173,7 @@ CREATE TABLE IF NOT EXISTS surveyor_orders (
   address VARCHAR(500) NOT NULL,
   note TEXT NOT NULL,
   work_types_json TEXT NOT NULL,
+  configuration_json MEDIUMTEXT NOT NULL,
   status VARCHAR(32) NOT NULL DEFAULT 'draft',
   archived TINYINT(1) NOT NULL DEFAULT 0,
   created_by VARCHAR(160) NOT NULL,
