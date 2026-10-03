@@ -7,7 +7,10 @@ test('canopy client is simple and saved order keeps production/finance in admin'
   await expect(page.locator('#canopyViewport')).toBeVisible();
   await expect(page.locator('#canopyViewport canvas')).toBeVisible({timeout:15000});
   await expect(page.locator('#reset3dView')).toBeVisible();
-  await expect(page.locator('#totalPrice')).toContainText('214');
+  await expect(page.locator('#totalPrice')).toContainText('₽');
+  await expect(page.locator('#totalPrice')).not.toHaveText('0 ₽');
+  await expect(page.locator('#trussType')).toHaveValue('Треугольная');
+  await expect(page.locator('#materialMode')).toHaveValue('30×30×2');
   await expect(page.locator('#resultStatus')).toContainText('Пример расчёта');
   await expect(page.locator('#clientSummary')).toContainText('3,40 × 8,40 м');
   await expect(page.locator('#clientSummary')).toContainText('Поликарбонат');
@@ -34,6 +37,13 @@ test('canopy client is simple and saved order keeps production/finance in admin'
   const formBox=await page.locator('#trussForm').boundingBox();
   const resultBox=await page.locator('.client-result').boundingBox();
   expect(formBox.y).toBeLessThan(resultBox.y);
+
+  // Both truss type and material are explicit client choices.
+  await page.locator('#trussType').selectOption({label:'Вертикальная'});
+  await page.locator('#materialMode').selectOption({label:'40×20×2'});
+  await expect(page.locator('#clientSummary')).toContainText('Вертикальная');
+  await expect(page.locator('#clientSummary')).toContainText('40×20×2');
+  await expect(page.locator('#canopyViewport canvas')).toBeVisible();
 
   // Changing width turns the example into a real preliminary calculation.
   await page.locator('#widthPosts').fill('4.2');
@@ -64,7 +74,10 @@ test('canopy client is simple and saved order keeps production/finance in admin'
   expect(saved.length).toBeGreaterThan(0);
   expect(saved[0].category).toBe('canopy');
   expect(saved[0].configuration.canopy.input.widthPostsM).toBe(4.2);
-  expect(saved[0].configuration.canopy.pricingSnapshot.rates.tube25).toBeGreaterThan(0);
+  expect(saved[0].configuration.canopy.input.trussType).toBe('Вертикальная');
+  expect(saved[0].configuration.canopy.input.materialMode).toBe('40×20×2');
+  expect(saved[0].configuration.canopy.pricingSnapshot.rates.tube30).toBeGreaterThan(0);
+  expect(saved[0].configuration.canopy.pricingSnapshot.rates.tube40x20).toBeGreaterThan(0);
 
   const overflow=await page.evaluate(()=>{
     const offenders=[...document.querySelectorAll('body *')].map(el=>{
@@ -90,6 +103,9 @@ test('canopy client is simple and saved order keeps production/finance in admin'
   await page.locator('[data-canopy-inner="production"]').click();
   await expect(page.locator('[data-canopy-panel="production"]')).toBeVisible();
   await expect(page.locator('#canopyAdminTrussSvg')).toBeVisible();
+  await expect(page.locator('#canopyAdminTrussSvg')).toContainText('V1');
+  await expect(page.locator('[data-canopy-panel="production"]')).toContainText('Вертикальная');
+  await expect(page.locator('[data-canopy-panel="production"]')).toContainText('40×20×2');
   await expect(page.locator('[data-canopy-panel="production"]')).toContainText('Раскрой фермы');
   await expect(page.locator('[data-canopy-panel="production"]')).toContainText('Материалы и закупка');
   await expect(page.locator('#canopyPrintDrawing')).toContainText('Распечатать ТЗ сварщику');
