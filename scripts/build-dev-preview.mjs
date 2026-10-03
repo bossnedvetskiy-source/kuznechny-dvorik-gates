@@ -12,7 +12,7 @@ const ACCESS_FILE = path.join(ROOT, 'dev-access.js');
 const LIVE_CATALOG = '/tmp/kuzdvor-live-catalog.json';
 const LIVE_FENCE_PRICES = '/tmp/kuzdvor-live-fence-prices.json';
 const DEV_ICON_NAME = 'dev-site-icon.svg';
-const DEV_APP_START = `${BASE}/work-app.html?app=1&environment=dev`;
+const DEV_APP_START = `${BASE}/work-app.html?app=1&environment=dev&devtools=2`;
 
 await rm(OUT, {recursive:true, force:true});
 await cp(SOURCE, OUT, {recursive:true});
@@ -176,9 +176,9 @@ await writeFile(path.join(OUT, DEV_ICON_NAME), devIcon, 'utf8');
 const manifestPath = path.join(OUT, 'site-manifest.webmanifest');
 const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
 Object.assign(manifest, {
-  name:'Кузнечный Дворик — DEV',
-  short_name:'КД DEV',
-  id:`${BASE}/dev-app`,
+  name:'КД Калькуляторы DEV',
+  short_name:'КД Калькуляторы',
+  id:`${BASE}/dev-tools-v2`,
   start_url:DEV_APP_START,
   scope:`${BASE}/`,
   description:'Отдельное тестовое приложение DEV Кузнечного Дворика с автономной офлайн-базой.',
@@ -299,9 +299,9 @@ if (index.includes('<script src="app.js"')) throw new Error('Dev preview is usin
 
 const builtManifest = JSON.parse(await readFile(manifestPath, 'utf8'));
 if (
-  builtManifest.name !== 'Кузнечный Дворик — DEV' ||
-  builtManifest.short_name !== 'КД DEV' ||
-  builtManifest.id !== `${BASE}/dev-app` ||
+  builtManifest.name !== 'КД Калькуляторы DEV' ||
+  builtManifest.short_name !== 'КД Калькуляторы' ||
+  builtManifest.id !== `${BASE}/dev-tools-v2` ||
   builtManifest.start_url !== DEV_APP_START ||
   builtManifest.scope !== `${BASE}/` ||
   builtManifest.icons?.[0]?.src !== `${BASE}/${DEV_ICON_NAME}`
