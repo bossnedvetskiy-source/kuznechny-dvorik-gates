@@ -119,3 +119,72 @@ CREATE TABLE IF NOT EXISTS manager_push_subscriptions (
   KEY idx_manager_push_admin (admin_id),
   KEY idx_manager_push_updated (updated_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+-- KD Surveyor mobile app
+CREATE TABLE IF NOT EXISTS surveyor_users (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  name VARCHAR(120) NOT NULL,
+  username VARCHAR(120) NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  role VARCHAR(24) NOT NULL DEFAULT 'surveyor',
+  active TINYINT(1) NOT NULL DEFAULT 1,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_surveyor_username (username),
+  KEY idx_surveyor_active (active)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS surveyor_sessions (
+  token_hash CHAR(64) NOT NULL,
+  principal_type VARCHAR(20) NOT NULL,
+  principal_id INT UNSIGNED NOT NULL,
+  role VARCHAR(24) NOT NULL,
+  display_name VARCHAR(120) NOT NULL,
+  expires_at DATETIME NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  ip_address VARCHAR(64) NOT NULL DEFAULT '',
+  PRIMARY KEY (token_hash),
+  KEY idx_surveyor_sessions_expiry (expires_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS surveyor_clients (
+  uuid VARCHAR(80) NOT NULL,
+  name VARCHAR(120) NOT NULL,
+  phone VARCHAR(60) NOT NULL,
+  address VARCHAR(500) NOT NULL DEFAULT '',
+  revision INT UNSIGNED NOT NULL DEFAULT 1,
+  client_updated_at VARCHAR(40) NOT NULL DEFAULT '',
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_by VARCHAR(160) NOT NULL DEFAULT '',
+  PRIMARY KEY (uuid),
+  KEY idx_surveyor_clients_phone (phone),
+  KEY idx_surveyor_clients_updated (updated_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS surveyor_orders (
+  seq_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  uuid VARCHAR(80) NOT NULL,
+  order_number VARCHAR(40) NULL,
+  client_uuid VARCHAR(80) NULL,
+  client_name VARCHAR(120) NOT NULL,
+  client_phone VARCHAR(60) NOT NULL,
+  address VARCHAR(500) NOT NULL,
+  note TEXT NOT NULL,
+  work_types_json TEXT NOT NULL,
+  status VARCHAR(32) NOT NULL DEFAULT 'draft',
+  archived TINYINT(1) NOT NULL DEFAULT 0,
+  created_by VARCHAR(160) NOT NULL,
+  created_by_name VARCHAR(120) NOT NULL,
+  revision INT UNSIGNED NOT NULL DEFAULT 1,
+  client_updated_at VARCHAR(40) NOT NULL DEFAULT '',
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (seq_id),
+  UNIQUE KEY uq_surveyor_order_uuid (uuid),
+  UNIQUE KEY uq_surveyor_order_number (order_number),
+  KEY idx_surveyor_order_updated (updated_at),
+  KEY idx_surveyor_order_creator (created_by),
+  KEY idx_surveyor_order_archived (archived)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
