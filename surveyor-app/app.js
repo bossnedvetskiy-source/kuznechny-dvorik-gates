@@ -1129,7 +1129,22 @@ function bindEvents() {
 
 async function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
-  try { await navigator.serviceWorker.register('./sw.js'); } catch (e) { console.warn('SW registration failed', e); }
+  let reloading = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (reloading) return;
+    reloading = true;
+    try {
+      if (sessionStorage.getItem('kd-surveyor-sw-reloaded') === '1') return;
+      sessionStorage.setItem('kd-surveyor-sw-reloaded', '1');
+    } catch {}
+    location.reload();
+  });
+  try {
+    const registration = await navigator.serviceWorker.register('./sw.js', {updateViaCache:'none'});
+    try { await registration.update(); } catch {}
+  } catch (e) {
+    console.warn('SW registration failed', e);
+  }
 }
 
 bootstrap().catch(err => {
