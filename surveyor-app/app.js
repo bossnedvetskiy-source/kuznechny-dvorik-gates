@@ -1,4 +1,4 @@
-const APP_VERSION = '0.2.0';
+const APP_VERSION = '0.3.0';
 const DB_NAME = 'kd-surveyor-stage1';
 const DB_VERSION = 1;
 const STORE_NAMES = ['employees', 'clients', 'surveys', 'meta'];
