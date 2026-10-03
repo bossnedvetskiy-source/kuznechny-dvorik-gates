@@ -70,7 +70,8 @@ const server = http.createServer(async (req, res) => {
       const suffix = url.pathname === devProjectPrefix.slice(0,-1)
         ? ''
         : url.pathname.slice(devProjectPrefix.length);
-      const relativeDev = suffix === '' ? 'index.html' : normalize(decodeURIComponent(suffix)).replace(/^[/\\]+/, '');
+      const decodedDev = normalize(decodeURIComponent(suffix)).replace(/^[/\\]+/, '');
+      const relativeDev = suffix === '' ? 'index.html' : (suffix.endsWith('/') ? decodedDev + 'index.html' : decodedDev);
       const devPath = join(root, '_site', relativeDev);
       const info = await stat(devPath);
       if (!info.isFile()) return send(res, 404, 'Not found');
