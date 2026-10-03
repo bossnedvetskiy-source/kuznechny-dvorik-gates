@@ -338,7 +338,7 @@ devSw = devSw
   .replaceAll('__kuzdvor_offline_meta__', '__kuzdvor_dev_offline_meta__')
   .replaceAll(`${BASE}/site-icon.svg`, `${BASE}/${DEV_ICON_NAME}`);
 const surveyorTestFetchNeedle = "self.addEventListener('fetch',event=>{\n  const request=event.request;\n  const url=new URL(request.url);";
-const surveyorTestFetchReplacement = surveyorTestFetchNeedle + "\n  // surveyor-test bypass\n  if(url.pathname==='${BASE}/${SURVEYOR_TEST_DIR}'||url.pathname.startsWith('${BASE}/${SURVEYOR_TEST_DIR}/'))return;";
+const surveyorTestFetchReplacement = surveyorTestFetchNeedle + "\n  // standalone surveyor PWA bypass\n  if(url.pathname==='${BASE}/${SURVEYOR_TEST_DIR}'||url.pathname.startsWith('${BASE}/${SURVEYOR_TEST_DIR}/')||url.pathname==='${BASE}/${SURVEYOR_V2_DIR}'||url.pathname.startsWith('${BASE}/${SURVEYOR_V2_DIR}/'))return;";
 if (!devSw.includes(surveyorTestFetchNeedle)) throw new Error('DEV service worker fetch handler not found');
 devSw = devSw.replace(surveyorTestFetchNeedle, surveyorTestFetchReplacement);
 await writeFile(swPath, devSw, 'utf8');
