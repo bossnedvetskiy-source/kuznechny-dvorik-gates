@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#121212" />
+  <meta name="description" content="КД Замерщик — мобильное приложение для выездных замеров" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="styles.css" />
+  <title>КД Замерщик</title>
+</head>
+<body>
+  <div id="app" class="app-shell">
+    <section id="loginView" class="auth-view">
+      <div class="brand-mark" aria-hidden="true">КД</div>
+      <div class="auth-card">
+        <div class="eyebrow">Кузнечный ДворикЪ</div>
+        <h1>КД Замерщик</h1>
+        <p class="muted">Замеры, клиенты и заказы — в одном приложении, даже без связи.</p>
+        <form id="loginForm" class="stack" autocomplete="on">
+          <label class="field">
+            <span>Логин</span>
+            <input id="loginInput" name="username" autocomplete="username" required placeholder="Введите логин" />
+          </label>
+          <label class="field">
+            <span>Пароль</span>
+            <input id="passwordInput" name="password" type="password" autocomplete="current-password" inputmode="numeric" required placeholder="Введите пароль" />
+          </label>
+          <button class="btn btn-primary btn-lg" type="submit">Войти</button>
+          <div id="loginError" class="form-error" role="alert" hidden></div>
+        </form>
+        <details class="demo-access">
+          <summary>Тестовый доступ</summary>
+          <div><b>Собственник:</b> admin / 1234</div>
+          <div><b>Замерщик:</b> zamer / 1234</div>
+        </details>
+      </div>
+    </section>
+
+    <section id="mainView" class="main-view" hidden>
+      <header class="topbar">
+        <div>
+          <div class="eyebrow">КД Замерщик</div>
+          <div id="screenTitle" class="topbar-title">Замеры</div>
+        </div>
+        <div class="topbar-actions">
+          <span id="networkBadge" class="network-badge"><span class="dot"></span><span>Онлайн</span></span>
+          <button id="profileBtn" class="avatar-btn" type="button" aria-label="Профиль">КД</button>
+        </div>
+      </header>
+
+      <main class="content">
+        <section id="surveysScreen" class="screen active">
+          <div class="hero-card">
+            <div>
+              <div class="eyebrow">Выездной замер</div>
+              <h2>Новый замер</h2>
+              <p>Создайте клиента, выберите сразу несколько видов работ и сохраните всё одной заявкой.</p>
+            </div>
+            <button id="newSurveyBtn" class="btn btn-primary btn-lg" type="button">+ Новый замер</button>
+          </div>
+
+          <div class="section-head">
+            <div>
+              <h3>Последние замеры</h3>
+              <p id="surveysCounter" class="muted">0 заказов</p>
+            </div>
+            <div class="segmented" role="tablist" aria-label="Фильтр замеров">
+              <button class="segmented-btn active" data-survey-filter="all" type="button">Все</button>
+              <button class="segmented-btn" data-survey-filter="draft" type="button">Черновики</button>
+              <button class="segmented-btn" data-survey-filter="ready" type="button">Готовые</button>
+            </div>
+          </div>
+          <div id="surveyList" class="card-list"></div>
+          <div id="surveyEmpty" class="empty-state" hidden>
+            <div class="empty-icon">📐</div>
+            <h3>Замеров пока нет</h3>
+            <p>Создайте первый замер — он сохранится на телефоне даже без интернета.</p>
+          </div>
+        </section>
+
+        <section id="clientsScreen" class="screen">
+          <div class="section-head">
+            <div>
+              <h2>Клиенты</h2>
+              <p class="muted">Контакты и адреса объектов</p>
+            </div>
+            <button id="newClientBtn" class="btn btn-secondary" type="button">+ Клиент</button>
+          </div>
+          <label class="searchbox">
+            <span>⌕</span>
+            <input id="clientSearch" type="search" placeholder="Имя, телефон или адрес" />
+          </label>
+          <div id="clientList" class="card-list"></div>
+          <div id="clientEmpty" class="empty-state" hidden>
+            <div class="empty-icon">👤</div>
+            <h3>Клиентов пока нет</h3>
+            <p>Клиент автоматически добавится при создании замера.</p>
+          </div>
+        </section>
+
+        <section id="teamScreen" class="screen">
+          <div class="section-head">
+            <div>
+              <h2>Сотрудники</h2>
+              <p class="muted">Доступы и роли</p>
+            </div>
+            <button id="newEmployeeBtn" class="btn btn-secondary" type="button">+ Сотрудник</button>
+          </div>
+          <div class="notice notice-lock">Замерщик этот раздел не видит. Доступами управляет только собственник.</div>
+          <div id="employeeList" class="card-list"></div>
+        </section>
+
+        <section id="settingsScreen" class="screen">
+          <div class="settings-card">
+            <h2>Приложение</h2>
+            <div class="settings-row">
+              <div><b>Офлайн-режим</b><span>Замеры сохраняются на этом устройстве</span></div>
+              <span class="status-pill success">Включён</span>
+            </div>
+            <div class="settings-row">
+              <div><b>Синхронизация</b><span>Серверный обмен будет подключён следующим подэтапом</span></div>
+              <span class="status-pill warning">Локально</span>
+            </div>
+            <div class="settings-row">
+              <div><b>Версия</b><span>Этап 1 · foundation</span></div>
+              <span>0.1.0</span>
+            </div>
+          </div>
+          <button id="logoutBtn" class="btn btn-danger btn-block" type="button">Выйти из аккаунта</button>
+        </section>
+      </main>
+
+      <nav class="bottom-nav" aria-label="Основная навигация">
+        <button class="nav-btn active" data-screen="surveys" type="button"><span>▤</span><b>Замеры</b></button>
+        <button class="nav-btn" data-screen="clients" type="button"><span>♙</span><b>Клиенты</b></button>
+        <button id="teamNavBtn" class="nav-btn" data-screen="team" type="button"><span>♟</span><b>Сотрудники</b></button>
+        <button class="nav-btn" data-screen="settings" type="button"><span>⚙</span><b>Ещё</b></button>
+      </nav>
+    </section>
+  </div>
+
+  <dialog id="surveyDialog" class="sheet-dialog">
+    <form id="surveyForm" method="dialog" class="sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-head">
+        <div>
+          <div class="eyebrow">Новый заказ</div>
+          <h2>Новый замер</h2>
+        </div>
+        <button class="icon-btn" value="cancel" type="submit" aria-label="Закрыть">×</button>
+      </div>
+
+      <div class="progress-line"><span class="active"></span><span></span></div>
+      <section id="surveyStep1" class="wizard-step active">
+        <h3>1. Клиент и объект</h3>
+        <label class="field"><span>Имя клиента</span><input id="surveyClientName" required placeholder="Например, Иван" /></label>
+        <label class="field"><span>Телефон</span><input id="surveyClientPhone" inputmode="tel" required placeholder="+7 937 000-00-00" /></label>
+        <label class="field"><span>Адрес объекта</span><textarea id="surveyAddress" rows="2" required placeholder="Населённый пункт, улица, дом"></textarea></label>
+        <label class="field"><span>Комментарий</span><textarea id="surveyNote" rows="2" placeholder="Например: позвонить за час"></textarea></label>
+        <button id="toSurveyStep2" class="btn btn-primary btn-lg btn-block" type="button">Дальше: что замеряем</button>
+      </section>
+
+      <section id="surveyStep2" class="wizard-step">
+        <h3>2. Что нужно замерить?</h3>
+        <p class="muted">Можно выбрать сразу несколько пунктов.</p>
+        <div class="work-grid">
+          <label class="work-option">
+            <input type="checkbox" name="workType" value="gates" />
+            <span class="work-icon">▥</span><b>Ворота / калитка</b><small>Распашные, откатные, кованые и под зашивку</small>
+          </label>
+          <label class="work-option">
+            <input type="checkbox" name="workType" value="fence" />
+            <span class="work-icon">▥▥</span><b>Забор</b><small>Профнастил, евроштакетник и участки без ворот</small>
+          </label>
+          <label class="work-option">
+            <input type="checkbox" name="workType" value="canopy" />
+            <span class="work-icon">⌒</span><b>Навес</b><small>Размеры, столбы, фермы и покрытие</small>
+          </label>
+        </div>
+        <div id="workTypeError" class="form-error" hidden>Выберите хотя бы один вид работ.</div>
+        <div class="button-row">
+          <button id="backSurveyStep1" class="btn btn-secondary" type="button">Назад</button>
+          <button id="saveSurveyBtn" class="btn btn-primary" type="button">Сохранить замер</button>
+        </div>
+      </section>
+    </form>
+  </dialog>
+
+  <dialog id="clientDialog" class="sheet-dialog small">
+    <form id="clientForm" method="dialog" class="sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-head"><h2>Новый клиент</h2><button class="icon-btn" value="cancel" type="submit">×</button></div>
+      <label class="field"><span>Имя</span><input id="clientNameInput" required /></label>
+      <label class="field"><span>Телефон</span><input id="clientPhoneInput" inputmode="tel" required /></label>
+      <label class="field"><span>Адрес</span><textarea id="clientAddressInput" rows="2"></textarea></label>
+      <button id="saveClientBtn" class="btn btn-primary btn-block" type="button">Сохранить клиента</button>
+    </form>
+  </dialog>
+
+  <dialog id="employeeDialog" class="sheet-dialog small">
+    <form id="employeeForm" method="dialog" class="sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-head"><h2>Сотрудник</h2><button class="icon-btn" value="cancel" type="submit">×</button></div>
+      <input id="employeeIdInput" type="hidden" />
+      <label class="field"><span>Имя</span><input id="employeeNameInput" required /></label>
+      <label class="field"><span>Логин</span><input id="employeeLoginInput" required autocapitalize="none" /></label>
+      <label class="field"><span>Роль</span><select id="employeeRoleInput"><option value="surveyor">Замерщик</option><option value="owner">Собственник</option></select></label>
+      <label class="field"><span>Новый пароль</span><input id="employeePasswordInput" type="password" inputmode="numeric" placeholder="Минимум 4 символа" /></label>
+      <button id="saveEmployeeBtn" class="btn btn-primary btn-block" type="button">Сохранить</button>
+    </form>
+  </dialog>
+
+  <dialog id="surveyDetailsDialog" class="sheet-dialog">
+    <section class="sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-head"><div><div class="eyebrow">Карточка замера</div><h2 id="detailsNumber"></h2></div><button id="closeDetailsBtn" class="icon-btn" type="button">×</button></div>
+      <div id="surveyDetailsContent"></div>
+    </section>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="app.js" type="module"></script>
+</body>
+</html>
