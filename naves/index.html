@@ -26,67 +26,68 @@
       <div class="panel-head"><div><small>Шаг 1</small><h2>Параметры навеса</h2></div></div>
 
       <div class="field-grid client-main-fields">
-        <label class="field"><span>Ширина, м</span><input id="widthPosts" type="number" min="1.5" max="8" step="0.1" value="3.4" inputmode="decimal"><small>Расстояние между крайними столбами</small></label>
-        <label class="field"><span>Длина, м</span><input id="lengthPosts" type="number" min="1" max="30" step="0.1" value="8.4" inputmode="decimal"><small>По линии столбов</small></label>
-        <label class="field"><span>Высота, м</span><input id="visibleHeight" type="number" min="1.5" max="5" step="0.1" value="2.1" inputmode="decimal"><small>Высота столбов над землёй</small></label>
+        <section class="original-picker field-wide" aria-labelledby="farmTypeLabel">
+          <div class="original-picker-group">
+            <label id="farmTypeLabel" class="original-label">Тип фермы: <strong id="farmTypeCaption">Арочный</strong></label>
+            <input id="farmType" type="hidden" value="Арочный">
+            <div class="farm-type-grid" role="radiogroup" aria-label="Тип фермы">
+              <button class="farm-type-option is-selected" type="button" data-farm-type="Арочный" role="radio" aria-checked="true">
+                <img src="https://mosnavesi.ru/content/icons/farms/arched-triangle.svg" onerror="this.onerror=null;this.src='./truss-icons/triangle.svg'" alt="Арочный">
+              </button>
+              <button class="farm-type-option" type="button" data-farm-type="Полуарочный" role="radio" aria-checked="false">
+                <img src="https://mosnavesi.ru/content/icons/farms/semi-arched-triangle.svg" onerror="this.onerror=null;this.src='./truss-icons/triangle.svg'" alt="Полуарочный">
+              </button>
+              <button class="farm-type-option" type="button" data-farm-type="Односкатный" role="radio" aria-checked="false">
+                <img src="https://mosnavesi.ru/content/icons/farms/shed-triangle.svg" onerror="this.onerror=null;this.src='./truss-icons/triangle.svg'" alt="Односкатный">
+              </button>
+              <button class="farm-type-option" type="button" data-farm-type="Треугольный" role="radio" aria-checked="false">
+                <img src="https://mosnavesi.ru/content/icons/farms/triangle-triangle.svg" onerror="this.onerror=null;this.src='./truss-icons/triangle.svg'" alt="Треугольный">
+              </button>
+              <button class="farm-type-option" type="button" data-farm-type="Швелер" role="radio" aria-checked="false">
+                <img src="https://mosnavesi.ru/content/icons/farms/shed-channel.svg" onerror="this.onerror=null;this.src='./truss-icons/triangle.svg'" alt="Швелер">
+              </button>
+            </div>
+          </div>
+
+          <div class="original-picker-group">
+            <label class="original-label">Обрешётка</label>
+            <input id="trussType" type="hidden" value="Треугольная">
+            <div class="original-segment" role="radiogroup" aria-label="Обрешётка фермы">
+              <button type="button" data-truss-option="Вертикальная" role="radio" aria-checked="false">Вертикальная</button>
+              <button class="is-selected" type="button" data-truss-option="Треугольная" role="radio" aria-checked="true">Треугольная</button>
+              <button type="button" data-truss-option="Усиленная" role="radio" aria-checked="false">Усиленная</button>
+              <button type="button" data-truss-option="Плоская" role="radio" aria-checked="false">Плоская</button>
+            </div>
+          </div>
+
+          <div class="original-picker-row">
+            <label class="field original-compact-field">
+              <span>Материал фермы</span>
+              <select id="materialMode">
+                <option selected>30×30×2</option>
+                <option>40×20×2</option>
+              </select>
+            </label>
+
+            <div class="original-compact-field">
+              <span class="original-field-label">Лаги 40×20×2</span>
+              <input id="lagMode" type="hidden" value="Стандарт">
+              <div class="original-segment original-segment-two lag-choice" role="radiogroup" aria-label="Шаг лаг 40 на 20">
+                <button class="is-selected" type="button" data-lag-option="Стандарт" role="radio" aria-checked="true">Стандарт</button>
+                <button type="button" data-lag-option="Эконом" role="radio" aria-checked="false">Эконом</button>
+              </div>
+              <small id="lagModeInfo" class="original-inline-info">Считаем количество лаг…</small>
+              <small id="lagModeHint" hidden></small>
+            </div>
+          </div>
+        </section>
+
+        <label class="field"><span>Ширина навеса, м</span><input id="widthPosts" type="number" min="1.5" max="8" step="0.1" value="3.4" inputmode="decimal"><small>Расстояние между крайними столбами</small></label>
+        <label class="field"><span>Длина навеса, м</span><input id="lengthPosts" type="number" min="1" max="30" step="0.1" value="8.4" inputmode="decimal"><small>По линии столбов</small></label>
+        <label class="field"><span>Высота столбов, м</span><input id="visibleHeight" type="number" min="1.5" max="5" step="0.1" value="2.1" inputmode="decimal"><small>Высота над землёй</small></label>
         <label class="field"><span>Покрытие</span><select id="coverage"><option>Поликарбонат</option><option>Профнастил</option><option>Без покрытия</option></select></label>
         <label class="field"><span>Установка</span><select id="installType"><option>Бетонирование</option><option>Закладные</option></select><small>Способ установки новых столбов</small></label>
         <label class="field"><span>Столбы уже есть, шт</span><input id="existingPosts" type="number" min="0" max="50" step="1" value="0" inputmode="numeric"><small>Укажите только подходящие существующие столбы</small></label>
-
-        <section class="construction-picker field-wide" aria-labelledby="trussPickerTitle">
-          <div class="choice-head">
-            <div><span id="trussPickerTitle">Форма фермы</span><small>Выберите по внешнему виду — 3D перестроится сразу</small></div>
-          </div>
-          <input id="trussType" type="hidden" value="Треугольная">
-          <div class="truss-visual-grid" role="radiogroup" aria-label="Тип фермы">
-            <button class="truss-option" type="button" data-truss-option="Вертикальная" role="radio" aria-checked="false">
-              <span class="truss-option-art">
-                <img src="./truss-icons/vertical.svg" alt="Вертикальная арочная ферма">
-              </span>
-              <span class="truss-option-copy"><b>Вертикальная</b><small>Вертикальные стойки</small></span>
-              <i class="choice-check">✓</i>
-            </button>
-
-            <button class="truss-option is-selected" type="button" data-truss-option="Треугольная" role="radio" aria-checked="true">
-              <span class="truss-option-art">
-                <img src="./truss-icons/triangle.svg" alt="Треугольная арочная ферма">
-              </span>
-              <span class="truss-option-copy"><b>Треугольная</b><small>Диагональная решётка</small></span>
-              <i class="choice-check">✓</i>
-            </button>
-
-            <button class="truss-option" type="button" data-truss-option="Усиленная" role="radio" aria-checked="false">
-              <span class="truss-option-art">
-                <img src="./truss-icons/reinforced.svg" alt="Усиленная арочная ферма">
-              </span>
-              <span class="truss-option-copy"><b>Усиленная</b><small>Диагонали + стойки</small></span>
-              <i class="choice-check">✓</i>
-            </button>
-          </div>
-
-          <div class="choice-subsection">
-            <div class="choice-head compact"><div><span>Материал фермы</span><small>Профиль поясов и внутренней решётки</small></div></div>
-            <input id="materialMode" type="hidden" value="30×30×2">
-            <div class="segment-choice material-choice" role="radiogroup" aria-label="Материал фермы">
-              <button class="segment-option is-selected" type="button" data-material-option="30×30×2" role="radio" aria-checked="true"><b>30×30×2</b><small>профильная труба</small></button>
-              <button class="segment-option" type="button" data-material-option="40×20×2" role="radio" aria-checked="false"><b>40×20×2</b><small>профильная труба</small></button>
-            </div>
-          </div>
-
-          <div class="choice-subsection">
-            <div class="choice-head compact"><div><span>Лаги кровли 40×20×2</span><small id="lagModeHint">Выберите баланс жёсткости и стоимости</small></div></div>
-            <input id="lagMode" type="hidden" value="Стандарт">
-            <div class="segment-choice lag-choice" role="radiogroup" aria-label="Шаг лаг 40 на 20">
-              <button class="segment-option is-selected" type="button" data-lag-option="Стандарт" role="radio" aria-checked="true">
-                <b>Стандарт</b><span>≈40 см</span><small>больше лаг · жёстче</small>
-              </button>
-              <button class="segment-option" type="button" data-lag-option="Эконом" role="radio" aria-checked="false">
-                <b>Эконом</b><span>≤50 см</span><small>меньше металла</small>
-              </button>
-            </div>
-            <div id="lagModeInfo" class="choice-result">Считаем количество лаг…</div>
-          </div>
-        </section>
       </div>
 
       <div class="simple-options">
