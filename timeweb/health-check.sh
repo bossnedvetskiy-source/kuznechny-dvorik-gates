@@ -151,6 +151,15 @@ grep -q '/site-manifest.webmanifest' "$TMP_DIR/link-app.html" || fail 'client li
 fetch "$BASE_URL/manager?deploy_health=$TARGET_SOURCE_SHA" "$TMP_DIR/manager.html"
 grep -q "scope:'/manager'" "$TMP_DIR/manager.html" || fail 'manager-specific push registration missing'
 grep -q 'createFreshSubscription' "$TMP_DIR/manager.html" || fail 'manager push repair flow missing'
+fetch "$BASE_URL/surveyor-app/index.html?deploy_health=$TARGET_SOURCE_SHA" "$TMP_DIR/surveyor-app.html"
+grep -q 'КД Замерщик' "$TMP_DIR/surveyor-app.html" || fail 'surveyor app missing'
+grep -q 'noindex,nofollow,noarchive' "$TMP_DIR/surveyor-app.html" || fail 'surveyor app must be noindexed'
+fetch "$BASE_URL/surveyor-app/app.js?deploy_health=$TARGET_SOURCE_SHA" "$TMP_DIR/surveyor-app.js"
+grep -q 'async function syncNow' "$TMP_DIR/surveyor-app.js" || fail 'surveyor synchronization runtime missing'
+php -l backend/surveyor.php >/dev/null 2>&1 || fail 'surveyor API PHP has syntax errors'
+status=$(curl --silent --show-error --max-time 25 --output "$TMP_DIR/surveyor-me.json" --write-out '%{http_code}' "$BASE_URL/api/surveyor/me" || true)
+[ "$status" = '401' ] || fail "surveyor API should require auth, got HTTP ${status:-000}"
+
 fetch "$BASE_URL/manager-sw.js?deploy_health=$TARGET_SOURCE_SHA" "$TMP_DIR/manager-sw.js"
 grep -q 'kuzdvor-manager-v4' "$TMP_DIR/manager-sw.js" || fail 'manager push service worker version is stale'
 grep -q "showNotification('Новая заявка с сайта'" "$TMP_DIR/manager-sw.js" || fail 'manager background notification handler missing'
