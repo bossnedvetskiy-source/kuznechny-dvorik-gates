@@ -1,4 +1,6 @@
-const APP_VERSION = '0.2.0';
+import {PLAN_ITEM_TYPES,MATERIAL_LABELS,ensureSitePlan,newItem,newLine,lineWidth,itemDescription,trimNumber} from './line-builder.js';
+
+const APP_VERSION = '0.3.0';
 const DB_NAME = 'kd-surveyor-stage1';
 const DB_VERSION = 1;
 const STORE_NAMES = ['employees', 'clients', 'surveys', 'meta'];
@@ -19,6 +21,11 @@ let currentUser = null;
 let currentSurveyFilter = 'all';
 let syncInFlight = false;
 let lastSyncMessage = '';
+let activePlanSurveyId = '';
+let activePlanConfiguration = null;
+let activePlanLineId = '';
+let activePlanItemId = '';
+let activeInsertIndex = null;
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
@@ -292,7 +299,7 @@ async function createSurvey(data) {
     address: data.address.trim(), note: data.note.trim(), workTypes: [...data.workTypes],
     status: 'draft', createdBy: currentUser.id, createdByName: currentUser.name,
     createdAt: now, updatedAt: now, syncState: API_ENABLED ? 'pending' : 'local',
-    serverRevision: 0, archived: false, schemaVersion: 2
+    serverRevision: 0, archived: false, schemaVersion: 3, configuration: {}
   };
   await idbPut('surveys', survey);
   if (API_ENABLED && navigator.onLine) queueMicrotask(() => syncNow({ silent: true }));
@@ -326,6 +333,7 @@ function serverSurveyToLocal(server, existing = {}) {
     address: server.address,
     note: server.note || '',
     workTypes: Array.isArray(server.workTypes) ? server.workTypes : [],
+    configuration: server.configuration && typeof server.configuration === 'object' ? server.configuration : (existing.configuration || {}),
     status: server.status || 'draft',
     archived: !!server.archived,
     createdBy: server.createdBy || existing.createdBy || '',
@@ -385,7 +393,7 @@ async function syncNow({ silent = false } = {}) {
       })),
       surveys: pendingSurveys.map(x => ({
         id:x.id,clientId:x.clientId,clientName:x.clientName,clientPhone:x.clientPhone,address:x.address,note:x.note,
-        workTypes:x.workTypes,status:x.status,archived:!!x.archived,createdByName:x.createdByName,
+        workTypes:x.workTypes,configuration:x.configuration || {},status:x.status,archived:!!x.archived,createdByName:x.createdByName,
         updatedAt:x.updatedAt,serverRevision:Number(x.serverRevision||0)
       }))
     };
@@ -578,6 +586,227 @@ async function renderEmployees() {
   $$('[data-toggle-employee]').forEach(btn => btn.addEventListener('click', () => toggleEmployee(btn.dataset.toggleEmployee)));
 }
 
+
+function surveyHasLinearPlan(survey) {
+  return Array.isArray(survey?.workTypes) && (survey.workTypes.includes('gates') || survey.workTypes.includes('fence'));
+}
+
+function surveyPlanSummaryHtml(survey) {
+  if (!surveyHasLinearPlan(survey)) return '';
+  const lines = survey?.configuration?.sitePlan?.lines;
+  if (!Array.isArray(lines) || !lines.length) {
+    return `<div class="details-section">
+      <div class="section-head compact"><div><h3>Схема установки</h3><p class="muted">Забор, ворота, калитка и столбы на одной линии.</p></div></div>
+      <div class="plan-empty-card">
+        <div><b>Схема ещё не заполнена</b><span>Добавьте фактический порядок элементов на объекте.</span></div>
+        <button class="btn btn-primary" data-edit-plan="${survey.id}" type="button">Создать схему</button>
+      </div>
+    </div>`;
+  }
+  const total = lines.reduce((sum,line)=>sum+lineWidth(line),0);
+  const objects = lines.reduce((sum,line)=>sum+(line.items || []).length,0);
+  return `<div class="details-section">
+    <div class="section-head compact"><div><h3>Схема установки</h3><p class="muted">${lines.length} ${plural(lines.length,['линия','линии','линий'])} · ${trimNumber(total)} м · ${objects} элементов</p></div></div>
+    <div class="plan-mini-preview">${lines.slice(0,2).map(line=>miniLineHtml(line)).join('')}</div>
+    <button class="btn btn-secondary btn-block" data-edit-plan="${survey.id}" type="button">Редактировать схему</button>
+  </div>`;
+}
+
+function miniLineHtml(line) {
+  const items = Array.isArray(line?.items) ? line.items : [];
+  return `<div class="mini-line">
+    <div class="mini-line-name">${escapeHtml(line.name || 'Линия')}</div>
+    <div class="mini-line-track">${items.map(item => `<span class="mini-plan-part ${item.type}" title="${escapeHtml(itemDescription(item))}" style="--part:${item.type==='post'?.16:Math.max(.45,Number(item.width)||1)}"></span>`).join('')}</div>
+  </div>`;
+}
+
+function currentPlanLine() {
+  const lines=activePlanConfiguration?.sitePlan?.lines || [];
+  return lines.find(line=>line.id===activePlanLineId) || lines[0] || null;
+}
+
+function currentPlanItem() {
+  const line=currentPlanLine();
+  return line?.items?.find(item=>item.id===activePlanItemId) || null;
+}
+
+async function openPlanEditor(surveyId) {
+  const survey=await idbGet('surveys',surveyId);
+  if (!survey || !surveyHasLinearPlan(survey)) return;
+  activePlanSurveyId=survey.id;
+  activePlanConfiguration=ensureSitePlan(survey.configuration,survey.workTypes);
+  activePlanLineId=activePlanConfiguration.sitePlan.lines[0].id;
+  activePlanItemId='';
+  activeInsertIndex=null;
+  $('#planTitle').textContent=displaySurveyNumber(survey)+' · схема';
+  renderPlanEditor();
+  $('#planDialog').showModal();
+}
+
+function renderPlanEditor() {
+  const lines=activePlanConfiguration?.sitePlan?.lines || [];
+  let line=currentPlanLine();
+  if (!line && lines.length) {
+    activePlanLineId=lines[0].id;
+    line=lines[0];
+  }
+  $('#planLineTabs').innerHTML=lines.map((item,index)=>`<button type="button" class="plan-line-tab ${item.id===activePlanLineId?'active':''}" data-plan-line="${item.id}">${escapeHtml(item.name || 'Линия '+(index+1))}</button>`).join('');
+  $('#planLinesCount').textContent=String(lines.length);
+  if (!line) return;
+  $('#planLineName').value=line.name || '';
+  $('#planLineWidth').textContent=trimNumber(lineWidth(line))+' м';
+  renderPlanCanvas(line);
+  renderPlanItems(line);
+  renderPlanItemEditor(line);
+}
+
+function renderPlanCanvas(line) {
+  const items=line.items || [];
+  $('#planCanvas').innerHTML=`<div class="plan-track">${items.map(item=>{
+    const grow=item.type==='post'?.16:Math.max(.45,Number(item.width)||1);
+    const selected=item.id===activePlanItemId?' selected':'';
+    const label=item.type==='post'?(item.state==='existing'?'есть':'новый'):(trimNumber(item.width)+' м');
+    return `<button type="button" class="plan-part ${item.type}${selected}" data-select-plan-item="${item.id}" style="--part:${grow}" title="${escapeHtml(itemDescription(item))}">
+      <span class="plan-part-shape"></span><b>${escapeHtml(PLAN_ITEM_TYPES[item.type]?.short || item.type)}</b><small>${escapeHtml(label)}</small>
+    </button>`;
+  }).join('')}</div>`;
+}
+
+function renderPlanItems(line) {
+  const items=line.items || [];
+  let html='';
+  for(let index=0;index<=items.length;index++){
+    html+=`<div class="plan-insert-slot"><button type="button" data-plan-insert="${index}" aria-label="Добавить элемент сюда">+</button></div>`;
+    if(index<items.length){
+      const item=items[index];
+      html+=`<article class="plan-item-row ${item.id===activePlanItemId?'selected':''}" data-select-plan-item="${item.id}">
+        <div class="plan-item-icon ${item.type}">${item.type==='post'?'│':item.type==='gate'?'▰':item.type==='wicket'?'▯':item.type==='opening'?'↔':'▥'}</div>
+        <div class="plan-item-main"><b>${escapeHtml(PLAN_ITEM_TYPES[item.type]?.label || item.type)}</b><span>${escapeHtml(itemDescription(item))}</span></div>
+        <span class="plan-item-order">${index+1}</span>
+      </article>`;
+    }
+  }
+  $('#planItems').innerHTML=html;
+}
+
+function materialOptions(selected, type) {
+  const allowed=type==='fence'
+    ? ['profsheet','euro_vertical','euro_horizontal']
+    : ['forged','profsheet','euro_vertical','euro_horizontal','frame'];
+  return allowed.map(value=>`<option value="${value}" ${value===selected?'selected':''}>${MATERIAL_LABELS[value]}</option>`).join('');
+}
+
+function renderPlanItemEditor(line) {
+  const item=currentPlanItem();
+  const editor=$('#planEditor');
+  if(!item){ editor.hidden=true; return; }
+  editor.hidden=false;
+  $('#planEditorTitle').textContent=PLAN_ITEM_TYPES[item.type]?.label || 'Элемент';
+  if(item.type==='post'){
+    $('#planEditorFields').innerHTML=`
+      <div class="plan-field-grid">
+        <label class="field"><span>Столб</span><select data-plan-field="state"><option value="new" ${item.state==='new'?'selected':''}>Новый</option><option value="existing" ${item.state==='existing'?'selected':''}>Уже стоит</option></select></label>
+        <label class="field"><span>Профиль</span><select data-plan-field="profile">
+          ${['60×60×3','80×80×3','100×100×3'].map(v=>`<option value="${v}" ${v===item.profile?'selected':''}>${v}</option>`).join('')}
+        </select></label>
+      </div>`;
+  } else {
+    $('#planEditorFields').innerHTML=`
+      <div class="plan-field-grid">
+        <label class="field"><span>Ширина, м</span><input data-plan-field="width" type="number" min="0.1" max="100" step="0.01" inputmode="decimal" value="${Number(item.width)||1}" /></label>
+        ${item.type!=='opening'?`<label class="field"><span>Высота, м</span><input data-plan-field="height" type="number" min="0.5" max="5" step="0.01" inputmode="decimal" value="${Number(item.height)||1.8}" /></label>`:''}
+        ${item.type!=='opening'?`<label class="field plan-field-wide"><span>Материал</span><select data-plan-field="material">${materialOptions(item.material,item.type)}</select></label>`:''}
+        ${item.type==='gate'?`<label class="field plan-field-wide"><span>Тип ворот</span><select data-plan-field="gateKind"><option value="swing" ${item.gateKind!=='sliding'?'selected':''}>Распашные</option><option value="sliding" ${item.gateKind==='sliding'?'selected':''}>Откатные</option></select></label>`:''}
+      </div>`;
+  }
+  const index=(line.items || []).findIndex(value=>value.id===item.id);
+  $('#movePlanItemLeftBtn').disabled=index<=0;
+  $('#movePlanItemRightBtn').disabled=index<0 || index>=line.items.length-1;
+}
+
+function selectPlanItem(id) {
+  activePlanItemId=id;
+  activeInsertIndex=null;
+  $('#insertPanel').hidden=true;
+  renderPlanEditor();
+}
+
+function showInsertPanel(index) {
+  activeInsertIndex=Number(index);
+  activePlanItemId='';
+  $('#planEditor').hidden=true;
+  $('#insertPanel').hidden=false;
+  $('#insertPanel').scrollIntoView({behavior:'smooth',block:'nearest'});
+  const line=currentPlanLine();
+  if(line){ renderPlanCanvas(line); renderPlanItems(line); }
+}
+
+function addPlanItem(type) {
+  const line=currentPlanLine();
+  if(!line || !PLAN_ITEM_TYPES[type]) return;
+  const index=Number.isInteger(activeInsertIndex)?Math.max(0,Math.min(line.items.length,activeInsertIndex)):line.items.length;
+  const item=newItem(type);
+  line.items.splice(index,0,item);
+  activePlanItemId=item.id;
+  activeInsertIndex=null;
+  $('#insertPanel').hidden=true;
+  renderPlanEditor();
+}
+
+function movePlanItem(direction) {
+  const line=currentPlanLine(), item=currentPlanItem();
+  if(!line || !item) return;
+  const from=line.items.findIndex(value=>value.id===item.id);
+  const to=from+direction;
+  if(from<0 || to<0 || to>=line.items.length) return;
+  [line.items[from],line.items[to]]=[line.items[to],line.items[from]];
+  renderPlanEditor();
+}
+
+function deletePlanItem() {
+  const line=currentPlanLine(), item=currentPlanItem();
+  if(!line || !item) return;
+  line.items=line.items.filter(value=>value.id!==item.id);
+  activePlanItemId='';
+  renderPlanEditor();
+}
+
+function addPlanLine() {
+  const lines=activePlanConfiguration?.sitePlan?.lines;
+  if(!lines) return;
+  const line=newLine([],lines.length);
+  lines.push(line);
+  activePlanLineId=line.id;
+  activePlanItemId='';
+  renderPlanEditor();
+}
+
+function deletePlanLine() {
+  const lines=activePlanConfiguration?.sitePlan?.lines;
+  if(!lines || lines.length<=1) return showToast('В схеме должна остаться хотя бы одна линия');
+  const index=lines.findIndex(line=>line.id===activePlanLineId);
+  if(index<0) return;
+  lines.splice(index,1);
+  activePlanLineId=lines[Math.max(0,index-1)]?.id || lines[0]?.id || '';
+  activePlanItemId='';
+  renderPlanEditor();
+}
+
+async function savePlan() {
+  const survey=await idbGet('surveys',activePlanSurveyId);
+  if(!survey || !activePlanConfiguration) return;
+  survey.configuration=activePlanConfiguration;
+  survey.updatedAt=new Date().toISOString();
+  survey.syncState=API_ENABLED?'pending':'local';
+  survey.schemaVersion=3;
+  await idbPut('surveys',survey);
+  $('#planDialog').close();
+  showToast('Схема сохранена');
+  if($('#surveyDetailsDialog').open) $('#surveyDetailsDialog').close();
+  await openSurveyDetails(survey.id);
+  if(API_ENABLED && navigator.onLine) syncNow({silent:true});
+}
+
 async function openSurveyDetails(id) {
   const survey = await idbGet('surveys', id);
   if (!survey) return;
@@ -593,10 +822,11 @@ async function openSurveyDetails(id) {
     <div class="details-section"><h3>Что замеряем</h3><div class="badge-row">${survey.workTypes.map(type => `<span class="type-badge ${WORK_TYPES[type]?.className || ''}">${WORK_TYPES[type]?.label || type}</span>`).join('')}</div></div>
     ${survey.note ? `<div class="details-section"><h3>Комментарий</h3><div class="details-note">${escapeHtml(survey.note)}</div></div>` : ''}
     ${survey.syncState === 'conflict' ? '<div class="details-section"><div class="notice notice-lock">Есть более новая версия этого замера на сервере. Пока данные не затираются автоматически.</div></div>' : ''}
-    <div class="details-section"><div class="notice notice-lock">Следующий этап добавит сюда визуальный конструктор линии: столбы, пролёты, ворота, калитки и их свободное редактирование.</div></div>
+    ${surveyPlanSummaryHtml(survey)}
     ${currentUser.role === 'owner' ? `<button class="btn btn-danger btn-block" data-archive-survey="${survey.id}" type="button">Архивировать заказ</button>` : ''}`;
   $('#surveyDetailsDialog').showModal();
   $('[data-archive-survey]')?.addEventListener('click', () => archiveSurvey(survey.id));
+  $('[data-edit-plan]')?.addEventListener('click', () => openPlanEditor(survey.id));
 }
 
 async function archiveSurvey(id) {
@@ -819,6 +1049,55 @@ function bindEvents() {
   $('#newEmployeeBtn').addEventListener('click', () => openEmployeeDialog());
   $('#saveEmployeeBtn').addEventListener('click', saveEmployee);
   $('#closeDetailsBtn').addEventListener('click', () => $('#surveyDetailsDialog').close());
+  $('#closePlanBtn').addEventListener('click', () => $('#planDialog').close());
+  $('#addPlanLineBtn').addEventListener('click', addPlanLine);
+  $('#deletePlanLineBtn').addEventListener('click', deletePlanLine);
+  $('#savePlanBtn').addEventListener('click', savePlan);
+  $('#cancelInsertBtn').addEventListener('click', () => { activeInsertIndex=null; $('#insertPanel').hidden=true; });
+  $('#closePlanEditorBtn').addEventListener('click', () => { activePlanItemId=''; renderPlanEditor(); });
+  $('#movePlanItemLeftBtn').addEventListener('click', () => movePlanItem(-1));
+  $('#movePlanItemRightBtn').addEventListener('click', () => movePlanItem(1));
+  $('#deletePlanItemBtn').addEventListener('click', deletePlanItem);
+  $('#planLineName').addEventListener('input', e => {
+    const line=currentPlanLine();
+    if(!line) return;
+    line.name=e.target.value.slice(0,80);
+    renderPlanCanvas(line);
+    $('#planLineTabs').querySelector('[data-plan-line="'+line.id+'"]')?.replaceChildren(document.createTextNode(line.name || 'Линия'));
+  });
+  $('#planLineTabs').addEventListener('click', e => {
+    const button=e.target.closest('[data-plan-line]');
+    if(!button) return;
+    activePlanLineId=button.dataset.planLine;
+    activePlanItemId='';
+    activeInsertIndex=null;
+    $('#insertPanel').hidden=true;
+    renderPlanEditor();
+  });
+  $('#planItems').addEventListener('click', e => {
+    const insert=e.target.closest('[data-plan-insert]');
+    if(insert) return showInsertPanel(Number(insert.dataset.planInsert));
+    const row=e.target.closest('[data-select-plan-item]');
+    if(row) selectPlanItem(row.dataset.selectPlanItem);
+  });
+  $('#planCanvas').addEventListener('click', e => {
+    const part=e.target.closest('[data-select-plan-item]');
+    if(part) selectPlanItem(part.dataset.selectPlanItem);
+  });
+  $('#insertPanel').addEventListener('click', e => {
+    const button=e.target.closest('[data-add-plan-item]');
+    if(button) addPlanItem(button.dataset.addPlanItem);
+  });
+  $('#planEditorFields').addEventListener('change', e => {
+    const field=e.target.dataset.planField;
+    const item=currentPlanItem();
+    if(!field || !item) return;
+    let value=e.target.value;
+    if(field==='width') value=Math.max(.1,Math.min(100,Number(value)||.1));
+    if(field==='height') value=Math.max(.5,Math.min(5,Number(value)||.5));
+    item[field]=value;
+    renderPlanEditor();
+  });
   $$('[data-survey-filter]').forEach(btn => btn.addEventListener('click', () => {
     currentSurveyFilter = btn.dataset.surveyFilter;
     $$('[data-survey-filter]').forEach(x => x.classList.toggle('active', x === btn));
