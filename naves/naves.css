@@ -44,3 +44,21 @@ html,body{max-width:100%;overflow-x:clip}
   .advanced-grid .switch-field{grid-column:auto}
   .client-main-fields{grid-template-columns:1fr!important}
 }
+
+/* Real Three.js canopy viewer, based on the original uploaded calculator. */
+.canopy-3d-wrap{position:relative;background:#c9c9c9;padding:0;overflow:hidden;touch-action:none}
+.canopy-three-viewport{position:relative;width:100%;height:clamp(340px,58vw,560px);min-height:340px;background:#c9c9c9;overflow:hidden;cursor:grab}
+.canopy-three-viewport:active{cursor:grabbing}
+.canopy-webgl-canvas{display:block;width:100%!important;height:100%!important;max-width:100%;touch-action:none;outline:0}
+.three-loading,.three-fallback{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;padding:28px;color:#373737;background:#c9c9c9}
+.three-loading span{width:30px;height:30px;border:3px solid rgba(0,0,0,.16);border-top-color:#9a6d28;border-radius:50%;animation:canopySpin .8s linear infinite}
+.three-loading b,.three-fallback b{font-size:14px}.three-fallback span{font-size:11px;max-width:300px;opacity:.72}
+@keyframes canopySpin{to{transform:rotate(360deg)}}
+.three-toolbar{position:absolute;left:10px;right:10px;bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:8px;pointer-events:none}
+.three-toolbar span{padding:7px 10px;border-radius:999px;background:rgba(20,20,20,.70);backdrop-filter:blur(6px);color:#fff;font-size:10px;line-height:1.2}
+.three-toolbar button{pointer-events:auto;min-height:34px;padding:0 11px;border:1px solid rgba(255,255,255,.30);border-radius:999px;background:rgba(20,20,20,.72);color:#fff;font-size:10px;font-weight:800}
+@media(max-width:600px){
+  .canopy-three-viewport{height:390px;min-height:390px}
+  .three-toolbar{align-items:flex-end}
+  .three-toolbar span{max-width:220px}
+}
