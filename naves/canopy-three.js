@@ -85,7 +85,7 @@ function buildTruss(group,g,z,baseY,frameMat,webMat){
   addBoxBetween(truss,{x:leftX,y:0,z},{x:leftX,y:topY(g,leftX),z},ww,wh,webMat,'end post');
   addBoxBetween(truss,{x:rightX,y:0,z},{x:rightX,y:topY(g,rightX),z},ww,wh,webMat,'end post');
 
-  if(g.trussType==='Вертикальная'){
+  if(g.trussType==='Вертикальная'||g.trussType==='Усиленная'){
     for(const v of g.verticals){
       addBoxBetween(
         truss,
@@ -94,7 +94,8 @@ function buildTruss(group,g,z,baseY,frameMat,webMat){
         ww,wh,webMat,'vertical farm web'
       );
     }
-  }else{
+  }
+  if(g.trussType==='Треугольная'||g.trussType==='Усиленная'){
     for(let i=0;i<g.nodes.length-1;i++){
       const a=g.nodes[i],b=g.nodes[i+1];
       addBoxBetween(
