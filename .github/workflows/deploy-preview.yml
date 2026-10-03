@@ -59,6 +59,8 @@ jobs:
           node --check admin-prices.js
           node --check admin-canopy.js
           node --check site-sw.js
+          node --check surveyor-app/app.js
+          node --check surveyor-app/sw.js
           node --check worker/site-settings-d1.js
           php -l timeweb/local-api.php
           node --check scripts/build-dev-preview.mjs
@@ -143,6 +145,9 @@ jobs:
           test -s _site/api/catalog-images
           test -s _site/api/fence-prices
           test -s _site/api/offline-version
+          test -s _site/surveyor-app/index.html
+          test -s _site/surveyor-app/app.js
+          test -s _site/surveyor-app/sw.js
           node -e "const x=JSON.parse(require('fs').readFileSync('_site/api/offline-version','utf8')); if(!x.version || !String(x.version).startsWith('dev-')) throw Error('DEV offline version missing'); console.log('DEV offline version OK:', x.version)"
           if grep -Fq '<script src="app.js"' _site/index.html; then
             echo 'Dev preview is still using raw source scripts' >&2

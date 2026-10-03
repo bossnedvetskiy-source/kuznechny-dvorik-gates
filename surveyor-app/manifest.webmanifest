@@ -1,0 +1,14 @@
+{
+  "name": "КД Замерщик",
+  "short_name": "КД Замер",
+  "description": "Выездные замеры Кузнечного Дворика",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f4f2",
+  "theme_color": "#151515",
+  "orientation": "portrait-primary",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
