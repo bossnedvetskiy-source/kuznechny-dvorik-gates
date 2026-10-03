@@ -116,7 +116,7 @@ function timingSafeEqual(a, b) {
 
 async function seedDatabase() {
   const employees = await idbGetAll('employees');
-  if (IS_PREVIEW && !employees.length) {
+  if ((IS_PREVIEW || IS_ANDROID_APP) && !employees.length) {
     const ownerPass = await hashPassword('1234');
     const surveyorPass = await hashPassword('1234');
     await idbPut('employees', {
