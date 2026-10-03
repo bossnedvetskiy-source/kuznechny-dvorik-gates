@@ -1,6 +1,6 @@
 import {PLAN_ITEM_TYPES,MATERIAL_LABELS,ensureSitePlan,newItem,newLine,lineWidth,itemDescription,trimNumber} from './line-builder.js';
 
-const APP_VERSION = '0.3.0';
+const APP_VERSION = '0.3.1';
 const DB_NAME = 'kd-surveyor-stage1';
 const DB_VERSION = 1;
 const STORE_NAMES = ['employees', 'clients', 'surveys', 'meta'];
@@ -270,7 +270,7 @@ function displaySurveyNumber(survey) {
   return survey.number || survey.localNumber || 'Замер без номера';
 }
 
-async function upsertClient({ name, phone, address = '' }) {
+async function upsertClient({ name = '', phone, address = '' }) {
   const clients = await idbGetAll('clients');
   const phoneDigits = phone.replace(/\D/g, '');
   let client = clients.find(x => String(x.phone || '').replace(/\D/g, '') === phoneDigits);
@@ -299,7 +299,7 @@ async function createSurvey(data) {
     number: API_ENABLED ? '' : await nextSurveyNumber(),
     localNumber: API_ENABLED ? `ЛОК-${id.slice(-5).toUpperCase()}` : '',
     clientId: client.id, clientName: client.name, clientPhone: client.phone,
-    address: data.address.trim(), note: data.note.trim(), workTypes: [...data.workTypes],
+    address: data.address.trim(), note: data.note.trim(), workTypes: Array.isArray(data.workTypes) ? [...data.workTypes] : [],
     status: 'draft', createdBy: currentUser.id, createdByName: currentUser.name,
     createdAt: now, updatedAt: now, syncState: API_ENABLED ? 'pending' : 'local',
     serverRevision: 0, archived: false, schemaVersion: 3, configuration: {}
@@ -530,12 +530,12 @@ async function renderSurveys() {
       <div class="card-top">
         <div>
           <div class="order-number">${escapeHtml(displaySurveyNumber(survey))}</div>
-          <div class="card-name">${escapeHtml(survey.clientName)}</div>
+          <div class="card-name">${escapeHtml(survey.clientName || survey.clientPhone || 'Клиент без имени')}</div>
           <div class="card-address">${escapeHtml(survey.address)}</div>
         </div>
         <span class="status-pill ${survey.status}">${survey.status === 'ready' ? 'Готов' : 'Черновик'}</span>
       </div>
-      <div class="badge-row">${survey.workTypes.map(type => `<span class="type-badge ${WORK_TYPES[type]?.className || ''}">${WORK_TYPES[type]?.short || type}</span>`).join('')}</div>
+      <div class="badge-row">${survey.workTypes.length ? survey.workTypes.map(type => `<span class="type-badge ${WORK_TYPES[type]?.className || ''}">${WORK_TYPES[type]?.short || type}</span>`).join('') : '<span class="type-badge">Определим на объекте</span>'}</div>
       <div class="sync-row"><span>${formatDate(survey.updatedAt)}</span><span class="${syncClass(survey.syncState)}">${syncLabel(survey.syncState)}</span></div>
     </article>`).join('');
   $('#surveyEmpty').hidden = surveys.length > 0;
@@ -548,7 +548,7 @@ async function renderClients(query = '') {
   if (q) clients = clients.filter(x => `${x.name} ${x.phone} ${x.address}`.toLowerCase().includes(q));
   $('#clientList').innerHTML = clients.map(client => `
     <article class="client-card">
-      <div class="client-main"><div class="client-name">${escapeHtml(client.name)}</div><div class="client-meta">${escapeHtml(client.address || 'Адрес не указан')}</div></div>
+      <div class="client-main"><div class="client-name">${escapeHtml(client.name || client.phone || 'Контакт')}</div><div class="client-meta">${escapeHtml(client.address || 'Адрес не указан')}${client.name ? '' : ' · имя добавим при договоре'}</div></div>
       <a class="client-phone" href="tel:${String(client.phone||'').replace(/\D/g,'')}">${escapeHtml(client.phone)}</a>
     </article>`).join('');
   $('#clientEmpty').hidden = clients.length > 0;
@@ -589,6 +589,40 @@ async function renderEmployees() {
   $$('[data-toggle-employee]').forEach(btn => btn.addEventListener('click', () => toggleEmployee(btn.dataset.toggleEmployee)));
 }
 
+
+function workTypesEditorHtml(survey) {
+  const selected = new Set(Array.isArray(survey?.workTypes) ? survey.workTypes : []);
+  return `<div class="details-section">
+    <div class="section-head compact">
+      <div><h3>Что замеряем</h3><p class="muted">${selected.size ? 'Можно изменить состав замера в любой момент.' : 'Выберите уже на объекте, когда станет понятно, что нужно клиенту.'}</p></div>
+    </div>
+    <div class="work-grid work-grid-compact" data-survey-work-types="${survey.id}">
+      ${Object.entries(WORK_TYPES).map(([value,meta]) => `<label class="work-option compact">
+        <input type="checkbox" value="${value}" ${selected.has(value) ? 'checked' : ''} />
+        <span class="work-icon">${value==='canopy'?'⌒':'▥'}</span>
+        <b>${escapeHtml(meta.label)}</b>
+      </label>`).join('')}
+    </div>
+    <button class="btn btn-secondary btn-block work-types-save" data-save-work-types="${survey.id}" type="button">Сохранить состав замера</button>
+  </div>`;
+}
+
+async function saveSurveyWorkTypes(surveyId) {
+  const survey = await idbGet('surveys', surveyId);
+  const root = document.querySelector(`[data-survey-work-types="${surveyId}"]`);
+  if (!survey || !root) return;
+  survey.workTypes = [...root.querySelectorAll('input[type="checkbox"]:checked')].map(input => input.value);
+  survey.updatedAt = new Date().toISOString();
+  survey.syncState = API_ENABLED ? 'pending' : 'local';
+  await idbPut('surveys', survey);
+  showToast(survey.workTypes.length ? 'Состав замера сохранён' : 'Вид работ пока не выбран');
+  await renderSurveys();
+  if ($('#surveyDetailsDialog').open) {
+    $('#surveyDetailsDialog').close();
+    await openSurveyDetails(survey.id);
+  }
+  if (API_ENABLED && navigator.onLine) syncNow({silent:true});
+}
 
 function surveyHasLinearPlan(survey) {
   return Array.isArray(survey?.workTypes) && (survey.workTypes.includes('gates') || survey.workTypes.includes('fence'));
@@ -816,13 +850,13 @@ async function openSurveyDetails(id) {
   $('#detailsNumber').textContent = displaySurveyNumber(survey);
   $('#surveyDetailsContent').innerHTML = `
     <div class="details-grid">
-      <div class="detail-box"><small>Клиент</small><b>${escapeHtml(survey.clientName)}</b></div>
+      <div class="detail-box"><small>Клиент</small><b>${escapeHtml(survey.clientName || 'Имя не требуется до договора')}</b></div>
       <div class="detail-box"><small>Телефон</small><b>${escapeHtml(survey.clientPhone)}</b></div>
       <div class="detail-box"><small>Статус</small><b>${survey.status === 'ready' ? 'Готов' : 'Черновик'}</b></div>
       <div class="detail-box"><small>Замерщик</small><b>${escapeHtml(survey.createdByName)}</b></div>
     </div>
     <div class="details-section"><h3>Адрес объекта</h3><div class="details-note">${escapeHtml(survey.address)}</div></div>
-    <div class="details-section"><h3>Что замеряем</h3><div class="badge-row">${survey.workTypes.map(type => `<span class="type-badge ${WORK_TYPES[type]?.className || ''}">${WORK_TYPES[type]?.label || type}</span>`).join('')}</div></div>
+    ${workTypesEditorHtml(survey)}
     ${survey.note ? `<div class="details-section"><h3>Комментарий</h3><div class="details-note">${escapeHtml(survey.note)}</div></div>` : ''}
     ${survey.syncState === 'conflict' ? '<div class="details-section"><div class="notice notice-lock">Есть более новая версия этого замера на сервере. Пока данные не затираются автоматически.</div></div>' : ''}
     ${surveyPlanSummaryHtml(survey)}
@@ -830,6 +864,7 @@ async function openSurveyDetails(id) {
   $('#surveyDetailsDialog').showModal();
   $('[data-archive-survey]')?.addEventListener('click', () => archiveSurvey(survey.id));
   $('[data-edit-plan]')?.addEventListener('click', () => openPlanEditor(survey.id));
+  $('[data-save-work-types]')?.addEventListener('click', () => saveSurveyWorkTypes(survey.id));
 }
 
 async function archiveSurvey(id) {
@@ -850,7 +885,7 @@ async function saveClientFromDialog() {
   const name = $('#clientNameInput').value.trim();
   const phone = $('#clientPhoneInput').value.trim();
   const address = $('#clientAddressInput').value.trim();
-  if (!name || phone.replace(/\D/g,'').length < 10) return showToast('Заполните имя и телефон');
+  if (phone.replace(/\D/g,'').length < 10) return showToast('Заполните телефон');
   await upsertClient({ name, phone, address });
   $('#clientDialog').close();
   $('#clientForm').reset();
@@ -950,16 +985,6 @@ async function toggleEmployee(id) {
 
 function resetSurveyWizard() {
   $('#surveyForm').reset();
-  $('#surveyStep1').classList.add('active');
-  $('#surveyStep2').classList.remove('active');
-  $$('.progress-line span')[0].classList.add('active');
-  $$('.progress-line span')[1].classList.remove('active');
-  $('#workTypeError').hidden = true;
-}
-function goSurveyStep(step) {
-  $('#surveyStep1').classList.toggle('active', step === 1);
-  $('#surveyStep2').classList.toggle('active', step === 2);
-  $$('.progress-line span')[1].classList.toggle('active', step === 2);
 }
 
 async function bootstrap() {
@@ -1026,22 +1051,19 @@ function bindEvents() {
   $('#logoutBtn').addEventListener('click', logout);
   $('#syncNowBtn')?.addEventListener('click', () => syncNow({ silent:false }));
   $('#newSurveyBtn').addEventListener('click', () => { resetSurveyWizard(); $('#surveyDialog').showModal(); });
-  $('#toSurveyStep2').addEventListener('click', () => {
-    const name = $('#surveyClientName').value.trim(), phone = $('#surveyClientPhone').value.replace(/\D/g,''), address = $('#surveyAddress').value.trim();
-    if (!name || phone.length < 10 || !address) return showToast('Заполните имя, телефон и адрес объекта');
-    goSurveyStep(2);
-  });
-  $('#backSurveyStep1').addEventListener('click', () => goSurveyStep(1));
   $('#saveSurveyBtn').addEventListener('click', async () => {
-    const workTypes = $$('input[name="workType"]:checked').map(x => x.value);
-    if (!workTypes.length) { $('#workTypeError').hidden = false; return; }
-    $('#workTypeError').hidden = true;
+    const phone = $('#surveyClientPhone').value.replace(/\D/g,'');
+    const address = $('#surveyAddress').value.trim();
+    if (phone.length < 10 || !address) return showToast('Заполните телефон и адрес объекта');
     const survey = await createSurvey({
-      name: $('#surveyClientName').value, phone: $('#surveyClientPhone').value,
-      address: $('#surveyAddress').value, note: $('#surveyNote').value, workTypes
+      name: '',
+      phone: $('#surveyClientPhone').value,
+      address,
+      note: $('#surveyNote').value,
+      workTypes: []
     });
     $('#surveyDialog').close();
-    showToast(`${displaySurveyNumber(survey)} сохранён`);
+    showToast(`${displaySurveyNumber(survey)} создан`);
     renderSurveys();
   });
   $('#surveyClientPhone').addEventListener('input', e => { e.target.value = formatPhone(e.target.value); });

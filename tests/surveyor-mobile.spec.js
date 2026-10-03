@@ -14,25 +14,28 @@ test('surveyor can create a mixed survey and reopen it offline', async ({page, c
   await expect(page.locator('#teamNavBtn')).toHaveClass(/hidden/);
 
   await page.locator('#newSurveyBtn').click();
-  await page.locator('#surveyClientName').fill('Тестовый клиент');
   await page.locator('#surveyClientPhone').fill('89370000000');
   await page.locator('#surveyAddress').fill('Мелеуз, тестовый объект');
-  await page.locator('#toSurveyStep2').click();
-
-  await page.locator('input[name="workType"][value="gates"]').check();
-  await page.locator('input[name="workType"][value="fence"]').check();
-  await page.locator('input[name="workType"][value="canopy"]').check();
   await page.locator('#saveSurveyBtn').click();
 
   const card = page.locator('.survey-card').first();
   await expect(card).toContainText('ЗМ-0001');
-  await expect(card).toContainText('Тестовый клиент');
-  await expect(card).toContainText('Ворота');
-  await expect(card).toContainText('Забор');
-  await expect(card).toContainText('Навес');
+  await expect(card).toContainText('+7 937');
+  await expect(card).toContainText('Определим на объекте');
 
   await card.click();
   await expect(page.locator('#surveyDetailsDialog')).toBeVisible();
+  await expect(page.locator('#surveyDetailsContent')).toContainText('Имя не требуется до договора');
+  await page.locator('[data-survey-work-types] input[value="gates"]').check();
+  await page.locator('[data-survey-work-types] input[value="fence"]').check();
+  await page.locator('[data-survey-work-types] input[value="canopy"]').check();
+  await page.locator('[data-save-work-types]').click();
+
+  await expect(page.locator('#surveyDetailsDialog')).toBeVisible();
+  await expect(page.locator('#surveyDetailsContent')).toContainText('Ворота / калитка');
+  await expect(page.locator('#surveyDetailsContent')).toContainText('Забор');
+  await expect(page.locator('#surveyDetailsContent')).toContainText('Навес');
+
   await page.locator('[data-edit-plan]').click();
   await expect(page.locator('#planDialog')).toBeVisible();
   await expect(page.locator('#planCanvas .plan-part')).toHaveCount(5);
@@ -68,7 +71,7 @@ test('surveyor can create a mixed survey and reopen it offline', async ({page, c
   await page.reload({waitUntil:'domcontentloaded'});
 
   await expect(page.locator('#mainView')).toBeVisible();
-  await expect(page.locator('.survey-card').first()).toContainText('Тестовый клиент');
+  await expect(page.locator('.survey-card').first()).toContainText('+7 937');
   await expect(page.locator('#networkBadge')).toContainText('Офлайн');
 
   await page.locator('.survey-card').first().click();
