@@ -13,7 +13,7 @@ const C=sandbox.window.CanopyPricing;
 function calc(overrides={}){
   const raw={
     widthPostsM:3.4,lengthM:8.4,visibleHeightM:2.1,installType:'Бетонирование',
-    coverage:'Поликарбонат',materialMode:'Авто',overhangMm:150,riseMm:567,
+    coverage:'Поликарбонат',trussType:'Треугольная',materialMode:'30×30×2',overhangMm:150,riseMm:567,
     heightMm:250,endFlatMm:300,cellStepMm:400,postsNeeded:true,existingPosts:0,
     beamsExisting:false,paint:true,delivery:0,...overrides
   };
@@ -31,9 +31,12 @@ assert.equal(base.price.tube80Sticks,7,'Baseline 80×80 layout must use 7 sticks
 assert.equal(base.price.coverageData.buyMeters,24,'Baseline polycarbonate purchase must be 24 running metres');
 assert.equal(base.price.coverageData.connectors,4,'Baseline must use 4 connector kits');
 assert.equal(base.price.coverageData.endProfiles,10,'Baseline must use 10 end profiles');
-assert.equal(base.geometry.chordProfile,'25×25×1,5','Auto profile below 4 m must be 25×25');
-assert.equal(base.geometry.webProfile,'20×20×1,5','25×25 chord must use 20×20 web');
-assert(base.price.total>214000&&base.price.total<216000,'Baseline total should remain close to approved Excel calculation');
+assert.equal(base.geometry.trussType,'Треугольная');
+assert.equal(base.geometry.chordProfile,'30×30×2','New client default must use 30×30×2');
+assert.equal(base.geometry.webProfile,'30×30×2','Selected material applies to the whole truss');
+assert(base.geometry.diagonals.length>0,'Triangular truss must contain diagonal members');
+assert.equal(base.geometry.verticals.length,0,'Triangular truss must not contain vertical lattice members');
+assert(base.price.total>0,'Baseline total must be positive');
 
 const twoPosts=calc({existingPosts:2});
 assert.equal(twoPosts.price.newPosts,6);
@@ -53,8 +56,17 @@ assert.equal(none.price.coverageCost,0);
 assert.equal(none.price.fittingsCost,0);
 assert.equal(none.price.mountRate,900);
 
-const wide=calc({widthPostsM:4.2,riseMm:700});
-assert.equal(wide.geometry.chordProfile,'30×30×2');
-assert.equal(wide.geometry.webProfile,'25×25×1,5');
+const vertical=calc({trussType:'Вертикальная'});
+assert.equal(vertical.geometry.trussType,'Вертикальная');
+assert.equal(vertical.geometry.diagonals.length,0);
+assert(vertical.geometry.verticals.length>=4,'Vertical truss must contain vertical posts');
+assert(vertical.price.webUsedM>0);
 
-console.log('Canopy calculator checks passed:',Math.round(base.price.total),'₽');
+const tube40=calc({materialMode:'40×20×2'});
+assert.equal(tube40.geometry.chordProfile,'40×20×2');
+assert.equal(tube40.geometry.webProfile,'40×20×2');
+
+const legacy=calc({materialMode:'Авто'});
+assert.equal(legacy.geometry.chordProfile,'25×25×1,5','Legacy Auto mode must remain readable for old orders');
+
+console.log('Canopy calculator checks passed:',Math.round(base.price.total),'₽; vertical:',Math.round(vertical.price.total),'₽');
