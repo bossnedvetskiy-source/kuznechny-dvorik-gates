@@ -296,7 +296,7 @@ const fencePrices = JSON.parse(await readFile(path.join(OUT, 'api', 'fence-price
 if (!fencePrices?.fence || typeof fencePrices.fence !== 'object') throw new Error('Dev preview fence prices are missing');
 
 const navesIndex = await readFile(path.join(OUT, 'naves', 'index.html'), 'utf8');
-for (const required of ['./naves.css','./geometry.js','./pricing.js','./canopy-3d.js','./naves.js','canopySvg','totalPrice','saveCalculation']) {
+for (const required of ['./naves.css','./geometry.js','./pricing.js','./canopy-three.js','./naves.js','canopyViewport','reset3dView','totalPrice','saveCalculation']) {
   if (!navesIndex.includes(required)) throw new Error(`DEV canopy generator missing: ${required}`);
 }
 const navesAdminIndex = await readFile(path.join(OUT, 'naves', 'admin.html'), 'utf8');
