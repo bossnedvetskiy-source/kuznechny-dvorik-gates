@@ -4,7 +4,8 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <meta name="theme-color" content="#121212" />
-  <meta name="description" content="КД Замерщик — мобильное приложение для выездных замеров" />\n  <meta name="robots" content="noindex,nofollow,noarchive" />
+  <meta name="description" content="КД Замерщик — мобильное приложение для выездных замеров" />
+  <meta name="robots" content="noindex,nofollow,noarchive" />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="styles.css" />
@@ -217,6 +218,63 @@
       <div class="sheet-handle"></div>
       <div class="sheet-head"><div><div class="eyebrow">Карточка замера</div><h2 id="detailsNumber"></h2></div><button id="closeDetailsBtn" class="icon-btn" type="button">×</button></div>
       <div id="surveyDetailsContent"></div>
+    </section>
+  </dialog>
+
+  <dialog id="planDialog" class="sheet-dialog plan-dialog">
+    <section class="sheet plan-sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-head">
+        <div><div class="eyebrow">Схема объекта</div><h2 id="planTitle">Линия установки</h2></div>
+        <button id="closePlanBtn" class="icon-btn" type="button" aria-label="Закрыть">×</button>
+      </div>
+
+      <div class="plan-toolbar">
+        <div id="planLineTabs" class="plan-line-tabs"></div>
+        <button id="addPlanLineBtn" class="mini-btn" type="button">+ Линия</button>
+      </div>
+
+      <div class="plan-summary">
+        <div><span>Длина линии</span><b id="planLineWidth">0 м</b></div>
+        <div><span>Всего линий</span><b id="planLinesCount">1</b></div>
+      </div>
+
+      <div id="planCanvas" class="plan-canvas" aria-label="Схема линии"></div>
+
+      <div class="plan-name-row">
+        <label class="field"><span>Название линии</span><input id="planLineName" maxlength="80" placeholder="Например: Передняя сторона" /></label>
+      </div>
+
+      <div class="section-head compact">
+        <div><h3>Элементы линии</h3><p class="muted">Нажмите элемент, чтобы изменить размеры и материал.</p></div>
+      </div>
+      <div id="planItems" class="plan-items"></div>
+
+      <div id="insertPanel" class="insert-panel" hidden>
+        <div class="insert-panel-head"><b>Что добавить?</b><button id="cancelInsertBtn" class="icon-btn small" type="button">×</button></div>
+        <div class="insert-grid">
+          <button type="button" data-add-plan-item="post"><span>│</span><b>Столб</b></button>
+          <button type="button" data-add-plan-item="fence"><span>▥</span><b>Забор</b></button>
+          <button type="button" data-add-plan-item="gate"><span>▰</span><b>Ворота</b></button>
+          <button type="button" data-add-plan-item="wicket"><span>▯</span><b>Калитка</b></button>
+          <button type="button" data-add-plan-item="opening"><span>↔</span><b>Проём</b></button>
+        </div>
+      </div>
+
+      <div id="planEditor" class="plan-editor" hidden>
+        <div class="plan-editor-head"><div><div class="eyebrow">Выбранный элемент</div><h3 id="planEditorTitle">Элемент</h3></div><button id="closePlanEditorBtn" class="icon-btn small" type="button">×</button></div>
+        <div id="planEditorFields"></div>
+        <div class="button-row plan-edit-actions">
+          <button id="movePlanItemLeftBtn" class="btn btn-secondary" type="button">← Левее</button>
+          <button id="movePlanItemRightBtn" class="btn btn-secondary" type="button">Правее →</button>
+        </div>
+        <button id="deletePlanItemBtn" class="btn btn-danger btn-block" type="button">Удалить элемент</button>
+      </div>
+
+      <div class="plan-footer">
+        <button id="deletePlanLineBtn" class="btn btn-danger" type="button">Удалить линию</button>
+        <button id="savePlanBtn" class="btn btn-primary" type="button">Сохранить схему</button>
+      </div>
     </section>
   </dialog>
 
