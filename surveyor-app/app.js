@@ -339,7 +339,7 @@ function serverSurveyToLocal(server, existing = {}) {
     layout: server.layout || existing.layout || null,
     syncState: 'synced',
     serverConflict: null,
-    schemaVersion: 2
+    schemaVersion: 3
   };
 }
 
