@@ -187,11 +187,14 @@ for (const sitePwaFile of ['site-sw.js','site-manifest.webmanifest','site-icon.s
   await cp(path.join(root, 'dist/client', sitePwaFile), path.join(output, sitePwaFile));
 }
 await cp(path.join(root, 'privacy.html'), path.join(output, 'privacy.html'));
+await cp(path.join(root, 'surveyor-app'), path.join(output, 'surveyor-app'), { recursive: true });
 
 const hubHtml = await render('/napravleniya');
 await mkdir(path.join(output, 'napravleniya'), { recursive: true });
 await writeFile(path.join(output, 'napravleniya/index.html'), hubHtml, 'utf8');
 if (!(await readFile(path.join(output, 'evroshtaketnik/index.html'), 'utf8')).includes('Забор из')) throw new Error('Калькулятор евроштакетника не попал в Timeweb-сборку');
+const surveyorHtml = await readFile(path.join(output, 'surveyor-app/index.html'), 'utf8');
+if (!surveyorHtml.includes('КД Замерщик') || !surveyorHtml.includes('syncNowBtn')) throw new Error('Приложение замерщика не попало в Timeweb-сборку');
 
 const robotsTxt = [
   'User-agent: *',
@@ -200,6 +203,7 @@ const robotsTxt = [
   'Disallow: /manager',
   'Disallow: /links',
   'Disallow: /app',
+  'Disallow: /surveyor-app',
   'Disallow: /api/',
   `Sitemap: ${publicOrigin}/sitemap.xml`,
   ''
