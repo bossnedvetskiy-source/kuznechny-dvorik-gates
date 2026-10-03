@@ -150,7 +150,8 @@ let surveyorTestIndex = await readFile(surveyorTestIndexPath, 'utf8');
 surveyorTestIndex = surveyorTestIndex
   .replace('<title>КД Замерщик</title>', '<title>КД Замерщик Тест</title>')
   .replace('<h1>КД Замерщик</h1>', '<h1>КД Замерщик Тест</h1>')
-  .replace('<div class="eyebrow">КД Замерщик</div>', '<div class="eyebrow">КД Замерщик · Тест</div>');
+  .replace('<div class="eyebrow">КД Замерщик</div>', '<div class="eyebrow">КД Замерщик · Тест</div>')
+  .replace('</head>', '<script id="kdz-test-cleanup">if("serviceWorker" in navigator){navigator.serviceWorker.getRegistrations().then(r=>Promise.all(r.filter(x=>!x.scope.includes("/surveyor-test/")).map(x=>x.unregister()))).catch(()=>{})}</script></head>');
 await writeFile(surveyorTestIndexPath, surveyorTestIndex, 'utf8');
 
 const surveyorTestSwPath = path.join(SURVEYOR_TEST_OUT, 'sw.js');
