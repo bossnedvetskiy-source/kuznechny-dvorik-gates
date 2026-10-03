@@ -33,3 +33,21 @@ test('ungated surveyor test PWA is independently installable', async ({page}) =>
   const scriptUrl = await page.evaluate(() => navigator.serviceWorker.controller?.scriptURL || '');
   expect(scriptUrl).toContain('/surveyor-test/sw.js');
 });
+
+
+test('login works inside standalone test PWA', async ({page}) => {
+  const errors = [];
+  page.on('pageerror', error => errors.push(error.message));
+
+  await page.goto('/kuznechny-dvorik-gates/surveyor-test/');
+  await expect(page.locator('#loginView')).toBeVisible();
+
+  await page.locator('#loginInput').fill('zamer');
+  await page.locator('#passwordInput').fill('1234');
+  await page.locator('#loginForm button[type="submit"]').click();
+
+  await expect(page.locator('#mainView')).toBeVisible({timeout:10000});
+  await expect(page.locator('#loginView')).toBeHidden();
+  await expect(page.locator('#screenTitle')).toContainText('Замеры');
+  expect(errors).toEqual([]);
+});
