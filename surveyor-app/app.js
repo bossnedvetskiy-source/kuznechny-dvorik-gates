@@ -616,7 +616,7 @@ function miniLineHtml(line) {
   const items = Array.isArray(line?.items) ? line.items : [];
   return `<div class="mini-line">
     <div class="mini-line-name">${escapeHtml(line.name || 'Линия')}</div>
-    <div class="mini-line-track">${items.map(item => `<span class="mini-plan-part ${item.type}" title="${escapeHtml(itemDescription(item))}" style="--part:${item.type==='post'?.16:Math.max(.45,Number(item.width)||1)}"></span>`).join('')}</div>
+    <div class="mini-line-track">${items.map(item => `<span class="mini-plan-part ${item.type}" title="${escapeHtml(itemDescription(item))}" style="--part:${item.type === 'post' ? 0.16 :Math.max(.45,Number(item.width)||1)}"></span>`).join('')}</div>
   </div>`;
 }
 
@@ -663,7 +663,7 @@ function renderPlanEditor() {
 function renderPlanCanvas(line) {
   const items=line.items || [];
   $('#planCanvas').innerHTML=`<div class="plan-track">${items.map(item=>{
-    const grow=item.type==='post'?.16:Math.max(.45,Number(item.width)||1);
+    const grow=item.type === 'post' ? 0.16 :Math.max(.45,Number(item.width)||1);
     const selected=item.id===activePlanItemId?' selected':'';
     const label=item.type==='post'?(item.state==='existing'?'есть':'новый'):(trimNumber(item.width)+' м');
     return `<button type="button" class="plan-part ${item.type}${selected}" data-select-plan-item="${item.id}" style="--part:${grow}" title="${escapeHtml(itemDescription(item))}">
