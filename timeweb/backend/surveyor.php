@@ -114,7 +114,7 @@ function kd_surveyor_ensure_schema(): void
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
     $layoutColumn = $db->query("SHOW COLUMNS FROM surveyor_orders LIKE 'layout_json'")->fetch();
-    if (!$layoutColumn) $db->exec("ALTER TABLE surveyor_orders ADD COLUMN layout_json MEDIUMTEXT NOT NULL AFTER work_types_json");
+    if (!$layoutColumn) $db->exec("ALTER TABLE surveyor_orders ADD COLUMN layout_json MEDIUMTEXT NULL AFTER work_types_json");
     $db->exec('DELETE FROM surveyor_sessions WHERE expires_at <= UTC_TIMESTAMP()');
     $ready = true;
 }
