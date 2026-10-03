@@ -86,11 +86,12 @@ function compute(raw,g,custom={}){
   const lagLines=coverage==='Профнастил'?Math.max(2,Math.max(1,Math.round(g.topCircle.length/p.profLagTarget),Math.ceil(g.topCircle.length/p.profLagMax))+1):intervals+1;
   const lagStep=lagLines>1?g.topCircle.length/(lagLines-1):0;
   const chordUsedM=(g.topCircle.length+g.lowerTotalM)*trussCount;
-  const webOneM=2*g.endPostM+g.diagonals.reduce((a,d)=>a+d.lengthM,0),webUsedM=webOneM*trussCount;
+  const internalMembers=g.trussType==='Вертикальная'?g.verticals:g.diagonals;
+  const webOneM=2*g.endPostM+internalMembers.reduce((a,d)=>a+d.lengthM,0),webUsedM=webOneM*trussCount;
   const lagUsedM=lagLines*lengthM,beamCount=beamsExisting?0:2,beamPostUsedM=beamCount*lengthM+newPosts*postLen;
   const chordLengths=[];for(let i=0;i<trussCount;i++){chordLengths.push(g.topCircle.length,g.lowerTotalM);}
   let chordSticks=0;for(const L of chordLengths)chordSticks+=L<=p.stick?1:Math.ceil(L/p.stick);
-  const webPieces=[];for(let i=0;i<trussCount;i++){webPieces.push(g.endPostM,g.endPostM,...g.diagonals.map(d=>d.lengthM));}
+  const webPieces=[];for(let i=0;i<trussCount;i++){webPieces.push(g.endPostM,g.endPostM,...internalMembers.map(d=>d.lengthM));}
   const webPack=binPack(webPieces,p.stick),lagsSticks=lagSticks(lagLines,lengthM,p.stick),tube80Sticks=sticks80(beamCount,lengthM,newPosts,postLen,p);
   const chordCost=chordSticks*p.stick*profilePrice(g.chordProfile,p),webCost=webPack.sticks*p.stick*profilePrice(g.webProfile,p,'web'),lagCost=lagsSticks*p.stick*p.tube40x20,tube80Cost=tube80Sticks*p.stick*p.tube80;
   const metalCost=chordCost+webCost+lagCost+tube80Cost;
@@ -114,11 +115,11 @@ function compute(raw,g,custom={}){
   if(coverageData.warning)warnings.push(coverageData.warning);
   const materialRows=[
     {name:'Пояса ферм '+g.chordProfile,used:chordUsedM,sticks:chordSticks,buy:chordSticks*p.stick,cost:chordCost,note:'Верхний + нижний пояс'},
-    {name:'Решётка '+g.webProfile,used:webUsedM,sticks:webPack.sticks,buy:webPack.sticks*p.stick,cost:webCost,note:'Диагонали + торцевые стойки'},
+    {name:(g.trussType==='Вертикальная'?'Вертикальная решётка ':'Треугольная решётка ')+g.webProfile,used:webUsedM,sticks:webPack.sticks,buy:webPack.sticks*p.stick,cost:webCost,note:(g.trussType==='Вертикальная'?'Вертикальные стойки':'Диагонали')+' + торцевые стойки'},
     {name:'Лаги 40×20×2',used:lagUsedM,sticks:lagsSticks,buy:lagsSticks*p.stick,cost:lagCost,note:'Стыкуемые куски не короче 2 м'},
     {name:'80×80×3',used:beamPostUsedM,sticks:tube80Sticks,buy:tube80Sticks*p.stick,cost:tube80Cost,note:(beamCount?beamCount+' балки + ':'')+newPosts+' новых столбов'}
   ];
-  return {p,lengthM,visibleHeightM,delivery,coverage,installType,paint,postsNeeded,beamsExisting,totalPosts,postsPerSide,existingPosts,newPosts,clearPostStep,postLen,trussCount,area,intervals,lagLines,lagStep,chordUsedM,webUsedM,lagUsedM,beamCount,beamPostUsedM,chordSticks,webPack,lagsSticks,tube80Sticks,metalCost,coverageCost,fittingsCost,coverageData,consumables,weld,mountRate,mount,postMount,paintArea,paintCost,base,markup,priceNoDelivery,total,ownerMount,actualExpenses,profit,margin,oneTruss:{metal:oneTrussMetal,weld:oneTrussWeld,consumables:oneTrussConsumables,paintArea:oneTrussPaintArea,paint:oneTrussPaint,cost:oneCost,priceNoPaint:oneNoPaint,pricePaint:onePaint,profitNoPaint:oneNoPaint-oneCost,profitPaint:onePaint-oneCost-oneTrussPaint},materialRows,warnings};
+  return {p,lengthM,visibleHeightM,delivery,coverage,installType,paint,postsNeeded,beamsExisting,totalPosts,postsPerSide,existingPosts,newPosts,clearPostStep,postLen,trussCount,area,intervals,lagLines,lagStep,chordUsedM,webUsedM,lagUsedM,beamCount,beamPostUsedM,chordSticks,webPack,lagsSticks,tube80Sticks,metalCost,coverageCost,fittingsCost,coverageData,consumables,weld,mountRate,mount,postMount,paintArea,paintCost,base,markup,priceNoDelivery,total,ownerMount,actualExpenses,profit,margin,trussType:g.trussType,materialMode:g.materialMode,oneTruss:{metal:oneTrussMetal,weld:oneTrussWeld,consumables:oneTrussConsumables,paintArea:oneTrussPaintArea,paint:oneTrussPaint,cost:oneCost,priceNoPaint:oneNoPaint,pricePaint:onePaint,profitNoPaint:oneNoPaint-oneCost,profitPaint:onePaint-oneCost-oneTrussPaint},materialRows,warnings};
 }
 window.CanopyPricing={DEFAULTS:P,mergePrices,autoTrussCount,compute,lagSticks,binPack,polyPurchase,connectorSticks,sticks80,profilePrice,profilePerimeter};
 })();
