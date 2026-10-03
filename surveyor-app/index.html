@@ -188,6 +188,90 @@
     </form>
   </dialog>
 
+  <dialog id="layoutDialog" class="sheet-dialog layout-dialog">
+    <section class="sheet layout-sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-head">
+        <div>
+          <div class="eyebrow">Схема объекта</div>
+          <h2 id="layoutSurveyNumber">Конструктор линии</h2>
+        </div>
+        <button id="closeLayoutBtn" class="icon-btn" type="button" aria-label="Закрыть">×</button>
+      </div>
+      <div class="layout-help">Соберите линию слева направо. Нажмите на пролёт или столб, чтобы изменить его. Кнопка <b>+</b> вставляет новый элемент именно в это место.</div>
+      <div id="layoutLines" class="layout-lines"></div>
+      <button id="addLayoutLineBtn" class="btn btn-secondary btn-block" type="button">+ Добавить отдельную линию / участок</button>
+    </section>
+  </dialog>
+
+  <dialog id="segmentDialog" class="sheet-dialog small">
+    <form id="segmentForm" method="dialog" class="sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-head"><div><div class="eyebrow">Элемент схемы</div><h2 id="segmentDialogTitle">Пролёт</h2></div><button class="icon-btn" value="cancel" type="submit">×</button></div>
+      <input id="segmentLineId" type="hidden" />
+      <input id="segmentId" type="hidden" />
+      <label class="field"><span>Что находится в этом пролёте</span>
+        <select id="segmentTypeInput">
+          <option value="fence">Забор</option>
+          <option value="gate">Ворота</option>
+          <option value="wicket">Калитка</option>
+          <option value="opening">Свободный проём / расстояние</option>
+        </select>
+      </label>
+      <div class="form-grid-2">
+        <label class="field"><span>Ширина, мм</span><input id="segmentWidthInput" type="number" min="100" max="50000" step="10" inputmode="numeric" /></label>
+        <label class="field"><span>Высота, мм</span><input id="segmentHeightInput" type="number" min="0" max="5000" step="10" inputmode="numeric" /></label>
+      </div>
+      <label id="segmentGateTypeField" class="field"><span>Тип ворот</span>
+        <select id="segmentGateTypeInput"><option value="swing">Распашные</option><option value="sliding">Откатные</option></select>
+      </label>
+      <label id="segmentMaterialField" class="field"><span>Заполнение / материал</span>
+        <select id="segmentMaterialInput">
+          <option value="profsheet">Профнастил</option>
+          <option value="picket">Евроштакетник</option>
+          <option value="forged">Кованые</option>
+          <option value="frame">Только каркас</option>
+          <option value="other">Другое</option>
+        </select>
+      </label>
+      <div id="segmentColorFields" class="form-grid-2">
+        <label class="field"><span>Цвет заполнения</span><input id="segmentFillColorInput" placeholder="Например RAL 8017" /></label>
+        <label class="field"><span>Цвет каркаса</span><input id="segmentFrameColorInput" placeholder="Например чёрный" /></label>
+      </div>
+      <label class="field"><span>Примечание</span><textarea id="segmentNoteInput" rows="2" placeholder="Открывание, уклон, особенности места"></textarea></label>
+      <div class="button-row">
+        <button id="deleteSegmentBtn" class="btn btn-danger" type="button">Удалить</button>
+        <button id="saveSegmentBtn" class="btn btn-primary" type="button">Сохранить</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="postDialog" class="sheet-dialog small">
+    <form id="postForm" method="dialog" class="sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-head"><div><div class="eyebrow">Граница пролётов</div><h2>Столб</h2></div><button class="icon-btn" value="cancel" type="submit">×</button></div>
+      <input id="postLineId" type="hidden" />
+      <input id="postId" type="hidden" />
+      <label class="field"><span>Что здесь будет</span>
+        <select id="postKindInput">
+          <option value="new">Новый столб</option>
+          <option value="existing">Существующий столб</option>
+          <option value="none">Без столба</option>
+        </select>
+      </label>
+      <label id="postProfileField" class="field"><span>Профиль столба</span>
+        <select id="postProfileInput">
+          <option value="100×100×3">100×100×3</option>
+          <option value="80×80×3">80×80×3</option>
+          <option value="60×60×2">60×60×2</option>
+          <option value="other">Другой</option>
+        </select>
+      </label>
+      <label class="field"><span>Примечание</span><input id="postNoteInput" placeholder="Например: кирпичный столб заказчика" /></label>
+      <button id="savePostBtn" class="btn btn-primary btn-block" type="button">Сохранить столб</button>
+    </form>
+  </dialog>
+
   <dialog id="clientDialog" class="sheet-dialog small">
     <form id="clientForm" method="dialog" class="sheet">
       <div class="sheet-handle"></div>
