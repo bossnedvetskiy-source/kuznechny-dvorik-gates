@@ -71,9 +71,15 @@
       <section class="panel canopy-preview-panel">
         <div class="panel-head"><div><small>Визуализация</small><h2>Как будет выглядеть навес</h2></div><span id="drawingStatus" class="status-pill">готово</span></div>
         <div class="drawing-wrap canopy-3d-wrap">
-          <svg id="canopySvg" viewBox="0 0 1200 700" role="img" aria-label="Объёмная схема арочного навеса"></svg>
+          <div id="canopyViewport" class="canopy-three-viewport" role="img" aria-label="Интерактивная 3D модель арочного навеса">
+            <div class="three-loading"><span></span><b>Загружаем 3D…</b></div>
+          </div>
+          <div class="three-toolbar">
+            <span>Поверните пальцем · приблизьте двумя пальцами</span>
+            <button id="reset3dView" type="button">Сбросить вид</button>
+          </div>
         </div>
-        <p class="preview-note">Схема показывает пропорции, расположение опор и форму кровли. Это визуализация, а не монтажный чертёж.</p>
+        <p class="preview-note">Это интерактивная 3D‑модель по вашим размерам. Конструкцию можно вращать и приближать.</p>
       </section>
     </div>
   </section>
@@ -98,7 +104,7 @@
 
 <script src="./geometry.js"></script>
 <script src="./pricing.js"></script>
-<script src="./canopy-3d.js"></script>
+<script type="module" src="./canopy-three.js"></script>
 <script src="./naves.js"></script>
 </body>
 </html>
