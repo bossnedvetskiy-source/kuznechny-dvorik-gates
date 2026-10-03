@@ -56,6 +56,17 @@
           </div>
 
           <div class="original-picker-group">
+            <label class="original-label">Преднастроенная конфигурация</label>
+            <input id="farmPreset" type="hidden" value="Стандарт">
+            <div class="original-segment preset-segment" role="radiogroup" aria-label="Преднастроенная конфигурация">
+              <button class="is-selected" type="button" data-preset-option="Стандарт" role="radio" aria-checked="true">Стандарт</button>
+              <button type="button" data-preset-option="Рекомендуемая" role="radio" aria-checked="false">Рекомендуемая</button>
+              <button type="button" data-preset-option="Усиленная" role="radio" aria-checked="false">Усиленная</button>
+              <button type="button" data-preset-option="Своя" role="radio" aria-checked="false">Своя</button>
+            </div>
+          </div>
+
+          <div class="original-picker-group">
             <label class="original-label">Обрешётка</label>
             <input id="trussType" type="hidden" value="Треугольная">
             <div class="original-segment" role="radiogroup" aria-label="Обрешётка фермы">
