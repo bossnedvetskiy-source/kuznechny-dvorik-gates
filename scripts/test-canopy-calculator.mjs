@@ -14,7 +14,7 @@ function calc(overrides={}){
   const raw={
     widthPostsM:3.4,lengthM:8.4,visibleHeightM:2.1,installType:'Бетонирование',
     coverage:'Поликарбонат',trussType:'Треугольная',materialMode:'30×30×2',overhangMm:150,riseMm:567,
-    heightMm:250,endFlatMm:300,cellStepMm:400,postsNeeded:true,existingPosts:0,
+    heightMm:250,endFlatMm:300,cellStepMm:400,lagMode:'Стандарт',postsNeeded:true,existingPosts:0,
     beamsExisting:false,paint:true,delivery:0,...overrides
   };
   raw.trussCount=C.autoTrussCount(raw.lengthM);
@@ -62,11 +62,26 @@ assert.equal(vertical.geometry.diagonals.length,0);
 assert(vertical.geometry.verticals.length>=4,'Vertical truss must contain vertical posts');
 assert(vertical.price.webUsedM>0);
 
+const strengthened=calc({trussType:'Усиленная'});
+assert.equal(strengthened.geometry.trussType,'Усиленная');
+assert(strengthened.geometry.diagonals.length>0,'Strengthened truss must keep diagonals');
+assert(strengthened.geometry.verticals.length>0,'Strengthened truss must add vertical posts');
+assert(strengthened.price.webUsedM>vertical.price.webUsedM,'Strengthened truss must use more lattice metal than vertical-only');
+
 const tube40=calc({materialMode:'40×20×2'});
 assert.equal(tube40.geometry.chordProfile,'40×20×2');
 assert.equal(tube40.geometry.webProfile,'40×20×2');
 
+const standard3=calc({widthPostsM:3,lengthM:5.9,riseMm:500,coverage:'Без покрытия',lagMode:'Стандарт'});
+assert.equal(standard3.price.lagLines,10,'3 m canopy standard mode must use 10 purlin lines');
+assert(standard3.price.lagStep<0.4,'Standard purlin step must stay around 40 cm');
+
+const economy3=calc({widthPostsM:3,lengthM:5.9,riseMm:500,coverage:'Без покрытия',lagMode:'Эконом'});
+assert.equal(economy3.price.lagLines,8,'3 m canopy economy mode must use 8 purlin lines');
+assert(economy3.price.lagStep<=0.5+1e-9,'Economy purlin step must not exceed 50 cm');
+assert(economy3.price.lagCost<standard3.price.lagCost,'Economy purlin mode must reduce 40×20 cost');
+
 const legacy=calc({materialMode:'Авто'});
 assert.equal(legacy.geometry.chordProfile,'25×25×1,5','Legacy Auto mode must remain readable for old orders');
 
-console.log('Canopy calculator checks passed:',Math.round(base.price.total),'₽; vertical:',Math.round(vertical.price.total),'₽');
+console.log('Canopy calculator checks passed:',Math.round(base.price.total),'₽; 3m lags standard/economy:',standard3.price.lagLines,'/',economy3.price.lagLines);
