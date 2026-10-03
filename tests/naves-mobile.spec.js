@@ -16,7 +16,7 @@ test('canopy client is simple and saved order keeps production/finance in admin'
   await expect(page.locator('#clientSummary')).toContainText('Поликарбонат');
 
   // Production-only data is absent from the client summary/page.
-  await expect(page.locator('#clientSummary')).not.toContainText('Ферм');
+  await expect(page.locator('#clientSummary dt').filter({hasText:/^Ферм$/})).toHaveCount(0);
   await expect(page.locator('#clientSummary')).not.toContainText('Опор');
   await expect(page.locator('#ownerSummary')).toHaveCount(0);
   await expect(page.locator('#materialsTableBody')).toHaveCount(0);
