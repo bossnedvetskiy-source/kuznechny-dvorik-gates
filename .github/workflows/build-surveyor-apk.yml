@@ -1,0 +1,66 @@
+name: Build KD Surveyor APK
+
+on:
+  push:
+    branches:
+      - feature/kd-surveyor-android-apk
+    paths:
+      - 'android-surveyor/**'
+      - 'surveyor-app/**'
+      - 'timeweb/backend/surveyor.php'
+      - '.github/workflows/build-surveyor-apk.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: feature/kd-surveyor-android-apk
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+
+      - name: Validate bundled app
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check surveyor-app/app.js
+          node --check surveyor-app/line-builder.js
+          php -l timeweb/backend/surveyor.php
+          grep -Fq "appassets.androidplatform.net" surveyor-app/app.js
+          grep -Fq "https://appassets.androidplatform.net" timeweb/backend/surveyor.php
+
+      - name: Build debug APK
+        run: gradle -p android-surveyor :app:assembleDebug --stacktrace
+
+      - name: Verify APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="android-surveyor/app/build/outputs/apk/debug/app-debug.apk"
+          test -s "$APK"
+          cp "$APK" "KD-Surveyor-dev.apk"
+          ls -lh "KD-Surveyor-dev.apk"
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: KD-Surveyor-APK
+          path: KD-Surveyor-dev.apk
+          if-no-files-found: error
+          retention-days: 30
