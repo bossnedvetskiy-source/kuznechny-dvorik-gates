@@ -109,7 +109,7 @@ function renderList(){
     const s=snapOf(lead),inp=s?.input||{},local=lead._local?' · DEV локально':'';
     return `<article class="canopy-order-card">
       <div class="canopy-order-card-head"><div><b>#${escape(lead.id)} · ${escape(lead.city||'Без населённого пункта')}</b><small>${escape(date(lead.created_at))} · ${escape(lead.phone||'')}${local}</small></div><strong class="canopy-order-price">${money(lead.total)}</strong></div>
-      <div class="canopy-order-meta"><span>Размер <b>${escape(fmt(inp.widthPostsM))} × ${escape(fmt(inp.lengthM))} м</b></span><span>Ферма <b>${escape(inp.trussType||'Треугольная')}</b></span><span>Материал <b>${escape(inp.materialMode||'Авто')}</b></span></div>
+      <div class="canopy-order-meta"><span>Размер <b>${escape(fmt(inp.widthPostsM))} × ${escape(fmt(inp.lengthM))} м</b></span><span>Тип <b>${escape(inp.farmType||'Арочный')}</b></span><span>Обрешётка <b>${escape(inp.trussType||'Треугольная')}</b></span></div>
       <div class="canopy-order-actions"><button class="reset-button" data-open-canopy="${index}" type="button">Открыть заказ</button></div>
     </article>`
   }).join('');
@@ -185,7 +185,7 @@ async function openItem(lead){
           <section class="canopy-admin-box"><h3>Клиент и расчёт</h3>${dl([
             ['Телефон',lead.phone||'—'],['Населённый пункт',lead.city||'—'],['Сохранён',date(lead.created_at)],
             ['Цена клиенту',money(lead.total)],['Размер',fmt(g.widthPostsM)+' × '+fmt(savedC.lengthM)+' м'],['Площадь',fmt(savedC.area,1)+' м²'],
-            ['Высота',fmt(savedC.visibleHeightM)+' м'],['Покрытие',savedC.coverage],['Тип фермы',g.trussType],['Материал фермы',g.materialMode],['Установка',savedC.installType],['Покраска',savedC.paint?'да':'нет']
+            ['Высота',fmt(savedC.visibleHeightM)+' м'],['Покрытие',savedC.coverage],['Тип фермы',snap.input.farmType||'Арочный'],['Обрешётка',g.trussType],['Материал фермы',g.materialMode],['Установка',savedC.installType],['Покраска',savedC.paint?'да':'нет']
           ])}</section>
           <section class="canopy-admin-box"><h3>Что учитывать</h3>${dl([
             ['Столбов нужно',savedC.totalPosts+' шт'],['Уже есть',savedC.existingPosts+' шт'],['Новых столбов',savedC.newPosts+' шт'],
@@ -203,7 +203,7 @@ async function openItem(lead){
         <div class="canopy-admin-grid" style="margin-top:12px">
           <section class="canopy-admin-box"><h3>Сборка навеса</h3>${dl([
             ['Ферм',savedC.trussCount+' шт'],['Режим лаг',savedC.coverage==='Профнастил'?'Авто 80–100 см':savedC.lagMode],['Линий лаг',savedC.lagLines+' шт'],['Шаг лаг',fmt(savedC.lagStep*100,1)+' см'],
-            ['Новых столбов',savedC.newPosts+' шт'],['Продольных балок',savedC.beamCount+' шт'],['Тип фермы',g.trussType],['Материал фермы',g.materialMode],['Внутренних элементов',(g.trussType==='Усиленная'?(g.verticalCount+g.diagonalCount):g.trussType==='Вертикальная'?g.verticalCount:g.diagonalCount)+' шт']
+            ['Новых столбов',savedC.newPosts+' шт'],['Продольных балок',savedC.beamCount+' шт'],['Тип фермы',snap.input.farmType||'Арочный'],['Обрешётка',g.trussType],['Материал фермы',g.materialMode],['Внутренних элементов',(g.trussType==='Усиленная'?(g.verticalCount+g.diagonalCount):g.trussType==='Вертикальная'?g.verticalCount:g.diagonalCount)+' шт']
           ])}</section>
           <section class="canopy-admin-box"><h3>Покрытие</h3>${dl([
             ['Тип',savedC.coverage],['Длина покрытия по дуге',fmt(savedC.coverageData.coverArcM)+' м'],['Длина навеса с выпуском',fmt(savedC.coverageData.coverLengthM)+' м'],
