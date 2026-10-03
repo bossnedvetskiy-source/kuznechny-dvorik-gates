@@ -31,6 +31,8 @@
         <label class="field"><span>Высота, м</span><input id="visibleHeight" type="number" min="1.5" max="5" step="0.1" value="2.1" inputmode="decimal"><small>Высота столбов над землёй</small></label>
         <label class="field"><span>Покрытие</span><select id="coverage"><option>Поликарбонат</option><option>Профнастил</option><option>Без покрытия</option></select></label>
         <label class="field"><span>Установка</span><select id="installType"><option>Бетонирование</option><option>Закладные</option></select><small>Способ установки новых столбов</small></label>
+        <label class="field"><span>Тип фермы</span><select id="trussType"><option selected>Треугольная</option><option>Вертикальная</option></select><small>Треугольная решётка или вертикальные стойки</small></label>
+        <label class="field"><span>Материал фермы</span><select id="materialMode"><option selected>30×30×2</option><option>40×20×2</option></select><small>Профиль обоих поясов и внутренней решётки</small></label>
         <label class="field"><span>Столбы уже есть, шт</span><input id="existingPosts" type="number" min="0" max="50" step="1" value="0" inputmode="numeric"><small>Укажите только подходящие существующие столбы</small></label>
       </div>
 
@@ -52,7 +54,6 @@
       <input id="endFlat" type="hidden" value="300">
       <input id="cellStep" type="hidden" value="400">
       <input id="postsNeeded" type="hidden" value="1">
-      <input id="materialMode" type="hidden" value="Авто">
       <input id="delivery" type="hidden" value="0">
 
       <div id="geometryWarning" class="warning" hidden></div>
