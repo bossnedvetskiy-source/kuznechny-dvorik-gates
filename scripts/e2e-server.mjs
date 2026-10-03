@@ -65,6 +65,18 @@ const server = http.createServer(async (req, res) => {
       return send(res, 200, await readFile(testPath), mime[extname(testPath).toLowerCase()] || 'application/octet-stream');
     }
 
+    const devProjectPrefix = '/kuznechny-dvorik-gates/';
+    if (url.pathname === devProjectPrefix.slice(0,-1) || url.pathname.startsWith(devProjectPrefix)) {
+      const suffix = url.pathname === devProjectPrefix.slice(0,-1)
+        ? ''
+        : url.pathname.slice(devProjectPrefix.length);
+      const relativeDev = suffix === '' ? 'index.html' : normalize(decodeURIComponent(suffix)).replace(/^[/\\]+/, '');
+      const devPath = join(root, '_site', relativeDev);
+      const info = await stat(devPath);
+      if (!info.isFile()) return send(res, 404, 'Not found');
+      return send(res, 200, await readFile(devPath), mime[extname(devPath).toLowerCase()] || 'application/octet-stream');
+    }
+
     if (url.pathname === '/' || url.pathname === '/index.html' || url.pathname === '/vorota' || url.pathname === '/vorota/') {
       let html = await readFile(join(root, 'index.html'), 'utf8');
       html = html.replace('<script id="deliveryData" type="application/json">{}</script>', `<script id="deliveryData" type="application/json">${delivery.replace(/</g,'\\u003c')}</script>`);
