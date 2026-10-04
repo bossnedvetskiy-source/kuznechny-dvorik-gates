@@ -24,7 +24,7 @@ test('surveyor can create a mixed survey and reopen it offline', async ({page, c
   await expect(card).toContainText('Определим на объекте');
   await expect(card.locator('[data-quick-calculation]')).toBeVisible();
 
-  await card.click();
+  await card.locator('[data-open-survey]').click();
   await expect(page.locator('#surveyDetailsDialog')).toBeVisible();
   await expect(page.locator('#surveyDetailsContent')).toContainText('Имя не требуется до договора');
   await page.locator('[data-survey-work-types] input[value="gates"]').check();
@@ -75,7 +75,7 @@ test('surveyor can create a mixed survey and reopen it offline', async ({page, c
   await expect(page.locator('.survey-card').first()).toContainText('+7 937');
   await expect(page.locator('#networkBadge')).toContainText('Офлайн');
 
-  await page.locator('.survey-card').first().click();
+  await page.locator('.survey-card').first().locator('[data-open-survey]').click();
   await expect(page.locator('.plan-mini-preview')).toBeVisible();
   await expect(page.locator('#surveyDetailsContent')).toContainText('6,1 м');
 });
