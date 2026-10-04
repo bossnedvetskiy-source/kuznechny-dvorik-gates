@@ -225,6 +225,21 @@
     </section>
   </dialog>
 
+  <dialog id="calculationPickerDialog" class="sheet-dialog small">
+    <section class="sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-head">
+        <div><div class="eyebrow">Добавить в замер</div><h2>Выберите расчёт</h2></div>
+        <button id="closeCalculationPickerBtn" class="icon-btn" type="button" aria-label="Закрыть">×</button>
+      </div>
+      <div class="calculation-picker-grid">
+        <button type="button" data-launch-calculation="gates"><span>▰</span><b>Ворота</b><small>Кованые Арт., размеры, столбы, монтаж</small></button>
+        <button type="button" data-launch-calculation="fence"><span>▥</span><b>Евроштакетник</b><small>Участки, пролёты, столбы, материалы</small></button>
+        <button type="button" data-launch-calculation="canopy"><span>⌒</span><b>Навес</b><small>Фермы, покрытие, материалы, монтаж</small></button>
+      </div>
+    </section>
+  </dialog>
+
   <dialog id="planDialog" class="sheet-dialog plan-dialog">
     <section class="sheet plan-sheet">
       <div class="sheet-handle"></div>
