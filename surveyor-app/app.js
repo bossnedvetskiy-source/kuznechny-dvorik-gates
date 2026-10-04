@@ -501,7 +501,7 @@ function updateNetworkState() {
 
 function applyRoleUi() {
   const isOwner = currentUser?.role === 'owner';
-  $('#teamNavBtn')?.classList.toggle('hidden', !isOwner);
+  $('#openTeamBtn')?.classList.toggle('hidden', !isOwner);
   if (!isOwner && $('#teamScreen')?.classList.contains('active')) switchScreen('surveys');
   $('#profileBtn').textContent = (currentUser?.name || 'КД').split(/\s+/).slice(0,2).map(x => x[0]).join('').toUpperCase();
 }
@@ -1047,6 +1047,7 @@ function bindEvents() {
   $('#profileBtn').addEventListener('click', () => switchScreen('settings'));
   $('#logoutBtn').addEventListener('click', logout);
   $('#syncNowBtn')?.addEventListener('click', () => syncNow({ silent:false }));
+  $('#openTeamBtn')?.addEventListener('click', () => switchScreen('team'));
   $('#newSurveyBtn').addEventListener('click', () => { resetSurveyWizard(); $('#surveyDialog').showModal(); });
   $('#saveSurveyBtn').addEventListener('click', async () => {
     const phone = $('#surveyClientPhone').value.replace(/\D/g,'');
