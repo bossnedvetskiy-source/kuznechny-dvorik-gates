@@ -169,6 +169,8 @@ jobs:
           test -s _site/zamer-app-v2/index.html
           test -s _site/zamer-app-v2/manifest.webmanifest
           test -s _site/zamer-app-v2/sw.js
+          test -s _site/zamer-app-v2/icon-192.png
+          test -s _site/zamer-app-v2/icon-512.png
           test -s _site/dev-tools/index.html
           test -s _site/dev-tools/manifest.webmanifest
           test -s _site/dev-tools/sw.js
