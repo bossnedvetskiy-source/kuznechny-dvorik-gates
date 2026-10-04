@@ -543,7 +543,7 @@ async function renderSurveys() {
       ${surveyCalculations(survey).length ? `<div class="survey-card-total"><span>Расчёты</span><b>${formatMoney(surveyCalculationsTotal(survey))}</b></div>` : ''}
       <div class="survey-card-actions">
         <button type="button" class="quick-calc-btn" data-quick-calculation="${survey.id}">+ Расчёт</button>
-        <span>Открыть карточку ›</span>
+        <button type="button" class="open-survey-btn" data-open-survey="${survey.id}">Карточка ›</button>
       </div>
       <div class="sync-row"><span>${formatDate(survey.updatedAt)}</span><span class="${syncClass(survey.syncState)}">${syncLabel(survey.syncState)}</span></div>
     </article>`).join('');
@@ -551,6 +551,10 @@ async function renderSurveys() {
   $('[data-quick-calculation]', list).forEach(button => button.addEventListener('click', event => {
     event.stopPropagation();
     openCalculationPicker(button.dataset.quickCalculation);
+  }));
+  $('[data-open-survey]', list).forEach(button => button.addEventListener('click', event => {
+    event.stopPropagation();
+    openSurveyDetails(button.dataset.openSurvey);
   }));
   $('.survey-card', list).forEach(card => card.addEventListener('click', () => openSurveyDetails(card.dataset.surveyId)));
 }
