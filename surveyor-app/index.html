@@ -196,6 +196,50 @@
     </section>
   </dialog>
 
+  <dialog id="gateQuoteDialog" class="sheet-dialog gate-quote-dialog">
+    <section class="sheet gate-quote-sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-head">
+        <div><div class="eyebrow">Расчёт ворот</div><h2 id="gateQuoteTitle">Кованые ворота</h2></div>
+        <button id="closeGateQuoteBtn" class="icon-btn" type="button" aria-label="Закрыть">×</button>
+      </div>
+
+      <div class="gate-quote-intro">
+        <b>Выберите дизайн</b>
+        <span>Цены и формулы те же, что в калькуляторе на сайте.</span>
+      </div>
+      <div id="gateQuoteCatalog" class="gate-quote-catalog"></div>
+
+      <div class="gate-quote-config">
+        <div id="gateQuoteSelected" class="gate-quote-selected"></div>
+        <div class="gate-quote-dimensions">
+          <label class="field"><span>Ширина ворот, м</span><input id="gateQuoteGateWidth" type="number" min="0.8" max="8" step="0.01" inputmode="decimal" value="3.4" /></label>
+          <label class="field"><span>Высота ворот, м</span><input id="gateQuoteGateHeight" type="number" min="1" max="3" step="0.01" inputmode="decimal" value="1.8" /></label>
+          <label class="field"><span>Ширина калитки, м</span><input id="gateQuoteWicketWidth" type="number" min="0.7" max="2.5" step="0.01" inputmode="decimal" value="1" /></label>
+          <label class="field"><span>Высота калитки, м</span><input id="gateQuoteWicketHeight" type="number" min="1" max="3" step="0.01" inputmode="decimal" value="1.8" /></label>
+        </div>
+
+        <label class="gate-quote-toggle">
+          <input id="gateQuotePosts" type="checkbox" />
+          <span><b>Новые усиленные столбы</b><small id="gateQuotePostsPrice">+ 25 000 ₽</small></span>
+        </label>
+
+        <div class="gate-quote-estimate">
+          <div><span>Изделие</span><b id="gateQuoteProductPrice">—</b></div>
+          <div><span>Монтаж на готовые столбы</span><b id="gateQuoteInstallPrice">—</b></div>
+          <div id="gateQuotePostsLine" hidden><span>Новые усиленные столбы</span><b id="gateQuotePostsLinePrice">—</b></div>
+          <div class="gate-quote-total"><span>Итого</span><strong id="gateQuoteTotal">—</strong></div>
+          <small>Доставку добавим автоматически из адреса замера следующим этапом.</small>
+        </div>
+
+        <div class="gate-quote-actions">
+          <button id="deleteGateQuoteBtn" class="btn btn-danger" type="button" hidden>Удалить</button>
+          <button id="saveGateQuoteBtn" class="btn btn-primary" type="button">Добавить в замер</button>
+        </div>
+      </div>
+    </section>
+  </dialog>
+
   <dialog id="planDialog" class="sheet-dialog plan-dialog">
     <section class="sheet plan-sheet">
       <div class="sheet-handle"></div>
@@ -254,6 +298,16 @@
   </dialog>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script>window.KUZDVOR_CATALOG_POLISH_V2 = true;</script>
+  <script src="../catalog-images.js"></script>
+  <script src="../prices.js"></script>
+  <script src="../gate-calc-prices.js"></script>
+  <script src="../gate-calc-models-chunk1.js"></script>
+  <script src="../gate-calc-models-chunk2.js"></script>
+  <script src="../gate-calc-models-chunk3.js"></script>
+  <script src="../gate-calc-models-chunk4.js"></script>
+  <script src="../gate-calc-models.js"></script>
+  <script src="../gate-calc-engine.js"></script>
   <script src="app.js" type="module"></script>
 </body>
 </html>
