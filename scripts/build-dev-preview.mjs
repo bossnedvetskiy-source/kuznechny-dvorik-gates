@@ -402,6 +402,19 @@ async function patchDevHtml(dir) {
 }
 await patchDevHtml(OUT);
 
+// DEV-only bridge: existing calculators stay unchanged, but when opened from a
+// survey they can return their exact current snapshot back into that survey.
+await cp(path.join(SURVEYOR_SOURCE, 'calculator-bridge.js'), path.join(OUT, 'surveyor-bridge.js'));
+for (const relative of ['index.html','evroshtaketnik/index.html','naves/index.html']) {
+  const full = path.join(OUT, relative);
+  let html = await readFile(full, 'utf8');
+  if (!html.includes(`${BASE}/surveyor-bridge.js`)) {
+    if (!html.includes('</body>')) throw new Error(`DEV calculator page has no body: ${relative}`);
+    html = html.replace('</body>', `<script src="${BASE}/surveyor-bridge.js"></script>\n</body>`);
+    await writeFile(full, html, 'utf8');
+  }
+}
+
 // Build one internal DEV work app. The surveyor shell is the start screen,
 // while the existing DEV calculators remain under the same broad PWA scope.
 await rm(DEV_TOOLS_OUT, {recursive:true, force:true});
@@ -514,6 +527,14 @@ if (!devCatalogText.includes(`"${BASE}/catalog/`) && !devCatalogText.includes('"
 }
 const fencePrices = JSON.parse(await readFile(path.join(OUT, 'api', 'fence-prices'), 'utf8'));
 if (!fencePrices?.fence || typeof fencePrices.fence !== 'object') throw new Error('Dev preview fence prices are missing');
+
+for (const relative of ['index.html','evroshtaketnik/index.html','naves/index.html']) {
+  const html = await readFile(path.join(OUT, relative), 'utf8');
+  if (!html.includes(`${BASE}/surveyor-bridge.js`)) throw new Error(`DEV surveyor bridge missing: ${relative}`);
+}
+if (!(await readFile(path.join(OUT,'surveyor-bridge.js'),'utf8')).includes('kd-surveyor-transfer-v1')) {
+  throw new Error('DEV surveyor bridge payload contract missing');
+}
 
 const navesIndex = await readFile(path.join(OUT, 'naves', 'index.html'), 'utf8');
 for (const required of ['./naves.css','./geometry.js','./pricing.js','./canopy-three.js','./naves.js','canopyViewport','reset3dView','totalPrice','saveCalculation']) {
