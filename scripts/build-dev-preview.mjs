@@ -328,12 +328,12 @@ await writeFile(path.join(OUT, DEV_ICON_NAME), devIcon, 'utf8');
 const manifestPath = path.join(OUT, 'site-manifest.webmanifest');
 const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
 Object.assign(manifest, {
-  name:'КД Калькуляторы DEV',
-  short_name:'КД Калькуляторы',
-  id:`${BASE}/dev-tools-v3`,
+  name:'КД Замерщик DEV',
+  short_name:'КД Замерщик',
+  id:`${BASE}/kd-work-v1`,
   start_url:DEV_APP_START,
-  scope:`${BASE}/${DEV_TOOLS_DIR}/`,
-  description:'Отдельное тестовое приложение DEV Кузнечного Дворика с автономной офлайн-базой.',
+  scope:`${BASE}/`,
+  description:'Внутреннее DEV-приложение замерщика: замеры, ворота, заборы и навесы.',
   background_color:'#111318',
   theme_color:'#111318',
   icons:[{
@@ -402,60 +402,30 @@ async function patchDevHtml(dir) {
 }
 await patchDevHtml(OUT);
 
-// Build the narrow DEV tools launcher. The manifest scope is deliberately
-// limited to /dev-tools/ so Android never routes surveyor links into this app.
+// Build one internal DEV work app. The surveyor shell is the start screen,
+// while the existing DEV calculators remain under the same broad PWA scope.
 await rm(DEV_TOOLS_OUT, {recursive:true, force:true});
-await mkdir(DEV_TOOLS_OUT, {recursive:true});
-const devToolsHtml = `<!doctype html>
-<html lang="ru"><head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#111318">
-<meta name="robots" content="noindex,nofollow,noarchive">
-<title>КД Калькуляторы DEV</title>
-<link rel="manifest" href="./manifest.webmanifest">
-<link rel="icon" href="../${DEV_ICON_NAME}">
-<style>
-*{box-sizing:border-box}body{margin:0;background:#101216;color:#f5f1e7;font-family:Arial,sans-serif;min-height:100vh}
-main{max-width:620px;margin:auto;padding:24px 16px 42px}.tag{color:#d7ad5b;font-size:12px;font-weight:900;letter-spacing:.12em}
-h1{font-size:27px;margin:8px 0 5px}.muted{color:#aaa59b;font-size:13px;line-height:1.45;margin:0 0 20px}
-.grid{display:grid;gap:10px}.tile{display:grid;grid-template-columns:48px 1fr 24px;gap:12px;align-items:center;text-decoration:none;color:inherit;background:#1a1d22;border:1px solid #2b2e34;border-radius:16px;padding:14px}
-.icon{width:48px;height:48px;border-radius:13px;background:#2b2418;color:#e6bd69;display:grid;place-items:center;font-size:21px;font-weight:900}
-.tile b{display:block;font-size:15px}.tile small{display:block;color:#aaa59b;margin-top:3px;line-height:1.3}.arrow{color:#d7ad5b;font-size:24px}
-.note{margin-top:18px;padding:12px;border:1px solid #34373d;border-radius:13px;color:#aaa59b;font-size:12px;line-height:1.4}
-</style></head><body><main>
-<div class="tag">КУЗНЕЧНЫЙ ДВОРИК · DEV</div><h1>КД Калькуляторы DEV</h1>
-<p class="muted">Отдельное приложение калькуляторов. Замерщик теперь устанавливается независимо.</p>
-<div class="grid">
-<a class="tile" href="../?app=1"><span class="icon">В</span><span><b>Ворота</b><small>Каталог и расчёт ворот</small></span><span class="arrow">›</span></a>
-<a class="tile" href="../evroshtaketnik/"><span class="icon">▥</span><span><b>Евроштакетник</b><small>Забор, материалы и стоимость</small></span><span class="arrow">›</span></a>
-<a class="tile" href="../naves/"><span class="icon">⌒</span><span><b>Навесы</b><small>Расчёт, 3D и материалы</small></span><span class="arrow">›</span></a>
-<a class="tile" href="../naves/admin.html"><span class="icon">⚙</span><span><b>Навесы — админ</b><small>Сохранённые расчёты и ТЗ</small></span><span class="arrow">›</span></a>
-<a class="tile" href="../admin.html"><span class="icon">A</span><span><b>Админ DEV</b><small>Настройки и данные сайта</small></span><span class="arrow">›</span></a>
-</div>
-<div class="note">Если калькулятор откроется с небольшой адресной строкой — это нормально: он находится вне узкого scope лаунчера. Главное, что DEV больше не перехватывает КД Замерщик.</div>
-<script>
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js').catch(()=>{})}
-</script></main></body></html>`;
-await writeFile(path.join(DEV_TOOLS_OUT,'index.html'),devToolsHtml,'utf8');
+await cp(SURVEYOR_SOURCE, DEV_TOOLS_OUT, {recursive:true});
+
+const devToolsIndexPath = path.join(DEV_TOOLS_OUT, 'index.html');
+let devToolsIndex = await readFile(devToolsIndexPath, 'utf8');
+devToolsIndex = devToolsIndex
+  .replace('<title>КД Замерщик</title>', '<title>КД Замерщик DEV</title>')
+  .replace('<h1>КД Замерщик</h1>', '<h1>КД Замерщик DEV</h1>')
+  .replace('<div class="eyebrow">КД Замерщик</div>', '<div class="eyebrow">КД Замерщик · DEV</div>');
+await writeFile(devToolsIndexPath, devToolsIndex, 'utf8');
+
 await writeFile(path.join(DEV_TOOLS_OUT,'manifest.webmanifest'),JSON.stringify({
-  name:'КД Калькуляторы DEV',
-  short_name:'КД Калькуляторы',
-  id:`${BASE}/${DEV_TOOLS_DIR}/v3`,
+  name:'КД Замерщик DEV',
+  short_name:'КД Замерщик',
+  id:`${BASE}/kd-work-v1`,
   start_url:`${BASE}/${DEV_TOOLS_DIR}/`,
-  scope:`${BASE}/${DEV_TOOLS_DIR}/`,
+  scope:`${BASE}/`,
   display:'standalone',
   background_color:'#111318',
   theme_color:'#111318',
   icons:[{src:`${BASE}/${DEV_ICON_NAME}`,sizes:'any',type:'image/svg+xml',purpose:'any maskable'}]
 },null,2)+'\n','utf8');
-await writeFile(path.join(DEV_TOOLS_OUT,'sw.js'),`
-const CACHE='kd-dev-tools-v3';
-const CORE=['./','./index.html','./manifest.webmanifest','../${DEV_ICON_NAME}'];
-self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(CORE)).then(()=>self.skipWaiting())));
-self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('kd-dev-tools-')&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
-self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWith(fetch(e.request).catch(()=>caches.match(e.request).then(r=>r||caches.match('./index.html'))))});
-`,'utf8');
 
 // The public bundle adds a floating app menu when launched in standalone mode.
 // Point it to the actual static DEV menu instead of the Timeweb-only /app route.
@@ -506,11 +476,11 @@ if (index.includes('<script src="app.js"')) throw new Error('Dev preview is usin
 
 const builtManifest = JSON.parse(await readFile(manifestPath, 'utf8'));
 if (
-  builtManifest.name !== 'КД Калькуляторы DEV' ||
-  builtManifest.short_name !== 'КД Калькуляторы' ||
-  builtManifest.id !== `${BASE}/dev-tools-v3` ||
+  builtManifest.name !== 'КД Замерщик DEV' ||
+  builtManifest.short_name !== 'КД Замерщик' ||
+  builtManifest.id !== `${BASE}/kd-work-v1` ||
   builtManifest.start_url !== DEV_APP_START ||
-  builtManifest.scope !== `${BASE}/${DEV_TOOLS_DIR}/` ||
+  builtManifest.scope !== `${BASE}/` ||
   builtManifest.icons?.[0]?.src !== `${BASE}/${DEV_ICON_NAME}`
 ) {
   throw new Error('DEV PWA manifest is not isolated from production');
