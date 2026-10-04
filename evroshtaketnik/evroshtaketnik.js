@@ -1417,6 +1417,11 @@ async function submitLead(event) {
   }
 }
 
+window.KUZDVOR_FENCE_APP = {
+  snapshot: () => leadPayload(),
+  quoteText: () => quoteText()
+};
+
 addSectionButton.addEventListener('click', () => {
   if (visibleSections >= 4) return;
   visibleSections += 1;
