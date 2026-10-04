@@ -541,10 +541,18 @@ async function renderSurveys() {
       </div>
       <div class="badge-row">${survey.workTypes.length ? survey.workTypes.map(type => `<span class="type-badge ${WORK_TYPES[type]?.className || ''}">${WORK_TYPES[type]?.short || type}</span>`).join('') : '<span class="type-badge">Определим на объекте</span>'}</div>
       ${surveyCalculations(survey).length ? `<div class="survey-card-total"><span>Расчёты</span><b>${formatMoney(surveyCalculationsTotal(survey))}</b></div>` : ''}
+      <div class="survey-card-actions">
+        <button type="button" class="quick-calc-btn" data-quick-calculation="${survey.id}">+ Расчёт</button>
+        <span>Открыть карточку ›</span>
+      </div>
       <div class="sync-row"><span>${formatDate(survey.updatedAt)}</span><span class="${syncClass(survey.syncState)}">${syncLabel(survey.syncState)}</span></div>
     </article>`).join('');
   $('#surveyEmpty').hidden = surveys.length > 0;
-  $$('.survey-card', list).forEach(card => card.addEventListener('click', () => openSurveyDetails(card.dataset.surveyId)));
+  $('[data-quick-calculation]', list).forEach(button => button.addEventListener('click', event => {
+    event.stopPropagation();
+    openCalculationPicker(button.dataset.quickCalculation);
+  }));
+  $('.survey-card', list).forEach(card => card.addEventListener('click', () => openSurveyDetails(card.dataset.surveyId)));
 }
 
 async function renderClients(query = '') {
