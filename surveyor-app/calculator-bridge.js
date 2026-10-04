@@ -5,8 +5,8 @@
 
   const TRANSFER_KEY = 'kd-surveyor-transfer-v1';
   const scriptUrl = new URL(document.currentScript?.src || location.href);
-  const basePath = scriptUrl.pathname.replace(/\/surveyor-bridge\.js$/, '');
-  const returnUrl = () => `${basePath}/dev-tools/?resumeSurvey=${encodeURIComponent(surveyId)}`;
+  const appPath = scriptUrl.pathname.replace(/\/calculator-bridge\.js$/, '');
+  const returnUrl = () => `${appPath}/?resumeSurvey=${encodeURIComponent(surveyId)}`;
 
   const escapeHtml = value => String(value ?? '').replace(/[&<>'"]/g, ch => ({
     '&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#039;','"':'&quot;'
@@ -72,7 +72,7 @@
     const input = snap.input || {};
     return {
       type:'canopy',
-      title:'Навес',
+      title:input.farmType ? `${input.farmType} навес` : 'Навес',
       total,
       image:'',
       summary:[
@@ -105,6 +105,8 @@
 
   function install() {
     if (document.getElementById('kdSurveyorBridge')) return;
+    const calculatorType = typeFromPath();
+    document.documentElement.classList.add('kd-surveyor-mode', `kd-surveyor-${calculatorType}`);
     const style = document.createElement('style');
     style.textContent = `
       body{padding-bottom:max(88px,calc(76px + env(safe-area-inset-bottom)))!important}
@@ -117,6 +119,7 @@
       #kdSurveyorBridge .kd-copy b{display:block;font-size:12px;color:#e7c36f}
       #kdSurveyorBridge .kd-copy span{display:block;font-size:10px;color:#c8c8c8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
       #kdSurveyorBridgeMessage.is-error{color:#ffaaaa!important}
+      .kd-surveyor-canopy #showSave,.kd-surveyor-canopy #savePanel{display:none!important}
       @media(max-width:520px){#kdSurveyorBridge .kd-row{grid-template-columns:46px minmax(0,1fr) auto}#kdSurveyorBridge .kd-back{font-size:0;padding:8px}#kdSurveyorBridge .kd-back:before{content:'←';font-size:20px}}
     `;
     document.head.append(style);
@@ -127,7 +130,7 @@
       <div class="kd-row">
         <button type="button" class="kd-back" id="kdSurveyorBridgeBack">← В замер</button>
         <div class="kd-copy"><b>Расчёт для замера</b><span id="kdSurveyorBridgeMessage">Настройте калькулятор и сохраните результат</span></div>
-        <button type="button" class="kd-save" id="kdSurveyorBridgeSave">Добавить</button>
+        <button type="button" class="kd-save" id="kdSurveyorBridgeSave">Добавить в замер</button>
       </div>`;
     document.body.append(bar);
 
