@@ -1130,7 +1130,11 @@ function bindEvents() {
 async function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
   try {
-    const registration = await navigator.serviceWorker.register('./sw.js', {updateViaCache:'none'});
+    const inDevShell = /\/dev-tools(?:\/|$)/.test(location.pathname);
+    const registration = await navigator.serviceWorker.register(
+      inDevShell ? '../site-sw.js' : './sw.js',
+      inDevShell ? {scope:'../', updateViaCache:'none'} : {updateViaCache:'none'}
+    );
     try { await registration.update(); } catch {}
   } catch (e) {
     console.warn('SW registration failed', e);
