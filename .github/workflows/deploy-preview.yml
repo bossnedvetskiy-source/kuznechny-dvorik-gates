@@ -144,6 +144,9 @@ jobs:
       - name: Test DEV calculators PWA install start
         run: npx playwright test tests/dev-pwa.spec.js
 
+      - name: Test surveyor DEV calculator bridge
+        run: npx playwright test tests/surveyor-dev-calculator-bridge.spec.js
+
       - name: Verify dev mirrors production frontend
         shell: bash
         run: |
@@ -174,6 +177,7 @@ jobs:
           test -s _site/dev-tools/index.html
           test -s _site/dev-tools/manifest.webmanifest
           test -s _site/dev-tools/sw.js
+          test -s _site/surveyor-bridge.js
           node -e "const x=JSON.parse(require('fs').readFileSync('_site/api/offline-version','utf8')); if(!x.version || !String(x.version).startsWith('dev-')) throw Error('DEV offline version missing'); console.log('DEV offline version OK:', x.version)"
           if grep -Fq '<script src="app.js"' _site/index.html; then
             echo 'Dev preview is still using raw source scripts' >&2
