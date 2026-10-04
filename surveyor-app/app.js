@@ -896,6 +896,7 @@ function launchCalculation(type) {
   if (type === 'gates') url.searchParams.set('app','1');
   url.searchParams.set('surveyor','1');
   url.searchParams.set('survey',activeCalculationSurveyId);
+  url.searchParams.set('returnTo', location.pathname);
   location.href = url.href;
 }
 async function deleteCalculation(surveyId, calculationId) {
