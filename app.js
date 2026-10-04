@@ -1057,3 +1057,9 @@ renderProducts();
 loadPublishedGalleries();
 chooseProduct(selectedProductId);
 window.GATE_CALC?.ready?.then(()=>{calculate();}).catch(error=>console.error('Gate models load failed',error));
+
+/* Internal DEV integration: reuse the exact storefront calculation in КД Замерщик. */
+window.KUZDVOR_GATE_APP = {
+  snapshot: () => leadPayload(),
+  calculate: () => calcData()
+};
