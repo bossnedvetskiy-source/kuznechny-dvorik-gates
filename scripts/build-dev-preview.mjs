@@ -1,5 +1,6 @@
 import { cp, mkdir, readFile, readdir, rm, writeFile, unlink } from 'node:fs/promises';
 import path from 'node:path';
+import {deflateSync} from 'node:zlib';
 
 const ROOT = process.cwd();
 const SOURCE = path.join(ROOT, 'timeweb-dist');
@@ -16,7 +17,80 @@ const LIVE_FENCE_PRICES = '/tmp/kuzdvor-live-fence-prices.json';
 const DEV_ICON_NAME = 'dev-site-icon.svg';
 const DEV_TOOLS_DIR = 'dev-tools';
 const DEV_TOOLS_OUT = path.join(ROOT, '_site', DEV_TOOLS_DIR);
+
 const DEV_APP_START = `${BASE}/${DEV_TOOLS_DIR}/`;
+
+function crc32(buffer) {
+  let crc = 0xffffffff;
+  for (const byte of buffer) {
+    crc ^= byte;
+    for (let i = 0; i < 8; i += 1) crc = (crc >>> 1) ^ (0xedb88320 & -(crc & 1));
+  }
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+function pngChunk(type, data) {
+  const typeBuf = Buffer.from(type, 'ascii');
+  const len = Buffer.alloc(4);
+  len.writeUInt32BE(data.length, 0);
+  const crc = Buffer.alloc(4);
+  crc.writeUInt32BE(crc32(Buffer.concat([typeBuf, data])), 0);
+  return Buffer.concat([len, typeBuf, data, crc]);
+}
+
+function buildPngIcon(size) {
+  const px = Buffer.alloc(size * size * 4);
+  const bg = [21, 21, 21, 255];
+  const gold = [231, 195, 111, 255];
+  const edge = [199, 150, 53, 255];
+  const set = (x, y, color) => {
+    if (x < 0 || y < 0 || x >= size || y >= size) return;
+    const i = (y * size + x) * 4;
+    px[i] = color[0]; px[i + 1] = color[1]; px[i + 2] = color[2]; px[i + 3] = color[3];
+  };
+  for (let y = 0; y < size; y += 1) for (let x = 0; x < size; x += 1) set(x, y, bg);
+  const s = size / 512;
+  const rect = (x1,y1,x2,y2,color) => {
+    for (let y=Math.floor(y1*s); y<Math.ceil(y2*s); y+=1)
+      for (let x=Math.floor(x1*s); x<Math.ceil(x2*s); x+=1) set(x,y,color);
+  };
+  // Gold frame.
+  rect(54,54,458,66,edge); rect(54,446,458,458,edge);
+  rect(54,54,66,458,edge); rect(446,54,458,458,edge);
+  // K.
+  rect(145,135,178,377,gold);
+  for (let t=0;t<26;t+=1) {
+    for (let n=0;n<118;n+=1) {
+      const x=178+n; const y=256-n+t-13; set(Math.round(x*s),Math.round(y*s),gold);
+      const y2=256+n+t-13; set(Math.round(x*s),Math.round(y2*s),gold);
+    }
+  }
+  // D.
+  rect(294,138,327,377,gold);
+  rect(327,138,355,171,gold); rect(327,344,355,377,gold);
+  for (let y=171;y<344;y+=1) {
+    const yy=(y-257)/86;
+    const x=355+Math.round(64*Math.sqrt(Math.max(0,1-yy*yy)));
+    rect(x-16,y,x+16,y+1,gold);
+  }
+
+  const raw = Buffer.alloc((size * 4 + 1) * size);
+  for (let y=0;y<size;y+=1) {
+    const row = y * (size * 4 + 1);
+    raw[row] = 0;
+    px.copy(raw, row + 1, y * size * 4, (y + 1) * size * 4);
+  }
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(size,0); ihdr.writeUInt32BE(size,4);
+  ihdr[8]=8; ihdr[9]=6; ihdr[10]=0; ihdr[11]=0; ihdr[12]=0;
+  return Buffer.concat([
+    Buffer.from([137,80,78,71,13,10,26,10]),
+    pngChunk('IHDR', ihdr),
+    pngChunk('IDAT', deflateSync(raw, {level:9})),
+    pngChunk('IEND', Buffer.alloc(0))
+  ]);
+}
+
 
 await rm(OUT, {recursive:true, force:true});
 await cp(SOURCE, OUT, {recursive:true});
@@ -194,9 +268,18 @@ Object.assign(surveyorV2Manifest, {
   scope:`${BASE}/${SURVEYOR_V2_DIR}/`,
   description:'Чистая тестовая PWA КД Замерщик V2.',
   background_color:'#f4f4f2',
-  theme_color:'#151515'
+  theme_color:'#151515',
+  display:'standalone',
+  prefer_related_applications:false,
+  icons:[
+    {src:'icon-192.png', sizes:'192x192', type:'image/png', purpose:'any'},
+    {src:'icon-512.png', sizes:'512x512', type:'image/png', purpose:'any maskable'},
+    {src:'icon.svg', sizes:'any', type:'image/svg+xml', purpose:'any'}
+  ]
 });
 await writeFile(surveyorV2ManifestPath, JSON.stringify(surveyorV2Manifest, null, 2)+'\n', 'utf8');
+await writeFile(path.join(SURVEYOR_V2_OUT, 'icon-192.png'), buildPngIcon(192));
+await writeFile(path.join(SURVEYOR_V2_OUT, 'icon-512.png'), buildPngIcon(512));
 
 const surveyorV2AssetVersion = encodeURIComponent(devSourceVersion);
 const surveyorV2IndexPath = path.join(SURVEYOR_V2_OUT, 'index.html');
