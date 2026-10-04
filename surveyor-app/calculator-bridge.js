@@ -6,10 +6,16 @@
   const TRANSFER_KEY = 'kd-surveyor-transfer-v1';
   const scriptUrl = new URL(document.currentScript?.src || location.href);
   const scriptPath = scriptUrl.pathname;
-  const appPath = scriptPath.endsWith('/surveyor-bridge.js')
-    ? scriptPath.replace(/\/surveyor-bridge\.js$/, '/dev-tools')
-    : scriptPath.replace(/\/calculator-bridge\.js$/, '');
-  const returnUrl = () => `${appPath}/?resumeSurvey=${encodeURIComponent(surveyId)}`;
+  const requestedReturn = params.get('returnTo') || '';
+  const safeReturnPath = requestedReturn.startsWith('/') && !requestedReturn.startsWith('//') ? requestedReturn : '';
+  const appPath = safeReturnPath || (scriptPath.endsWith('/surveyor-bridge.js')
+    ? scriptPath.replace(/\/surveyor-bridge\.js$/, '/dev-tools/')
+    : scriptPath.replace(/\/calculator-bridge\.js$/, '/'));
+  const returnUrl = () => {
+    const target = new URL(appPath, location.origin);
+    target.searchParams.set('resumeSurvey', surveyId);
+    return target.pathname + target.search;
+  };
 
   const escapeHtml = value => String(value ?? '').replace(/[&<>'"]/g, ch => ({
     '&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#039;','"':'&quot;'
