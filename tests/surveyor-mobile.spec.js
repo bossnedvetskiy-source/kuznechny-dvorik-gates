@@ -22,6 +22,7 @@ test('surveyor can create a mixed survey and reopen it offline', async ({page, c
   await expect(card).toContainText('ЗМ-0001');
   await expect(card).toContainText('+7 937');
   await expect(card).toContainText('Определим на объекте');
+  await expect(card.locator('[data-quick-calculation]')).toBeVisible();
 
   await card.click();
   await expect(page.locator('#surveyDetailsDialog')).toBeVisible();
