@@ -501,6 +501,7 @@ function updateNetworkState() {
 
 function applyRoleUi() {
   const isOwner = currentUser?.role === 'owner';
+  $('#teamNavBtn')?.classList.toggle('hidden', !isOwner);
   $('#openTeamBtn')?.classList.toggle('hidden', !isOwner);
   if (!isOwner && $('#teamScreen')?.classList.contains('active')) switchScreen('surveys');
   $('#profileBtn').textContent = (currentUser?.name || 'КД').split(/\s+/).slice(0,2).map(x => x[0]).join('').toUpperCase();
@@ -1044,6 +1045,7 @@ function bindEvents() {
   window.addEventListener('online', () => { updateNetworkState(); if (currentUser) syncNow({ silent:true }); });
   window.addEventListener('offline', updateNetworkState);
   $$('.nav-btn').forEach(btn => btn.addEventListener('click', () => btn.dataset.screen && switchScreen(btn.dataset.screen)));
+  $('#teamNavBtn')?.addEventListener('click', () => switchScreen('team'));
   $('#profileBtn').addEventListener('click', () => switchScreen('settings'));
   $('#logoutBtn').addEventListener('click', logout);
   $('#syncNowBtn')?.addEventListener('click', () => syncNow({ silent:false }));
