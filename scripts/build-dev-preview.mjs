@@ -510,10 +510,12 @@ for (const required of [
   `href="${BASE}/evroshtaketnik/"`,
   'Расчёт евроштакетника',
   `href="${BASE}/naves/"`,
-  'Расчёт навеса',
-  `href="${BASE}/admin.html"`
+  'Расчёт навеса'
 ]) {
   if (!builtWorkApp.includes(required)) throw new Error(`DEV work app missing: ${required}`);
+}
+if (builtWorkApp.includes('Заявки и админка') || builtWorkApp.includes('Навесы — админ DEV')) {
+  throw new Error('DEV work app still exposes legacy admin tiles');
 }
 if (!siteBundle.includes(devMenuTarget)) throw new Error('DEV standalone menu does not point to the static work app');
 
