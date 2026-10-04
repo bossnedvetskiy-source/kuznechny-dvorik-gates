@@ -26,6 +26,8 @@ let activePlanConfiguration = null;
 let activePlanLineId = '';
 let activePlanItemId = '';
 let activeInsertIndex = null;
+let activeCalculationSurveyId = '';
+const CALC_TRANSFER_KEY = 'kd-surveyor-transfer-v1';
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
@@ -160,6 +162,9 @@ function formatDate(iso) {
   const d = new Date(parseServerDate(iso));
   if (Number.isNaN(d.getTime())) return '';
   return new Intl.DateTimeFormat('ru-RU', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(d);
+}
+function formatMoney(value) {
+  return new Intl.NumberFormat('ru-RU').format(Math.round(Number(value) || 0)) + ' ₽';
 }
 function escapeHtml(value = '') {
   return String(value).replace(/[&<>'"]/g, ch => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', "'":'&#039;', '"':'&quot;' }[ch]));
@@ -534,6 +539,7 @@ async function renderSurveys() {
         <span class="status-pill ${survey.status}">${survey.status === 'ready' ? 'Готов' : 'Черновик'}</span>
       </div>
       <div class="badge-row">${survey.workTypes.length ? survey.workTypes.map(type => `<span class="type-badge ${WORK_TYPES[type]?.className || ''}">${WORK_TYPES[type]?.short || type}</span>`).join('') : '<span class="type-badge">Определим на объекте</span>'}</div>
+      ${surveyCalculations(survey).length ? `<div class="survey-card-total"><span>Расчёты</span><b>${formatMoney(surveyCalculationsTotal(survey))}</b></div>` : ''}
       <div class="sync-row"><span>${formatDate(survey.updatedAt)}</span><span class="${syncClass(survey.syncState)}">${syncLabel(survey.syncState)}</span></div>
     </article>`).join('');
   $('#surveyEmpty').hidden = surveys.length > 0;
@@ -842,6 +848,93 @@ async function savePlan() {
   if(API_ENABLED && navigator.onLine) syncNow({silent:true});
 }
 
+
+function surveyCalculations(survey) {
+  const rows = survey?.configuration?.calculations;
+  return Array.isArray(rows) ? rows : [];
+}
+function surveyCalculationsTotal(survey) {
+  return surveyCalculations(survey).reduce((sum,item)=>sum+(Number(item.total)||0),0);
+}
+function calculationTypeLabel(type) {
+  return type === 'gates' ? 'Ворота' : type === 'fence' ? 'Забор' : type === 'canopy' ? 'Навес' : 'Расчёт';
+}
+function calculationsHtml(survey) {
+  const rows = surveyCalculations(survey);
+  const total = surveyCalculationsTotal(survey);
+  return `<div class="details-section calculation-section">
+    <div class="section-head compact">
+      <div><h3>Расчёты</h3><p class="muted">${rows.length ? rows.length+' '+plural(rows.length,['объект','объекта','объектов']) : 'Добавьте расчёт прямо с объекта.'}</p></div>
+      ${rows.length ? `<strong class="calculation-grand-total">${formatMoney(total)}</strong>` : ''}
+    </div>
+    <div class="calculation-list">
+      ${rows.map(item=>`<article class="calculation-card">
+        ${item.image ? `<img src="${escapeHtml(item.image)}" alt="" loading="lazy">` : `<div class="calculation-card-icon ${escapeHtml(item.type)}">${item.type==='gates'?'▰':item.type==='fence'?'▥':'⌒'}</div>`}
+        <div class="calculation-card-copy">
+          <small>${escapeHtml(calculationTypeLabel(item.type))}</small>
+          <b>${escapeHtml(item.title || calculationTypeLabel(item.type))}</b>
+          <span>${escapeHtml(item.summary || '')}</span>
+        </div>
+        <div class="calculation-card-price"><b>${formatMoney(item.total)}</b><button type="button" data-delete-calculation="${escapeHtml(item.id)}" aria-label="Удалить расчёт">×</button></div>
+      </article>`).join('') || '<div class="calculation-empty">Пока нет сохранённых расчётов.</div>'}
+    </div>
+    <button class="btn btn-primary btn-block" data-add-calculation="${survey.id}" type="button">+ Добавить расчёт</button>
+  </div>`;
+}
+function openCalculationPicker(surveyId) {
+  activeCalculationSurveyId = surveyId;
+  $('#calculationPickerDialog')?.showModal();
+}
+function launchCalculation(type) {
+  if (!activeCalculationSurveyId) return;
+  const root = new URL('../', location.href);
+  let url;
+  if (type === 'fence') url = new URL('evroshtaketnik/', root);
+  else if (type === 'canopy') url = new URL('naves/', root);
+  else url = new URL(root.href);
+  if (type === 'gates') url.searchParams.set('app','1');
+  url.searchParams.set('surveyor','1');
+  url.searchParams.set('survey',activeCalculationSurveyId);
+  location.href = url.href;
+}
+async function deleteCalculation(surveyId, calculationId) {
+  const survey = await idbGet('surveys', surveyId);
+  if (!survey) return;
+  survey.configuration = survey.configuration && typeof survey.configuration === 'object' ? survey.configuration : {};
+  survey.configuration.calculations = surveyCalculations(survey).filter(item => item.id !== calculationId);
+  survey.updatedAt = new Date().toISOString();
+  survey.syncState = API_ENABLED ? 'pending' : 'local';
+  await idbPut('surveys', survey);
+  showToast('Расчёт удалён');
+  await renderSurveys();
+  if ($('#surveyDetailsDialog').open) {
+    $('#surveyDetailsDialog').close();
+    await openSurveyDetails(surveyId);
+  }
+  if (API_ENABLED && navigator.onLine) syncNow({silent:true});
+}
+async function consumeCalculationTransfer() {
+  let transfer = null;
+  try { transfer = JSON.parse(localStorage.getItem(CALC_TRANSFER_KEY) || 'null'); } catch {}
+  if (!transfer?.surveyId || !transfer?.calculation?.id) return '';
+  const survey = await idbGet('surveys', transfer.surveyId);
+  if (!survey) return '';
+  survey.configuration = survey.configuration && typeof survey.configuration === 'object' ? survey.configuration : {};
+  const rows = Array.isArray(survey.configuration.calculations) ? survey.configuration.calculations : [];
+  if (!rows.some(item => item.id === transfer.calculation.id)) rows.push(transfer.calculation);
+  survey.configuration.calculations = rows;
+  const workType = transfer.calculation.type === 'gates' ? 'gates' : transfer.calculation.type === 'fence' ? 'fence' : transfer.calculation.type === 'canopy' ? 'canopy' : '';
+  if (workType && !survey.workTypes.includes(workType)) survey.workTypes.push(workType);
+  survey.updatedAt = new Date().toISOString();
+  survey.syncState = API_ENABLED ? 'pending' : 'local';
+  survey.schemaVersion = Math.max(4, Number(survey.schemaVersion)||0);
+  await idbPut('surveys', survey);
+  try { localStorage.removeItem(CALC_TRANSFER_KEY); } catch {}
+  showToast('Расчёт добавлен в замер');
+  if (API_ENABLED && navigator.onLine) syncNow({silent:true});
+  return survey.id;
+}
+
 async function openSurveyDetails(id) {
   const survey = await idbGet('surveys', id);
   if (!survey) return;
@@ -856,6 +949,7 @@ async function openSurveyDetails(id) {
     <div class="details-section"><h3>Адрес объекта</h3><div class="details-note">${escapeHtml(survey.address)}</div></div>
     ${workTypesEditorHtml(survey)}
     ${survey.note ? `<div class="details-section"><h3>Комментарий</h3><div class="details-note">${escapeHtml(survey.note)}</div></div>` : ''}
+    ${calculationsHtml(survey)}
     ${survey.syncState === 'conflict' ? '<div class="details-section"><div class="notice notice-lock">Есть более новая версия этого замера на сервере. Пока данные не затираются автоматически.</div></div>' : ''}
     ${surveyPlanSummaryHtml(survey)}
     ${currentUser.role === 'owner' ? `<button class="btn btn-danger btn-block" data-archive-survey="${survey.id}" type="button">Архивировать заказ</button>` : ''}`;
@@ -863,6 +957,11 @@ async function openSurveyDetails(id) {
   $('[data-archive-survey]')?.addEventListener('click', () => archiveSurvey(survey.id));
   $('[data-edit-plan]')?.addEventListener('click', () => openPlanEditor(survey.id));
   $('[data-save-work-types]')?.addEventListener('click', () => saveSurveyWorkTypes(survey.id));
+  $('[data-add-calculation]')?.addEventListener('click', () => openCalculationPicker(survey.id));
+  $('[data-delete-calculation]', $('#surveyDetailsContent')).forEach(button => button.addEventListener('click', event => {
+    event.stopPropagation();
+    deleteCalculation(survey.id, button.dataset.deleteCalculation);
+  }));
 }
 
 async function archiveSurvey(id) {
@@ -992,7 +1091,9 @@ async function bootstrap() {
   bindEvents();
   updateNetworkState();
   if (currentUser) {
+    const returnedSurveyId = await consumeCalculationTransfer();
     showMain();
+    if (returnedSurveyId) setTimeout(() => openSurveyDetails(returnedSurveyId), 0);
     if (API_ENABLED && navigator.onLine) syncNow({ silent:true });
   } else {
     showLogin();
@@ -1034,7 +1135,9 @@ function bindEvents() {
       currentUser = user;
       saveSession(user);
       $('#loginForm').reset();
+      const returnedSurveyId = await consumeCalculationTransfer();
       showMain();
+      if (returnedSurveyId) setTimeout(() => openSurveyDetails(returnedSurveyId), 0);
       if (lastSyncMessage) showToast(lastSyncMessage);
       if (API_ENABLED && navigator.onLine) syncNow({ silent:true });
     } catch (error) {
@@ -1074,6 +1177,12 @@ function bindEvents() {
   $('#newEmployeeBtn').addEventListener('click', () => openEmployeeDialog());
   $('#saveEmployeeBtn').addEventListener('click', saveEmployee);
   $('#closeDetailsBtn').addEventListener('click', () => $('#surveyDetailsDialog').close());
+  $('#closeCalculationPickerBtn')?.addEventListener('click', () => $('#calculationPickerDialog')?.close());
+  $('#calculationPickerDialog')?.addEventListener('click', event => {
+    const button = event.target.closest('[data-launch-calculation]');
+    if (!button) return;
+    launchCalculation(button.dataset.launchCalculation);
+  });
   $('#closePlanBtn').addEventListener('click', () => $('#planDialog').close());
   $('#addPlanLineBtn').addEventListener('click', addPlanLine);
   $('#deletePlanLineBtn').addEventListener('click', deletePlanLine);
