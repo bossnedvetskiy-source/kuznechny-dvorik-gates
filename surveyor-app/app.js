@@ -501,12 +501,12 @@ function updateNetworkState() {
 
 function applyRoleUi() {
   const isOwner = currentUser?.role === 'owner';
-  $('#teamNavBtn').classList.toggle('hidden', !isOwner);
-  if (!isOwner && $('#teamScreen').classList.contains('active')) switchScreen('surveys');
+  $('#teamNavBtn')?.classList.toggle('hidden', !isOwner);
+  if (!isOwner && $('#teamScreen')?.classList.contains('active')) switchScreen('surveys');
   $('#profileBtn').textContent = (currentUser?.name || 'КД').split(/\s+/).slice(0,2).map(x => x[0]).join('').toUpperCase();
 }
 function switchScreen(name) {
-  const titles = { surveys: 'Замеры', clients: 'Клиенты', team: 'Сотрудники', settings: 'Ещё' };
+  const titles = { surveys: 'Замеры', calculators: 'Калькуляторы', clients: 'Клиенты', team: 'Сотрудники', settings: 'Ещё' };
   $$('.screen').forEach(el => el.classList.remove('active'));
   $(`#${name}Screen`)?.classList.add('active');
   $$('.nav-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.screen === name));
