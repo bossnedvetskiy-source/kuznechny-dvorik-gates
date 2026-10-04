@@ -20,7 +20,8 @@ for (const marker of [
   "function addPlanItem",
   "function workTypesEditorHtml",
   "data-save-work-types",
-  "configuration:x.configuration || {}"
+  "configuration:x.configuration || {}",
+  "url.searchParams.set('returnTo', location.pathname)"
 ]) {
   if (!app.includes(marker)) throw new Error('Surveyor app missing: '+marker);
 }
