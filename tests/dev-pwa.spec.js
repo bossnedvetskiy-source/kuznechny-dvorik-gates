@@ -36,7 +36,7 @@ test('single DEV work PWA starts in surveyor shell with card-based calculators',
   await card.locator('[data-quick-calculation]').click();
   await expect(page.locator('#calculationPickerDialog')).toBeVisible();
   await expect(page.locator('#calculationPickerDialog')).toContainText('Ворота');
-  await expect(page.locator('#calculationPickerDialog')).toContainText('Забор');
+  await expect(page.locator('#calculationPickerDialog')).toContainText('Евроштакетник');
   await expect(page.locator('#calculationPickerDialog')).toContainText('Навес');
   await page.locator('#closeCalculationPickerBtn').click();
 
