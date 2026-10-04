@@ -22,6 +22,20 @@ test('clean surveyor V2 installs independently and login works', async ({page}) 
   expect(manifest.id).toBe('/kuznechny-dvorik-gates/zamer-app-v2');
   expect(manifest.start_url).toBe('/kuznechny-dvorik-gates/zamer-app-v2/');
   expect(manifest.scope).toBe('/kuznechny-dvorik-gates/zamer-app-v2/');
+  expect(manifest.prefer_related_applications).toBe(false);
+  expect(manifest.icons).toEqual(expect.arrayContaining([
+    expect.objectContaining({src:'icon-192.png', sizes:'192x192', type:'image/png'}),
+    expect.objectContaining({src:'icon-512.png', sizes:'512x512', type:'image/png'})
+  ]));
+
+  for (const icon of ['icon-192.png','icon-512.png']) {
+    const status = await page.evaluate(async iconName => {
+      const r = await fetch('./' + iconName, {cache:'no-store'});
+      return {ok:r.ok, type:r.headers.get('content-type') || '', length:Number(r.headers.get('content-length') || 0)};
+    }, icon);
+    expect(status.ok).toBe(true);
+    expect(status.type).toContain('image/png');
+  }
 
   await page.locator('#loginInput').fill('zamer');
   await page.locator('#passwordInput').fill('1234');
