@@ -28,6 +28,7 @@ let activePlanItemId = '';
 let activeInsertIndex = null;
 let activeCalculationSurveyId = '';
 const CALC_TRANSFER_KEY = 'kd-surveyor-transfer-v1';
+const DEV_ACCESS_KEY = 'kuzdvor-dev-access-v1';
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
@@ -1108,6 +1109,9 @@ function showLogin() {
 function showMain() {
   $('#loginView').hidden = true;
   $('#mainView').hidden = false;
+  if (/\/dev-tools(?:\/|$)/.test(location.pathname)) {
+    try { localStorage.setItem(DEV_ACCESS_KEY, '1'); } catch {}
+  }
   applyRoleUi();
   switchScreen('surveys');
 }
@@ -1117,6 +1121,7 @@ async function logout() {
   }
   await metaDelete('serverToken');
   clearSession();
+  try { localStorage.removeItem(DEV_ACCESS_KEY); } catch {}
   currentUser = null;
   showLogin();
 }
