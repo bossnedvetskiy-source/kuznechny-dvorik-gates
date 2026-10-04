@@ -377,6 +377,20 @@ async function patchDevHtml(dir) {
 
       const navesTile = `      <a class="tile" href="${BASE}/naves/">
         <span class="tile-icon">⌁</span>
+        <span class="tile-copy"><b>Расчёт навеса</b><span>Размеры, конструкция, 3D и стоимость. Для замера результат добавляется прямо в карточку.</span></span>
+        <span class="arrow">›</span>
+      </a>
+`;
+      if (!html.includes('Расчёт навеса')) {
+        if (!html.includes(linksMarker)) throw new Error('DEV work app links tile marker was not found for canopy generator');
+        html = html.replace(linksMarker, navesTile + linksMarker);
+      }
+
+      // Старую DEV-админку не показываем в рабочем приложении замерщика.
+      // Все расчёты навеса сохраняются в карточке конкретного замера.
+      html = html.replace(
+        /\s*<a class="tile" href="${BASE.replace(/[.*+?^$()|[\]{}\\]/g,'\\      const navesTile = `      <a class="tile" href="${BASE}/naves/">
+        <span class="tile-icon">⌁</span>
         <span class="tile-copy"><b>Расчёт навеса</b><span>Клиентская цена, объёмная схема и сохранение расчёта в админ‑панель. Работает без сети.</span></span>
         <span class="arrow">›</span>
       </a>
@@ -395,7 +409,9 @@ async function patchDevHtml(dir) {
       if (!html.includes('Навесы — админ DEV')) {
         if (!html.includes(linksMarker)) throw new Error('DEV work app links tile marker was not found for canopy admin');
         html = html.replace(linksMarker, navesAdminTile + linksMarker);
-      }
+      }')}\/admin\.html">[\s\S]*?<\/a>/,
+        ''
+      );
     }
     await writeFile(full, html, 'utf8');
   }
