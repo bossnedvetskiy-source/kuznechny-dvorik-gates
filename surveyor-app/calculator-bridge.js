@@ -98,10 +98,13 @@
     };
   }
 
-  function takeSnapshot() {
+  async function takeSnapshot() {
     const type = typeFromPath();
     if (type === 'fence') return fenceSnapshot();
     if (type === 'canopy') return canopySnapshot();
+    if (window.GATE_CALC?.ready) {
+      try { await window.GATE_CALC.ready; } catch {}
+    }
     return gateSnapshot();
   }
 
@@ -146,9 +149,16 @@
     document.getElementById('kdSurveyorBridgeBack')?.addEventListener('click', () => {
       location.href = returnUrl();
     });
-    document.getElementById('kdSurveyorBridgeSave')?.addEventListener('click', () => {
+    document.getElementById('kdSurveyorBridgeSave')?.addEventListener('click', async event => {
+      const button = event.currentTarget;
+      if (button?.disabled) return;
+      if (button) {
+        button.disabled = true;
+        button.textContent = 'Добавляем…';
+      }
+      showMessage('Проверяем расчёт…');
       try {
-        const calc = takeSnapshot();
+        const calc = await takeSnapshot();
         const transfer = {
           version:1,
           surveyId,
@@ -160,16 +170,19 @@
         };
         localStorage.setItem(TRANSFER_KEY, JSON.stringify(transfer));
         showMessage(`Сохранено · ${money(calc.total)}`);
-        setTimeout(() => { location.href = returnUrl(); }, 180);
+        setTimeout(() => { location.href = returnUrl(); }, 120);
       } catch (error) {
         showMessage(error?.message || 'Не удалось сохранить расчёт', true);
+        if (button) {
+          button.disabled = false;
+          button.textContent = 'Добавить в замер';
+        }
       }
     });
 
-    try {
-      const calc = takeSnapshot();
+    takeSnapshot().then(calc => {
       showMessage(`${calc.title} · ${money(calc.total)}`);
-    } catch {}
+    }).catch(() => {});
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', install, {once:true});
