@@ -2,7 +2,7 @@ import {test, expect} from '@playwright/test';
 
 test.use({viewport:{width:390,height:844}});
 
-test('single DEV work PWA starts in surveyor shell and owns calculators', async ({page}) => {
+test('single DEV work PWA starts in surveyor shell with card-based calculators', async ({page}) => {
   await page.goto('/kuznechny-dvorik-gates/dev-tools/');
   await expect(page).toHaveTitle('КД Замерщик DEV');
   await expect(page.locator('#loginView')).toBeVisible();
@@ -24,11 +24,21 @@ test('single DEV work PWA starts in surveyor shell and owns calculators', async 
   await page.locator('#loginForm button[type="submit"]').click();
   await expect(page.locator('#mainView')).toBeVisible();
 
-  await page.locator('[data-screen="calculators"]').click();
-  await expect(page.locator('#calculatorsScreen')).toHaveClass(/active/);
-  await expect(page.locator('#calculatorsScreen')).toContainText('Ворота с калиткой');
-  await expect(page.locator('#calculatorsScreen')).toContainText('Евроштакетник');
-  await expect(page.locator('#calculatorsScreen')).toContainText('Навес');
+  await expect(page.locator('[data-screen="calculators"]')).toHaveCount(0);
+
+  await page.locator('#newSurveyBtn').click();
+  await page.locator('#surveyClientPhone').fill('89370000000');
+  await page.locator('#surveyAddress').fill('Мелеуз, PWA тест');
+  await page.locator('#saveSurveyBtn').click();
+
+  const card = page.locator('.survey-card').first();
+  await expect(card.locator('[data-quick-calculation]')).toBeVisible();
+  await card.locator('[data-quick-calculation]').click();
+  await expect(page.locator('#calculationPickerDialog')).toBeVisible();
+  await expect(page.locator('#calculationPickerDialog')).toContainText('Ворота');
+  await expect(page.locator('#calculationPickerDialog')).toContainText('Забор');
+  await expect(page.locator('#calculationPickerDialog')).toContainText('Навес');
+  await page.locator('#closeCalculationPickerBtn').click();
 
   for (const href of [
     '/kuznechny-dvorik-gates/?app=1',
