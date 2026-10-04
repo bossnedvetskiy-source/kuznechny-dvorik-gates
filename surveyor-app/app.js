@@ -548,15 +548,15 @@ async function renderSurveys() {
       <div class="sync-row"><span>${formatDate(survey.updatedAt)}</span><span class="${syncClass(survey.syncState)}">${syncLabel(survey.syncState)}</span></div>
     </article>`).join('');
   $('#surveyEmpty').hidden = surveys.length > 0;
-  $('[data-quick-calculation]', list).forEach(button => button.addEventListener('click', event => {
+  list.querySelectorAll('[data-quick-calculation]').forEach(button => button.addEventListener('click', event => {
     event.stopPropagation();
     openCalculationPicker(button.dataset.quickCalculation);
   }));
-  $('[data-open-survey]', list).forEach(button => button.addEventListener('click', event => {
+  list.querySelectorAll('[data-open-survey]').forEach(button => button.addEventListener('click', event => {
     event.stopPropagation();
     openSurveyDetails(button.dataset.openSurvey);
   }));
-  $('.survey-card', list).forEach(card => card.addEventListener('click', () => openSurveyDetails(card.dataset.surveyId)));
+  list.querySelectorAll('.survey-card').forEach(card => card.addEventListener('click', () => openSurveyDetails(card.dataset.surveyId)));
 }
 
 async function renderClients(query = '') {
