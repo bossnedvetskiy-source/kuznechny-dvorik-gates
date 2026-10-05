@@ -87,19 +87,21 @@
 .calculation-grand-total{font-size:20px;color:#8a620f;white-space:nowrap}
 .calculation-list{display:grid;gap:9px;margin-bottom:10px}
 .calculation-empty{padding:14px;border:1px dashed #d8d5cc;border-radius:14px;color:var(--muted);font-size:12px;text-align:center}
-.calculation-card{display:grid;grid-template-columns:58px minmax(0,1fr) auto;gap:11px;align-items:start;background:#f8f7f3;border:1px solid #e9e5da;border-radius:16px;padding:11px}
+.calculation-card{display:grid;grid-template-columns:58px minmax(0,1fr) auto;gap:11px;align-items:start;background:#f8f7f3;border:1px solid #e9e5da;border-radius:16px;padding:11px;cursor:pointer;transition:.14s}
+.calculation-card:active{transform:scale(.995);background:#f5f2ea}.calculation-card:focus-visible{outline:3px solid rgba(199,150,53,.24);outline-offset:2px}
 .calculation-card>img,.calculation-card-icon{width:58px;height:58px;border-radius:12px;object-fit:cover;background:#171717;color:var(--gold-2);display:grid;place-items:center;font-size:22px}
 .calculation-card-icon.fence{background:#26372d}.calculation-card-icon.canopy{background:#2b3241}
 .calculation-card-copy{min-width:0;display:grid;gap:4px}.calculation-card-copy>small{font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.06em;color:#9a782f}.calculation-card-copy>b{font-size:13px;line-height:1.25}
 .calculation-card-lines{display:grid;gap:2px}.calculation-card-lines>span{font-size:10.5px;line-height:1.3;color:#5f5b53}
 .calculation-card-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:2px}.calculation-card-tags>span{font-size:9px;line-height:1.15;font-weight:800;color:#6d5a2b;background:#fff7e5;border:1px solid #ead9af;border-radius:999px;padding:4px 6px}
 .calculation-card-fence .calculation-card-tags>span{background:#edf5ef;border-color:#d7e7db;color:#3d654b}.calculation-card-canopy .calculation-card-tags>span{background:#eef1f7;border-color:#dce2ee;color:#4b5d7d}
-.calculation-card-price{display:grid;justify-items:end;gap:7px}.calculation-card-price>b{font-size:13px;white-space:nowrap;color:#6f5010}.calculation-card-price button{width:27px;height:27px;border:0;border-radius:9px;background:#efe9e5;color:#9d3c3c;font-size:16px;line-height:1}
+.calculation-card-price{display:grid;justify-items:end;gap:7px}.calculation-card-price>b{font-size:13px;white-space:nowrap;color:#6f5010}.calculation-card-actions{display:flex;align-items:center;gap:5px}.calculation-card-actions button{border:0;border-radius:9px;font-weight:850}.calculation-edit-btn{min-height:27px;padding:0 8px;background:#fff2cf;color:#76530e;font-size:9px}.calculation-delete-btn{width:27px;height:27px;background:#efe9e5;color:#9d3c3c;font-size:16px;line-height:1}
 @media(max-width:520px){
   .calculation-card{grid-template-columns:52px minmax(0,1fr);gap:10px}
   .calculation-card>img,.calculation-card-icon{width:52px;height:52px}
   .calculation-card-price{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;border-top:1px solid #ebe6da;padding-top:9px;margin-top:1px}
   .calculation-card-price>b{font-size:15px}
+  .calculation-edit-btn{min-height:30px;padding:0 10px;font-size:10px}
 }
 .calculation-picker-grid{display:grid;gap:10px}
 .calculation-picker-grid>button{display:grid;grid-template-columns:48px minmax(0,1fr);grid-template-rows:auto auto;column-gap:11px;text-align:left;border:1px solid var(--line);border-radius:16px;background:#fff;padding:12px;color:var(--text)}
