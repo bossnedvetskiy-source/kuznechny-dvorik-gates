@@ -118,7 +118,9 @@
   function install() {
     if (document.getElementById('kdSurveyorBridge')) return;
     const calculatorType = typeFromPath();
+    const calculatorLabel = calculatorType === 'gates' ? 'Ворота' : calculatorType === 'fence' ? 'Евроштакетник' : 'Навес';
     document.documentElement.classList.add('kd-surveyor-mode', `kd-surveyor-${calculatorType}`);
+    document.title = `КД Замерщик · ${calculatorLabel}`;
     const style = document.createElement('style');
     style.textContent = `
       body{padding-bottom:max(88px,calc(76px + env(safe-area-inset-bottom)))!important}
@@ -131,8 +133,71 @@
       #kdSurveyorBridge .kd-copy b{display:block;font-size:12px;color:#e7c36f}
       #kdSurveyorBridge .kd-copy span{display:block;font-size:10px;color:#c8c8c8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
       #kdSurveyorBridgeMessage.is-error{color:#ffaaaa!important}
-      .kd-surveyor-canopy #showSave,.kd-surveyor-canopy #savePanel{display:none!important}
-      @media(max-width:520px){#kdSurveyorBridge .kd-row{grid-template-columns:46px minmax(0,1fr) auto}#kdSurveyorBridge .kd-back{font-size:0;padding:8px}#kdSurveyorBridge .kd-back:before{content:'←';font-size:20px}}
+
+      /* Surveyor mode: keep the calculators intact, but remove customer-facing
+         marketing, lead forms and duplicate save/share actions. These rules only
+         exist when the calculator is opened from a survey card (?surveyor=1). */
+      .kd-surveyor-gates .topbar,
+      .kd-surveyor-gates .hero,
+      .kd-surveyor-gates .package,
+      .kd-surveyor-gates .trust,
+      .kd-surveyor-gates .order-steps,
+      .kd-surveyor-gates .faq,
+      .kd-surveyor-gates .privacy-section,
+      .kd-surveyor-gates .final-cta,
+      .kd-surveyor-gates footer,
+      .kd-surveyor-gates #leadBackdrop,
+      .kd-surveyor-gates #policyModal,
+      .kd-surveyor-gates #successModal,
+      .kd-surveyor-gates #leadSheetClose,
+      .kd-surveyor-gates .mobile-lead-heading,
+      .kd-surveyor-gates .lead-fields,
+      .kd-surveyor-gates #leadRequest>.consent-row,
+      .kd-surveyor-gates #sendButton,
+      .kd-surveyor-gates #copyButton,
+      .kd-surveyor-gates .privacy-copy,
+      .kd-surveyor-gates #mobileMeasureButton{display:none!important}
+      .kd-surveyor-gates .catalog{padding-top:22px!important;padding-bottom:30px!important}
+      .kd-surveyor-gates .catalog .section-head{margin-bottom:18px!important}
+      .kd-surveyor-gates .calculator{padding-top:24px!important;padding-bottom:28px!important}
+      .kd-surveyor-gates .calculator>.section-head.light p{display:none!important}
+      .kd-surveyor-gates #leadRequest{margin-bottom:8px}
+      .kd-surveyor-gates .estimate-card{top:12px}
+
+      .kd-surveyor-fence .topbar,
+      .kd-surveyor-fence .hero,
+      .kd-surveyor-fence .trust-strip,
+      .kd-surveyor-fence .process-section,
+      .kd-surveyor-fence #leadSection,
+      .kd-surveyor-fence .footer,
+      .kd-surveyor-fence #resultLeadButton,
+      .kd-surveyor-fence .result-call,
+      .kd-surveyor-fence #quoteMainActions,
+      .kd-surveyor-fence #quoteMoreActions,
+      .kd-surveyor-fence #savedQuoteBar,
+      .kd-surveyor-fence #resultNote,
+      .kd-surveyor-fence .mobile-quote-bar{display:none!important}
+      .kd-surveyor-fence .calculator{padding-top:18px!important}
+      .kd-surveyor-fence .scheme-section{padding-bottom:28px!important}
+
+      .kd-surveyor-canopy .topbar,
+      .kd-surveyor-canopy .hero,
+      .kd-surveyor-canopy #showSave,
+      .kd-surveyor-canopy #savePanel,
+      .kd-surveyor-canopy .client-info-strip,
+      .kd-surveyor-canopy .client-price-note{display:none!important}
+      .kd-surveyor-canopy .page{padding-top:12px!important}
+      .kd-surveyor-canopy .workspace{margin-top:0!important}
+
+      @media(max-width:520px){
+        #kdSurveyorBridge .kd-row{grid-template-columns:46px minmax(0,1fr) auto}
+        #kdSurveyorBridge .kd-back{font-size:0;padding:8px}
+        #kdSurveyorBridge .kd-back:before{content:'←';font-size:20px}
+        .kd-surveyor-gates .catalog{padding-top:14px!important;padding-bottom:20px!important}
+        .kd-surveyor-gates .calculator{padding-top:16px!important}
+        .kd-surveyor-fence .calculator{padding-top:10px!important}
+        .kd-surveyor-canopy .page{padding-top:8px!important}
+      }
     `;
     document.head.append(style);
 
