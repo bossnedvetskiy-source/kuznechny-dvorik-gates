@@ -4,6 +4,8 @@
   if (params.get('surveyor') !== '1' || !surveyId) return;
 
   const TRANSFER_KEY = 'kd-surveyor-transfer-v1';
+  const EDIT_KEY = 'kd-surveyor-edit-v1';
+  const editId = params.get('edit') || '';
   const scriptUrl = new URL(document.currentScript?.src || location.href);
   const scriptPath = scriptUrl.pathname;
   const requestedReturn = params.get('returnTo') || '';
@@ -27,6 +29,90 @@
     return 'gates';
   }
 
+  function readEditState() {
+    if (!editId) return null;
+    try {
+      const state = JSON.parse(localStorage.getItem(EDIT_KEY) || 'null');
+      if (!state || state.surveyId !== surveyId || state.calculationId !== editId || !state.calculation) return null;
+      if (state.calculation.type !== typeFromPath()) return null;
+      return state;
+    } catch {
+      return null;
+    }
+  }
+
+  function waitFor(test, timeout = 15000) {
+    const started = Date.now();
+    return new Promise((resolve, reject) => {
+      const tick = () => {
+        let value = null;
+        try { value = test(); } catch {}
+        if (value) return resolve(value);
+        if (Date.now() - started >= timeout) return reject(new Error('Калькулятор не успел загрузиться'));
+        setTimeout(tick, 50);
+      };
+      tick();
+    });
+  }
+
+  async function restoreGateCalculation(item) {
+    if (window.GATE_CALC?.ready) { try { await window.GATE_CALC.ready; } catch {} }
+    const api = await waitFor(() => window.GATE_PAGE_API);
+    await waitFor(() => window.KUZDVOR_GATE_APP?.snapshot);
+    const payload = item?.payload || {};
+    const config = payload.configuration || {};
+    const article = payload.article || config.article || '';
+    if (article && !api.showProductByArticle?.(article, {open:true})) throw new Error('Не удалось открыть сохранённый Арт.');
+    const setNumber = (id, value) => {
+      const input = document.getElementById(id);
+      if (!input || !(Number(value) > 0)) return;
+      input.value = String(value);
+      input.dispatchEvent(new Event('input', {bubbles:true}));
+    };
+    setNumber('widthInput', payload.width ?? config.width);
+    setNumber('heightInput', payload.height ?? config.height);
+    setNumber('wicketWidthInput', payload.wicketWidth ?? config.wicketWidth);
+    setNumber('wicketHeightInput', payload.wicketHeight ?? config.wicketHeight);
+    const posts = document.getElementById('postsCheck');
+    if (posts) {
+      posts.checked = Boolean(payload.posts ?? config.posts);
+      posts.dispatchEvent(new Event('change', {bubbles:true}));
+    }
+    if (payload.city && api.setDeliveryPlace) { try { await api.setDeliveryPlace(payload.city); } catch {} }
+  }
+
+  async function restoreFenceCalculation(item) {
+    const api = await waitFor(() => window.KUZDVOR_FENCE_APP?.restore ? window.KUZDVOR_FENCE_APP : null);
+    if (api.ready) { try { await api.ready; } catch {} }
+    const config = item?.payload?.configuration || {};
+    const delivery = config.delivery || {};
+    const state = {
+      quoteNumber: config.quoteNumber || '',
+      type: config.fenceType || '',
+      post: config.postType || '',
+      includeNewPosts: config.includeNewPosts !== false,
+      existingPostsCount: Number(config.existingPostsCount) || 0,
+      siteConditions: config.siteConditions || {},
+      sections: Array.isArray(config.sections) ? config.sections : [],
+      delivery: {manual:false, manualPrice:0, name:delivery.name || item?.payload?.city || '', secondary:'', price:Number(delivery.price) || 0}
+    };
+    if (!api.restore(state)) throw new Error('Не удалось восстановить расчёт забора');
+  }
+
+  async function restoreCanopyCalculation(item) {
+    const api = await waitFor(() => window.TrussApp?.restore ? window.TrussApp : null);
+    const snap = item?.payload?.configuration?.canopy;
+    if (!snap || !api.restore(snap)) throw new Error('Не удалось восстановить расчёт навеса');
+  }
+
+  async function restoreEditingCalculation(editState) {
+    if (!editState?.calculation) return false;
+    const type = typeFromPath();
+    if (type === 'gates') await restoreGateCalculation(editState.calculation);
+    else if (type === 'fence') await restoreFenceCalculation(editState.calculation);
+    else await restoreCanopyCalculation(editState.calculation);
+    return true;
+  }
   function money(value) {
     return new Intl.NumberFormat('ru-RU').format(Math.round(Number(value) || 0)) + ' ₽';
   }
