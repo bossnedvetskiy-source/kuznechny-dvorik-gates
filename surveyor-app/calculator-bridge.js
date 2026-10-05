@@ -79,6 +79,13 @@
       posts.dispatchEvent(new Event('change', {bubbles:true}));
     }
     if (payload.city && api.setDeliveryPlace) { try { await api.setDeliveryPlace(payload.city); } catch {} }
+    const dimensions = document.getElementById('gateDimensions');
+    const sizeToggle = document.getElementById('sizeToggle');
+    dimensions?.classList.add('is-open');
+    if (sizeToggle) {
+      sizeToggle.textContent = 'Скрыть';
+      sizeToggle.setAttribute('aria-expanded', 'true');
+    }
   }
 
   async function restoreFenceCalculation(item) {
