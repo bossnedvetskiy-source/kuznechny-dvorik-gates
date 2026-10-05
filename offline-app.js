@@ -1,7 +1,8 @@
 (() => {
   if (!('serviceWorker' in navigator)) return;
   const params=new URLSearchParams(location.search);
-  const appMode=(window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches)||params.get('app')==='1';
+  const surveyorMode=params.get('surveyor')==='1';
+  const appMode=!surveyorMode&&((window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches)||params.get('app')==='1');
   const APP_BUILD='2026-09-27-v11';
   let installPrompt=null;
   let badge=null;
@@ -85,7 +86,7 @@
   window.addEventListener('offline',()=>setStatus('Офлайн-режим · сайт работает без сети'));
   window.addEventListener('online',()=>{setStatus('Связь появилась');post('GET_OFFLINE_STATUS');post('CHECK_OFFLINE_UPDATE',{auto:true,allowInitial:false});post('FLUSH_LEADS')});
   window.addEventListener('beforeinstallprompt',event=>{
-    if(params.get('app')!=='1')return;
+    if(surveyorMode||params.get('app')!=='1')return;
     event.preventDefault();
     installPrompt=event;
     const node=ensureBadge();
