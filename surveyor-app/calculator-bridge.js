@@ -191,14 +191,28 @@
     };
   }
 
+  async function waitForGateSnapshot(timeout = 4000) {
+    if (window.GATE_CALC?.ready) {
+      try { await window.GATE_CALC.ready; } catch {}
+    }
+    const started = Date.now();
+    let lastError = null;
+    while (Date.now() - started < timeout) {
+      try {
+        return gateSnapshot();
+      } catch (error) {
+        lastError = error;
+      }
+      await new Promise(resolve => setTimeout(resolve, 80));
+    }
+    throw lastError || new Error('Калькулятор ворот ещё не готов');
+  }
+
   async function takeSnapshot() {
     const type = typeFromPath();
     if (type === 'fence') return fenceSnapshot();
     if (type === 'canopy') return canopySnapshot();
-    if (window.GATE_CALC?.ready) {
-      try { await window.GATE_CALC.ready; } catch {}
-    }
-    return gateSnapshot();
+    return waitForGateSnapshot();
   }
 
   function showMessage(message, error = false) {
