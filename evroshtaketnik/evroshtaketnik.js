@@ -62,6 +62,8 @@ let toastTimer = 0;
 let draftTimer = 0;
 let quoteNumber = '';
 let restoringState = false;
+let resolveSurveyorReady;
+const surveyorReady = new Promise(resolve => { resolveSurveyorReady = resolve; });
 
 function sectionMarkup(index) {
   const n = index + 1;
@@ -1421,7 +1423,8 @@ window.KUZDVOR_FENCE_APP = {
   snapshot: () => leadPayload(),
   quoteText: () => quoteText(),
   quoteState: () => quoteState(),
-  restore: state => restoreQuoteState(state)
+  restore: state => restoreQuoteState(state),
+  ready: surveyorReady
 };
 
 addSectionButton.addEventListener('click', () => {
@@ -1566,3 +1569,4 @@ if (sharedState && restoreQuoteState(sharedState, {fromLink:true})) {
   const draftState = readDraftQuote();
   if (!draftState || !restoreQuoteState(draftState, {fromDraft:true})) calculate();
 }
+resolveSurveyorReady?.(true);
