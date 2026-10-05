@@ -1097,7 +1097,7 @@ async function openSurveyDetails(id) {
   $('[data-save-work-types]')?.addEventListener('click', () => saveSurveyWorkTypes(survey.id));
   $('[data-add-calculation]')?.addEventListener('click', () => openCalculationPicker(survey.id));
   const detailsRoot = $('#surveyDetailsContent');
-  $('[data-edit-calculation]', detailsRoot).forEach(card => {
+  $$('[data-edit-calculation]', detailsRoot).forEach(card => {
     const openEdit = event => {
       if (event?.target?.closest?.('[data-delete-calculation]')) return;
       if (event?.type === 'keydown' && !['Enter',' '].includes(event.key)) return;
@@ -1107,7 +1107,7 @@ async function openSurveyDetails(id) {
     card.addEventListener('click', openEdit);
     card.addEventListener('keydown', openEdit);
   });
-  $('[data-delete-calculation]', detailsRoot).forEach(button => button.addEventListener('click', event => {
+  $$('[data-delete-calculation]', detailsRoot).forEach(button => button.addEventListener('click', event => {
     event.stopPropagation();
     deleteCalculation(survey.id, button.dataset.deleteCalculation);
   }));
