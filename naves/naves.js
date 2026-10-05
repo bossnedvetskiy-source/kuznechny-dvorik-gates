@@ -143,7 +143,7 @@ function snapshot(){
     savedAt:new Date().toISOString(),
     input:{
       widthPostsM:raw.widthPostsM,lengthM:raw.lengthM,visibleHeightM:raw.visibleHeightM,
-      installType:raw.installType,coverage:raw.coverage,farmType:raw.farmType,farmPreset:raw.farmPreset,trussType:raw.trussType,lagMode:raw.lagMode,riseMm:raw.riseMm,heightMm:raw.heightMm,
+      installType:raw.installType,coverage:raw.coverage,farmType:raw.farmType,farmPreset:raw.farmPreset,trussType:raw.trussType,lagMode:raw.lagMode,riseMm:raw.riseMm,autoRise:Boolean($('autoRise')?.checked),heightMm:raw.heightMm,
       overhangMm:raw.overhangMm,endFlatMm:raw.endFlatMm,cellStepMm:raw.cellStepMm,
       materialMode:raw.materialMode,existingPosts:raw.existingPosts,beamsExisting:raw.beamsExisting,
       postsNeeded:raw.postsNeeded,paint:raw.paint,delivery:raw.delivery
@@ -270,7 +270,10 @@ function restoreSnapshot(saved){
   setValue('coverage',input.coverage);
   setValue('materialMode',input.materialMode);
   setValue('rise',input.riseMm);
-  setValue('autoRise',input.autoRise);
+  const inferredAutoRise = input.autoRise !== undefined
+    ? Boolean(input.autoRise)
+    : Math.abs((Number(input.riseMm)||0) - Math.round((Number(input.widthPostsM)||3.4)*1000/6)) < 15;
+  setValue('autoRise',inferredAutoRise);
   setValue('trussHeight',input.heightMm);
   setValue('existingPosts',input.existingPosts);
   setValue('beamsExisting',input.beamsExisting);
