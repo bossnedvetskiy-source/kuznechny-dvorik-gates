@@ -254,6 +254,55 @@ window.addEventListener('canopy3d-ready',()=>{
   const g=window.__TRUSS_CURRENT,c=window.__CANOPY_PUBLIC,viewport=$('canopyViewport');
   if(g?.ok&&c&&viewport) window.Canopy3D.render(viewport,g,c);
 },{once:true});
-window.TrussApp={render,rawInput,loadAdminPrices,snapshot};
+function restoreSnapshot(saved){
+  const snap=saved && typeof saved==='object' ? saved : {};
+  const input=snap.input && typeof snap.input==='object' ? snap.input : {};
+  const setValue=(id,value)=>{
+    const node=$(id);
+    if(!node || value===undefined || value===null)return;
+    if(node.type==='checkbox')node.checked=Boolean(value);
+    else node.value=String(value);
+  };
+  setValue('widthPosts',input.widthPostsM);
+  setValue('lengthPosts',input.lengthM);
+  setValue('visibleHeight',input.visibleHeightM);
+  setValue('installType',input.installType);
+  setValue('coverage',input.coverage);
+  setValue('materialMode',input.materialMode);
+  setValue('rise',input.riseMm);
+  setValue('autoRise',input.autoRise);
+  setValue('trussHeight',input.heightMm);
+  setValue('existingPosts',input.existingPosts);
+  setValue('beamsExisting',input.beamsExisting);
+  setValue('paint',input.paint);
+  setValue('farmType',input.farmType);
+  setValue('farmPreset',input.farmPreset);
+  setValue('trussType',input.trussType);
+  setValue('lagMode',input.lagMode);
+
+  if(input.farmType){
+    if(farmCaption)farmCaption.textContent=input.farmType;
+    document.querySelectorAll('[data-farm-type]').forEach(button=>{
+      const selected=button.dataset.farmType===input.farmType;
+      button.classList.toggle('is-selected',selected);
+      button.setAttribute('aria-checked',selected?'true':'false');
+    });
+  }
+  const syncButtons=(selector,key,value)=>{
+    if(!value)return;
+    document.querySelectorAll(selector).forEach(button=>{
+      const selected=button.dataset[key]===value;
+      button.classList.toggle('is-selected',selected);
+      button.setAttribute('aria-checked',selected?'true':'false');
+    });
+  };
+  syncButtons('[data-preset-option]','presetOption',input.farmPreset);
+  syncButtons('[data-truss-option]','trussOption',input.trussType);
+  syncButtons('[data-lag-option]','lagOption',input.lagMode);
+  userTouched=true;
+  render();
+  return true;
+}
+window.TrussApp={render,rawInput,loadAdminPrices,snapshot,restore:restoreSnapshot};
 render();
 })();
