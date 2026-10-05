@@ -28,6 +28,7 @@ let activePlanItemId = '';
 let activeInsertIndex = null;
 let activeCalculationSurveyId = '';
 const CALC_TRANSFER_KEY = 'kd-surveyor-transfer-v1';
+const CALC_EDIT_KEY = 'kd-surveyor-edit-v1';
 const DEV_ACCESS_KEY = 'kuzdvor-dev-access-v1';
 
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -976,7 +977,7 @@ function calculationsHtml(survey) {
     <div class="calculation-list">
       ${rows.map(item=>{
         const details = calculationCardDetails(item);
-        return `<article class="calculation-card calculation-card-${escapeHtml(item.type)}">
+        return `<article class="calculation-card calculation-card-${escapeHtml(item.type)}" data-edit-calculation="${escapeHtml(item.id)}" role="button" tabindex="0" aria-label="Изменить расчёт: ${escapeHtml(details.title)}">
           ${item.image ? `<img src="${escapeHtml(item.image)}" alt="" loading="lazy">` : `<div class="calculation-card-icon ${escapeHtml(item.type)}">${item.type==='gates'?'▰':item.type==='fence'?'▥':'⌒'}</div>`}
           <div class="calculation-card-copy">
             <small>${escapeHtml(calculationTypeLabel(item.type))}</small>
@@ -984,7 +985,13 @@ function calculationsHtml(survey) {
             ${details.lines.length ? `<div class="calculation-card-lines">${details.lines.map(line=>`<span>${escapeHtml(line)}</span>`).join('')}</div>` : ''}
             ${details.tags.length ? `<div class="calculation-card-tags">${details.tags.map(tag=>`<span>${escapeHtml(tag)}</span>`).join('')}</div>` : ''}
           </div>
-          <div class="calculation-card-price"><b>${formatMoney(item.total)}</b><button type="button" data-delete-calculation="${escapeHtml(item.id)}" aria-label="Удалить расчёт">×</button></div>
+          <div class="calculation-card-price">
+            <b>${formatMoney(item.total)}</b>
+            <div class="calculation-card-actions">
+              <button type="button" class="calculation-edit-btn" data-edit-calculation-button="${escapeHtml(item.id)}">Изменить</button>
+              <button type="button" class="calculation-delete-btn" data-delete-calculation="${escapeHtml(item.id)}" aria-label="Удалить расчёт">×</button>
+            </div>
+          </div>
         </article>`;
       }).join('') || '<div class="calculation-empty">Пока нет сохранённых расчётов.</div>'}
     </div>
@@ -995,8 +1002,9 @@ function openCalculationPicker(surveyId) {
   activeCalculationSurveyId = surveyId;
   $('#calculationPickerDialog')?.showModal();
 }
-function launchCalculation(type) {
-  if (!activeCalculationSurveyId) return;
+function launchCalculation(type, options = {}) {
+  const surveyId = options.surveyId || activeCalculationSurveyId;
+  if (!surveyId) return;
   const root = new URL('../', location.href);
   let url;
   if (type === 'fence') url = new URL('evroshtaketnik/', root);
@@ -1004,9 +1012,26 @@ function launchCalculation(type) {
   else url = new URL(root.href);
   if (type === 'gates') url.searchParams.set('app','1');
   url.searchParams.set('surveyor','1');
-  url.searchParams.set('survey',activeCalculationSurveyId);
+  url.searchParams.set('survey',surveyId);
+  if (options.editId) url.searchParams.set('edit', options.editId);
   url.searchParams.set('returnTo', location.pathname);
   location.href = url.href;
+}
+async function editCalculation(surveyId, calculationId) {
+  const survey = await idbGet('surveys', surveyId);
+  const item = surveyCalculations(survey).find(row => row.id === calculationId);
+  if (!survey || !item) return showToast('Расчёт не найден');
+  try {
+    localStorage.setItem(CALC_EDIT_KEY, JSON.stringify({
+      version:1,
+      surveyId,
+      calculationId:item.id,
+      calculation:item
+    }));
+  } catch {
+    return showToast('Не удалось открыть расчёт для изменения');
+  }
+  launchCalculation(item.type, {surveyId, editId:item.id});
 }
 async function deleteCalculation(surveyId, calculationId) {
   const survey = await idbGet('surveys', surveyId);
@@ -1032,7 +1057,9 @@ async function consumeCalculationTransfer() {
   if (!survey) return '';
   survey.configuration = survey.configuration && typeof survey.configuration === 'object' ? survey.configuration : {};
   const rows = Array.isArray(survey.configuration.calculations) ? survey.configuration.calculations : [];
-  if (!rows.some(item => item.id === transfer.calculation.id)) rows.push(transfer.calculation);
+  const existingIndex = rows.findIndex(item => item.id === transfer.calculation.id);
+  if (existingIndex >= 0) rows[existingIndex] = transfer.calculation;
+  else rows.push(transfer.calculation);
   survey.configuration.calculations = rows;
   const workType = transfer.calculation.type === 'gates' ? 'gates' : transfer.calculation.type === 'fence' ? 'fence' : transfer.calculation.type === 'canopy' ? 'canopy' : '';
   if (workType && !survey.workTypes.includes(workType)) survey.workTypes.push(workType);
@@ -1069,7 +1096,18 @@ async function openSurveyDetails(id) {
   $('[data-edit-plan]')?.addEventListener('click', () => openPlanEditor(survey.id));
   $('[data-save-work-types]')?.addEventListener('click', () => saveSurveyWorkTypes(survey.id));
   $('[data-add-calculation]')?.addEventListener('click', () => openCalculationPicker(survey.id));
-  $('[data-delete-calculation]', $('#surveyDetailsContent')).forEach(button => button.addEventListener('click', event => {
+  const detailsRoot = $('#surveyDetailsContent');
+  $('[data-edit-calculation]', detailsRoot).forEach(card => {
+    const openEdit = event => {
+      if (event?.target?.closest?.('[data-delete-calculation]')) return;
+      if (event?.type === 'keydown' && !['Enter',' '].includes(event.key)) return;
+      event?.preventDefault?.();
+      editCalculation(survey.id, card.dataset.editCalculation);
+    };
+    card.addEventListener('click', openEdit);
+    card.addEventListener('keydown', openEdit);
+  });
+  $('[data-delete-calculation]', detailsRoot).forEach(button => button.addEventListener('click', event => {
     event.stopPropagation();
     deleteCalculation(survey.id, button.dataset.deleteCalculation);
   }));
