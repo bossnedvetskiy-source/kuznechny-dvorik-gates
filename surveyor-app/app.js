@@ -872,6 +872,99 @@ function surveyCalculationsTotal(survey) {
 function calculationTypeLabel(type) {
   return type === 'gates' ? 'Ворота' : type === 'fence' ? 'Забор' : type === 'canopy' ? 'Навес' : 'Расчёт';
 }
+function calcNumber(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? trimNumber(number) : '';
+}
+function tubeLabel(value) {
+  return String(value || '').trim().replace(/[xх*]/gi, '×');
+}
+function calculationCardDetails(item) {
+  const payload = item?.payload && typeof item.payload === 'object' ? item.payload : {};
+  const config = payload.configuration && typeof payload.configuration === 'object' ? payload.configuration : {};
+  const fallback = { title:item.title || calculationTypeLabel(item.type), lines:item.summary ? [item.summary] : [], tags:[] };
+
+  if (item.type === 'gates') {
+    const article = payload.article || config.article || '';
+    const width = payload.width ?? config.width;
+    const height = payload.height ?? config.height;
+    const wicketWidth = payload.wicketWidth ?? config.wicketWidth;
+    const wicketHeight = payload.wicketHeight ?? config.wicketHeight;
+    const lines = [];
+    if (Number(width) > 0 && Number(height) > 0) lines.push(`Ворота ${calcNumber(width)} × ${calcNumber(height)} м`);
+    if (Number(wicketWidth) > 0 && Number(wicketHeight) > 0) lines.push(`Калитка ${calcNumber(wicketWidth)} × ${calcNumber(wicketHeight)} м`);
+    const tags = [
+      payload.posts ?? config.posts ? 'Новые усиленные столбы' : 'Готовые столбы',
+      payload.city ? `Доставка: ${payload.city}` : (payload.deliveryPending ? 'Доставка не рассчитана' : '')
+    ].filter(Boolean);
+    return {
+      title: article ? `Ворота с калиткой · ${article}` : (item.title || 'Ворота с калиткой'),
+      lines: lines.length ? lines : fallback.lines,
+      tags
+    };
+  }
+
+  if (item.type === 'fence') {
+    const summary = config.summary && typeof config.summary === 'object' ? config.summary : {};
+    const sections = Array.isArray(config.sections) ? config.sections : [];
+    const heights = [...new Set(sections.map(section => calcNumber(section?.height)).filter(Boolean))];
+    const totalLength = Number(summary.totalLength);
+    const totalSpans = Number(summary.totalSpans);
+    const newPosts = Number(summary.newPosts);
+    const existingPosts = Number(summary.existingPostsUsed ?? config.existingPostsCount);
+    const lines = [];
+    if (totalLength > 0) {
+      const sectionText = sections.length ? ` · ${sections.length} ${plural(sections.length,['участок','участка','участков'])}` : '';
+      lines.push(`Длина ${calcNumber(totalLength)} м${sectionText}`);
+    }
+    const construction = [
+      heights.length ? `Высота ${heights.join(' / ')} м` : '',
+      config.postType ? `Столбы ${tubeLabel(config.postType)}` : ''
+    ].filter(Boolean).join(' · ');
+    if (construction) lines.push(construction);
+    const postText = config.includeNewPosts === false
+      ? 'Столбы заказчика'
+      : newPosts > 0
+        ? `Новых столбов: ${newPosts}${existingPosts > 0 ? ` · готовых: ${existingPosts}` : ''}`
+        : existingPosts > 0 ? `Готовых столбов: ${existingPosts}` : '';
+    const tags = [
+      config.fenceTypeLabel || '',
+      totalSpans > 0 ? `${totalSpans} ${plural(totalSpans,['пролёт','пролёта','пролётов'])}` : '',
+      postText,
+      config.delivery?.name ? `Доставка: ${config.delivery.name}` : ''
+    ].filter(Boolean);
+    return { title:item.title || 'Забор из евроштакетника', lines:lines.length ? lines : fallback.lines, tags };
+  }
+
+  if (item.type === 'canopy') {
+    const snap = config.canopy && typeof config.canopy === 'object' ? config.canopy : {};
+    const input = snap.input && typeof snap.input === 'object' ? snap.input : {};
+    const lines = [];
+    if (Number(input.widthPostsM) > 0 && Number(input.lengthM) > 0) {
+      lines.push(`Размер ${calcNumber(input.widthPostsM)} × ${calcNumber(input.lengthM)} м${Number(input.visibleHeightM) > 0 ? ` · высота ${calcNumber(input.visibleHeightM)} м` : ''}`);
+    }
+    const truss = [
+      input.materialMode ? `ферма ${tubeLabel(input.materialMode)}` : '',
+      input.trussType ? `обрешётка ${input.trussType.toLowerCase()}` : ''
+    ].filter(Boolean).join(' · ');
+    if (truss) lines.push(truss);
+    const support = [];
+    if (Number(input.existingPosts) > 0) support.push(`готовые столбы: ${Number(input.existingPosts)}`);
+    else if (input.postsNeeded !== false) support.push('новые столбы');
+    if (input.beamsExisting) support.push('балки уже есть');
+    if (input.paint === false) support.push('без покраски');
+    else if (input.paint === true) support.push('с покраской');
+    const tags = [
+      input.farmType || '',
+      input.coverage || '',
+      input.installType || '',
+      support.join(' · ')
+    ].filter(Boolean);
+    return { title:item.title || (input.farmType ? `${input.farmType} навес` : 'Навес'), lines:lines.length ? lines : fallback.lines, tags };
+  }
+
+  return fallback;
+}
 function calculationsHtml(survey) {
   const rows = surveyCalculations(survey);
   const total = surveyCalculationsTotal(survey);
@@ -881,15 +974,19 @@ function calculationsHtml(survey) {
       ${rows.length ? `<strong class="calculation-grand-total">${formatMoney(total)}</strong>` : ''}
     </div>
     <div class="calculation-list">
-      ${rows.map(item=>`<article class="calculation-card">
-        ${item.image ? `<img src="${escapeHtml(item.image)}" alt="" loading="lazy">` : `<div class="calculation-card-icon ${escapeHtml(item.type)}">${item.type==='gates'?'▰':item.type==='fence'?'▥':'⌒'}</div>`}
-        <div class="calculation-card-copy">
-          <small>${escapeHtml(calculationTypeLabel(item.type))}</small>
-          <b>${escapeHtml(item.title || calculationTypeLabel(item.type))}</b>
-          <span>${escapeHtml(item.summary || '')}</span>
-        </div>
-        <div class="calculation-card-price"><b>${formatMoney(item.total)}</b><button type="button" data-delete-calculation="${escapeHtml(item.id)}" aria-label="Удалить расчёт">×</button></div>
-      </article>`).join('') || '<div class="calculation-empty">Пока нет сохранённых расчётов.</div>'}
+      ${rows.map(item=>{
+        const details = calculationCardDetails(item);
+        return `<article class="calculation-card calculation-card-${escapeHtml(item.type)}">
+          ${item.image ? `<img src="${escapeHtml(item.image)}" alt="" loading="lazy">` : `<div class="calculation-card-icon ${escapeHtml(item.type)}">${item.type==='gates'?'▰':item.type==='fence'?'▥':'⌒'}</div>`}
+          <div class="calculation-card-copy">
+            <small>${escapeHtml(calculationTypeLabel(item.type))}</small>
+            <b>${escapeHtml(details.title)}</b>
+            ${details.lines.length ? `<div class="calculation-card-lines">${details.lines.map(line=>`<span>${escapeHtml(line)}</span>`).join('')}</div>` : ''}
+            ${details.tags.length ? `<div class="calculation-card-tags">${details.tags.map(tag=>`<span>${escapeHtml(tag)}</span>`).join('')}</div>` : ''}
+          </div>
+          <div class="calculation-card-price"><b>${formatMoney(item.total)}</b><button type="button" data-delete-calculation="${escapeHtml(item.id)}" aria-label="Удалить расчёт">×</button></div>
+        </article>`;
+      }).join('') || '<div class="calculation-empty">Пока нет сохранённых расчётов.</div>'}
     </div>
     <button class="btn btn-primary btn-block" data-add-calculation="${survey.id}" type="button">+ Добавить расчёт</button>
   </div>`;
