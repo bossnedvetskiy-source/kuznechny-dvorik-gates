@@ -48,7 +48,7 @@ test('gate calculator result returns into the same survey card', async ({page}) 
   await expect(page.locator('.survey-card-total').first()).toContainText('₽');
 
   await page.locator('.survey-card').first().click();
-  await page.locator('.calculation-card').click();
+  await page.locator('.calculation-card-copy').click();
   await expect(page).toHaveURL(/edit=calc_/);
   await expect(page.locator('#kdSurveyorBridgeSave')).toHaveText('Сохранить изменения');
   await expect(page.locator('#widthInput')).toHaveValue('3.4');
@@ -106,7 +106,7 @@ test('fence calculator result returns into the same survey card', async ({page})
   await expect(page.locator('.calculation-card-tags')).toContainText('прол');
   await expect(page.locator('.calculation-card-price')).toContainText('₽');
 
-  await page.locator('.calculation-card').click();
+  await page.locator('.calculation-card-copy').click();
   await expect(page).toHaveURL(/edit=calc_/);
   await expect(page.locator('#kdSurveyorBridgeSave')).toHaveText('Сохранить изменения');
   await expect(page.locator('[data-field="length"][data-index="0"]')).toHaveValue('10');
@@ -147,7 +147,7 @@ test('canopy calculator result returns into the same survey card', async ({page}
   await expect(page.locator('.calculation-card-tags')).toContainText('Поликарбонат');
   await expect(page.locator('.calculation-card-price')).toContainText('₽');
 
-  await page.locator('.calculation-card').click();
+  await page.locator('.calculation-card-copy').click();
   await expect(page).toHaveURL(/edit=calc_/);
   await expect(page.locator('#kdSurveyorBridgeSave')).toHaveText('Сохранить изменения');
   await expect(page.locator('#widthPosts')).toHaveValue('3');
