@@ -39,6 +39,9 @@ test('gate calculator result returns into the same survey card', async ({page}) 
   await expect(page.locator('.calculation-card')).toHaveCount(1);
   await expect(page.locator('.calculation-card')).toContainText('Ворота с калиткой');
   await expect(page.locator('.calculation-card')).toContainText('Арт.');
+  await expect(page.locator('.calculation-card-lines')).toContainText('Ворота 3.4 × 1.8 м');
+  await expect(page.locator('.calculation-card-lines')).toContainText('Калитка 1 × 1.8 м');
+  await expect(page.locator('.calculation-card-tags')).toContainText('столб');
   await expect(page.locator('.calculation-card-price')).toContainText('₽');
 
   await page.locator('#closeDetailsBtn').click();
@@ -86,7 +89,9 @@ test('fence calculator result returns into the same survey card', async ({page})
   await expect(page.locator('#surveyDetailsDialog')).toBeVisible({timeout:15000});
   await expect(page.locator('.calculation-card')).toHaveCount(1);
   await expect(page.locator('.calculation-card')).toContainText('Забор из евроштакетника');
-  await expect(page.locator('.calculation-card')).toContainText('10');
+  await expect(page.locator('.calculation-card-lines')).toContainText('Длина 10 м');
+  await expect(page.locator('.calculation-card-tags')).toContainText('Вертикальный');
+  await expect(page.locator('.calculation-card-tags')).toContainText('прол');
   await expect(page.locator('.calculation-card-price')).toContainText('₽');
 });
 
@@ -114,6 +119,9 @@ test('canopy calculator result returns into the same survey card', async ({page}
   await expect(page.locator('#surveyDetailsDialog')).toBeVisible({timeout:15000});
   await expect(page.locator('.calculation-card')).toHaveCount(1);
   await expect(page.locator('.calculation-card')).toContainText('Навес');
-  await expect(page.locator('.calculation-card')).toContainText('3 × 5.9');
+  await expect(page.locator('.calculation-card-lines')).toContainText('Размер 3 × 5.9 м');
+  await expect(page.locator('.calculation-card-lines')).toContainText('ферма');
+  await expect(page.locator('.calculation-card-tags')).toContainText('Арочный');
+  await expect(page.locator('.calculation-card-tags')).toContainText('Поликарбонат');
   await expect(page.locator('.calculation-card-price')).toContainText('₽');
 });
