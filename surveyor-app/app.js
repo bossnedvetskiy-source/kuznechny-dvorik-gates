@@ -1389,6 +1389,7 @@ function bindEvents() {
     renderSurveys();
   });
   $('#surveyClientPhone').addEventListener('input', e => { e.target.value = formatPhone(e.target.value); });
+  $('#surveyDataPhone')?.addEventListener('input', e => { e.target.value = formatPhone(e.target.value); });
   $('#clientPhoneInput').addEventListener('input', e => { e.target.value = formatPhone(e.target.value); });
   $('#newClientBtn').addEventListener('click', () => { $('#clientForm').reset(); $('#clientDialog').showModal(); });
   $('#saveClientBtn').addEventListener('click', saveClientFromDialog);
@@ -1396,6 +1397,8 @@ function bindEvents() {
   $('#newEmployeeBtn').addEventListener('click', () => openEmployeeDialog());
   $('#saveEmployeeBtn').addEventListener('click', saveEmployee);
   $('#closeDetailsBtn').addEventListener('click', () => $('#surveyDetailsDialog').close());
+  $('#closeSurveyDataBtn')?.addEventListener('click', () => $('#surveyDataDialog')?.close());
+  $('#saveSurveyDataBtn')?.addEventListener('click', saveSurveyData);
   $('#closeCalculationPickerBtn')?.addEventListener('click', () => $('#calculationPickerDialog')?.close());
   $('#calculationPickerDialog')?.addEventListener('click', event => {
     const button = event.target.closest('[data-launch-calculation]');
