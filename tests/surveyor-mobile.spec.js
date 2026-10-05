@@ -89,12 +89,12 @@ test('surveyor can create a mixed survey and reopen it offline', async ({page, c
 
   await expect(page.locator('#mainView')).toBeVisible();
   await expect(page.locator('.survey-card').first()).toContainText('Иван Петров');
-  await expect(page.locator('.survey-card').first()).toContainText('+7 937');
   await expect(page.locator('.survey-card').first()).toContainText('ул. Ленина, 10');
   await expect(page.locator('#networkBadge')).toContainText('Офлайн');
 
   await page.locator('.survey-card').first().locator('[data-open-survey]').click();
   await expect(page.locator('.plan-mini-preview')).toBeVisible();
+  await expect(page.locator('#surveyDetailsContent')).toContainText('+7 937 123-45-67');
   await expect(page.locator('#surveyDetailsContent')).toContainText('Позвонить за час');
   await expect(page.locator('#surveyDetailsContent')).toContainText('6,1 м');
 });
