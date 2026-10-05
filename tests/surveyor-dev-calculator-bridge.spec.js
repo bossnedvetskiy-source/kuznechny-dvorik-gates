@@ -25,6 +25,11 @@ test('gate calculator result returns into the same survey card', async ({page}) 
 
   await expect(page).toHaveURL(/surveyor=1/);
   await expect(page.locator('#kdSurveyorBridge')).toBeVisible({timeout:15000});
+  await expect(page).toHaveTitle(/КД Замерщик · Ворота/);
+  await expect(page.locator('#catalog')).toBeVisible();
+  await expect(page.locator('.hero')).toBeHidden();
+  await expect(page.locator('.package')).toBeHidden();
+  await expect(page.locator('#sendButton')).toBeHidden();
   await page.waitForFunction(() => Boolean(window.KUZDVOR_GATE_APP?.snapshot), null, {timeout:15000});
 
   await page.locator('#kdSurveyorBridgeSave').click();
@@ -64,6 +69,11 @@ test('fence calculator result returns into the same survey card', async ({page})
 
   await expect(page).toHaveURL(/\/evroshtaketnik\//);
   await expect(page.locator('#kdSurveyorBridge')).toBeVisible({timeout:15000});
+  await expect(page).toHaveTitle(/КД Замерщик · Евроштакетник/);
+  await expect(page.locator('.calculator')).toBeVisible();
+  await expect(page.locator('.hero')).toBeHidden();
+  await expect(page.locator('#leadSection')).toBeHidden();
+  await expect(page.locator('#resultLeadButton')).toBeHidden();
   await page.locator('[data-field="length"][data-index="0"]').fill('10');
   await page.waitForFunction(() => {
     const text = document.querySelector('#totalPrice')?.textContent || '';
@@ -86,6 +96,11 @@ test('canopy calculator result returns into the same survey card', async ({page}
 
   await expect(page).toHaveURL(/\/naves\//);
   await expect(page.locator('#kdSurveyorBridge')).toBeVisible({timeout:15000});
+  await expect(page).toHaveTitle(/КД Замерщик · Навес/);
+  await expect(page.locator('.workspace')).toBeVisible();
+  await expect(page.locator('.hero')).toBeHidden();
+  await expect(page.locator('#showSave')).toBeHidden();
+  await expect(page.locator('.client-info-strip')).toBeHidden();
   await page.locator('#widthPosts').fill('3');
   await page.locator('#lengthPosts').fill('5.9');
   await page.waitForFunction(() => {
