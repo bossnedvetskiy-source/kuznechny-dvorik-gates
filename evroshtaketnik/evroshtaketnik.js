@@ -1419,7 +1419,9 @@ async function submitLead(event) {
 
 window.KUZDVOR_FENCE_APP = {
   snapshot: () => leadPayload(),
-  quoteText: () => quoteText()
+  quoteText: () => quoteText(),
+  quoteState: () => quoteState(),
+  restore: state => restoreQuoteState(state)
 };
 
 addSectionButton.addEventListener('click', () => {
