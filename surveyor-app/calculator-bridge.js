@@ -78,6 +78,13 @@
       posts.checked = Boolean(payload.posts ?? config.posts);
       posts.dispatchEvent(new Event('change', {bubbles:true}));
     }
+    const dimensions = document.getElementById('gateDimensions');
+    const sizeToggle = document.getElementById('sizeToggle');
+    if (dimensions && sizeToggle && !dimensions.classList.contains('is-open')) {
+      dimensions.classList.add('is-open');
+      sizeToggle.textContent = 'Скрыть';
+      sizeToggle.setAttribute('aria-expanded','true');
+    }
     if (payload.city && api.setDeliveryPlace) { try { await api.setDeliveryPlace(payload.city); } catch {} }
     const dimensions = document.getElementById('gateDimensions');
     const sizeToggle = document.getElementById('sizeToggle');
