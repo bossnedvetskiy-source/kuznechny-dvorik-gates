@@ -407,7 +407,7 @@ for (const relative of ['index.html','evroshtaketnik/index.html','naves/index.ht
   let html = await readFile(full, 'utf8');
   if (!html.includes(`${BASE}/surveyor-bridge.js`)) {
     if (!html.includes('</body>')) throw new Error(`DEV calculator page has no body: ${relative}`);
-    html = html.replace('</body>', `<script src="${BASE}/surveyor-bridge.js"></script>\n</body>`);
+    html = html.replace('</body>', `<script src="${BASE}/surveyor-bridge.js?v=${encodeURIComponent(devSourceVersion)}"></script>\n</body>`);
     await writeFile(full, html, 'utf8');
   }
 }
@@ -418,12 +418,24 @@ await rm(DEV_TOOLS_OUT, {recursive:true, force:true});
 await cp(SURVEYOR_SOURCE, DEV_TOOLS_OUT, {recursive:true});
 
 const devToolsIndexPath = path.join(DEV_TOOLS_OUT, 'index.html');
+const devToolsAssetVersion = encodeURIComponent(devSourceVersion);
 let devToolsIndex = await readFile(devToolsIndexPath, 'utf8');
 devToolsIndex = devToolsIndex
   .replace('<title>КД Замерщик</title>', '<title>КД Замерщик DEV</title>')
   .replace('<h1>КД Замерщик</h1>', '<h1>КД Замерщик DEV</h1>')
-  .replace('<div class="eyebrow">КД Замерщик</div>', '<div class="eyebrow">КД Замерщик · DEV</div>');
+  .replace('<div class="eyebrow">КД Замерщик</div>', '<div class="eyebrow">КД Замерщик · DEV</div>')
+  .replace('href="styles.css"', `href="styles.css?v=${devToolsAssetVersion}"`)
+  .replace('src="app.js"', `src="app.js?v=${devToolsAssetVersion}"`)
+  .replace('href="manifest.webmanifest"', `href="manifest.webmanifest?v=${devToolsAssetVersion}"`);
 await writeFile(devToolsIndexPath, devToolsIndex, 'utf8');
+
+const devToolsAppPath = path.join(DEV_TOOLS_OUT, 'app.js');
+let devToolsApp = await readFile(devToolsAppPath, 'utf8');
+devToolsApp = devToolsApp.replace(
+  "from './line-builder.js';",
+  `from './line-builder.js?v=${devToolsAssetVersion}';`
+);
+await writeFile(devToolsAppPath, devToolsApp, 'utf8');
 
 await writeFile(path.join(DEV_TOOLS_OUT,'manifest.webmanifest'),JSON.stringify({
   name:'КД Замерщик DEV',
@@ -454,6 +466,7 @@ await writeFile(siteBundlePath, siteBundle, 'utf8');
 const swPath = path.join(OUT, 'site-sw.js');
 let devSw = await readFile(swPath, 'utf8');
 devSw = devSw
+  .replace(/^const VERSION='[^']+';/, `const VERSION='kuzdvor-dev-offline-${devSourceVersion}';`)
   .replaceAll('kuzdvor-offline-', 'kuzdvor-dev-offline-')
   .replaceAll('__kuzdvor_offline_meta__', '__kuzdvor_dev_offline_meta__')
   .replaceAll(`${BASE}/site-icon.svg`, `${BASE}/${DEV_ICON_NAME}`);
