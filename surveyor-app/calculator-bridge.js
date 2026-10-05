@@ -205,6 +205,7 @@
     if (document.getElementById('kdSurveyorBridge')) return;
     const calculatorType = typeFromPath();
     const calculatorLabel = calculatorType === 'gates' ? 'Ворота' : calculatorType === 'fence' ? 'Евроштакетник' : 'Навес';
+    const editState = readEditState();
     document.documentElement.classList.add('kd-surveyor-mode', `kd-surveyor-${calculatorType}`);
     document.title = `КД Замерщик · ${calculatorLabel}`;
     const style = document.createElement('style');
@@ -292,12 +293,13 @@
     bar.innerHTML = `
       <div class="kd-row">
         <button type="button" class="kd-back" id="kdSurveyorBridgeBack">← В замер</button>
-        <div class="kd-copy"><b>Расчёт для замера</b><span id="kdSurveyorBridgeMessage">Настройте калькулятор и сохраните результат</span></div>
-        <button type="button" class="kd-save" id="kdSurveyorBridgeSave">Добавить в замер</button>
+        <div class="kd-copy"><b>${editState ? 'Редактирование расчёта' : 'Расчёт для замера'}</b><span id="kdSurveyorBridgeMessage">${editState ? 'Восстанавливаем сохранённые параметры…' : 'Настройте калькулятор и сохраните результат'}</span></div>
+        <button type="button" class="kd-save" id="kdSurveyorBridgeSave">${editState ? 'Сохранить изменения' : 'Добавить в замер'}</button>
       </div>`;
     document.body.append(bar);
 
     document.getElementById('kdSurveyorBridgeBack')?.addEventListener('click', () => {
+      if (editState) { try { localStorage.removeItem(EDIT_KEY); } catch {} }
       location.href = returnUrl();
     });
     document.getElementById('kdSurveyorBridgeSave')?.addEventListener('click', async event => {
@@ -305,35 +307,48 @@
       if (button?.disabled) return;
       if (button) {
         button.disabled = true;
-        button.textContent = 'Добавляем…';
+        button.textContent = editState ? 'Сохраняем…' : 'Добавляем…';
       }
       showMessage('Проверяем расчёт…');
       try {
         const calc = await takeSnapshot();
+        const now = new Date().toISOString();
         const transfer = {
           version:1,
           surveyId,
           calculation:{
-            id:'calc_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,8),
+            id:editState?.calculationId || ('calc_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,8)),
             ...calc,
-            createdAt:new Date().toISOString()
+            createdAt:editState?.calculation?.createdAt || now,
+            updatedAt:now
           }
         };
         localStorage.setItem(TRANSFER_KEY, JSON.stringify(transfer));
-        showMessage(`Сохранено · ${money(calc.total)}`);
+        if (editState) localStorage.removeItem(EDIT_KEY);
+        showMessage(`${editState ? 'Изменения сохранены' : 'Сохранено'} · ${money(calc.total)}`);
         setTimeout(() => { location.href = returnUrl(); }, 120);
       } catch (error) {
         showMessage(error?.message || 'Не удалось сохранить расчёт', true);
         if (button) {
           button.disabled = false;
-          button.textContent = 'Добавить в замер';
+          button.textContent = editState ? 'Сохранить изменения' : 'Добавить в замер';
         }
       }
     });
 
-    takeSnapshot().then(calc => {
-      showMessage(`${calc.title} · ${money(calc.total)}`);
-    }).catch(() => {});
+    (async () => {
+      try {
+        if (editState) {
+          await restoreEditingCalculation(editState);
+          showMessage('Параметры восстановлены — можно изменить расчёт');
+        } else {
+          const calc = await takeSnapshot();
+          showMessage(`${calc.title} · ${money(calc.total)}`);
+        }
+      } catch (error) {
+        showMessage(error?.message || 'Не удалось восстановить расчёт', true);
+      }
+    })();
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', install, {once:true});
