@@ -46,6 +46,18 @@ test('gate calculator result returns into the same survey card', async ({page}) 
 
   await page.locator('#closeDetailsBtn').click();
   await expect(page.locator('.survey-card-total').first()).toContainText('₽');
+
+  await page.locator('.survey-card').first().click();
+  await page.locator('.calculation-card').click();
+  await expect(page).toHaveURL(/edit=calc_/);
+  await expect(page.locator('#kdSurveyorBridgeSave')).toHaveText('Сохранить изменения');
+  await expect(page.locator('#widthInput')).toHaveValue('3.4');
+  await expect(page.locator('#heightInput')).toHaveValue('1.8');
+  await page.locator('#widthInput').fill('3.6');
+  await page.locator('#kdSurveyorBridgeSave').click();
+  await expect(page).toHaveURL(/\/dev-tools\/\?resumeSurvey=/, {timeout:15000});
+  await expect(page.locator('.calculation-card')).toHaveCount(1);
+  await expect(page.locator('.calculation-card-lines')).toContainText('Ворота 3,6 × 1,8 м');
 });
 
 
@@ -93,6 +105,16 @@ test('fence calculator result returns into the same survey card', async ({page})
   await expect(page.locator('.calculation-card-tags')).toContainText('Вертикальный');
   await expect(page.locator('.calculation-card-tags')).toContainText('прол');
   await expect(page.locator('.calculation-card-price')).toContainText('₽');
+
+  await page.locator('.calculation-card').click();
+  await expect(page).toHaveURL(/edit=calc_/);
+  await expect(page.locator('#kdSurveyorBridgeSave')).toHaveText('Сохранить изменения');
+  await expect(page.locator('[data-field="length"][data-index="0"]')).toHaveValue('10');
+  await page.locator('[data-field="length"][data-index="0"]').fill('12');
+  await page.locator('#kdSurveyorBridgeSave').click();
+  await expect(page).toHaveURL(/\/dev-tools\/\?resumeSurvey=/, {timeout:15000});
+  await expect(page.locator('.calculation-card')).toHaveCount(1);
+  await expect(page.locator('.calculation-card-lines')).toContainText('Длина 12 м');
 });
 
 test('canopy calculator result returns into the same survey card', async ({page}) => {
@@ -124,4 +146,15 @@ test('canopy calculator result returns into the same survey card', async ({page}
   await expect(page.locator('.calculation-card-tags')).toContainText('Арочный');
   await expect(page.locator('.calculation-card-tags')).toContainText('Поликарбонат');
   await expect(page.locator('.calculation-card-price')).toContainText('₽');
+
+  await page.locator('.calculation-card').click();
+  await expect(page).toHaveURL(/edit=calc_/);
+  await expect(page.locator('#kdSurveyorBridgeSave')).toHaveText('Сохранить изменения');
+  await expect(page.locator('#widthPosts')).toHaveValue('3');
+  await expect(page.locator('#lengthPosts')).toHaveValue('5.9');
+  await page.locator('#lengthPosts').fill('6.2');
+  await page.locator('#kdSurveyorBridgeSave').click();
+  await expect(page).toHaveURL(/\/dev-tools\/\?resumeSurvey=/, {timeout:15000});
+  await expect(page.locator('.calculation-card')).toHaveCount(1);
+  await expect(page.locator('.calculation-card-lines')).toContainText('Размер 3 × 6,2 м');
 });
