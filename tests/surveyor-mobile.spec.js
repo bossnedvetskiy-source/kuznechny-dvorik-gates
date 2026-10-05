@@ -27,6 +27,22 @@ test('surveyor can create a mixed survey and reopen it offline', async ({page, c
   await card.locator('[data-open-survey]').click();
   await expect(page.locator('#surveyDetailsDialog')).toBeVisible();
   await expect(page.locator('#surveyDetailsContent')).toContainText('Имя не требуется до договора');
+
+  await page.locator('[data-edit-survey-data]').click();
+  await expect(page.locator('#surveyDataDialog')).toBeVisible();
+  await page.locator('#surveyDataName').fill('Иван Петров');
+  await page.locator('#surveyDataPhone').fill('89371234567');
+  await page.locator('#surveyDataAddress').fill('Мелеуз, ул. Ленина, 10');
+  await page.locator('#surveyDataNote').fill('Позвонить за час');
+  await page.locator('#saveSurveyDataBtn').click();
+
+  await expect(page.locator('#surveyDataDialog')).not.toBeVisible();
+  await expect(page.locator('#surveyDetailsDialog')).toBeVisible();
+  await expect(page.locator('#surveyDetailsContent')).toContainText('Иван Петров');
+  await expect(page.locator('#surveyDetailsContent')).toContainText('+7 937 123-45-67');
+  await expect(page.locator('#surveyDetailsContent')).toContainText('Мелеуз, ул. Ленина, 10');
+  await expect(page.locator('#surveyDetailsContent')).toContainText('Позвонить за час');
+
   await page.locator('[data-survey-work-types] input[value="gates"]').check();
   await page.locator('[data-survey-work-types] input[value="fence"]').check();
   await page.locator('[data-survey-work-types] input[value="canopy"]').check();
@@ -72,11 +88,14 @@ test('surveyor can create a mixed survey and reopen it offline', async ({page, c
   await page.reload({waitUntil:'domcontentloaded'});
 
   await expect(page.locator('#mainView')).toBeVisible();
+  await expect(page.locator('.survey-card').first()).toContainText('Иван Петров');
   await expect(page.locator('.survey-card').first()).toContainText('+7 937');
+  await expect(page.locator('.survey-card').first()).toContainText('ул. Ленина, 10');
   await expect(page.locator('#networkBadge')).toContainText('Офлайн');
 
   await page.locator('.survey-card').first().locator('[data-open-survey]').click();
   await expect(page.locator('.plan-mini-preview')).toBeVisible();
+  await expect(page.locator('#surveyDetailsContent')).toContainText('Позвонить за час');
   await expect(page.locator('#surveyDetailsContent')).toContainText('6,1 м');
 });
 
