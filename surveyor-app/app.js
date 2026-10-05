@@ -1115,6 +1115,70 @@ async function openSurveyDetails(id) {
   }));
 }
 
+async function openSurveyDataDialog(surveyId) {
+  const survey = await idbGet('surveys', surveyId);
+  if (!survey) return;
+  $('#surveyDataId').value = survey.id;
+  $('#surveyDataName').value = survey.clientName || '';
+  $('#surveyDataPhone').value = survey.clientPhone || '';
+  $('#surveyDataAddress').value = survey.address || '';
+  $('#surveyDataNote').value = survey.note || '';
+  $('#surveyDataDialog').showModal();
+  setTimeout(() => {
+    const target = $('#surveyDataName').value ? $('#surveyDataPhone') : $('#surveyDataName');
+    target?.focus({preventScroll:true});
+  }, 40);
+}
+
+async function saveSurveyData() {
+  const surveyId = $('#surveyDataId').value;
+  const survey = await idbGet('surveys', surveyId);
+  if (!survey) return showToast('Замер не найден');
+
+  const name = $('#surveyDataName').value.trim();
+  const phoneRaw = $('#surveyDataPhone').value.trim();
+  const phoneDigits = phoneRaw.replace(/\D/g,'');
+  const address = $('#surveyDataAddress').value.trim();
+  const note = $('#surveyDataNote').value.trim();
+  if (phoneDigits.length < 10 || !address) return showToast('Заполните телефон и адрес объекта');
+
+  const clients = await idbGetAll('clients');
+  const now = new Date().toISOString();
+  const currentClient = clients.find(item => item.id === survey.clientId) || null;
+  const phoneMatch = clients.find(item => String(item.phone || '').replace(/\D/g,'') === phoneDigits) || null;
+  let client = phoneMatch || currentClient;
+  if (!client) {
+    client = { id:makeId('cl'), createdAt:now, serverRevision:0 };
+  }
+  client = {
+    ...client,
+    name,
+    phone:formatPhone(phoneRaw),
+    address,
+    updatedAt:now,
+    syncState:API_ENABLED ? 'pending' : 'local'
+  };
+  await idbPut('clients', client);
+
+  survey.clientId = client.id;
+  survey.clientName = name;
+  survey.clientPhone = client.phone;
+  survey.address = address;
+  survey.note = note;
+  survey.updatedAt = now;
+  survey.syncState = API_ENABLED ? 'pending' : 'local';
+  await idbPut('surveys', survey);
+
+  $('#surveyDataDialog').close();
+  showToast('Данные замера обновлены');
+  await renderSurveys();
+  renderClients($('#clientSearch')?.value || '');
+  if ($('#surveyDetailsDialog').open) {
+    $('#surveyDetailsDialog').close();
+    await openSurveyDetails(survey.id);
+  }
+  if (API_ENABLED && navigator.onLine) syncNow({silent:true});
+}
 async function archiveSurvey(id) {
   if (currentUser.role !== 'owner') return;
   const survey = await idbGet('surveys', id);
