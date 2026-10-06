@@ -18,8 +18,9 @@ for (const marker of [
   "API_BASE + path",
   "async function openPlanEditor",
   "function addPlanItem",
-  "function workTypesEditorHtml",
-  "data-save-work-types",
+  "function calculationWorkTypes",
+  "function syncSurveyWorkTypes",
+  "Расчёты / варианты",
   "configuration:x.configuration || {}",
   "url.searchParams.set('returnTo', location.pathname)"
 ]) {
