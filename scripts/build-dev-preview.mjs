@@ -261,12 +261,12 @@ await cp(SURVEYOR_SOURCE, SURVEYOR_V2_OUT, {recursive:true});
 const surveyorV2ManifestPath = path.join(SURVEYOR_V2_OUT, 'manifest.webmanifest');
 const surveyorV2Manifest = JSON.parse(await readFile(surveyorV2ManifestPath, 'utf8'));
 Object.assign(surveyorV2Manifest, {
-  name:'КД Замерщик V2',
-  short_name:'КД Замер V2',
-  id:`${BASE}/${SURVEYOR_V2_DIR}`,
+  name:'КД Замерщик DEV',
+  short_name:'КД Замерщик',
+  id:`${BASE}/kd-zamer-dev-clean-v1`,
   start_url:`${BASE}/${SURVEYOR_V2_DIR}/`,
-  scope:`${BASE}/${SURVEYOR_V2_DIR}/`,
-  description:'Чистая тестовая PWA КД Замерщик V2.',
+  scope:`${BASE}/`,
+  description:'Чистая DEV-PWA замерщика с доступом к воротам, заборам и навесам.',
   background_color:'#f4f4f2',
   theme_color:'#151515',
   display:'standalone',
@@ -285,9 +285,9 @@ const surveyorV2AssetVersion = encodeURIComponent(devSourceVersion);
 const surveyorV2IndexPath = path.join(SURVEYOR_V2_OUT, 'index.html');
 let surveyorV2Index = await readFile(surveyorV2IndexPath, 'utf8');
 surveyorV2Index = surveyorV2Index
-  .replace('<title>КД Замерщик</title>', '<title>КД Замерщик V2</title>')
-  .replace('<h1>КД Замерщик</h1>', '<h1>КД Замерщик V2</h1>')
-  .replace('<div class="eyebrow">КД Замерщик</div>', '<div class="eyebrow">КД Замерщик · V2</div>')
+  .replace('<title>КД Замерщик</title>', '<title>КД Замерщик DEV</title>')
+  .replace('<h1>КД Замерщик</h1>', '<h1>КД Замерщик DEV</h1>')
+  .replace('<div class="eyebrow">КД Замерщик</div>', '<div class="eyebrow">КД Замерщик · DEV</div>')
   .replace('href="./styles.css"', `href="./styles.css?v=${surveyorV2AssetVersion}"`)
   .replace('src="./app.js"', `src="./app.js?v=${surveyorV2AssetVersion}"`)
   .replace('href="./manifest.webmanifest"', `href="./manifest.webmanifest?v=${surveyorV2AssetVersion}"`);
@@ -490,7 +490,7 @@ devSw = devSw
   .replaceAll('__kuzdvor_offline_meta__', '__kuzdvor_dev_offline_meta__')
   .replaceAll(`${BASE}/site-icon.svg`, `${BASE}/${DEV_ICON_NAME}`);
 const surveyorTestFetchNeedle = "self.addEventListener('fetch',event=>{\n  const request=event.request;\n  const url=new URL(request.url);";
-const surveyorTestFetchReplacement = surveyorTestFetchNeedle + "\n  // standalone surveyor PWA bypass\n  if(url.pathname==='${BASE}/${SURVEYOR_TEST_DIR}'||url.pathname.startsWith('${BASE}/${SURVEYOR_TEST_DIR}/')||url.pathname==='${BASE}/${SURVEYOR_V2_DIR}'||url.pathname.startsWith('${BASE}/${SURVEYOR_V2_DIR}/'))return;";
+const surveyorTestFetchReplacement = surveyorTestFetchNeedle + `\n  // standalone surveyor PWA bypass\n  if(url.pathname==='${BASE}/${SURVEYOR_TEST_DIR}'||url.pathname.startsWith('${BASE}/${SURVEYOR_TEST_DIR}/')||url.pathname==='${BASE}/${SURVEYOR_V2_DIR}'||url.pathname.startsWith('${BASE}/${SURVEYOR_V2_DIR}/'))return;`;
 if (!devSw.includes(surveyorTestFetchNeedle)) throw new Error('DEV service worker fetch handler not found');
 devSw = devSw.replace(surveyorTestFetchNeedle, surveyorTestFetchReplacement);
 await writeFile(swPath, devSw, 'utf8');
