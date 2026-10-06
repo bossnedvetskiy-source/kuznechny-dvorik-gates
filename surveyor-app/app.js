@@ -1,6 +1,6 @@
 import {PLAN_ITEM_TYPES,MATERIAL_LABELS,ensureSitePlan,newItem,newLine,lineWidth,itemDescription,trimNumber} from './line-builder.js';
 
-const APP_VERSION = '0.3.4';
+const APP_VERSION = '0.3.5';
 const DB_NAME = 'kd-surveyor-stage1';
 const DB_VERSION = 1;
 const STORE_NAMES = ['employees', 'clients', 'surveys', 'meta'];
@@ -514,7 +514,7 @@ function applyRoleUi() {
   $('#profileBtn').textContent = (currentUser?.name || 'КД').split(/\s+/).slice(0,2).map(x => x[0]).join('').toUpperCase();
 }
 function switchScreen(name) {
-  const titles = { surveys: 'Замеры', calculators: 'Калькуляторы', clients: 'Клиенты', team: 'Сотрудники', settings: 'Ещё' };
+  const titles = { surveys: 'Замеры', clients: 'Клиенты', team: 'Сотрудники', settings: 'Ещё' };
   $$('.screen').forEach(el => el.classList.remove('active'));
   $(`#${name}Screen`)?.classList.add('active');
   $$('.nav-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.screen === name));
@@ -1091,9 +1091,15 @@ async function openSurveyDetails(id) {
     ${calculationsHtml(survey)}
     ${survey.syncState === 'conflict' ? '<div class="details-section"><div class="notice notice-lock">Есть более новая версия этого замера на сервере. Пока данные не затираются автоматически.</div></div>' : ''}
     ${surveyPlanSummaryHtml(survey)}
-    ${currentUser.role === 'owner' ? `<button class="btn btn-danger btn-block" data-archive-survey="${survey.id}" type="button">Архивировать заказ</button>` : ''}`;
+    <div class="details-actions">
+      ${survey.status === 'ready'
+        ? '<div class="notice notice-ready">✓ Замер завершён и находится в разделе «Готовые».</div>'
+        : `<button class="btn btn-primary btn-lg btn-block" data-complete-survey="${survey.id}" type="button">✓ Завершить замер</button>`}
+      ${currentUser.role === 'owner' ? `<button class="btn btn-danger btn-block" data-archive-survey="${survey.id}" type="button">Архивировать заказ</button>` : ''}
+    </div>`;
   $('#surveyDetailsDialog').showModal();
   $('[data-archive-survey]')?.addEventListener('click', () => archiveSurvey(survey.id));
+  $('[data-complete-survey]')?.addEventListener('click', () => completeSurvey(survey.id));
   $('[data-edit-survey-data]')?.addEventListener('click', () => openSurveyDataDialog(survey.id));
   $('[data-edit-plan]')?.addEventListener('click', () => openPlanEditor(survey.id));
   $('[data-save-work-types]')?.addEventListener('click', () => saveSurveyWorkTypes(survey.id));
@@ -1176,6 +1182,21 @@ async function saveSurveyData() {
   if ($('#surveyDetailsDialog').open) {
     $('#surveyDetailsDialog').close();
     await openSurveyDetails(survey.id);
+  }
+  if (API_ENABLED && navigator.onLine) syncNow({silent:true});
+}
+async function completeSurvey(id) {
+  const survey = await idbGet('surveys', id);
+  if (!survey || survey.status === 'ready') return;
+  survey.status = 'ready';
+  survey.updatedAt = new Date().toISOString();
+  survey.syncState = API_ENABLED ? 'pending' : 'local';
+  await idbPut('surveys', survey);
+  showToast('Замер завершён');
+  await renderSurveys();
+  if ($('#surveyDetailsDialog').open) {
+    $('#surveyDetailsDialog').close();
+    await openSurveyDetails(id);
   }
   if (API_ENABLED && navigator.onLine) syncNow({silent:true});
 }
