@@ -69,7 +69,17 @@ test('surveyor can create a mixed survey and reopen it offline', async ({page, c
   await expect(page.locator('#surveyDetailsDialog')).toBeVisible();
   await expect(page.locator('.plan-mini-preview')).toBeVisible();
   await expect(page.locator('#surveyDetailsContent')).toContainText('6,1 м');
+
+  await page.locator('[data-complete-survey]').click();
+  await expect(page.locator('#surveyDetailsDialog')).toBeVisible();
+  await expect(page.locator('#surveyDetailsContent')).toContainText('Готов');
+  await expect(page.locator('#surveyDetailsContent')).toContainText('Замер завершён');
   await page.locator('#closeDetailsBtn').click();
+
+  await expect(page.locator('.survey-card').first().locator('.status-pill')).toContainText('Готов');
+  await page.locator('[data-survey-filter="ready"]').click();
+  await expect(page.locator('.survey-card')).toHaveCount(1);
+  await page.locator('[data-survey-filter="all"]').click();
 
   await expect.poll(
     () => page.evaluate(async () => Boolean(await navigator.serviceWorker?.getRegistration('./'))),
@@ -97,6 +107,7 @@ test('surveyor can create a mixed survey and reopen it offline', async ({page, c
   await expect(page.locator('#surveyDetailsContent')).toContainText('+7 937 123-45-67');
   await expect(page.locator('#surveyDetailsContent')).toContainText('Позвонить за час');
   await expect(page.locator('#surveyDetailsContent')).toContainText('6,1 м');
+  await expect(page.locator('#surveyDetailsContent')).toContainText('Замер завершён');
 });
 
 test('owner can manage employee access', async ({page}) => {
