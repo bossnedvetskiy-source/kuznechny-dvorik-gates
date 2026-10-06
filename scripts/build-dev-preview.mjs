@@ -365,6 +365,12 @@ async function patchDevHtml(dir) {
       html = html
         .replaceAll(`href="${BASE}/links"`, `href="${BASE}/link-app.html"`)
         .replaceAll(`href="${BASE}/admin"`, `href="${BASE}/admin.html"`);
+      if (!html.includes('kuzdvor-dev-shell-redirect')) {
+        html = html.replace(
+          '</head>',
+          `<meta http-equiv="refresh" content="0;url=${DEV_APP_START}"><script id="kuzdvor-dev-shell-redirect">location.replace(${JSON.stringify(DEV_APP_START)});</script></head>`
+        );
+      }
 
       const linksMarker = `      <a class="tile" href="${BASE}/link-app.html">`;
       const euroTile = `      <a class="tile" href="${BASE}/evroshtaketnik/">
@@ -545,18 +551,10 @@ if (builtLinkApp.includes(`href="${BASE}/app"`) || !builtLinkApp.includes(`href=
 
 const builtWorkApp = await readFile(path.join(OUT, 'work-app.html'), 'utf8');
 for (const required of [
-  `${BASE}/site-manifest.webmanifest`,
-  `${BASE}/${DEV_ICON_NAME}`,
-  `href="${BASE}/link-app.html"`,
-  `href="${BASE}/evroshtaketnik/"`,
-  'Расчёт евроштакетника',
-  `href="${BASE}/naves/"`,
-  'Расчёт навеса'
+  'kuzdvor-dev-shell-redirect',
+  DEV_APP_START
 ]) {
-  if (!builtWorkApp.includes(required)) throw new Error(`DEV work app missing: ${required}`);
-}
-if (builtWorkApp.includes('Заявки и админка') || builtWorkApp.includes('Навесы — админ DEV')) {
-  throw new Error('DEV work app still exposes legacy admin tiles');
+  if (!builtWorkApp.includes(required)) throw new Error(`DEV legacy launcher redirect missing: ${required}`);
 }
 if (!siteBundle.includes(devMenuTarget)) throw new Error('DEV standalone menu does not point to the static work app');
 
