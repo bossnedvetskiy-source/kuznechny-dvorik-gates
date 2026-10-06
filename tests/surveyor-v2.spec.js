@@ -2,12 +2,12 @@ import {test, expect} from '@playwright/test';
 
 test.use({viewport:{width:390,height:844}});
 
-test('clean surveyor V2 installs independently and login works', async ({page}) => {
+test('clean DEV surveyor installs independently and login works', async ({page}) => {
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
 
   await page.goto('/kuznechny-dvorik-gates/zamer-app-v2/');
-  await expect(page).toHaveTitle('КД Замерщик V2');
+  await expect(page).toHaveTitle('КД Замерщик DEV');
   await expect(page.locator('#loginView')).toBeVisible();
   await expect(page.locator('#kuzdvor-dev-gate')).toHaveCount(0);
 
@@ -17,11 +17,11 @@ test('clean surveyor V2 installs independently and login works', async ({page}) 
     return response.json();
   });
 
-  expect(manifest.name).toBe('КД Замерщик V2');
-  expect(manifest.short_name).toBe('КД Замер V2');
-  expect(manifest.id).toBe('/kuznechny-dvorik-gates/zamer-app-v2');
+  expect(manifest.name).toBe('КД Замерщик DEV');
+  expect(manifest.short_name).toBe('КД Замерщик');
+  expect(manifest.id).toBe('/kuznechny-dvorik-gates/kd-zamer-dev-clean-v1');
   expect(manifest.start_url).toBe('/kuznechny-dvorik-gates/zamer-app-v2/');
-  expect(manifest.scope).toBe('/kuznechny-dvorik-gates/zamer-app-v2/');
+  expect(manifest.scope).toBe('/kuznechny-dvorik-gates/');
   expect(manifest.prefer_related_applications).toBe(false);
   expect(manifest.icons).toEqual(expect.arrayContaining([
     expect.objectContaining({src:'icon-192.png', sizes:'192x192', type:'image/png'}),
