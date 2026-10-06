@@ -21,7 +21,7 @@ test('surveyor can create a mixed survey and reopen it offline', async ({page, c
   const card = page.locator('.survey-card').first();
   await expect(card).toContainText('ЗМ-0001');
   await expect(card).toContainText('+7 937');
-  await expect(card).toContainText('Определим на объекте');
+  await expect(card).toContainText('Расчётов пока нет');
   await expect(card.locator('[data-quick-calculation]')).toBeVisible();
 
   await card.locator('[data-open-survey]').click();
@@ -42,16 +42,41 @@ test('surveyor can create a mixed survey and reopen it offline', async ({page, c
   await expect(page.locator('#surveyDetailsContent')).toContainText('+7 937 123-45-67');
   await expect(page.locator('#surveyDetailsContent')).toContainText('Мелеуз, ул. Ленина, 10');
   await expect(page.locator('#surveyDetailsContent')).toContainText('Позвонить за час');
+  await expect(page.locator('[data-survey-work-types]')).toHaveCount(0);
+  await expect(page.locator('#surveyDetailsContent')).toContainText('Расчёты / варианты');
+  await expect(page.locator('[data-add-calculation]')).toBeVisible();
 
-  await page.locator('[data-survey-work-types] input[value="gates"]').check();
-  await page.locator('[data-survey-work-types] input[value="fence"]').check();
-  await page.locator('[data-survey-work-types] input[value="canopy"]').check();
-  await page.locator('[data-save-work-types]').click();
-
+  const surveyId = await card.getAttribute('data-survey-id');
+  expect(surveyId).toBeTruthy();
+  await page.evaluate(({surveyId}) => {
+    localStorage.setItem('kd-surveyor-transfer-v1', JSON.stringify({
+      version:1,
+      surveyId,
+      calculation:{
+        id:'calc_test_gate',
+        type:'gates',
+        title:'Ворота с калиткой',
+        summary:'Арт.6 · 3,4 × 1,8 м',
+        total:56600,
+        createdAt:new Date().toISOString(),
+        payload:{
+          article:'Арт.6',
+          width:3.4,
+          height:1.8,
+          wicketWidth:1,
+          wicketHeight:1.8,
+          posts:true,
+          configuration:{article:'Арт.6',width:3.4,height:1.8,wicketWidth:1,wicketHeight:1.8,posts:true}
+        }
+      }
+    }));
+  }, {surveyId});
+  await page.reload();
   await expect(page.locator('#surveyDetailsDialog')).toBeVisible();
-  await expect(page.locator('#surveyDetailsContent')).toContainText('Ворота / калитка');
-  await expect(page.locator('#surveyDetailsContent')).toContainText('Забор');
-  await expect(page.locator('#surveyDetailsContent')).toContainText('Навес');
+  await expect(page.locator('#surveyDetailsContent')).toContainText('Расчёты / варианты');
+  await expect(page.locator('.calculation-card')).toContainText('Ворота с калиткой');
+  await expect(page.locator('.calculation-card-price')).toContainText('56');
+  await expect(page.locator('[data-survey-work-types]')).toHaveCount(0);
 
   await page.locator('[data-edit-plan]').click();
   await expect(page.locator('#planDialog')).toBeVisible();
