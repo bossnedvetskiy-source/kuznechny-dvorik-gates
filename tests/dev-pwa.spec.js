@@ -57,6 +57,13 @@ test('single DEV work PWA starts in surveyor shell with card-based calculators',
     {timeout:7000}
   ).toBe(true);
 
+  const rootSw = await page.request.get('/kuznechny-dvorik-gates/site-sw.js');
+  expect(rootSw.ok()).toBe(true);
+  const rootSwText = await rootSw.text();
+  expect(rootSwText).not.toContain('${BASE}');
+  expect(rootSwText).not.toContain('${SURVEYOR_V2_DIR}');
+  expect(rootSwText).toContain('/kuznechny-dvorik-gates/zamer-app-v2/');
+
   const legacyLauncher = await page.request.get('/kuznechny-dvorik-gates/work-app.html');
   expect(legacyLauncher.ok()).toBe(true);
   const legacyLauncherHtml = await legacyLauncher.text();
