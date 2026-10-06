@@ -358,6 +358,9 @@ async function patchDevHtml(dir) {
     if (!entry.name.endsWith('.html')) continue;
     let html = await readFile(full, 'utf8');
     html = html.replaceAll(`${BASE}/site-icon.svg`, `${BASE}/${DEV_ICON_NAME}`);
+    if (entry.name === 'link-app.html') {
+      html = html.replaceAll(`href="${BASE}/app"`, `href="${DEV_APP_START}"`);
+    }
     if (entry.name === 'work-app.html') {
       html = html
         .replaceAll(`href="${BASE}/links"`, `href="${BASE}/link-app.html"`)
@@ -465,6 +468,16 @@ await writeFile(siteBundlePath, siteBundle, 'utf8');
 // from the same browser profile. This also makes cache diagnostics unambiguous.
 const swPath = path.join(OUT, 'site-sw.js');
 let devSw = await readFile(swPath, 'utf8');
+const devShellCore = [
+  DEV_APP_START,
+  `${BASE}/${DEV_TOOLS_DIR}/styles.css`,
+  `${BASE}/${DEV_TOOLS_DIR}/app.js`,
+  `${BASE}/${DEV_TOOLS_DIR}/line-builder.js`,
+  `${BASE}/${DEV_TOOLS_DIR}/manifest.webmanifest`,
+  `${BASE}/${DEV_TOOLS_DIR}/icon.svg`,
+  `${BASE}/surveyor-bridge.js`
+];
+devSw = devSw.replace('const CORE=[', `const CORE=[${devShellCore.map(value=>JSON.stringify(value)).join(',')},`);
 devSw = devSw
   .replace(/^const VERSION='[^']+';/, `const VERSION='kuzdvor-dev-offline-${devSourceVersion}';`)
   .replaceAll('kuzdvor-offline-', 'kuzdvor-dev-offline-')
@@ -514,6 +527,21 @@ for (const required of ['kuzdvor-dev-offline-', '__kuzdvor_dev_offline_meta__', 
   if (!builtSw.includes(required)) throw new Error(`DEV service worker isolation missing: ${required}`);
 }
 if (builtSw.includes("const VERSION='kuzdvor-offline-")) throw new Error('DEV service worker still uses production cache namespace');
+for (const required of [
+  DEV_APP_START,
+  `${BASE}/${DEV_TOOLS_DIR}/styles.css`,
+  `${BASE}/${DEV_TOOLS_DIR}/app.js`,
+  `${BASE}/${DEV_TOOLS_DIR}/line-builder.js`,
+  `${BASE}/${DEV_TOOLS_DIR}/manifest.webmanifest`,
+  `${BASE}/surveyor-bridge.js`
+]) {
+  if (!builtSw.includes(required)) throw new Error(`DEV cold offline shell missing: ${required}`);
+}
+
+const builtLinkApp = await readFile(path.join(OUT, 'link-app.html'), 'utf8');
+if (builtLinkApp.includes(`href="${BASE}/app"`) || !builtLinkApp.includes(`href="${DEV_APP_START}"`)) {
+  throw new Error('DEV links app still points to the missing /app route');
+}
 
 const builtWorkApp = await readFile(path.join(OUT, 'work-app.html'), 'utf8');
 for (const required of [
