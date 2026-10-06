@@ -540,7 +540,7 @@ async function renderSurveys() {
         </div>
         <span class="status-pill ${survey.status}">${survey.status === 'ready' ? 'Готов' : 'Черновик'}</span>
       </div>
-      <div class="badge-row">${survey.workTypes.length ? survey.workTypes.map(type => `<span class="type-badge ${WORK_TYPES[type]?.className || ''}">${WORK_TYPES[type]?.short || type}</span>`).join('') : '<span class="type-badge">Определим на объекте</span>'}</div>
+      <div class="badge-row">${calculationWorkTypes(survey).length ? calculationWorkTypes(survey).map(type => `<span class="type-badge ${WORK_TYPES[type]?.className || ''}">${WORK_TYPES[type]?.short || type}</span>`).join('') : '<span class="type-badge">Расчётов пока нет</span>'}</div>
       ${surveyCalculations(survey).length ? `<div class="survey-card-total"><span>Расчёты</span><b>${formatMoney(surveyCalculationsTotal(survey))}</b></div>` : ''}
       <div class="survey-card-actions">
         <button type="button" class="quick-calc-btn" data-quick-calculation="${survey.id}">+ Расчёт</button>
@@ -608,42 +608,10 @@ async function renderEmployees() {
 }
 
 
-function workTypesEditorHtml(survey) {
-  const selected = new Set(Array.isArray(survey?.workTypes) ? survey.workTypes : []);
-  return `<div class="details-section">
-    <div class="section-head compact">
-      <div><h3>Что замеряем</h3><p class="muted">${selected.size ? 'Можно изменить состав замера в любой момент.' : 'Выберите уже на объекте, когда станет понятно, что нужно клиенту.'}</p></div>
-    </div>
-    <div class="work-grid work-grid-compact" data-survey-work-types="${survey.id}">
-      ${Object.entries(WORK_TYPES).map(([value,meta]) => `<label class="work-option compact">
-        <input type="checkbox" value="${value}" ${selected.has(value) ? 'checked' : ''} />
-        <span class="work-icon">${value==='canopy'?'⌒':'▥'}</span>
-        <b>${escapeHtml(meta.label)}</b>
-      </label>`).join('')}
-    </div>
-    <button class="btn btn-secondary btn-block work-types-save" data-save-work-types="${survey.id}" type="button">Сохранить состав замера</button>
-  </div>`;
-}
-
-async function saveSurveyWorkTypes(surveyId) {
-  const survey = await idbGet('surveys', surveyId);
-  const root = document.querySelector(`[data-survey-work-types="${surveyId}"]`);
-  if (!survey || !root) return;
-  survey.workTypes = [...root.querySelectorAll('input[type="checkbox"]:checked')].map(input => input.value);
-  survey.updatedAt = new Date().toISOString();
-  survey.syncState = API_ENABLED ? 'pending' : 'local';
-  await idbPut('surveys', survey);
-  showToast(survey.workTypes.length ? 'Состав замера сохранён' : 'Вид работ пока не выбран');
-  await renderSurveys();
-  if ($('#surveyDetailsDialog').open) {
-    $('#surveyDetailsDialog').close();
-    await openSurveyDetails(survey.id);
-  }
-  if (API_ENABLED && navigator.onLine) syncNow({silent:true});
-}
-
 function surveyHasLinearPlan(survey) {
-  return Array.isArray(survey?.workTypes) && (survey.workTypes.includes('gates') || survey.workTypes.includes('fence'));
+  const types = calculationWorkTypes(survey);
+  const existingLines = survey?.configuration?.sitePlan?.lines;
+  return types.includes('gates') || types.includes('fence') || (Array.isArray(existingLines) && existingLines.length > 0);
 }
 
 function surveyPlanSummaryHtml(survey) {
@@ -689,7 +657,7 @@ async function openPlanEditor(surveyId) {
   const survey=await idbGet('surveys',surveyId);
   if (!survey || !surveyHasLinearPlan(survey)) return;
   activePlanSurveyId=survey.id;
-  activePlanConfiguration=ensureSitePlan(survey.configuration,survey.workTypes);
+  activePlanConfiguration=ensureSitePlan(survey.configuration,calculationWorkTypes(survey));
   activePlanLineId=activePlanConfiguration.sitePlan.lines[0].id;
   activePlanItemId='';
   activeInsertIndex=null;
@@ -902,6 +870,14 @@ function surveyCalculations(survey) {
 function surveyCalculationsTotal(survey) {
   return surveyCalculations(survey).reduce((sum,item)=>sum+(Number(item.total)||0),0);
 }
+function calculationWorkTypes(survey) {
+  const allowed = new Set(['gates','fence','canopy']);
+  return [...new Set(surveyCalculations(survey).map(item => item?.type).filter(type => allowed.has(type)))];
+}
+function syncSurveyWorkTypes(survey) {
+  survey.workTypes = calculationWorkTypes(survey);
+  return survey.workTypes;
+}
 function calculationTypeLabel(type) {
   return type === 'gates' ? 'Ворота' : type === 'fence' ? 'Забор' : type === 'canopy' ? 'Навес' : 'Расчёт';
 }
@@ -1003,7 +979,7 @@ function calculationsHtml(survey) {
   const total = surveyCalculationsTotal(survey);
   return `<div class="details-section calculation-section">
     <div class="section-head compact">
-      <div><h3>Расчёты</h3><p class="muted">${rows.length ? rows.length+' '+plural(rows.length,['объект','объекта','объектов']) : 'Добавьте расчёт прямо с объекта.'}</p></div>
+      <div><h3>Расчёты / варианты</h3><p class="muted">${rows.length ? rows.length+' '+plural(rows.length,['вариант','варианта','вариантов']) : 'Добавьте первый вариант для клиента.'}</p></div>
       ${rows.length ? `<strong class="calculation-grand-total">${formatMoney(total)}</strong>` : ''}
     </div>
     <div class="calculation-list">
@@ -1025,7 +1001,7 @@ function calculationsHtml(survey) {
             </div>
           </div>
         </article>`;
-      }).join('') || '<div class="calculation-empty">Пока нет сохранённых расчётов.</div>'}
+      }).join('') || '<div class="calculation-empty">Пока нет вариантов. Добавьте расчёт ворот, забора или навеса.</div>'}
     </div>
     <button class="btn btn-primary btn-block" data-add-calculation="${survey.id}" type="button">+ Добавить расчёт</button>
   </div>`;
@@ -1070,6 +1046,7 @@ async function deleteCalculation(surveyId, calculationId) {
   if (!survey) return;
   survey.configuration = survey.configuration && typeof survey.configuration === 'object' ? survey.configuration : {};
   survey.configuration.calculations = surveyCalculations(survey).filter(item => item.id !== calculationId);
+  syncSurveyWorkTypes(survey);
   survey.updatedAt = new Date().toISOString();
   survey.syncState = API_ENABLED ? 'pending' : 'local';
   await idbPut('surveys', survey);
@@ -1093,8 +1070,7 @@ async function consumeCalculationTransfer() {
   if (existingIndex >= 0) rows[existingIndex] = transfer.calculation;
   else rows.push(transfer.calculation);
   survey.configuration.calculations = rows;
-  const workType = transfer.calculation.type === 'gates' ? 'gates' : transfer.calculation.type === 'fence' ? 'fence' : transfer.calculation.type === 'canopy' ? 'canopy' : '';
-  if (workType && !survey.workTypes.includes(workType)) survey.workTypes.push(workType);
+  syncSurveyWorkTypes(survey);
   survey.updatedAt = new Date().toISOString();
   survey.syncState = API_ENABLED ? 'pending' : 'local';
   survey.schemaVersion = Math.max(4, Number(survey.schemaVersion)||0);
@@ -1118,7 +1094,6 @@ async function openSurveyDetails(id) {
     </div>
     <button class="btn btn-secondary btn-block details-edit-data" data-edit-survey-data="${survey.id}" type="button">✎ Изменить данные</button>
     <div class="details-section"><h3>Адрес объекта</h3><div class="details-note">${escapeHtml(survey.address)}</div></div>
-    ${workTypesEditorHtml(survey)}
     ${survey.note ? `<div class="details-section"><h3>Комментарий</h3><div class="details-note">${escapeHtml(survey.note)}</div></div>` : ''}
     ${calculationsHtml(survey)}
     ${survey.syncState === 'conflict' ? '<div class="details-section"><div class="notice notice-lock">Есть более новая версия этого замера на сервере. Пока данные не затираются автоматически.</div></div>' : ''}
@@ -1134,7 +1109,6 @@ async function openSurveyDetails(id) {
   $('[data-complete-survey]')?.addEventListener('click', () => completeSurvey(survey.id));
   $('[data-edit-survey-data]')?.addEventListener('click', () => openSurveyDataDialog(survey.id));
   $('[data-edit-plan]')?.addEventListener('click', () => openPlanEditor(survey.id));
-  $('[data-save-work-types]')?.addEventListener('click', () => saveSurveyWorkTypes(survey.id));
   $('[data-add-calculation]')?.addEventListener('click', () => openCalculationPicker(survey.id));
   const detailsRoot = $('#surveyDetailsContent');
   $$('[data-edit-calculation]', detailsRoot).forEach(card => {
