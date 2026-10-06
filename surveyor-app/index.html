@@ -243,24 +243,33 @@
         <button id="addPlanLineBtn" class="mini-btn" type="button">+ Линия</button>
       </div>
 
-      <div class="plan-summary">
-        <div><span>Длина линии</span><b id="planLineWidth">0 м</b></div>
-        <div><span>Всего линий</span><b id="planLinesCount">1</b></div>
+      <div class="plan-visual-sticky">
+        <div class="plan-summary plan-summary-compact">
+          <div><span>Линия</span><b id="planLineWidth">0 м</b></div>
+          <div><span>Элементов</span><b id="planItemsCount">0</b></div>
+          <div><span>Линий</span><b id="planLinesCount">1</b></div>
+        </div>
+        <div id="planCanvas" class="plan-canvas" aria-label="Схема линии"></div>
       </div>
 
-      <div id="planCanvas" class="plan-canvas" aria-label="Схема линии"></div>
+      <details class="plan-line-settings">
+        <summary>Настройки линии</summary>
+        <div class="plan-line-settings-body">
+          <label class="field"><span>Название линии</span><input id="planLineName" maxlength="80" placeholder="Например: Передняя сторона" /></label>
+          <button id="deletePlanLineBtn" class="btn btn-danger btn-block" type="button">Удалить линию</button>
+        </div>
+      </details>
 
-      <div class="plan-name-row">
-        <label class="field"><span>Название линии</span><input id="planLineName" maxlength="80" placeholder="Например: Передняя сторона" /></label>
+      <div class="section-head compact plan-elements-head">
+        <div><h3>Элементы линии</h3><p class="muted">Нажмите строку, чтобы изменить элемент.</p></div>
       </div>
+      <div id="planItems" class="plan-items plan-items-compact"></div>
 
-      <div class="section-head compact">
-        <div><h3>Элементы линии</h3><p class="muted">Нажмите элемент, чтобы изменить размеры и материал.</p></div>
-      </div>
-      <div id="planItems" class="plan-items"></div>
+      <div id="planSheetBackdrop" class="plan-sheet-backdrop" hidden></div>
 
-      <div id="insertPanel" class="insert-panel" hidden>
-        <div class="insert-panel-head"><b>Что добавить?</b><button id="cancelInsertBtn" class="icon-btn small" type="button">×</button></div>
+      <div id="insertPanel" class="insert-panel plan-bottom-sheet" hidden>
+        <div class="plan-bottom-handle"></div>
+        <div class="insert-panel-head"><div><div class="eyebrow">Добавить элемент</div><b>Что поставить сюда?</b></div><button id="cancelInsertBtn" class="icon-btn small" type="button">×</button></div>
         <div class="insert-grid">
           <button type="button" data-add-plan-item="post"><span>│</span><b>Столб</b></button>
           <button type="button" data-add-plan-item="fence"><span>▥</span><b>Забор</b></button>
@@ -270,7 +279,8 @@
         </div>
       </div>
 
-      <div id="planEditor" class="plan-editor" hidden>
+      <div id="planEditor" class="plan-editor plan-bottom-sheet" hidden>
+        <div class="plan-bottom-handle"></div>
         <div class="plan-editor-head"><div><div class="eyebrow">Выбранный элемент</div><h3 id="planEditorTitle">Элемент</h3></div><button id="closePlanEditorBtn" class="icon-btn small" type="button">×</button></div>
         <div id="planEditorFields"></div>
         <div class="button-row plan-edit-actions">
@@ -281,8 +291,7 @@
       </div>
 
       <div class="plan-footer">
-        <button id="deletePlanLineBtn" class="btn btn-danger" type="button">Удалить линию</button>
-        <button id="savePlanBtn" class="btn btn-primary" type="button">Сохранить схему</button>
+        <button id="savePlanBtn" class="btn btn-primary btn-lg btn-block" type="button">Сохранить схему</button>
       </div>
     </section>
   </dialog>
