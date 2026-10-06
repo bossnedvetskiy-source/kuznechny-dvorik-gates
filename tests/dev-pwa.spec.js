@@ -57,6 +57,12 @@ test('single DEV work PWA starts in surveyor shell with card-based calculators',
     {timeout:7000}
   ).toBe(true);
 
+  const legacyLauncher = await page.request.get('/kuznechny-dvorik-gates/work-app.html');
+  expect(legacyLauncher.ok()).toBe(true);
+  const legacyLauncherHtml = await legacyLauncher.text();
+  expect(legacyLauncherHtml).toContain('kuzdvor-dev-shell-redirect');
+  expect(legacyLauncherHtml).toContain('/kuznechny-dvorik-gates/dev-tools/');
+
   const linksHtml = await page.evaluate(async () => {
     const res = await fetch('/kuznechny-dvorik-gates/link-app.html', {cache:'no-store'});
     return res.text();
