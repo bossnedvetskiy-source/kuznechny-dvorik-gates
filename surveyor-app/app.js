@@ -693,6 +693,9 @@ async function openPlanEditor(surveyId) {
   activePlanLineId=activePlanConfiguration.sitePlan.lines[0].id;
   activePlanItemId='';
   activeInsertIndex=null;
+  $('#insertPanel').hidden=true;
+  $('#planEditor').hidden=true;
+  $('#planSheetBackdrop').hidden=true;
   $('#planTitle').textContent=displaySurveyNumber(survey)+' · схема';
   renderPlanEditor();
   $('#planDialog').showModal();
@@ -710,6 +713,7 @@ function renderPlanEditor() {
   if (!line) return;
   $('#planLineName').value=line.name || '';
   $('#planLineWidth').textContent=trimNumber(lineWidth(line))+' м';
+  $('#planItemsCount').textContent=String((line.items || []).length);
   renderPlanCanvas(line);
   renderPlanItems(line);
   renderPlanItemEditor(line);
@@ -735,9 +739,10 @@ function renderPlanItems(line) {
     if(index<items.length){
       const item=items[index];
       html+=`<article class="plan-item-row ${item.id===activePlanItemId?'selected':''}" data-select-plan-item="${item.id}">
+        <span class="plan-item-order">${index+1}</span>
         <div class="plan-item-icon ${item.type}">${item.type==='post'?'│':item.type==='gate'?'▰':item.type==='wicket'?'▯':item.type==='opening'?'↔':'▥'}</div>
         <div class="plan-item-main"><b>${escapeHtml(PLAN_ITEM_TYPES[item.type]?.label || item.type)}</b><span>${escapeHtml(itemDescription(item))}</span></div>
-        <span class="plan-item-order">${index+1}</span>
+        <span class="plan-item-chevron">›</span>
       </article>`;
     }
   }
@@ -779,11 +784,28 @@ function renderPlanItemEditor(line) {
   $('#movePlanItemRightBtn').disabled=index<0 || index>=line.items.length-1;
 }
 
+function syncPlanSheetBackdrop() {
+  const backdrop=$('#planSheetBackdrop');
+  if (!backdrop) return;
+  backdrop.hidden=Boolean($('#planEditor')?.hidden && $('#insertPanel')?.hidden);
+}
+
+function closePlanSheets() {
+  activeInsertIndex=null;
+  activePlanItemId='';
+  $('#insertPanel').hidden=true;
+  $('#planEditor').hidden=true;
+  syncPlanSheetBackdrop();
+  const line=currentPlanLine();
+  if(line){ renderPlanCanvas(line); renderPlanItems(line); }
+}
+
 function selectPlanItem(id) {
   activePlanItemId=id;
   activeInsertIndex=null;
   $('#insertPanel').hidden=true;
   renderPlanEditor();
+  syncPlanSheetBackdrop();
 }
 
 function showInsertPanel(index) {
@@ -791,7 +813,7 @@ function showInsertPanel(index) {
   activePlanItemId='';
   $('#planEditor').hidden=true;
   $('#insertPanel').hidden=false;
-  $('#insertPanel').scrollIntoView({behavior:'smooth',block:'nearest'});
+  syncPlanSheetBackdrop();
   const line=currentPlanLine();
   if(line){ renderPlanCanvas(line); renderPlanItems(line); }
 }
@@ -806,6 +828,7 @@ function addPlanItem(type) {
   activeInsertIndex=null;
   $('#insertPanel').hidden=true;
   renderPlanEditor();
+  syncPlanSheetBackdrop();
 }
 
 function movePlanItem(direction) {
@@ -824,6 +847,7 @@ function deletePlanItem() {
   line.items=line.items.filter(value=>value.id!==item.id);
   activePlanItemId='';
   renderPlanEditor();
+  syncPlanSheetBackdrop();
 }
 
 function addPlanLine() {
@@ -833,6 +857,10 @@ function addPlanLine() {
   lines.push(line);
   activePlanLineId=line.id;
   activePlanItemId='';
+  activeInsertIndex=null;
+  $('#insertPanel').hidden=true;
+  $('#planEditor').hidden=true;
+  syncPlanSheetBackdrop();
   renderPlanEditor();
 }
 
@@ -844,6 +872,10 @@ function deletePlanLine() {
   lines.splice(index,1);
   activePlanLineId=lines[Math.max(0,index-1)]?.id || lines[0]?.id || '';
   activePlanItemId='';
+  activeInsertIndex=null;
+  $('#insertPanel').hidden=true;
+  $('#planEditor').hidden=true;
+  syncPlanSheetBackdrop();
   renderPlanEditor();
 }
 
@@ -1430,8 +1462,9 @@ function bindEvents() {
   $('#addPlanLineBtn').addEventListener('click', addPlanLine);
   $('#deletePlanLineBtn').addEventListener('click', deletePlanLine);
   $('#savePlanBtn').addEventListener('click', savePlan);
-  $('#cancelInsertBtn').addEventListener('click', () => { activeInsertIndex=null; $('#insertPanel').hidden=true; });
-  $('#closePlanEditorBtn').addEventListener('click', () => { activePlanItemId=''; renderPlanEditor(); });
+  $('#cancelInsertBtn').addEventListener('click', closePlanSheets);
+  $('#closePlanEditorBtn').addEventListener('click', closePlanSheets);
+  $('#planSheetBackdrop').addEventListener('click', closePlanSheets);
   $('#movePlanItemLeftBtn').addEventListener('click', () => movePlanItem(-1));
   $('#movePlanItemRightBtn').addEventListener('click', () => movePlanItem(1));
   $('#deletePlanItemBtn').addEventListener('click', deletePlanItem);
@@ -1449,6 +1482,8 @@ function bindEvents() {
     activePlanItemId='';
     activeInsertIndex=null;
     $('#insertPanel').hidden=true;
+    $('#planEditor').hidden=true;
+    syncPlanSheetBackdrop();
     renderPlanEditor();
   });
   $('#planItems').addEventListener('click', e => {
