@@ -2,7 +2,7 @@ import {test, expect} from '@playwright/test';
 
 test.use({viewport:{width:390,height:844}});
 
-test('single DEV work PWA starts in surveyor shell with card-based calculators', async ({page}) => {
+test('single DEV work PWA starts in surveyor shell with card-based calculators', async ({page, context}) => {
   await page.goto('/kuznechny-dvorik-gates/dev-tools/');
   await expect(page).toHaveTitle('КД Замерщик DEV');
   await expect(page.locator('#loginView')).toBeVisible();
@@ -25,6 +25,7 @@ test('single DEV work PWA starts in surveyor shell with card-based calculators',
   await expect(page.locator('#mainView')).toBeVisible();
 
   await expect(page.locator('[data-screen="calculators"]')).toHaveCount(0);
+  await expect(page.locator('#calculatorsScreen')).toHaveCount(0);
 
   await page.locator('#newSurveyBtn').click();
   await page.locator('#surveyClientPhone').fill('89370000000');
@@ -55,4 +56,42 @@ test('single DEV work PWA starts in surveyor shell with card-based calculators',
     }),
     {timeout:7000}
   ).toBe(true);
+
+  const linksHtml = await page.evaluate(async () => {
+    const res = await fetch('/kuznechny-dvorik-gates/link-app.html', {cache:'no-store'});
+    return res.text();
+  });
+  expect(linksHtml).toContain('href="/kuznechny-dvorik-gates/dev-tools/"');
+  expect(linksHtml).not.toContain('href="/kuznechny-dvorik-gates/app"');
+
+  await expect.poll(
+    () => page.evaluate(async () => {
+      const keys = await caches.keys();
+      const shellName = keys.find(key => key.startsWith('kuzdvor-dev-offline-') && key.endsWith('-shell'));
+      if (!shellName) return false;
+      const cache = await caches.open(shellName);
+      const required = [
+        '/kuznechny-dvorik-gates/dev-tools/',
+        '/kuznechny-dvorik-gates/dev-tools/styles.css',
+        '/kuznechny-dvorik-gates/dev-tools/app.js',
+        '/kuznechny-dvorik-gates/dev-tools/line-builder.js',
+        '/kuznechny-dvorik-gates/dev-tools/manifest.webmanifest',
+        '/kuznechny-dvorik-gates/surveyor-bridge.js'
+      ];
+      const rows = await Promise.all(required.map(url => cache.match(url, {ignoreSearch:true})));
+      return rows.every(Boolean);
+    }),
+    {timeout:10000}
+  ).toBe(true);
+
+  await page.reload();
+  await expect.poll(
+    () => page.evaluate(() => Boolean(navigator.serviceWorker?.controller)),
+    {timeout:7000}
+  ).toBe(true);
+
+  await context.setOffline(true);
+  await page.reload({waitUntil:'domcontentloaded'});
+  await expect(page.locator('#mainView')).toBeVisible();
+  await expect(page.locator('#networkBadge')).toContainText('Офлайн');
 });
