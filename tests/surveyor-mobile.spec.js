@@ -56,14 +56,34 @@ test('surveyor can create a mixed survey and reopen it offline', async ({page, c
   await page.locator('[data-edit-plan]').click();
   await expect(page.locator('#planDialog')).toBeVisible();
   await expect(page.locator('#planCanvas .plan-part')).toHaveCount(5);
+  await expect(page.locator('#planItemsCount')).toHaveText('5');
+
+  const rowHeights = await page.locator('#planItems .plan-item-row').evaluateAll(rows => rows.map(row => row.getBoundingClientRect().height));
+  expect(Math.max(...rowHeights)).toBeLessThanOrEqual(66);
+
+  const gateRow = page.locator('#planItems [data-select-plan-item]').filter({hasText:'Ворота'}).first();
+  await gateRow.click();
+  await expect(page.locator('#planEditor')).toBeVisible();
+  await expect(page.locator('#planSheetBackdrop')).toBeVisible();
+  const editorBox = await page.locator('#planEditor').boundingBox();
+  expect(editorBox).not.toBeNull();
+  expect(editorBox.height).toBeLessThan(620);
+  expect(editorBox.y + editorBox.height).toBeGreaterThan(820);
+  await page.locator('#closePlanEditorBtn').click();
+  await expect(page.locator('#planEditor')).toBeHidden();
+  await expect(page.locator('#planSheetBackdrop')).toBeHidden();
 
   // Insert a fence span between the middle post and wicket.
   await page.locator('[data-plan-insert="3"]').click();
+  await expect(page.locator('#insertPanel')).toBeVisible();
+  await expect(page.locator('#planSheetBackdrop')).toBeVisible();
   await page.locator('[data-add-plan-item="fence"]').click();
   await expect(page.locator('#planEditor')).toBeVisible();
   await page.locator('[data-plan-field="width"]').fill('1.7');
   await page.locator('[data-plan-field="width"]').blur();
   await page.locator('[data-plan-field="material"]').selectOption('euro_vertical');
+  await page.locator('#closePlanEditorBtn').click();
+  await expect(page.locator('#savePlanBtn')).toBeVisible();
   await page.locator('#savePlanBtn').click();
 
   await expect(page.locator('#surveyDetailsDialog')).toBeVisible();
