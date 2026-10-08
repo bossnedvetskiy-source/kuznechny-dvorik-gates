@@ -545,3 +545,9 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,su
   object-position:50% 50%!important;
   transform:scale(1.02)!important
 }
+
+
+/* One clear reset action for a new survey. Keep the primary add-section button dominant. */
+.section-actions .reset-fence-button{margin-left:auto;min-width:155px;color:#decaa9;border-color:rgba(239,200,111,.3);background:rgba(210,163,78,.045)}
+.section-actions .reset-fence-button:hover,.section-actions .reset-fence-button:focus-visible{border-color:rgba(239,200,111,.65);color:#f5d58e}
+@media(max-width:620px){.section-actions .reset-fence-button{grid-column:1/-1;width:100%;margin-left:0;min-height:46px;font-size:11px}}
