@@ -386,3 +386,61 @@ test('fresh surveyor app displays downloaded canopy thumbnail and fallback onlin
   expect(main.ok()).toBe(true);
   expect(backup.ok()).toBe(true);
 });
+
+
+test('fence reset clears four sections and delivery after confirmation, preserves saved quote', async ({page}) => {
+  await page.addInitScript(() => localStorage.setItem('kuzdvor-dev-access-v1','1'));
+  await page.goto('/kuznechny-dvorik-gates/evroshtaketnik/?surveyor=1&survey=sv_reset-a');
+  await page.evaluate(() => window.KUZDVOR_FENCE_APP.ready);
+  await page.locator('[data-field="length"][data-index="0"]').fill('13');
+  await page.locator('#addSection').click();
+  await page.locator('[data-field="length"][data-index="1"]').fill('9');
+  await page.locator('[data-field="gateOpening"][data-index="0"]').fill('3.4');
+  await page.locator('#manualDeliveryEnabled').check();
+  await page.locator('#manualDelivery').fill('1500');
+  await page.locator('#hasSlope').check();
+  await page.locator('[data-type="horizontal-double"]').click();
+  await expect.poll(() => page.evaluate(() => Boolean(localStorage.getItem('kuzdvor:picket-draft-v1:survey:sv_reset-a'))),{timeout:6000}).toBe(true);
+  await page.evaluate(() => localStorage.setItem('kuzdvor:picket-saved-v1', JSON.stringify({marker:'preserved'})));
+  page.once('dialog', dialog => dialog.dismiss());
+  await page.locator('#resetFenceQuote').click();
+  await expect(page.locator('[data-field="length"][data-index="0"]')).toHaveValue('13');
+  page.once('dialog', dialog => dialog.accept());
+  await page.locator('#resetFenceQuote').click();
+  await expect(page.locator('[data-field="length"][data-index="0"]')).toHaveValue('');
+  await expect(page.locator('[data-section-card="1"]')).toBeHidden();
+  await expect(page.locator('[data-field="gateOpening"][data-index="0"]')).toHaveValue('0');
+  await expect(page.locator('[data-field="height"][data-index="0"]')).toHaveValue('1.8');
+  await expect(page.locator('#manualDeliveryEnabled')).not.toBeChecked();
+  await expect(page.locator('#manualDelivery')).toHaveValue('0');
+  await expect(page.locator('#hasSlope')).not.toBeChecked();
+  await expect(page.locator('#fenceType')).toHaveValue('vertical-double');
+  await expect(page.locator('#totalPrice')).toHaveText('—');
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('kuzdvor:picket-draft-v1:survey:sv_reset-a')),{timeout:6000}).toBeNull();
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('kuzdvor:picket-saved-v1')).marker)).toBe('preserved');
+  await page.reload();
+  await page.evaluate(() => window.KUZDVOR_FENCE_APP.ready);
+  await expect(page.locator('[data-field="length"][data-index="0"]')).toHaveValue('');
+});
+
+test('new fence survey does not inherit previous survey draft; previous survey keeps its own work', async ({page}) => {
+  await page.addInitScript(() => localStorage.setItem('kuzdvor-dev-access-v1','1'));
+  await page.goto('/kuznechny-dvorik-gates/evroshtaketnik/?surveyor=1&survey=sv_unique-a');
+  await page.evaluate(() => window.KUZDVOR_FENCE_APP.ready);
+  await page.locator('[data-field="length"][data-index="0"]').fill('18');
+  await page.locator('#addSection').click();
+  await page.locator('[data-field="length"][data-index="1"]').fill('12');
+  await expect.poll(() => page.evaluate(() => Boolean(localStorage.getItem('kuzdvor:picket-draft-v1:survey:sv_unique-a'))),{timeout:6000}).toBe(true);
+  await page.goto('/kuznechny-dvorik-gates/evroshtaketnik/?surveyor=1&survey=sv_unique-b');
+  await page.evaluate(() => window.KUZDVOR_FENCE_APP.ready);
+  await expect(page.locator('[data-field="length"][data-index="0"]')).toHaveValue('');
+  await expect(page.locator('[data-section-card="1"]')).toBeHidden();
+  await expect(page.locator('#totalPrice')).toHaveText('—');
+  await page.locator('[data-field="length"][data-index="0"]').fill('7');
+  await expect.poll(() => page.evaluate(() => Boolean(localStorage.getItem('kuzdvor:picket-draft-v1:survey:sv_unique-b'))),{timeout:6000}).toBe(true);
+  await page.goto('/kuznechny-dvorik-gates/evroshtaketnik/?surveyor=1&survey=sv_unique-a');
+  await page.evaluate(() => window.KUZDVOR_FENCE_APP.ready);
+  await expect(page.locator('[data-field="length"][data-index="0"]')).toHaveValue('18');
+  await expect(page.locator('[data-field="length"][data-index="1"]')).toHaveValue('12');
+  await expect(page.locator('[data-section-card="1"]')).toBeVisible();
+});
