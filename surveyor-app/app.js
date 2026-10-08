@@ -1310,7 +1310,7 @@ async function openSurveyDetails(id) {
   const detailsRoot = $('#surveyDetailsContent');
   $$('[data-edit-calculation]', detailsRoot).forEach(card => {
     const openEdit = event => {
-      if (event?.target?.closest?.('[data-delete-calculation]')) return;
+      if (event?.target?.closest?.('[data-delete-calculation],[data-estimate-choice]')) return;
       if (event?.type === 'keydown' && !['Enter',' '].includes(event.key)) return;
       event?.preventDefault?.();
       editCalculation(survey.id, card.dataset.editCalculation);
@@ -1330,26 +1330,35 @@ async function openSurveyDetails(id) {
 }
 
 function showCustomerView(survey) {
-  const rows = surveyCalculations(survey);
+  const estimate = unifiedEstimate(survey);
+  const selected = estimate.selected;
   const dialog = $('#customerPreviewDialog');
-  if (!dialog || !rows.length) return;
-  $('#customerPreviewTitle').textContent = 'Ваши варианты';
+  if (!dialog || !selected.length) return;
+  $('#customerPreviewTitle').textContent = 'Смета объекта';
+  const customerCard = item => {
+    const d=calculationCardDetails(item);
+    return `<article class="v3-customer-item">
+      ${calculationImage(item) ? `<img class="${item.type==='canopy'?'canopy-farm-photo':''}" src="${escapeHtml(calculationImage(item))}" alt="${escapeHtml(d.title)}" loading="lazy">` : ''}
+      <div><small>${escapeHtml(calculationTypeLabel(item.type))}</small><h3>${escapeHtml(d.title)}</h3>
+      <p>${d.lines.map(escapeHtml).join(' · ')}</p>
+      ${item.payload?.deliveryPending && ['fence','canopy'].includes(item.type) ? '<p class="v3-customer-delivery-note">Стоимость изделия без доставки. Доставка рассчитывается отдельно.</p>' : ''}
+      <strong>${formatMoney(item.total)}</strong></div>
+    </article>`;
+  };
   $('#customerPreviewContent').innerHTML = `
-    <div class="v3-customer-brand">КУЗНЕЧНЫЙ ДВОРИКЪ · ВАШ РАСЧЁТ</div>
+    <div class="v3-customer-brand">КУЗНЕЧНЫЙ ДВОРИКЪ · ВАША СМЕТА</div>
     ${survey.address ? `<p class="v3-customer-address">${escapeHtml(survey.address)}</p>` : ''}
-    ${rows.map(item => {
-      const d = calculationCardDetails(item);
-      return `<article class="v3-customer-item">
-        ${calculationImage(item) ? `<img class="${item.type==='canopy'?'canopy-farm-photo':''}" src="${escapeHtml(calculationImage(item))}" alt="${escapeHtml(d.title)}" loading="lazy">` : ''}
-        <div><small>${escapeHtml(calculationTypeLabel(item.type))}</small><h3>${escapeHtml(d.title)}</h3>
-        <p>${d.lines.map(escapeHtml).join(' · ')}</p>
-        ${item.payload?.deliveryPending && ['fence','canopy'].includes(item.type) ? '<p class="v3-customer-delivery-note">Стоимость изделия без доставки. Доставка рассчитывается отдельно.</p>' : ''}
-        <strong>${formatMoney(item.total)}</strong></div>
-      </article>`;
-    }).join('')}
-    ${rows.length === 1
-      ? `<div class="v3-customer-total"><span>Стоимость варианта</span><b>${formatMoney(rows[0].total)}</b></div>`
-      : '<div class="v3-customer-disclaimer">Это цены отдельных вариантов. Общую смету с учётом доставки и общих элементов уточняем отдельно.</div>'}
+    <h3 class="v3-estimate-client-heading">Выбранные изделия</h3>
+    ${selected.map(customerCard).join('')}
+    ${estimate.repeatedDelivery>0 ? `<div class="v3-customer-adjustment">Повторная доставка —${formatMoney(estimate.repeatedDelivery)}</div>`:''}
+    ${estimate.adjustment>0 ? `<div class="v3-customer-adjustment">Корректировка совместных работ —${formatMoney(estimate.adjustment)}</div>`:''}
+    <div class="v3-customer-total"><span>Предварительная стоимость</span><b>${formatMoney(estimate.total)}</b></div>
+    ${estimate.needsReview ? '<div class="v3-customer-disclaimer">Стоимость предварительная. Доставка и общие столбы могут потребовать уточнения до оформления договора.</div>' : ''}
+    ${estimate.alternatives.length ? `<section class="v3-customer-alternatives">
+      <h3>Другие рассмотренные варианты</h3>
+      <p>Не включены в общую стоимость.</p>
+      ${estimate.alternatives.map(item=>`<div class="v3-alt-row"><span>${escapeHtml(calculationCardDetails(item).title)}</span><b>${formatMoney(item.total)}</b></div>`).join('')}
+    </section>` : ''}
     <p class="v3-customer-foot">Индивидуальное изготовление · Гарантия 3 года</p>`;
   dialog.dataset.surveyId = survey.id;
   $('#surveyDetailsDialog').close();
