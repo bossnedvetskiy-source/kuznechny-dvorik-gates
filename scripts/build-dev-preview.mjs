@@ -481,7 +481,7 @@ const surveyorGateGuard = `<script id="kd-surveyor-gate-context">
  html.kd-surveyor-gates .mobile-cta,html.kd-surveyor-gates #mobilePrimaryCta
  {display:none!important}
 </style>`;
-if (!surveyorGateHtml.includes('${BASE}/surveyor-bridge.js'))
+if (!surveyorGateHtml.includes(`${BASE}/surveyor-bridge.js`))
   throw new Error('Gate surveyor route cannot load the transfer bridge');
 surveyorGateHtml = surveyorGateHtml.replace('</head>', surveyorGateGuard + '\n</head>');
 await writeFile(path.join(surveyorGateOut, 'index.html'), surveyorGateHtml, 'utf8');
