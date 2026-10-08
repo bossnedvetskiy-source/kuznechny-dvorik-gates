@@ -466,7 +466,11 @@
           if (calculatorType !== 'fence') showMessage(`${calc.title} · ${money(calc.total)}`);
         }
       } catch (error) {
-        showMessage(error?.message || 'Не удалось восстановить расчёт', true);
+        // An empty new fence quote is expected until the surveyor enters length.
+        // Do not lock the live-price message into an error state on first open.
+        if (calculatorType !== 'fence' || editState) {
+          showMessage(error?.message || 'Не удалось восстановить расчёт', true);
+        }
       }
     })();
   }
