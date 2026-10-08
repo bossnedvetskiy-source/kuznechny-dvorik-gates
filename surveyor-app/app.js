@@ -905,12 +905,27 @@ const FENCE_IMAGE_NAMES = Object.freeze({
   'vertical-single':'fence-single-gray-20260927.webp',
   'horizontal-double':'fence-horizontal-real.webp'
 });
+const CANOPY_IMAGE_NAMES = Object.freeze({
+  'Арочный':'icon-arched.jpg',
+  'Полуарочный':'icon-semi-arched.jpg',
+  'Односкатный':'icon-shed-low.jpg',
+  'Треугольный':'icon-shed-high.jpg',
+  'Швелер':'icon-channel.jpg',
+  'Двухскатный':'icon-gable-vertical.jpg',
+  'Двухскатный арочный':'icon-gable-arched.jpg'
+});
 function calculationImage(item) {
   if (item.image) return item.image;
-  if (item.type !== 'fence') return '';
-  const type = item?.payload?.configuration?.fenceType;
-  const filename = FENCE_IMAGE_NAMES[type];
-  return filename ? new URL('../evroshtaketnik/assets/' + filename, location.href).pathname : '';
+  if (item.type === 'fence') {
+    const filename = FENCE_IMAGE_NAMES[item?.payload?.configuration?.fenceType];
+    return filename ? new URL('../evroshtaketnik/assets/' + filename,location.href).pathname : '';
+  }
+  if (item.type === 'canopy') {
+    const farmType = item?.payload?.configuration?.canopy?.input?.farmType;
+    const filename = CANOPY_IMAGE_NAMES[farmType];
+    return filename ? new URL('../naves/farm-icons/' + filename,location.href).pathname : '';
+  }
+  return '';
 }
 function calculationCardDetails(item) {
   const payload = item?.payload && typeof item.payload === 'object' ? item.payload : {};
@@ -991,7 +1006,8 @@ function calculationCardDetails(item) {
       input.farmType || '',
       input.coverage || '',
       input.installType || '',
-      support.join(' · ')
+      support.join(' · '),
+      payload.deliveryPending ? 'Доставка рассчитывается отдельно' : ''
     ].filter(Boolean);
     return { title:item.title || (input.farmType ? `${input.farmType} навес` : 'Навес'), lines:lines.length ? lines : fallback.lines, tags };
   }
@@ -1011,7 +1027,7 @@ function calculationsHtml(survey) {
       ${rows.map(item=>{
         const details = calculationCardDetails(item);
         return `<article class="calculation-card calculation-card-${escapeHtml(item.type)}" data-edit-calculation="${escapeHtml(item.id)}" role="button" tabindex="0" aria-label="Изменить расчёт: ${escapeHtml(details.title)}">
-          ${calculationImage(item) ? `<img src="${escapeHtml(calculationImage(item))}" alt="" loading="lazy">` : `<div class="calculation-card-icon ${escapeHtml(item.type)}">${item.type==='gates'?'▰':item.type==='fence'?'▥':'⌒'}</div>`}
+          ${calculationImage(item) ? `<img class="${item.type==='canopy'?'canopy-farm-photo':''}" src="${escapeHtml(calculationImage(item))}" alt="" loading="lazy">` : `<div class="calculation-card-icon ${escapeHtml(item.type)}">${item.type==='gates'?'▰':item.type==='fence'?'▥':'⌒'}</div>`}
           <div class="calculation-card-copy">
             <small>${escapeHtml(calculationTypeLabel(item.type))}</small>
             <b>${escapeHtml(details.title)}</b>
@@ -1200,10 +1216,10 @@ function showCustomerView(survey) {
     ${rows.map(item => {
       const d = calculationCardDetails(item);
       return `<article class="v3-customer-item">
-        ${calculationImage(item) ? `<img src="${escapeHtml(calculationImage(item))}" alt="${escapeHtml(d.title)}" loading="lazy">` : ''}
+        ${calculationImage(item) ? `<img class="${item.type==='canopy'?'canopy-farm-photo':''}" src="${escapeHtml(calculationImage(item))}" alt="${escapeHtml(d.title)}" loading="lazy">` : ''}
         <div><small>${escapeHtml(calculationTypeLabel(item.type))}</small><h3>${escapeHtml(d.title)}</h3>
         <p>${d.lines.map(escapeHtml).join(' · ')}</p>
-        ${item.type === 'fence' && item.payload?.deliveryPending ? '<p class="v3-customer-delivery-note">Стоимость забора без доставки. Доставка рассчитывается отдельно.</p>' : ''}
+        ${item.payload?.deliveryPending && ['fence','canopy'].includes(item.type) ? '<p class="v3-customer-delivery-note">Стоимость изделия без доставки. Доставка рассчитывается отдельно.</p>' : ''}
         <strong>${formatMoney(item.total)}</strong></div>
       </article>`;
     }).join('')}
