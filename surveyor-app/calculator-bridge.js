@@ -235,27 +235,55 @@
     };
   }
 
+  const CANOPY_FARM_IMAGES = Object.freeze({
+    'Арочный':'icon-arched.jpg',
+    'Полуарочный':'icon-semi-arched.jpg',
+    'Односкатный':'icon-shed-low.jpg',
+    'Треугольный':'icon-shed-high.jpg',
+    'Швелер':'icon-channel.jpg',
+    'Двухскатный':'icon-gable-vertical.jpg',
+    'Двухскатный арочный':'icon-gable-arched.jpg'
+  });
+
   function canopySnapshot() {
     const snap = window.TrussApp?.snapshot?.();
-    if (!snap) throw new Error('Калькулятор навеса ещё не готов');
+    if (!snap) throw new Error('Сначала выполните расчёт навеса');
     const total = Number(snap.publicSummary?.total) || 0;
-    if (!(total > 0)) throw new Error('Сначала выполните расчёт навеса');
     const input = snap.input || {};
+    if (!(total > 0) || input.farmType !== 'Арочный' || input.trussType === 'Плоская'
+        || document.getElementById('totalPrice')?.textContent?.includes('Требуется уточнение')) {
+      throw new Error('Для выбранной фермы нет готовой цены. Выберите арочную ферму и проверьте размеры.');
+    }
+    const photo = CANOPY_FARM_IMAGES[input.farmType];
+    const publicInput = {};
+    for (const key of [
+      'widthPostsM','lengthM','visibleHeightM','installType','coverage',
+      'farmType','farmPreset','trussType','lagMode','riseMm','autoRise',
+      'heightMm','overhangMm','endFlatMm','cellStepMm','materialMode',
+      'existingPosts','beamsExisting','postsNeeded','paint','delivery'
+    ]) {
+      if (Object.prototype.hasOwnProperty.call(input, key)) publicInput[key] = input[key];
+    }
+    // PricingSnapshot contains confidential rates. It must never reach the
+    // surveyor's local records or customer view; restore() only needs input.
+    const publicSnap = {version:6,input:publicInput,publicSummary:{total}};
     return {
       type:'canopy',
-      title:input.farmType ? `${input.farmType} навес` : 'Навес',
+      title:'Арочный навес',
       total,
-      image:'',
+      image:photo ? new URL('./farm-icons/' + photo,location.href).pathname : '',
       summary:[
-        input.widthPostsM && input.lengthM ? `${input.widthPostsM} × ${input.lengthM} м` : '',
+        Number(input.widthPostsM)>0&&Number(input.lengthM)>0 ? `${input.widthPostsM} × ${input.lengthM} м` : '',
         input.coverage || '',
-        input.installType || ''
+        Number(input.existingPosts)>0 ? `готовых столбов ${input.existingPosts}` : 'новые столбы',
+        input.beamsExisting ? 'готовые балки' : 'новые балки'
       ].filter(Boolean).join(' · '),
       payload:{
         category:'canopy',
-        productTitle:'Навес',
+        productTitle:'Арочный навес',
         total,
-        configuration:{canopy:snap}
+        deliveryPending:Number(input.delivery || 0)===0,
+        configuration:{canopy:publicSnap}
       }
     };
   }
@@ -369,6 +397,25 @@
       .kd-surveyor-canopy .client-price-note{display:none!important}
       .kd-surveyor-canopy .page{padding-top:12px!important}
       .kd-surveyor-canopy .workspace{margin-top:0!important}
+      .kd-surveyor-canopy .client-result{order:2!important;position:static!important}
+      .kd-surveyor-canopy .right-column{order:2!important}
+      .kd-surveyor-canopy .client-controls{order:1!important}
+      .kd-surveyor-canopy .farm-type-grid{gap:8px!important}
+      .kd-surveyor-canopy .farm-type-option{position:relative!important;min-height:85px!important;padding:5px 5px 23px!important;border:1px solid #3f454b!important;border-radius:9px!important;overflow:hidden}
+      .kd-surveyor-canopy .farm-type-option.is-selected{border:2px solid #dfb453!important;background:rgba(223,180,83,.08)!important}
+      .kd-surveyor-canopy .kd-farm-state{position:absolute;bottom:3px;left:0;right:0;text-align:center;font-weight:800;font-size:10px;line-height:1.3;color:#aeb4bd}
+      .kd-surveyor-canopy .farm-type-option.is-selected .kd-farm-state{color:#e2b861}
+      .kd-surveyor-canopy .kd-canopy-presets{grid-column:1/-1;display:grid;gap:9px;padding:13px;border-radius:13px;border:1px solid #41403a;background:#1c1d1c}
+      .kd-surveyor-canopy .kd-canopy-presets strong{color:#fff;font-size:14px}
+      .kd-surveyor-canopy .kd-canopy-presets small{color:#bbb;font-size:12px}
+      .kd-surveyor-canopy .kd-canopy-preset-list{display:grid;gap:7px}
+      .kd-surveyor-canopy .kd-canopy-preset-list button{min-height:46px;border:1px solid #53565a;background:#24282c;color:#fff;border-radius:10px;padding:9px;font:700 13px/1.25 inherit;cursor:pointer;text-align:left}
+      .kd-surveyor-canopy .kd-canopy-preset-list button.is-selected{border-color:#deb566;background:#3a3327;color:#ffdf92}
+      .kd-surveyor-canopy .kd-canopy-preview-jump{width:100%;border:1px solid #d2a34e;border-radius:10px;background:#282720;color:#f2d48a;padding:11px;font:800 13px inherit;cursor:pointer}
+      .kd-surveyor-canopy .kd-canopy-unsupported{color:#eccb8f;font-size:12px;line-height:1.4}
+      .kd-surveyor-canopy #kdSurveyorBridge .kd-copy b{font-size:15px;line-height:1.2}
+      .kd-surveyor-canopy #kdSurveyorBridge .kd-copy span{font-size:10px}
+      .kd-surveyor-canopy #kdSurveyorBridgeSave:disabled{opacity:.55;cursor:not-allowed}
 
       @media(max-width:520px){
         #kdSurveyorBridge .kd-row{grid-template-columns:46px minmax(0,1fr) auto}
@@ -391,6 +438,100 @@
         <button type="button" class="kd-save" id="kdSurveyorBridgeSave">${editState ? 'Сохранить изменения' : 'Добавить в замер'}</button>
       </div>`;
     document.body.append(bar);
+
+    if (calculatorType === 'canopy') {
+      const typeGrid = document.querySelector('.farm-type-grid');
+      typeGrid?.querySelectorAll('[data-farm-type]').forEach(button => {
+        const badge = document.createElement('span');
+        badge.className = 'kd-farm-state';
+        badge.textContent = button.dataset.farmType === 'Арочный' ? 'Цена онлайн' : 'По запросу';
+        button.append(badge);
+        button.setAttribute('aria-label', (button.dataset.farmType || 'Ферма') +
+          (button.dataset.farmType === 'Арочный' ? ', доступен расчёт цены' : ', цена по запросу'));
+      });
+      const jump = document.createElement('button');
+      jump.type = 'button';
+      jump.className = 'kd-canopy-preview-jump';
+      jump.textContent = 'Посмотреть 3D-модель навеса ↓';
+      jump.addEventListener('click', () =>
+        document.getElementById('canopyViewport')?.scrollIntoView({behavior:'smooth',block:'center'}));
+      typeGrid?.insertAdjacentElement('afterend',jump);
+
+      const existing = document.getElementById('existingPosts');
+      const beams = document.getElementById('beamsExisting');
+      const anchorField = existing?.closest('label');
+      const presets = document.createElement('section');
+      presets.className = 'kd-canopy-presets';
+      presets.innerHTML = `<strong>Что уже установлено у клиента?</strong>
+        <div class="kd-canopy-preset-list">
+          <button type="button" data-canopy-preset="new">Нужны новые столбы и балки</button>
+          <button type="button" data-canopy-preset="posts">Столбы уже стоят · нужны балки</button>
+          <button type="button" data-canopy-preset="all">Есть столбы и продольные балки</button>
+        </div>
+        <small>Если готова только часть столбов, укажите их количество в поле выше.</small>`;
+      anchorField?.insertAdjacentElement('afterend',presets);
+
+      let presetInProgress = false;
+      const updatePresets = () => {
+        const totalPosts = Number(window.__CANOPY_PUBLIC?.totalPosts || 0);
+        const installed = Number(existing?.value || 0);
+        const hasBeams = Boolean(beams?.checked);
+        const chosen = installed === 0 && !hasBeams ? 'new' :
+          totalPosts > 0 && installed >= totalPosts ? (hasBeams ? 'all' : 'posts') : '';
+        presets.querySelectorAll('[data-canopy-preset]').forEach(button =>
+          button.classList.toggle('is-selected',button.dataset.canopyPreset === chosen));
+      };
+      presets.addEventListener('click', event => {
+        const button = event.target.closest('[data-canopy-preset]');
+        if (!button || !existing || !beams || presetInProgress) return;
+        const totalPosts = Number(window.__CANOPY_PUBLIC?.totalPosts || 0);
+        if ((button.dataset.canopyPreset === 'posts' || button.dataset.canopyPreset === 'all') && totalPosts <= 0) return;
+        presetInProgress = true;
+        existing.value = button.dataset.canopyPreset === 'new' ? '0' : String(totalPosts);
+        beams.checked = button.dataset.canopyPreset === 'all';
+        existing.dispatchEvent(new Event('input',{bubbles:true}));
+        beams.dispatchEvent(new Event('change',{bubbles:true}));
+        presetInProgress = false;
+        updatePresets();
+      });
+      existing?.addEventListener('input',updatePresets);
+      beams?.addEventListener('change',updatePresets);
+      for (const id of ['lengthPosts','widthPosts']) document.getElementById(id)?.addEventListener('input',updatePresets);
+      updatePresets();
+
+      const priceNode = document.getElementById('totalPrice');
+      const statusNode = document.getElementById('resultStatus');
+      const warningNode = document.getElementById('geometryWarning');
+      const titleNode = bar.querySelector('.kd-copy b');
+      const messageNode = document.getElementById('kdSurveyorBridgeMessage');
+      const saveNode = document.getElementById('kdSurveyorBridgeSave');
+      let saving = false;
+      const showCanopyPrice = () => {
+        if (saving || !titleNode || !messageNode) return;
+        const price = (priceNode?.textContent || '').trim();
+        const isExample = statusNode?.classList.contains('example');
+        const valid = /^\d[\d\s\u00a0\u202f]*₽$/.test(price) && !isExample &&
+          !warningNode?.textContent?.includes('пока не') &&
+          document.getElementById('farmType')?.value === 'Арочный' &&
+          document.getElementById('trussType')?.value !== 'Плоская';
+        if (saveNode) saveNode.disabled = !valid;
+        titleNode.textContent = valid ? 'Навес · ' + price : 'Навес · цена по запросу';
+        messageNode.textContent = valid
+          ? 'Покажите 3D клиенту · добавьте в замер'
+          : isExample ? 'Укажите размеры навеса на объекте'
+          : 'Для выбранного варианта требуется проверка цены';
+        messageNode.classList.remove('is-error');
+        updatePresets();
+      };
+      showCanopyPrice();
+      const observer = new MutationObserver(showCanopyPrice);
+      for (const node of [priceNode,statusNode,warningNode])
+        if (node) observer.observe(node,{subtree:true,childList:true,characterData:true,attributes:node===statusNode,attributeFilter:node===statusNode?['class']:undefined});
+      bar.addEventListener('click', event => {
+        if (event.target.closest('#kdSurveyorBridgeSave') && !saveNode.disabled) saving = true;
+      }, {capture:true});
+      window.addEventListener('pagehide',()=>observer.disconnect(),{once:true});
+    }
 
     // On a phone the surveyor sees the chosen photo and lengths first; the
     // actual recalculated fence price stays visible in the bottom action bar.
