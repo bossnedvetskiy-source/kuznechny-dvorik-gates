@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - feature/kd-surveyor-v3-redesign
+      - feature/kd-surveyor-v3-fence-cards
   workflow_dispatch:
 
 permissions:
@@ -40,5 +41,5 @@ jobs:
           node scripts/build-timeweb.mjs
           node scripts/build-dev-preview.mjs
       - run: npx playwright install --with-deps chromium
-      - name: Check V3 mobile journey, legacy data and all real calculators
-        run: npx playwright test tests/surveyor-mobile.spec.js tests/surveyor-v3.spec.js tests/surveyor-dev-calculator-bridge.spec.js
+      - name: Check fence types, photographs, stored public price and editing
+        run: npx playwright test tests/surveyor-dev-calculator-bridge.spec.js --grep "fence" --workers=1

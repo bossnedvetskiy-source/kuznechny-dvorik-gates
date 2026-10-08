@@ -101,6 +101,7 @@ test('fence calculator result returns into the same survey card', async ({page})
   await expect(page.locator('#surveyDetailsDialog')).toBeVisible({timeout:15000});
   await expect(page.locator('.calculation-card')).toHaveCount(1);
   await expect(page.locator('.calculation-card')).toContainText('Забор из евроштакетника');
+  await expect(page.locator('.calculation-card img')).toHaveAttribute('src', /fence-double-brown-20260927\.webp/);
   await expect(page.locator('.calculation-card-lines')).toContainText('Длина 10 м');
   await expect(page.locator('.calculation-card-tags')).toContainText('Вертикальный');
   await expect(page.locator('.calculation-card-tags')).toContainText('прол');
@@ -158,3 +159,52 @@ test('canopy calculator result returns into the same survey card', async ({page}
   await expect(page.locator('.calculation-card')).toHaveCount(1);
   await expect(page.locator('.calculation-card-lines')).toContainText('Размер 3 × 6,2 м');
 });
+
+
+for (const [type, file] of [
+  ['vertical-single', 'fence-single-gray-20260927.webp'],
+  ['horizontal-double', 'fence-horizontal-real.webp']
+]) {
+  test(`fence ${type}: photo and price survive roundtrip, public survey payload only`, async ({page}) => {
+    await loginAndCreateSurvey(page, 'Мелеуз, тест ' + type);
+    await page.locator('[data-launch-calculation="fence"]').click();
+    await expect(page.locator('#kdSurveyorBridge')).toBeVisible({timeout:15000});
+    await page.locator(`[data-type="${type}"]`).click();
+    await page.locator('[data-field="length"][data-index="0"]').fill('9.5');
+    await expect(page.locator('#kdSurveyorBridge .kd-copy b')).toContainText('₽');
+    await expect(page.locator('#kdSurveyorBridgeMessage')).toContainText('Без доставки');
+    await page.locator('#kdSurveyorBridgeSave').click();
+    await expect(page.locator('#surveyDetailsDialog')).toBeVisible({timeout:15000});
+    await expect(page.locator('.calculation-card')).toHaveCount(1);
+    await expect(page.locator('.calculation-card img')).toHaveAttribute('src', new RegExp(file.replace('.', '\\.') + '$'));
+    await expect(page.locator('.calculation-card-tags')).toContainText('Стоимость без доставки');
+
+    const saved = await page.evaluate(async () => {
+      const db = await new Promise((resolve, reject) => {
+        const request = indexedDB.open('kd-surveyor-stage1');
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+      const surveys = await new Promise((resolve, reject) => {
+        const request = db.transaction('surveys').objectStore('surveys').getAll();
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+      db.close();
+      return surveys.at(-1).configuration.calculations[0];
+    });
+    expect(saved.payload.configuration.fenceType).toBe(type);
+    expect(saved.payload.configuration).not.toHaveProperty('costs');
+    expect(saved.payload.configuration).not.toHaveProperty('calculationSettings');
+    expect(saved.payload.configuration.summary).not.toHaveProperty('tubeStocks');
+    expect(saved.image).toContain(file);
+
+    await page.locator('[data-v3-preview]').click();
+    await expect(page.locator('.v3-customer-item img')).toHaveAttribute('src', new RegExp(file.replace('.', '\\.') + '$'));
+    await expect(page.locator('#customerPreviewContent')).toContainText('Стоимость забора без доставки');
+    await page.locator('#closeCustomerPreviewBtn').click();
+    await page.locator('.calculation-card-copy').click();
+    await expect(page.locator('#fenceType')).toHaveValue(type);
+    await expect(page.locator('[data-field="length"][data-index="0"]')).toHaveValue('9.5');
+  });
+}
