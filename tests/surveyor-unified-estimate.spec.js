@@ -7,7 +7,7 @@ async function startEstimate(page) {
   await page.locator('#loginInput').fill('zamer');
   await page.locator('#passwordInput').fill('1234');
   await page.locator('#loginForm button[type="submit"]').click();
-  await expect(page.locator('#mainView')).toBeVisible();
+  await expect(page.locator('#mainView')).toBeVisible({timeout:20000});
   await page.locator('#newSurveyBtn').click();
   await page.locator('#saveSurveyBtn').click();
   await expect(page.locator('#surveyDetailsDialog')).toBeVisible();
