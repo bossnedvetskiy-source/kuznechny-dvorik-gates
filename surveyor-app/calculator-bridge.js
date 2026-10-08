@@ -101,7 +101,7 @@
       existingPostsCount: Number(config.existingPostsCount) || 0,
       siteConditions: config.siteConditions || {},
       sections: Array.isArray(config.sections) ? config.sections : [],
-      delivery: {manual:false, manualPrice:0, name:delivery.name || item?.payload?.city || '', secondary:'', price:Number(delivery.price) || 0}
+      delivery: {manual:Boolean(delivery.manual), manualPrice:Number(delivery.manualPrice) || 0, name:delivery.name || item?.payload?.city || '', secondary:'', price:Number(delivery.price) || 0}
     };
     if (!api.restore(state)) throw new Error('Не удалось восстановить расчёт забора');
   }
@@ -153,23 +153,85 @@
     };
   }
 
+  const FENCE_PHOTOS = Object.freeze({
+    'vertical-double': 'fence-double-brown-20260927.webp',
+    'vertical-single': 'fence-single-gray-20260927.webp',
+    'horizontal-double': 'fence-horizontal-real.webp'
+  });
+
   function fenceSnapshot() {
-    const payload = window.KUZDVOR_FENCE_APP?.snapshot?.();
-    if (!payload) throw new Error('Калькулятор забора ещё не готов');
-    const total = Number(payload.total) || 0;
-    const summary = payload.configuration?.summary || {};
+    const source = window.KUZDVOR_FENCE_APP?.snapshot?.();
+    if (!source) throw new Error('Калькулятор забора ещё не готов');
+    const total = Number(source.total) || 0;
+    const config = source.configuration || {};
+    const summary = config.summary || {};
     if (!(total > 0) || !(Number(summary.totalLength) > 0)) throw new Error('Сначала укажите размеры забора');
+
+    // The survey card stores public fields only. Full calculationSettings,
+    // internal costs and material purchase data are NOT transferred to IndexedDB.
+    const type = FENCE_PHOTOS[config.fenceType] ? config.fenceType : 'vertical-double';
+    const image = new URL('./assets/' + FENCE_PHOTOS[type], location.href).pathname;
+    const delivery = config.delivery || {};
+    const manual = Boolean(document.getElementById('manualDeliveryEnabled')?.checked);
+    const publicSummary = {};
+    for (const key of [
+      'totalLength','grossLineLength','openingsWidth','openingSupportPosts',
+      'openingPostsWidth','openingNodeWidth','betweenOpeningFence',
+      'bridgeSpans','bridgeExtraPosts','totalSpans','postsByScheme',
+      'existingPostsUsed','newPosts','total'
+    ]) {
+      if (Number.isFinite(Number(summary[key]))) publicSummary[key] = Number(summary[key]);
+    }
+    const sections = Array.isArray(config.sections) ? config.sections.slice(0,4).map(section => ({
+      length:Number(section.length) || 0,
+      height:Number(section.height) || 1.8,
+      gateOpening:Number(section.gateOpening) || 0,
+      wicketOpening:Number(section.wicketOpening) || 0,
+      openingPostType:String(section.openingPostType || '100x100x3'),
+      openingsSharePost:section.openingsSharePost !== false,
+      betweenOpeningFence:Number(section.betweenOpeningFence) || 0,
+      openingStartFence:section.openingStartFence == null ? null : Number(section.openingStartFence),
+      sharedWithNext:Boolean(section.sharedWithNext)
+    })) : [];
+    const publicConfig = {
+      quoteNumber:String(config.quoteNumber || ''),
+      fenceType:type,
+      fenceTypeLabel:String(config.fenceTypeLabel || ''),
+      postType:String(config.postType || '80x80x3'),
+      includeNewPosts:config.includeNewPosts !== false,
+      existingPostsCount:Number(config.existingPostsCount) || 0,
+      siteConditions:{
+        slope:Boolean(config.siteConditions?.slope),
+        hardSurface:Boolean(config.siteConditions?.hardSurface)
+      },
+      sections,
+      delivery:{
+        known:Boolean(delivery.known),
+        name:String(delivery.name || ''),
+        price:Number(delivery.price) || 0,
+        manual,
+        manualPrice:manual ? Math.max(0, Number(document.getElementById('manualDelivery')?.value) || 0) : 0
+      },
+      summary:publicSummary
+    };
     return {
       type:'fence',
       title:'Забор из евроштакетника',
       total,
-      image:'',
+      image,
       summary:[
-        payload.configuration?.fenceTypeLabel || '',
+        publicConfig.fenceTypeLabel,
         Number(summary.totalLength) ? `${Number(summary.totalLength).toLocaleString('ru-RU')} м` : '',
         Number(summary.totalSpans) ? `${summary.totalSpans} прол.` : ''
       ].filter(Boolean).join(' · '),
-      payload
+      payload:{
+        category:'picket-fence',
+        productTitle:'Забор из евроштакетника',
+        total,
+        city:String(source.city || ''),
+        deliveryPending:!Boolean(delivery.known),
+        configuration:publicConfig
+      }
     };
   }
 
