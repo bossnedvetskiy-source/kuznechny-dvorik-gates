@@ -20,16 +20,19 @@ for (const marker of [
   "function addPlanItem",
   "function calculationWorkTypes",
   "function syncSurveyWorkTypes",
-  "Расчёты / варианты",
+  "Сохранённые расчёты",
+  "function v3ProductTools",
+  "function showCustomerView",
+  "await openSurveyDetails(survey.id)",
   "configuration:x.configuration || {}",
   "url.searchParams.set('returnTo', location.pathname)"
 ]) {
   if (!app.includes(marker)) throw new Error('Surveyor app missing: '+marker);
 }
-for (const marker of ['syncNowBtn','syncStatusText','КД Замерщик','planDialog','planCanvas','data-add-plan-item']) {
+for (const marker of ['syncNowBtn','syncStatusText','КД Замерщик','planDialog','planCanvas','data-add-plan-item','customerPreviewDialog']) {
   if (!html.includes(marker)) throw new Error('Surveyor HTML missing: '+marker);
 }
-if (!sw.includes('kd-surveyor-stage2-v7') || !sw.includes('./line-builder.js')) throw new Error('Surveyor service worker cache was not bumped');
+if (!sw.includes('kd-surveyor-v3-stage1-v1') || !sw.includes('./line-builder.js')) throw new Error('Surveyor service worker cache was not bumped');
 for (const marker of ['ensureSitePlan','newItem','newLine','lineWidth','PLAN_ITEM_TYPES']) {
   if (!lineBuilder.includes(marker)) throw new Error('Line builder missing: '+marker);
 }
