@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - feature/kd-surveyor-v3-redesign
+      - feature/kd-surveyor-v3-fence-cards
   workflow_dispatch:
 
 permissions:
