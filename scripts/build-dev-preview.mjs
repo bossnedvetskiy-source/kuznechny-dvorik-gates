@@ -570,6 +570,8 @@ const devShellCore = [
   `${BASE}/${DEV_TOOLS_FRESH_DIR}/line-builder.js`,
   `${BASE}/${DEV_TOOLS_FRESH_DIR}/manifest.webmanifest`,
   `${BASE}/${SURVEYOR_GATES_DIR}/`,
+  `${BASE}/naves/farm-icons/original-farms.webp`,
+  `${BASE}/naves/farm-icons/icon-arched.jpg`,
   `${BASE}/${DEV_TOOLS_DIR}/styles.css`,
   `${BASE}/${DEV_TOOLS_DIR}/app.js`,
   `${BASE}/${DEV_TOOLS_DIR}/line-builder.js`,
