@@ -53,13 +53,13 @@
 
       <main class="content">
         <section id="surveysScreen" class="screen active">
-          <div class="hero-card">
+          <div class="hero-card v3-hero">
             <div>
-              <div class="eyebrow">Выездной замер</div>
-              <h2>Новый замер</h2>
-              <p>Создайте выезд по телефону и адресу. Что именно замеряем, можно определить уже на объекте.</p>
+              <div class="eyebrow">КД ЗАМЕРЩИК · 3.0</div>
+              <h2>Замеры без лишних шагов</h2>
+              <p>Телефон, адрес — и сразу каталог с фотографиями, визуалом и ценой.</p>
             </div>
-            <button id="newSurveyBtn" class="btn btn-primary btn-lg" type="button">+ Новый замер</button>
+            <button id="newSurveyBtn" class="btn btn-primary btn-lg" type="button">+ Начать замер</button>
           </div>
 
           <div class="section-head">
@@ -125,8 +125,8 @@
               <button id="syncNowBtn" class="btn btn-secondary" type="button">Синхронизировать</button>
             </div>
             <div class="settings-row">
-              <div><b>Версия</b><span>Этап 2 · визуальная схема</span></div>
-              <span>0.3.7</span>
+              <div><b>Версия</b><span>3.0 · удобная карточка замера</span></div>
+              <span>0.4.0 · V3</span>
             </div>
           </div>
           <button id="openTeamBtn" class="btn btn-secondary btn-block hidden" type="button">Сотрудники и доступы</button>
@@ -160,7 +160,7 @@
         <label class="field"><span>Телефон</span><input id="surveyClientPhone" inputmode="tel" required placeholder="+7 937 000-00-00" /></label>
         <label class="field"><span>Адрес объекта</span><textarea id="surveyAddress" rows="2" required placeholder="Населённый пункт, улица, дом"></textarea></label>
         <label class="field"><span>Комментарий</span><textarea id="surveyNote" rows="2" placeholder="Например: позвонить за час"></textarea></label>
-        <button id="saveSurveyBtn" class="btn btn-primary btn-lg btn-block" type="button">Создать замер</button>
+        <button id="saveSurveyBtn" class="btn btn-primary btn-lg btn-block" type="button">Начать замер</button>
       </section>
     </form>
   </dialog>
@@ -189,10 +189,10 @@
     </form>
   </dialog>
 
-  <dialog id="surveyDetailsDialog" class="sheet-dialog">
+  <dialog id="surveyDetailsDialog" class="sheet-dialog v3-details-dialog">
     <section class="sheet">
       <div class="sheet-handle"></div>
-      <div class="sheet-head"><div><div class="eyebrow">Карточка замера</div><h2 id="detailsNumber"></h2></div><button id="closeDetailsBtn" class="icon-btn" type="button">×</button></div>
+      <div class="sheet-head"><div><div class="eyebrow">Объект · расчёт изделий</div><h2 id="detailsNumber"></h2></div><button id="closeDetailsBtn" class="icon-btn" type="button">×</button></div>
       <div id="surveyDetailsContent"></div>
     </section>
   </dialog>
@@ -294,6 +294,16 @@
         <button id="savePlanBtn" class="btn btn-primary btn-lg btn-block" type="button">Сохранить схему</button>
       </div>
     </section>
+  </dialog>
+
+  <dialog id="customerPreviewDialog" class="v3-customer-dialog">
+    <div class="v3-customer-shell">
+      <div class="v3-customer-top">
+        <h2 id="customerPreviewTitle">Ваши варианты</h2>
+        <button id="closeCustomerPreviewBtn" class="icon-btn" type="button" aria-label="Закрыть">×</button>
+      </div>
+      <div id="customerPreviewContent"></div>
+    </div>
   </dialog>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
