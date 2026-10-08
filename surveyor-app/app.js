@@ -885,9 +885,47 @@ function surveyCalculations(survey) {
   const rows = survey?.configuration?.calculations;
   return Array.isArray(rows) ? rows : [];
 }
-function surveyCalculationsTotal(survey) {
-  return surveyCalculations(survey).reduce((sum,item)=>sum+(Number(item.total)||0),0);
+// Only selected products contribute to the unified estimate. A second quote
+// for the same product type defaults to "alternative", never silently doubling
+// the customer's order. Historical quotes are interpreted without migration.
+function estimateRole(item, rows) {
+  if (item?.estimateRole === 'included' || item?.estimateRole === 'alternative') return item.estimateRole;
+  return rows.findIndex(row => row?.type === item?.type) === rows.indexOf(item) ? 'included' : 'alternative';
 }
+function deliveryPart(item) {
+  const config = item?.payload?.configuration || {};
+  let value = 0;
+  if (item.type === 'fence') {
+    value = Number(config.summary?.deliveryCost);
+    if (!Number.isFinite(value)) {
+      value = config.delivery?.manual ? Number(config.delivery.manualPrice) : Number(config.delivery?.price);
+    }
+  } else if (item.type === 'canopy') {
+    value = Number(config.canopy?.input?.delivery);
+  }
+  return Number.isFinite(value) ? Math.min(Math.max(0,value),Math.max(0,Number(item.total)||0)) : 0;
+}
+function unifiedEstimate(survey) {
+  const rows = surveyCalculations(survey);
+  const selected = rows.filter(item => estimateRole(item,rows) === 'included');
+  const alternatives = rows.filter(item => estimateRole(item,rows) !== 'included');
+  const productsTotal = selected.reduce((sum,item) => sum + Math.max(0,Number(item.total)||0),0);
+  const includedDelivery = selected.reduce((sum,item)=>sum+deliveryPart(item),0);
+  const oneDelivery = selected.reduce((max,item)=>Math.max(max,deliveryPart(item)),0);
+  const repeatedDelivery = Math.max(0,includedDelivery-oneDelivery);
+  const adjustment = Math.min(Math.max(0,Number(survey?.configuration?.estimateAdjustment)||0),Math.max(0,productsTotal-repeatedDelivery));
+  const total = Math.max(0,productsTotal-repeatedDelivery-adjustment);
+  // Gate price includes shipping but does not expose its amount. Refuse to
+  // portray this as a final price when other items are included.
+  const unknownGateDelivery = selected.length > 1 && selected.some(item => item.type === 'gates' && !item.payload?.deliveryPending);
+  const missingDelivery = selected.some(item => item.payload?.deliveryPending);
+  const sharedSupportRisk = selected.some(item=>item.type==='gates' && item.payload?.posts)
+    && selected.some(item=>item.type==='canopy' && item.payload?.configuration?.canopy?.input?.postsNeeded !== false);
+  return {selected, alternatives, productsTotal, includedDelivery, oneDelivery,
+    repeatedDelivery, adjustment, total, unknownGateDelivery, missingDelivery, sharedSupportRisk,
+    needsReview:unknownGateDelivery || missingDelivery || sharedSupportRisk};
+}
+function surveyCalculationsTotal(survey) { return unifiedEstimate(survey).total; }
 function calculationWorkTypes(survey) {
   const allowed = new Set(['gates','fence','canopy']);
   return [...new Set(surveyCalculations(survey).map(item => item?.type).filter(type => allowed.has(type)))];
@@ -1022,17 +1060,23 @@ function calculationCardDetails(item) {
 }
 function calculationsHtml(survey) {
   const rows = surveyCalculations(survey);
-  const total = surveyCalculationsTotal(survey);
+  const estimate = unifiedEstimate(survey);
+  const warnings = [
+    estimate.missingDelivery ? 'Доставка рассчитана не для всех изделий. Проверьте её до оформления заказа.' : '',
+    estimate.unknownGateDelivery ? 'Доставка ворот включена в их цену, но отдельно не выделена: проверьте её при объединении с другими изделиями.' : '',
+    estimate.sharedSupportRisk ? 'У ворот и навеса могут быть общие столбы: проверьте пересечение работ и внесите корректировку.' : ''
+  ].filter(Boolean);
   return `<div class="details-section calculation-section">
     <div class="section-head compact">
       <div><h3>Сохранённые расчёты</h3><p class="muted">${rows.length ? rows.length+' '+plural(rows.length,['вариант','варианта','вариантов']) : 'Выберите изделие и сделайте первый расчёт.'}</p></div>
-      ${rows.length === 1 ? `<strong class="calculation-grand-total">${formatMoney(total)}</strong>` : ''}
     </div>
-    ${rows.length > 1 ? '<p class="v3-estimate-warning">Это отдельные расчёты, а не итог заказа. Альтернативы, общие столбы и доставку объединяем на следующем этапе.</p>' : ''}
+    ${rows.length > 0 ? '<p class="estimate-help">Отметьте изделия для общего заказа. Другие варианты останутся сохранёнными, но не будут прибавляться к итогу.</p>' : ''}
     <div class="calculation-list">
       ${rows.map(item=>{
         const details = calculationCardDetails(item);
-        return `<article class="calculation-card calculation-card-${escapeHtml(item.type)}" data-edit-calculation="${escapeHtml(item.id)}" role="button" tabindex="0" aria-label="Изменить расчёт: ${escapeHtml(details.title)}">
+        const included = estimateRole(item,rows) === 'included';
+        return `<article class="calculation-card calculation-card-${escapeHtml(item.type)} ${included?'estimate-included':'estimate-alternative'}"
+          data-edit-calculation="${escapeHtml(item.id)}" role="group" aria-label="${escapeHtml(details.title)}">
           ${calculationImage(item) ? `<img class="${item.type==='canopy'?'canopy-farm-photo':''}" src="${escapeHtml(calculationImage(item))}" alt="" loading="lazy">` : `<div class="calculation-card-icon ${escapeHtml(item.type)}">${item.type==='gates'?'▰':item.type==='fence'?'▥':'⌒'}</div>`}
           <div class="calculation-card-copy">
             <small>${escapeHtml(calculationTypeLabel(item.type))}</small>
@@ -1047,10 +1091,28 @@ function calculationsHtml(survey) {
               <button type="button" class="calculation-delete-btn" data-delete-calculation="${escapeHtml(item.id)}" aria-label="Удалить расчёт">×</button>
             </div>
           </div>
+          <button class="estimate-role-toggle" type="button" aria-pressed="${included}" data-estimate-choice="${escapeHtml(item.id)}">
+            <span aria-hidden="true">${included?'✓':'+'}</span>
+            ${included?'В общем заказе':'Добавить в общий заказ'}
+          </button>
         </article>`;
       }).join('') || '<div class="calculation-empty">Пока нет вариантов. Добавьте расчёт ворот, забора или навеса.</div>'}
     </div>
     <button class="btn btn-secondary btn-block v3-add-more" data-add-calculation="${survey.id}" type="button">+ Добавить другой вариант</button>
+    ${rows.length ? `<section class="estimate-summary" aria-label="Общая смета объекта">
+      <div class="estimate-summary-head"><b>Общая смета объекта</b><span>${estimate.selected.length} в заказе · ${estimate.alternatives.length} альтернатив</span></div>
+      ${estimate.selected.length ? `
+        <div class="estimate-summary-row"><span>Выбранные изделия</span><b>${formatMoney(estimate.productsTotal)}</b></div>
+        ${estimate.repeatedDelivery>0 ? `<div class="estimate-summary-row estimate-deduction"><span>Повторная доставка (учтена один раз)</span><b>−${formatMoney(estimate.repeatedDelivery)}</b></div>` : ''}
+        <label class="estimate-adjustment">Общие столбы, монтаж и другие согласованные корректировки, ₽
+          <input type="number" id="estimateAdjustment" inputmode="numeric" min="0" max="${Math.max(0,estimate.productsTotal)}" step="100" value="${Number(survey.configuration?.estimateAdjustment)||0}" aria-label="Корректировка общего заказа в рублях">
+        </label>
+        ${estimate.adjustment>0? `<div class="estimate-summary-row estimate-deduction"><span>Согласованная корректировка</span><b>−${formatMoney(estimate.adjustment)}</b></div>`:''}
+        <div class="estimate-grand-total"><span>Предварительно за выбранное</span><strong>${formatMoney(estimate.total)}</strong></div>
+        <p class="estimate-small-note">Цены альтернатив не входят в сумму. Корректировку общих работ указывайте только после проверки, чтобы не вычесть одну позицию дважды.</p>
+        ${warnings.length ? `<div class="estimate-warnings">${warnings.map(x=>`<p>⚠ ${escapeHtml(x)}</p>`).join('')}</div>` : ''}
+      ` : '<p class="estimate-small-note">Отметьте хотя бы одно изделие для формирования общей суммы.</p>'}
+    </section>` : ''}
   </div>`;
 }
 function openCalculationPicker(surveyId) {
@@ -1099,6 +1161,40 @@ async function editCalculation(surveyId, calculationId) {
   }
   launchCalculation(item.type, {surveyId, editId:item.id});
 }
+// Persist estimate choices on the existing local survey; never mutate the
+// quote snapshots, customer pricing, or other survey records.
+async function setEstimateRole(surveyId, calculationId, included) {
+  const survey = await idbGet('surveys',surveyId);
+  if (!survey) return;
+  const item = surveyCalculations(survey).find(row=>row.id===calculationId);
+  if (!item) return;
+  item.estimateRole = included ? 'included' : 'alternative';
+  survey.updatedAt = new Date().toISOString();
+  survey.syncState = API_ENABLED ? 'pending' : 'local';
+  await idbPut('surveys',survey);
+  await renderSurveys();
+  if ($('#surveyDetailsDialog').open) {
+    $('#surveyDetailsDialog').close();
+    await openSurveyDetails(surveyId);
+  }
+  if (API_ENABLED && navigator.onLine) syncNow({silent:true});
+}
+async function setEstimateAdjustment(surveyId, value) {
+  const survey=await idbGet('surveys',surveyId);
+  if (!survey) return;
+  survey.configuration=survey.configuration || {};
+  const total=unifiedEstimate(survey).productsTotal;
+  survey.configuration.estimateAdjustment = Math.min(total,Math.max(0,Number(value)||0));
+  survey.updatedAt=new Date().toISOString();
+  survey.syncState=API_ENABLED ? 'pending' : 'local';
+  await idbPut('surveys',survey);
+  await renderSurveys();
+  if ($('#surveyDetailsDialog').open) {
+    $('#surveyDetailsDialog').close();
+    await openSurveyDetails(surveyId);
+  }
+  if (API_ENABLED && navigator.onLine) syncNow({silent:true});
+}
 async function deleteCalculation(surveyId, calculationId) {
   const survey = await idbGet('surveys', surveyId);
   if (!survey) return;
@@ -1125,8 +1221,14 @@ async function consumeCalculationTransfer() {
   survey.configuration = survey.configuration && typeof survey.configuration === 'object' ? survey.configuration : {};
   const rows = Array.isArray(survey.configuration.calculations) ? survey.configuration.calculations : [];
   const existingIndex = rows.findIndex(item => item.id === transfer.calculation.id);
-  if (existingIndex >= 0) rows[existingIndex] = transfer.calculation;
-  else rows.push(transfer.calculation);
+  if (existingIndex >= 0) {
+    transfer.calculation.estimateRole = rows[existingIndex].estimateRole || estimateRole(rows[existingIndex],rows);
+    rows[existingIndex] = transfer.calculation;
+  } else {
+    transfer.calculation.estimateRole = rows.some(item=>item.type === transfer.calculation.type && estimateRole(item,rows) === 'included')
+      ? 'alternative' : 'included';
+    rows.push(transfer.calculation);
+  }
   survey.configuration.calculations = rows;
   syncSurveyWorkTypes(survey);
   survey.updatedAt = new Date().toISOString();
@@ -1180,8 +1282,8 @@ async function openSurveyDetails(id) {
     </section>
     ${v3ProductTools(survey)}
     ${calculationsHtml(survey)}
-    ${rows.length ? `<section class="v3-preview-bar">
-      <div><small>${rows.length===1?'Цена для клиента':'Сохранено вариантов'}</small><b>${rows.length===1?formatMoney(rows[0].total):rows.length}</b></div>
+    ${unifiedEstimate(survey).selected.length ? `<section class="v3-preview-bar">
+      <div><small>Предварительно по заказу</small><b>${formatMoney(unifiedEstimate(survey).total)}</b></div>
       <button type="button" class="btn btn-primary" data-v3-preview>Показать клиенту →</button>
     </section>` : ''}
     ${survey.syncState === 'conflict' ? '<div class="details-section"><div class="notice notice-lock">На сервере есть новая версия этого замера. Данные на телефоне не перезаписаны.</div></div>' : ''}
@@ -1208,7 +1310,7 @@ async function openSurveyDetails(id) {
   const detailsRoot = $('#surveyDetailsContent');
   $$('[data-edit-calculation]', detailsRoot).forEach(card => {
     const openEdit = event => {
-      if (event?.target?.closest?.('[data-delete-calculation]')) return;
+      if (event?.target?.closest?.('[data-delete-calculation],[data-estimate-choice]')) return;
       if (event?.type === 'keydown' && !['Enter',' '].includes(event.key)) return;
       event?.preventDefault?.();
       editCalculation(survey.id, card.dataset.editCalculation);
@@ -1220,29 +1322,43 @@ async function openSurveyDetails(id) {
     event.stopPropagation();
     deleteCalculation(survey.id, button.dataset.deleteCalculation);
   }));
+  $$('[data-estimate-choice]', detailsRoot).forEach(button => button.addEventListener('click', event => {
+    event.stopPropagation();
+    setEstimateRole(survey.id,button.dataset.estimateChoice,button.getAttribute('aria-pressed')!=='true');
+  }));
+  $('#estimateAdjustment')?.addEventListener('change',event=>setEstimateAdjustment(survey.id,event.target.value));
 }
 
 function showCustomerView(survey) {
-  const rows = surveyCalculations(survey);
+  const estimate = unifiedEstimate(survey);
+  const selected = estimate.selected;
   const dialog = $('#customerPreviewDialog');
-  if (!dialog || !rows.length) return;
-  $('#customerPreviewTitle').textContent = 'Ваши варианты';
+  if (!dialog || !selected.length) return;
+  $('#customerPreviewTitle').textContent = 'Смета объекта';
+  const customerCard = item => {
+    const d=calculationCardDetails(item);
+    return `<article class="v3-customer-item">
+      ${calculationImage(item) ? `<img class="${item.type==='canopy'?'canopy-farm-photo':''}" src="${escapeHtml(calculationImage(item))}" alt="${escapeHtml(d.title)}" loading="lazy">` : ''}
+      <div><small>${escapeHtml(calculationTypeLabel(item.type))}</small><h3>${escapeHtml(d.title)}</h3>
+      <p>${d.lines.map(escapeHtml).join(' · ')}</p>
+      ${item.payload?.deliveryPending && ['fence','canopy'].includes(item.type) ? '<p class="v3-customer-delivery-note">Стоимость изделия без доставки. Доставка рассчитывается отдельно.</p>' : ''}
+      <strong>${formatMoney(item.total)}</strong></div>
+    </article>`;
+  };
   $('#customerPreviewContent').innerHTML = `
-    <div class="v3-customer-brand">КУЗНЕЧНЫЙ ДВОРИКЪ · ВАШ РАСЧЁТ</div>
+    <div class="v3-customer-brand">КУЗНЕЧНЫЙ ДВОРИКЪ · ВАША СМЕТА</div>
     ${survey.address ? `<p class="v3-customer-address">${escapeHtml(survey.address)}</p>` : ''}
-    ${rows.map(item => {
-      const d = calculationCardDetails(item);
-      return `<article class="v3-customer-item">
-        ${calculationImage(item) ? `<img class="${item.type==='canopy'?'canopy-farm-photo':''}" src="${escapeHtml(calculationImage(item))}" alt="${escapeHtml(d.title)}" loading="lazy">` : ''}
-        <div><small>${escapeHtml(calculationTypeLabel(item.type))}</small><h3>${escapeHtml(d.title)}</h3>
-        <p>${d.lines.map(escapeHtml).join(' · ')}</p>
-        ${item.payload?.deliveryPending && ['fence','canopy'].includes(item.type) ? '<p class="v3-customer-delivery-note">Стоимость изделия без доставки. Доставка рассчитывается отдельно.</p>' : ''}
-        <strong>${formatMoney(item.total)}</strong></div>
-      </article>`;
-    }).join('')}
-    ${rows.length === 1
-      ? `<div class="v3-customer-total"><span>Стоимость варианта</span><b>${formatMoney(rows[0].total)}</b></div>`
-      : '<div class="v3-customer-disclaimer">Это цены отдельных вариантов. Общую смету с учётом доставки и общих элементов уточняем отдельно.</div>'}
+    <h3 class="v3-estimate-client-heading">Выбранные изделия</h3>
+    ${selected.map(customerCard).join('')}
+    ${estimate.repeatedDelivery>0 ? `<div class="v3-customer-adjustment">Повторная доставка —${formatMoney(estimate.repeatedDelivery)}</div>`:''}
+    ${estimate.adjustment>0 ? `<div class="v3-customer-adjustment">Корректировка совместных работ —${formatMoney(estimate.adjustment)}</div>`:''}
+    <div class="v3-customer-total"><span>Предварительная стоимость</span><b>${formatMoney(estimate.total)}</b></div>
+    ${estimate.needsReview ? '<div class="v3-customer-disclaimer">Стоимость предварительная. Доставка и общие столбы могут потребовать уточнения до оформления договора.</div>' : ''}
+    ${estimate.alternatives.length ? `<section class="v3-customer-alternatives">
+      <h3>Другие рассмотренные варианты</h3>
+      <p>Не включены в общую стоимость.</p>
+      ${estimate.alternatives.map(item=>`<div class="v3-alt-row"><span>${escapeHtml(calculationCardDetails(item).title)}</span><b>${formatMoney(item.total)}</b></div>`).join('')}
+    </section>` : ''}
     <p class="v3-customer-foot">Индивидуальное изготовление · Гарантия 3 года</p>`;
   dialog.dataset.surveyId = survey.id;
   $('#surveyDetailsDialog').close();
