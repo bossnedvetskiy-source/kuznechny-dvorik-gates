@@ -1,0 +1,40 @@
+name: Surveyor V3 isolated checks
+
+on:
+  push:
+    branches:
+      - feature/kd-surveyor-v3-redesign
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  surveyor-v3:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --include=dev --no-audit --no-fund
+      - name: Check source and integrity
+        run: |
+          node --check surveyor-app/app.js
+          node --check surveyor-app/sw.js
+          node --check scripts/test-surveyor-integrity.mjs
+          node scripts/test-surveyor-integrity.mjs
+      - name: Prepare DEV preview and calculator assets
+        run: |
+          if [ ! -s node_modules/xlsx/dist/xlsx.full.min.js ]; then
+            mkdir -p node_modules/xlsx/dist
+            cp node_modules/xlsx/xlsx.js node_modules/xlsx/dist/xlsx.full.min.js
+          fi
+          npm run build
+          node scripts/build-timeweb.mjs
+          node scripts/build-dev-preview.mjs
+      - run: npx playwright install --with-deps chromium
+      - name: Check V3 mobile journey, legacy data and all real calculators
+        run: npx playwright test tests/surveyor-mobile.spec.js tests/surveyor-v3.spec.js tests/surveyor-dev-calculator-bridge.spec.js
