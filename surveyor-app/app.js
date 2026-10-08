@@ -535,7 +535,7 @@ async function renderSurveys() {
       <div class="card-top">
         <div>
           <div class="order-number">${escapeHtml(displaySurveyNumber(survey))}</div>
-          <div class="card-name">${escapeHtml(survey.clientPhone || 'Телефон не указан')}</div>
+          <div class="card-name">${escapeHtml(survey.clientName || survey.clientPhone || 'Телефон не указан')}</div>
           <div class="card-address">${escapeHtml(survey.address)}</div>
         </div>
         <span class="status-pill ${survey.status}">${survey.status === 'ready' ? 'Готов' : 'Черновик'}</span>
@@ -1118,7 +1118,7 @@ async function openSurveyDetails(id) {
     <section class="v3-survey-head">
       <div class="v3-address"><span>Адрес объекта</span><b>${escapeHtml(survey.address)}</b></div>
       <button type="button" class="v3-edit-link" data-edit-survey-data="${escapeHtml(survey.id)}">Изменить</button>
-      <div class="v3-survey-meta"><span>☎ ${escapeHtml(survey.clientPhone)}</span><span>● ${escapeHtml(surveySyncText(survey))}</span></div>
+      <div class="v3-survey-meta"><span>☎ ${escapeHtml(survey.clientPhone)}</span>${survey.clientName ? `<span>${escapeHtml(survey.clientName)}</span>` : ''}<span>● ${escapeHtml(surveySyncText(survey))}</span></div>
     </section>
     ${v3ProductTools(survey)}
     ${calculationsHtml(survey)}
@@ -1185,6 +1185,7 @@ function showCustomerView(survey) {
       ? `<div class="v3-customer-total"><span>Стоимость варианта</span><b>${formatMoney(rows[0].total)}</b></div>`
       : '<div class="v3-customer-disclaimer">Это цены отдельных вариантов. Общую смету с учётом доставки и общих элементов уточняем отдельно.</div>'}
     <p class="v3-customer-foot">Индивидуальное изготовление · Гарантия 3 года</p>`;
+  dialog.dataset.surveyId = survey.id;
   $('#surveyDetailsDialog').close();
   dialog.showModal();
 }
@@ -1488,6 +1489,12 @@ function bindEvents() {
   $('#saveEmployeeBtn').addEventListener('click', saveEmployee);
   $('#closeDetailsBtn').addEventListener('click', () => $('#surveyDetailsDialog').close());
   $('#closeCustomerPreviewBtn')?.addEventListener('click', () => $('#customerPreviewDialog').close());
+  $('#customerPreviewDialog')?.addEventListener('close', () => {
+    const preview = $('#customerPreviewDialog');
+    const id = preview?.dataset.surveyId;
+    if (preview) delete preview.dataset.surveyId;
+    if (id) openSurveyDetails(id);
+  });
   $('#closeSurveyDataBtn')?.addEventListener('click', () => $('#surveyDataDialog')?.close());
   $('#saveSurveyDataBtn')?.addEventListener('click', saveSurveyData);
   $('#closeCalculationPickerBtn')?.addEventListener('click', () => $('#calculationPickerDialog')?.close());
