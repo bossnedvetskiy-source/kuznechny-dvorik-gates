@@ -52,6 +52,11 @@ const schemeDialogBody = $('schemeDialogBody');
 const schemeDialogClose = $('schemeDialogClose');
 const SAVED_QUOTE_KEY = 'kuzdvor:picket-saved-v1';
 const DRAFT_QUOTE_KEY = 'kuzdvor:picket-draft-v1';
+const surveyorParams = new URLSearchParams(location.search);
+const surveyorId = surveyorParams.get('surveyor') === '1' ? (surveyorParams.get('survey') || '') : '';
+// Keep each staff survey's draft separate from other customers and from the
+// public site's draft. Saved customer calculations remain in IndexedDB.
+const activeDraftKey = surveyorId ? DRAFT_QUOTE_KEY + ':survey:' + encodeURIComponent(surveyorId) : DRAFT_QUOTE_KEY;
 
 let visibleSections = 1;
 let deliveryRows = [];
@@ -235,11 +240,11 @@ function quoteState() {
 
 function readDraftQuote() {
   try {
-    const value = JSON.parse(localStorage.getItem(DRAFT_QUOTE_KEY) || 'null');
+    const value = JSON.parse(localStorage.getItem(activeDraftKey) || 'null');
     if (!value || typeof value !== 'object') return null;
     const savedAt = Number(value.savedAt || 0);
     if (savedAt && Date.now() - savedAt > 30 * 24 * 60 * 60 * 1000) {
-      localStorage.removeItem(DRAFT_QUOTE_KEY);
+      localStorage.removeItem(activeDraftKey);
       return null;
     }
     return value;
@@ -254,12 +259,59 @@ function scheduleDraftSave() {
   draftTimer = setTimeout(() => {
     try {
       if (!lastResult?.summary.activeSections) {
-        localStorage.removeItem(DRAFT_QUOTE_KEY);
+        localStorage.removeItem(activeDraftKey);
         return;
       }
-      localStorage.setItem(DRAFT_QUOTE_KEY, JSON.stringify({...quoteState(), savedAt:Date.now()}));
+      localStorage.setItem(activeDraftKey, JSON.stringify({...quoteState(), savedAt:Date.now()}));
     } catch {}
   }, 220);
+}
+
+// Clear only the current form. Never delete saved quotes or survey cards.
+function resetFenceQuote({ask = true} = {}) {
+  if (ask && !window.confirm('Начать расчёт забора заново? Введённые участки, параметры и доставка будут очищены. Сохранённые замеры не изменятся.')) return false;
+  clearTimeout(draftTimer);
+  restoringState = true;
+  form.reset();
+  visibleSections = 1;
+  selectedDelivery = null;
+  quoteNumber = '';
+  typeInput.value = 'vertical-double';
+  postInput.value = '80x80x3';
+  includePostsInput.checked = true;
+  if (existingPostsInput) existingPostsInput.value = '0';
+  if (hasSlopeInput) hasSlopeInput.checked = false;
+  if (hasHardSurfaceInput) hasHardSurfaceInput.checked = false;
+  for (let index = 0; index < 4; index += 1) {
+    setSectionValue(index, 'length', '');
+    setSectionValue(index, 'height', 1.8);
+    setSectionValue(index, 'gateOpening', 0);
+    setSectionValue(index, 'wicketOpening', 0);
+    setSectionValue(index, 'openingPostType', '100x100x3');
+    setSectionValue(index, 'openingsSharePost', true);
+    setSectionValue(index, 'betweenOpeningFence', 0);
+    setSectionValue(index, 'openingStartFence', '');
+    setSectionValue(index, 'shared', false);
+  }
+  sectionsList.querySelectorAll('.section-openings').forEach(details => { details.open = false; });
+  settlementInput.value = '';
+  if (leadCity) leadCity.value = '';
+  manualDeliveryEnabled.checked = false;
+  manualDeliveryInput.value = '0';
+  hideSettlementResults();
+  deliveryStatus.className = 'delivery-status';
+  deliveryStatus.textContent = 'Начните вводить населённый пункт — итог обновится с учётом доставки.';
+  syncVisibleSections();
+  syncPostOptions();
+  syncTypePicker();
+  restoringState = false;
+  try { localStorage.removeItem(activeDraftKey); } catch {}
+  calculate();
+  if (ask) {
+    showToast('Расчёт очищен — можно вводить новый объект');
+    sectionsList.querySelector('[data-field="length"][data-index="0"]')?.focus({preventScroll:true});
+  }
+  return true;
 }
 
 function encodeQuoteState(state) {
@@ -1408,7 +1460,7 @@ async function submitLead(event) {
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || 'Не удалось отправить заявку');
     leadState.textContent = 'Заявка отправлена. Менеджер получит ваш расчёт и свяжется с вами.';
-    try { localStorage.removeItem(DRAFT_QUOTE_KEY); } catch {}
+    try { localStorage.removeItem(activeDraftKey); } catch {}
     showToast('Заявка отправлена ✓');
   } catch (error) {
     leadState.classList.add('is-error');
@@ -1436,6 +1488,7 @@ addSectionButton.addEventListener('click', () => {
   nextLength?.scrollIntoView({behavior:'smooth',block:'center'});
   setTimeout(() => nextLength?.focus({preventScroll:true}), 300);
 });
+$('resetFenceQuote')?.addEventListener('click', () => resetFenceQuote());
 removeSectionButton.addEventListener('click', () => {
   if (visibleSections <= 1) return;
   const index = visibleSections - 1;
