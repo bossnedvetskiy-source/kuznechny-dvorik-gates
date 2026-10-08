@@ -155,6 +155,10 @@ function formatPhone(raw) {
   const p1 = d.slice(1, 4), p2 = d.slice(4, 7), p3 = d.slice(7, 9), p4 = d.slice(9, 11);
   return `+7${p1 ? ' ' + p1 : ''}${p2 ? ' ' + p2 : ''}${p3 ? '-' + p3 : ''}${p4 ? '-' + p4 : ''}`;
 }
+function isOptionalPhoneValid(value) {
+  const digits = String(value || '').replace(/\D/g,'');
+  return !digits.length || digits.length === 10 || (digits.length === 11 && /^[78]/.test(digits));
+}
 function parseServerDate(value) {
   if (!value) return '';
   if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(value)) return value.replace(' ', 'T') + 'Z';
@@ -277,7 +281,7 @@ function displaySurveyNumber(survey) {
 async function upsertClient({ name = '', phone, address = '' }) {
   const clients = await idbGetAll('clients');
   const phoneDigits = phone.replace(/\D/g, '');
-  let client = clients.find(x => String(x.phone || '').replace(/\D/g, '') === phoneDigits);
+  let client = phoneDigits ? clients.find(x => String(x.phone || '').replace(/\D/g, '') === phoneDigits) : null;
   const now = new Date().toISOString();
   if (client) {
     client = {
@@ -295,15 +299,17 @@ async function upsertClient({ name = '', phone, address = '' }) {
 }
 
 async function createSurvey(data) {
-  const client = await upsertClient(data);
+  // A survey can start without contact information. Do not create an empty
+  // client record: it would accidentally merge unrelated anonymous surveys.
+  const client = String(data.phone || '').replace(/\D/g,'') ? await upsertClient(data) : null;
   const now = new Date().toISOString();
   const id = makeId('sv');
   const survey = {
     id,
     number: API_ENABLED ? '' : await nextSurveyNumber(),
     localNumber: API_ENABLED ? `ЛОК-${id.slice(-5).toUpperCase()}` : '',
-    clientId: client.id, clientName: client.name, clientPhone: client.phone,
-    address: data.address.trim(), note: data.note.trim(), workTypes: Array.isArray(data.workTypes) ? [...data.workTypes] : [],
+    clientId: client?.id || '', clientName: client?.name || String(data.name || '').trim(), clientPhone: client?.phone || '',
+    address: String(data.address || '').trim(), note: String(data.note || '').trim(), workTypes: Array.isArray(data.workTypes) ? [...data.workTypes] : [],
     status: 'draft', createdBy: currentUser.id, createdByName: currentUser.name,
     createdAt: now, updatedAt: now, syncState: API_ENABLED ? 'pending' : 'local',
     serverRevision: 0, archived: false, schemaVersion: 3, configuration: {}
@@ -548,8 +554,8 @@ async function renderSurveys() {
       <div class="card-top">
         <div>
           <div class="order-number">${escapeHtml(displaySurveyNumber(survey))}</div>
-          <div class="card-name">${escapeHtml(survey.clientName || survey.clientPhone || 'Телефон не указан')}</div>
-          <div class="card-address">${escapeHtml(survey.address)}</div>
+          <div class="card-name">${escapeHtml(survey.clientName || survey.clientPhone || 'Контакт не указан')}</div>
+          <div class="card-address">${escapeHtml(survey.address || 'Адрес пока не указан')}</div>
         </div>
         <span class="status-pill ${survey.status}">${survey.status === 'ready' ? 'Готов' : 'Черновик'}</span>
       </div>
@@ -1168,9 +1174,9 @@ async function openSurveyDetails(id) {
   const rows = surveyCalculations(survey);
   $('#surveyDetailsContent').innerHTML = `
     <section class="v3-survey-head">
-      <div class="v3-address"><span>Адрес объекта</span><b>${escapeHtml(survey.address)}</b></div>
+      <div class="v3-address"><span>Адрес объекта</span><b>${escapeHtml(survey.address || 'Адрес пока не указан')}</b></div>
       <button type="button" class="v3-edit-link" data-edit-survey-data="${escapeHtml(survey.id)}">Изменить</button>
-      <div class="v3-survey-meta"><span>☎ ${escapeHtml(survey.clientPhone)}</span>${survey.clientName ? `<span>${escapeHtml(survey.clientName)}</span>` : ''}<span>● ${escapeHtml(surveySyncText(survey))}</span></div>
+      <div class="v3-survey-meta"><span>${survey.clientPhone ? '☎ ' + escapeHtml(survey.clientPhone) : 'Телефон пока не указан'}</span>${survey.clientName ? `<span>${escapeHtml(survey.clientName)}</span>` : ''}<span>● ${escapeHtml(surveySyncText(survey))}</span></div>
     </section>
     ${v3ProductTools(survey)}
     ${calculationsHtml(survey)}
@@ -1223,7 +1229,7 @@ function showCustomerView(survey) {
   $('#customerPreviewTitle').textContent = 'Ваши варианты';
   $('#customerPreviewContent').innerHTML = `
     <div class="v3-customer-brand">КУЗНЕЧНЫЙ ДВОРИКЪ · ВАШ РАСЧЁТ</div>
-    <p class="v3-customer-address">${escapeHtml(survey.address)}</p>
+    ${survey.address ? `<p class="v3-customer-address">${escapeHtml(survey.address)}</p>` : ''}
     ${rows.map(item => {
       const d = calculationCardDetails(item);
       return `<article class="v3-customer-item">
@@ -1268,29 +1274,29 @@ async function saveSurveyData() {
   const phoneDigits = phoneRaw.replace(/\D/g,'');
   const address = $('#surveyDataAddress').value.trim();
   const note = $('#surveyDataNote').value.trim();
-  if (phoneDigits.length < 10 || !address) return showToast('Заполните телефон и адрес объекта');
+  if (!isOptionalPhoneValid(phoneRaw)) return showToast('Проверьте номер телефона или оставьте поле пустым');
 
   const clients = await idbGetAll('clients');
   const now = new Date().toISOString();
   const currentClient = clients.find(item => item.id === survey.clientId) || null;
-  const phoneMatch = clients.find(item => String(item.phone || '').replace(/\D/g,'') === phoneDigits) || null;
-  let client = phoneMatch || currentClient;
-  if (!client) {
-    client = { id:makeId('cl'), createdAt:now, serverRevision:0 };
+  const phoneMatch = phoneDigits ? clients.find(item => String(item.phone || '').replace(/\D/g,'') === phoneDigits) : null;
+  let client = null;
+  if (phoneDigits) {
+    client = phoneMatch || currentClient || { id:makeId('cl'), createdAt:now, serverRevision:0 };
+    client = {
+      ...client,
+      name,
+      phone:formatPhone(phoneRaw),
+      address,
+      updatedAt:now,
+      syncState:API_ENABLED ? 'pending' : 'local'
+    };
+    await idbPut('clients', client);
   }
-  client = {
-    ...client,
-    name,
-    phone:formatPhone(phoneRaw),
-    address,
-    updatedAt:now,
-    syncState:API_ENABLED ? 'pending' : 'local'
-  };
-  await idbPut('clients', client);
-
-  survey.clientId = client.id;
+  // A cleared phone detaches only this survey: keep older client records intact.
+  survey.clientId = client?.id || '';
   survey.clientName = name;
-  survey.clientPhone = client.phone;
+  survey.clientPhone = client?.phone || '';
   survey.address = address;
   survey.note = note;
   survey.updatedAt = now;
@@ -1522,9 +1528,9 @@ function bindEvents() {
   $('#newSurveyBtn').addEventListener('click', () => { resetSurveyWizard(); $('#surveyDialog').showModal(); });
   $('#surveySearch')?.addEventListener('input', () => renderSurveys());
   $('#saveSurveyBtn').addEventListener('click', async () => {
-    const phone = $('#surveyClientPhone').value.replace(/\D/g,'');
+    const phone = $('#surveyClientPhone').value;
     const address = $('#surveyAddress').value.trim();
-    if (phone.length < 10 || !address) return showToast('Заполните телефон и адрес объекта');
+    if (!isOptionalPhoneValid(phone)) return showToast('Проверьте номер телефона или оставьте поле пустым');
     const survey = await createSurvey({
       name: '',
       phone: $('#surveyClientPhone').value,
