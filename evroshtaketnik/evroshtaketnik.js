@@ -253,19 +253,23 @@ function readDraftQuote() {
   }
 }
 
+function persistDraftQuoteNow() {
+  clearTimeout(draftTimer);
+  try {
+    if (!lastResult?.summary.activeSections) {
+      localStorage.removeItem(activeDraftKey);
+      return;
+    }
+    localStorage.setItem(activeDraftKey, JSON.stringify({...quoteState(), savedAt:Date.now()}));
+  } catch {}
+}
 function scheduleDraftSave() {
   if (restoringState) return;
   clearTimeout(draftTimer);
-  draftTimer = setTimeout(() => {
-    try {
-      if (!lastResult?.summary.activeSections) {
-        localStorage.removeItem(activeDraftKey);
-        return;
-      }
-      localStorage.setItem(activeDraftKey, JSON.stringify({...quoteState(), savedAt:Date.now()}));
-    } catch {}
-  }, 220);
+  draftTimer = setTimeout(persistDraftQuoteNow, 220);
 }
+// Last measurements must survive an immediate jump to a different customer.
+window.addEventListener('pagehide', persistDraftQuoteNow);
 
 // Clear only the current form. Never delete saved quotes or survey cards.
 function resetFenceQuote({ask = true} = {}) {
