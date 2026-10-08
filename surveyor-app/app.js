@@ -885,9 +885,47 @@ function surveyCalculations(survey) {
   const rows = survey?.configuration?.calculations;
   return Array.isArray(rows) ? rows : [];
 }
-function surveyCalculationsTotal(survey) {
-  return surveyCalculations(survey).reduce((sum,item)=>sum+(Number(item.total)||0),0);
+// Only selected products contribute to the unified estimate. A second quote
+// for the same product type defaults to "alternative", never silently doubling
+// the customer's order. Historical quotes are interpreted without migration.
+function estimateRole(item, rows) {
+  if (item?.estimateRole === 'included' || item?.estimateRole === 'alternative') return item.estimateRole;
+  return rows.findIndex(row => row?.type === item?.type) === rows.indexOf(item) ? 'included' : 'alternative';
 }
+function deliveryPart(item) {
+  const config = item?.payload?.configuration || {};
+  let value = 0;
+  if (item.type === 'fence') {
+    value = Number(config.summary?.deliveryCost);
+    if (!Number.isFinite(value)) {
+      value = config.delivery?.manual ? Number(config.delivery.manualPrice) : Number(config.delivery?.price);
+    }
+  } else if (item.type === 'canopy') {
+    value = Number(config.canopy?.input?.delivery);
+  }
+  return Number.isFinite(value) ? Math.min(Math.max(0,value),Math.max(0,Number(item.total)||0)) : 0;
+}
+function unifiedEstimate(survey) {
+  const rows = surveyCalculations(survey);
+  const selected = rows.filter(item => estimateRole(item,rows) === 'included');
+  const alternatives = rows.filter(item => estimateRole(item,rows) !== 'included');
+  const productsTotal = selected.reduce((sum,item) => sum + Math.max(0,Number(item.total)||0),0);
+  const includedDelivery = selected.reduce((sum,item)=>sum+deliveryPart(item),0);
+  const oneDelivery = selected.reduce((max,item)=>Math.max(max,deliveryPart(item)),0);
+  const repeatedDelivery = Math.max(0,includedDelivery-oneDelivery);
+  const adjustment = Math.min(Math.max(0,Number(survey?.configuration?.estimateAdjustment)||0),Math.max(0,productsTotal-repeatedDelivery));
+  const total = Math.max(0,productsTotal-repeatedDelivery-adjustment);
+  // Gate price includes shipping but does not expose its amount. Refuse to
+  // portray this as a final price when other items are included.
+  const unknownGateDelivery = selected.length > 1 && selected.some(item => item.type === 'gates' && !item.payload?.deliveryPending);
+  const missingDelivery = selected.some(item => item.payload?.deliveryPending);
+  const sharedSupportRisk = selected.some(item=>item.type==='gates' && item.payload?.posts)
+    && selected.some(item=>item.type==='canopy' && item.payload?.configuration?.canopy?.input?.postsNeeded !== false);
+  return {selected, alternatives, productsTotal, includedDelivery, oneDelivery,
+    repeatedDelivery, adjustment, total, unknownGateDelivery, missingDelivery, sharedSupportRisk,
+    needsReview:unknownGateDelivery || missingDelivery || sharedSupportRisk};
+}
+function surveyCalculationsTotal(survey) { return unifiedEstimate(survey).total; }
 function calculationWorkTypes(survey) {
   const allowed = new Set(['gates','fence','canopy']);
   return [...new Set(surveyCalculations(survey).map(item => item?.type).filter(type => allowed.has(type)))];
@@ -1099,6 +1137,40 @@ async function editCalculation(surveyId, calculationId) {
   }
   launchCalculation(item.type, {surveyId, editId:item.id});
 }
+// Persist estimate choices on the existing local survey; never mutate the
+// quote snapshots, customer pricing, or other survey records.
+async function setEstimateRole(surveyId, calculationId, included) {
+  const survey = await idbGet('surveys',surveyId);
+  if (!survey) return;
+  const item = surveyCalculations(survey).find(row=>row.id===calculationId);
+  if (!item) return;
+  item.estimateRole = included ? 'included' : 'alternative';
+  survey.updatedAt = new Date().toISOString();
+  survey.syncState = API_ENABLED ? 'pending' : 'local';
+  await idbPut('surveys',survey);
+  await renderSurveys();
+  if ($('#surveyDetailsDialog').open) {
+    $('#surveyDetailsDialog').close();
+    await openSurveyDetails(surveyId);
+  }
+  if (API_ENABLED && navigator.onLine) syncNow({silent:true});
+}
+async function setEstimateAdjustment(surveyId, value) {
+  const survey=await idbGet('surveys',surveyId);
+  if (!survey) return;
+  survey.configuration=survey.configuration || {};
+  const total=unifiedEstimate(survey).productsTotal;
+  survey.configuration.estimateAdjustment = Math.min(total,Math.max(0,Number(value)||0));
+  survey.updatedAt=new Date().toISOString();
+  survey.syncState=API_ENABLED ? 'pending' : 'local';
+  await idbPut('surveys',survey);
+  await renderSurveys();
+  if ($('#surveyDetailsDialog').open) {
+    $('#surveyDetailsDialog').close();
+    await openSurveyDetails(surveyId);
+  }
+  if (API_ENABLED && navigator.onLine) syncNow({silent:true});
+}
 async function deleteCalculation(surveyId, calculationId) {
   const survey = await idbGet('surveys', surveyId);
   if (!survey) return;
@@ -1125,8 +1197,14 @@ async function consumeCalculationTransfer() {
   survey.configuration = survey.configuration && typeof survey.configuration === 'object' ? survey.configuration : {};
   const rows = Array.isArray(survey.configuration.calculations) ? survey.configuration.calculations : [];
   const existingIndex = rows.findIndex(item => item.id === transfer.calculation.id);
-  if (existingIndex >= 0) rows[existingIndex] = transfer.calculation;
-  else rows.push(transfer.calculation);
+  if (existingIndex >= 0) {
+    transfer.calculation.estimateRole = rows[existingIndex].estimateRole || estimateRole(rows[existingIndex],rows);
+    rows[existingIndex] = transfer.calculation;
+  } else {
+    transfer.calculation.estimateRole = rows.some(item=>item.type === transfer.calculation.type && estimateRole(item,rows) === 'included')
+      ? 'alternative' : 'included';
+    rows.push(transfer.calculation);
+  }
   survey.configuration.calculations = rows;
   syncSurveyWorkTypes(survey);
   survey.updatedAt = new Date().toISOString();
