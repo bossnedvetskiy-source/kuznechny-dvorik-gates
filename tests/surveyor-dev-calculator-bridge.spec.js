@@ -30,6 +30,13 @@ test('gate calculator result returns into the same survey card', async ({page}) 
   await expect(page.locator('.hero')).toBeHidden();
   await expect(page.locator('.package')).toBeHidden();
   await expect(page.locator('#sendButton')).toBeHidden();
+  await expect(page.locator('#mobileMeasureButton')).toBeHidden();
+  await expect(page.locator('.mobile-payment-note')).toBeHidden();
+  await expect(page.locator('.mobile-cta')).toBeHidden();
+  await expect(page.locator('#mobilePrimaryCta')).toBeHidden();
+  await expect(page.locator('#leadRequest .estimate-top')).toContainText('Расчёт для клиента');
+  await expect(page.locator('#kdSurveyorBridgeSave')).toBeVisible();
+  await expect(page.locator('#kdSurveyorBridgeSave')).toHaveText('Добавить в замер');
   await page.waitForFunction(() => Boolean(window.KUZDVOR_GATE_APP?.snapshot), null, {timeout:15000});
 
   await page.locator('#kdSurveyorBridgeSave').click();
@@ -60,6 +67,17 @@ test('gate calculator result returns into the same survey card', async ({page}) 
   await expect(page.locator('.calculation-card-lines')).toContainText('Ворота 3,6 × 1,8 м');
 });
 
+
+
+test('regular DEV gate catalog keeps public ordering UI outside a survey', async ({page}) => {
+  await page.addInitScript(() => localStorage.setItem('kuzdvor-dev-access-v1','1'));
+  await page.goto('/kuznechny-dvorik-gates/?app=1');
+  await expect(page.locator('#catalog')).toBeVisible();
+  await expect(page.locator('#kdSurveyorBridge')).toHaveCount(0);
+  await expect(page.locator('html')).not.toHaveClass(/kd-surveyor-gates/);
+  await expect(page.locator('#mobileMeasureButton')).not.toHaveAttribute('aria-hidden','true');
+  await expect(page.locator('.mobile-payment-note')).toHaveCount(1);
+});
 
 async function loginAndCreateSurvey(page, address) {
   await page.addInitScript(() => {
