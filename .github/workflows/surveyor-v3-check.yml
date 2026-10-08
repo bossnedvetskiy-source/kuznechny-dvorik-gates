@@ -5,6 +5,7 @@ on:
     branches:
       - feature/kd-surveyor-v3-redesign
       - feature/kd-surveyor-v3-fence-cards
+      - feature/kd-surveyor-v3-canopy-ux
   workflow_dispatch:
 
 permissions:
@@ -41,5 +42,5 @@ jobs:
           node scripts/build-timeweb.mjs
           node scripts/build-dev-preview.mjs
       - run: npx playwright install --with-deps chromium
-      - name: Check fence types, photographs, stored public price and editing
-        run: npx playwright test tests/surveyor-dev-calculator-bridge.spec.js --grep "fence" --workers=1
+      - name: Check canopy support options, 3D render, public cards and editing
+        run: npx playwright test tests/surveyor-dev-calculator-bridge.spec.js --grep "canopy" --workers=1
