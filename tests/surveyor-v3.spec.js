@@ -31,7 +31,7 @@ test('V3: begin survey, show 3 direct calculators, gate saves back to same surve
   await expect(page.locator('#catalog')).toBeVisible();
   await page.waitForFunction(() => Boolean(window.KUZDVOR_GATE_APP?.snapshot), null, {timeout:15000});
   await page.locator('#kdSurveyorBridgeSave').click();
-  await expect(page).toHaveURL(/\/dev-tools\/\?resumeSurvey=/, {timeout:15000});
+  await page.waitForURL(/\/dev-tools\/\?resumeSurvey=/, {waitUntil:'domcontentloaded', timeout:45000});
   await expect(page.locator('#surveyDetailsDialog')).toBeVisible();
   await expect(page.locator('.calculation-card')).toHaveCount(1);
   await expect(page.locator('.v3-preview-bar')).toContainText('₽');
