@@ -1094,7 +1094,7 @@ function v3ProductTools(survey) {
     <p class="muted">Выберите изделие. Каталог, визуализация и стоимость откроются сразу.</p>
     <div class="v3-product-grid">
       <button type="button" class="v3-product-tile" data-v3-calc="gates">
-        <img src="../assets/catalog/art-17s-1.webp" alt="Кованые ворота" loading="lazy">
+        <img src="../catalog/art-17s-1.webp" alt="Кованые ворота" loading="lazy">
         <span class="v3-product-label"><b>Ворота и калитки</b><small>Каталог Арт. с фото и ценами</small></span><span class="v3-product-arrow">→</span>
       </button>
       <button type="button" class="v3-product-tile" data-v3-calc="fence">
