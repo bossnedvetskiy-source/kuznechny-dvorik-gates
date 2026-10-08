@@ -529,8 +529,13 @@ async function renderSurveys() {
   let surveys = (await idbGetAll('surveys')).filter(x => !x.archived).sort((a,b) => String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
   if (currentSurveyFilter !== 'all') surveys = surveys.filter(x => x.status === currentSurveyFilter);
   const search = String($('#surveySearch')?.value || '').trim().toLocaleLowerCase('ru-RU');
-  if (search) surveys = surveys.filter(x => [displaySurveyNumber(x), x.clientName, x.clientPhone, x.address, x.note]
-    .some(value => String(value || '').toLocaleLowerCase('ru-RU').includes(search)));
+  const digits = search.replace(/\D/g, '');
+  const phoneSearch = digits.length === 11 && /^[78]/.test(digits) ? '7' + digits.slice(1) : digits;
+  if (search) surveys = surveys.filter(x =>
+    [displaySurveyNumber(x), x.clientName, x.clientPhone, x.address, x.note]
+      .some(value => String(value || '').toLocaleLowerCase('ru-RU').includes(search)) ||
+    (phoneSearch.length >= 3 && String(x.clientPhone || '').replace(/\D/g, '').includes(phoneSearch))
+  );
   $('#surveysCounter').textContent = `${surveys.length} ${plural(surveys.length, ['замер','замера','замеров'])}`;
   const empty = $('#surveyEmpty');
   if (empty) {
