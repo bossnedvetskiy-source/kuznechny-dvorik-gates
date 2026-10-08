@@ -235,27 +235,55 @@
     };
   }
 
+  const CANOPY_FARM_IMAGES = Object.freeze({
+    'Арочный':'icon-arched.jpg',
+    'Полуарочный':'icon-semi-arched.jpg',
+    'Односкатный':'icon-shed-low.jpg',
+    'Треугольный':'icon-shed-high.jpg',
+    'Швелер':'icon-channel.jpg',
+    'Двухскатный':'icon-gable-vertical.jpg',
+    'Двухскатный арочный':'icon-gable-arched.jpg'
+  });
+
   function canopySnapshot() {
     const snap = window.TrussApp?.snapshot?.();
-    if (!snap) throw new Error('Калькулятор навеса ещё не готов');
+    if (!snap) throw new Error('Сначала выполните расчёт навеса');
     const total = Number(snap.publicSummary?.total) || 0;
-    if (!(total > 0)) throw new Error('Сначала выполните расчёт навеса');
     const input = snap.input || {};
+    if (!(total > 0) || input.farmType !== 'Арочный' || input.trussType === 'Плоская'
+        || document.getElementById('totalPrice')?.textContent?.includes('Требуется уточнение')) {
+      throw new Error('Для выбранной фермы нет готовой цены. Выберите арочную ферму и проверьте размеры.');
+    }
+    const photo = CANOPY_FARM_IMAGES[input.farmType];
+    const publicInput = {};
+    for (const key of [
+      'widthPostsM','lengthM','visibleHeightM','installType','coverage',
+      'farmType','farmPreset','trussType','lagMode','riseMm','autoRise',
+      'heightMm','overhangMm','endFlatMm','cellStepMm','materialMode',
+      'existingPosts','beamsExisting','postsNeeded','paint','delivery'
+    ]) {
+      if (Object.prototype.hasOwnProperty.call(input, key)) publicInput[key] = input[key];
+    }
+    // PricingSnapshot contains confidential rates. It must never reach the
+    // surveyor's local records or customer view; restore() only needs input.
+    const publicSnap = {version:6,input:publicInput,publicSummary:{total}};
     return {
       type:'canopy',
-      title:input.farmType ? `${input.farmType} навес` : 'Навес',
+      title:'Арочный навес',
       total,
-      image:'',
+      image:photo ? new URL('./farm-icons/' + photo,location.href).pathname : '',
       summary:[
-        input.widthPostsM && input.lengthM ? `${input.widthPostsM} × ${input.lengthM} м` : '',
+        Number(input.widthPostsM)>0&&Number(input.lengthM)>0 ? `${input.widthPostsM} × ${input.lengthM} м` : '',
         input.coverage || '',
-        input.installType || ''
+        Number(input.existingPosts)>0 ? `готовых столбов ${input.existingPosts}` : 'новые столбы',
+        input.beamsExisting ? 'готовые балки' : 'новые балки'
       ].filter(Boolean).join(' · '),
       payload:{
         category:'canopy',
-        productTitle:'Навес',
+        productTitle:'Арочный навес',
         total,
-        configuration:{canopy:snap}
+        deliveryPending:Number(input.delivery || 0)===0,
+        configuration:{canopy:publicSnap}
       }
     };
   }
