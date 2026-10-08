@@ -130,7 +130,14 @@
     const total = Number(payload.total) || 0;
     if (!(total > 0)) throw new Error('Сначала выполните расчёт ворот');
     const article = payload.article || payload.configuration?.article || '';
-    const image = Array.isArray(window.CATALOG_IMAGES?.[article]) ? window.CATALOG_IMAGES[article][0] : '';
+    const rawImage = Array.isArray(window.CATALOG_IMAGES?.[article]) ? window.CATALOG_IMAGES[article][0] : '';
+    // Persist an image URL that also works when the survey card opens from
+    // /dev-tools/ or /zamer-app-v2/, not only from the gate catalog page.
+    const previewPrefix = location.pathname.startsWith('/kuznechny-dvorik-gates/')
+      ? '/kuznechny-dvorik-gates/' : '/';
+    const image = /^\/catalog\//.test(rawImage)
+      ? previewPrefix + rawImage.replace(/^\/+/, '')
+      : rawImage;
     return {
       type:'gates',
       title:article ? `Ворота с калиткой · ${article}` : 'Ворота с калиткой',
