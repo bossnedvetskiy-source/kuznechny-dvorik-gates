@@ -361,7 +361,12 @@
       .kd-surveyor-gates #sendButton,
       .kd-surveyor-gates #copyButton,
       .kd-surveyor-gates .privacy-copy,
-      .kd-surveyor-gates #mobileMeasureButton{display:none!important}
+      .kd-surveyor-gates #mobileMeasureButton,
+      .kd-surveyor-gates .mobile-price-breakdown .mobile-measure-button,
+      .kd-surveyor-gates .mobile-payment-note,
+      .kd-surveyor-gates .mobile-cta,
+      .kd-surveyor-gates #mobilePrimaryCta,
+      .kd-surveyor-gates .posts-reassurance{display:none!important}
       .kd-surveyor-gates .catalog{padding-top:22px!important;padding-bottom:30px!important}
       .kd-surveyor-gates .catalog .section-head{margin-bottom:18px!important}
       .kd-surveyor-gates .calculator{padding-top:24px!important;padding-bottom:28px!important}
@@ -428,6 +433,25 @@
       }
     `;
     document.head.append(style);
+
+    if (calculatorType === 'gates') {
+      // This is an on-site estimate. The lead form, payment pitch and booking
+      // button belong to the public catalog, never the surveyor experience.
+      document.body.classList.remove('mobile-lead-open');
+      const leadBackdrop = document.getElementById('leadBackdrop');
+      if (leadBackdrop) leadBackdrop.hidden = true;
+      const bookButtons = ['mobileMeasureButton','mobilePrimaryCta','sendButton'];
+      for (const id of bookButtons) {
+        const button = document.getElementById(id);
+        if (button) {
+          button.hidden = true;
+          button.setAttribute('aria-hidden','true');
+          button.tabIndex = -1;
+        }
+      }
+      const estimateLabel = document.querySelector('#leadRequest .estimate-top span');
+      if (estimateLabel) estimateLabel.textContent = 'Расчёт для клиента';
+    }
 
     const bar = document.createElement('div');
     bar.id = 'kdSurveyorBridge';
