@@ -11,6 +11,7 @@ on:
       - fix/surveyor-fresh-v4-and-legacy-gate-redirect
       - fix/surveyor-canopy-tile-media
       - fix/surveyor-optional-contact-and-address
+      - fix/fence-reset-per-survey-draft
   workflow_dispatch:
 
 permissions:
@@ -47,5 +48,5 @@ jobs:
           node scripts/build-timeweb.mjs
           node scripts/build-dev-preview.mjs
       - run: npx playwright install --with-deps chromium
-      - name: Check optional phone/address and independent local survey drafts
-        run: npx playwright test tests/surveyor-v3.spec.js --grep "empty phone|address-only|phone-only" --workers=1
+      - name: Verify fence reset and per-survey drafts on mobile
+        run: npx playwright test tests/surveyor-dev-calculator-bridge.spec.js --grep "fence reset|new fence survey" --workers=1
