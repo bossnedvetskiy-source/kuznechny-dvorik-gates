@@ -952,7 +952,7 @@ function calculationCardDetails(item) {
       config.fenceTypeLabel || '',
       totalSpans > 0 ? `${totalSpans} ${plural(totalSpans,['пролёт','пролёта','пролётов'])}` : '',
       postText,
-      config.delivery?.name ? `Доставка: ${config.delivery.name}` : ''
+      payload.deliveryPending ? 'Стоимость без доставки' : (config.delivery?.name ? `Доставка: ${config.delivery.name}` : '')
     ].filter(Boolean);
     return { title:item.title || 'Забор из евроштакетника', lines:lines.length ? lines : fallback.lines, tags };
   }
@@ -1191,6 +1191,7 @@ function showCustomerView(survey) {
         ${item.image ? `<img src="${escapeHtml(item.image)}" alt="${escapeHtml(d.title)}" loading="lazy">` : ''}
         <div><small>${escapeHtml(calculationTypeLabel(item.type))}</small><h3>${escapeHtml(d.title)}</h3>
         <p>${d.lines.map(escapeHtml).join(' · ')}</p>
+        ${item.type === 'fence' && item.payload?.deliveryPending ? '<p class="v3-customer-delivery-note">Стоимость забора без доставки. Доставка рассчитывается отдельно.</p>' : ''}
         <strong>${formatMoney(item.total)}</strong></div>
       </article>`;
     }).join('')}
