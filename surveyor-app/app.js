@@ -1154,7 +1154,7 @@ function v3ProductTools(survey) {
         <span class="v3-product-label"><b>Забор</b><small>Варианты, размеры, схема, цена</small></span><span class="v3-product-arrow">→</span>
       </button>
       <button type="button" class="v3-product-tile" data-v3-calc="canopy">
-        <img src="../naves/farm-icons/original-farms.webp" alt="Типы ферм навеса" loading="lazy">
+        <img src="../naves/farm-icons/original-farms.webp" alt="Типы ферм навеса" loading="eager" decoding="async" onerror="this.onerror=null;this.src='../naves/farm-icons/icon-arched.jpg'">
         <span class="v3-product-label"><b>Навес</b><small>Фермы, покрытие, визуал и цена</small></span><span class="v3-product-arrow">→</span>
       </button>
     </div>
