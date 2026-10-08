@@ -1398,7 +1398,9 @@ async function bootstrap() {
   if (currentUser) {
     const returnedSurveyId = await consumeCalculationTransfer();
     showMain();
-    if (returnedSurveyId) setTimeout(() => openSurveyDetails(returnedSurveyId), 0);
+    const resumeSurveyId = new URLSearchParams(location.search).get('resumeSurvey') || '';
+    const targetSurveyId = returnedSurveyId || resumeSurveyId;
+    if (targetSurveyId) setTimeout(() => openSurveyDetails(targetSurveyId), 0);
     if (API_ENABLED && navigator.onLine) syncNow({ silent:true });
   } else {
     showLogin();
@@ -1446,7 +1448,9 @@ function bindEvents() {
       $('#loginForm').reset();
       const returnedSurveyId = await consumeCalculationTransfer();
       showMain();
-      if (returnedSurveyId) setTimeout(() => openSurveyDetails(returnedSurveyId), 0);
+      const resumeSurveyId = new URLSearchParams(location.search).get('resumeSurvey') || '';
+    const targetSurveyId = returnedSurveyId || resumeSurveyId;
+    if (targetSurveyId) setTimeout(() => openSurveyDetails(targetSurveyId), 0);
       if (lastSyncMessage) showToast(lastSyncMessage);
       if (API_ENABLED && navigator.onLine) syncNow({ silent:true });
     } catch (error) {
