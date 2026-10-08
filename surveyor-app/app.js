@@ -1318,11 +1318,11 @@ async function openSurveyDetails(id) {
     card.addEventListener('click', openEdit);
     card.addEventListener('keydown', openEdit);
   });
-  $('[data-delete-calculation]', detailsRoot).forEach(button => button.addEventListener('click', event => {
+  $$('[data-delete-calculation]', detailsRoot).forEach(button => button.addEventListener('click', event => {
     event.stopPropagation();
     deleteCalculation(survey.id, button.dataset.deleteCalculation);
   }));
-  $('[data-estimate-choice]', detailsRoot).forEach(button => button.addEventListener('click', event => {
+  $$('[data-estimate-choice]', detailsRoot).forEach(button => button.addEventListener('click', event => {
     event.stopPropagation();
     setEstimateRole(survey.id,button.dataset.estimateChoice,button.getAttribute('aria-pressed')!=='true');
   }));
