@@ -355,7 +355,11 @@
       .kd-surveyor-fence #resultNote,
       .kd-surveyor-fence .mobile-quote-bar{display:none!important}
       .kd-surveyor-fence .calculator{padding-top:18px!important}
+      .kd-surveyor-fence .result-card{order:initial!important}
+      .kd-surveyor-fence #internalPanel{display:none!important}
       .kd-surveyor-fence .scheme-section{padding-bottom:28px!important}
+      .kd-surveyor-fence #kdSurveyorBridge .kd-copy b{font-size:15px;line-height:1.2}
+      .kd-surveyor-fence #kdSurveyorBridge .kd-copy span{font-size:10px}
 
       .kd-surveyor-canopy .topbar,
       .kd-surveyor-canopy .hero,
@@ -387,6 +391,32 @@
         <button type="button" class="kd-save" id="kdSurveyorBridgeSave">${editState ? 'Сохранить изменения' : 'Добавить в замер'}</button>
       </div>`;
     document.body.append(bar);
+
+    // On a phone the surveyor sees the chosen photo and lengths first; the
+    // actual recalculated fence price stays visible in the bottom action bar.
+    if (calculatorType === 'fence') {
+      const priceNode = document.getElementById('totalPrice');
+      const labelNode = document.getElementById('totalLabel');
+      const titleNode = bar.querySelector('.kd-copy b');
+      const messageNode = document.getElementById('kdSurveyorBridgeMessage');
+      const showFencePrice = () => {
+        if (!titleNode || !messageNode || messageNode.classList.contains('is-error')) return;
+        const price = (priceNode?.textContent || '').trim();
+        const label = (labelNode?.textContent || '').trim();
+        if (price && price !== '—' && price !== '0 ₽') {
+          titleNode.textContent = 'Забор · ' + price;
+          messageNode.textContent = label.includes('без доставки') ? 'Без доставки · уточните адрес' : 'Цена с учётом выбранных условий';
+        } else {
+          titleNode.textContent = 'Забор · укажите длину';
+          messageNode.textContent = 'Выберите фото и введите размеры участка';
+        }
+      };
+      showFencePrice();
+      const observer = new MutationObserver(showFencePrice);
+      if (priceNode) observer.observe(priceNode, {subtree:true,childList:true,characterData:true});
+      if (labelNode) observer.observe(labelNode, {subtree:true,childList:true,characterData:true});
+      window.addEventListener('pagehide', () => observer.disconnect(), {once:true});
+    }
 
     document.getElementById('kdSurveyorBridgeBack')?.addEventListener('click', () => {
       if (editState) { try { localStorage.removeItem(EDIT_KEY); } catch {} }
@@ -433,7 +463,7 @@
           showMessage('Параметры восстановлены — можно изменить расчёт');
         } else {
           const calc = await takeSnapshot();
-          showMessage(`${calc.title} · ${money(calc.total)}`);
+          if (calculatorType !== 'fence') showMessage(`${calc.title} · ${money(calc.total)}`);
         }
       } catch (error) {
         showMessage(error?.message || 'Не удалось восстановить расчёт', true);
