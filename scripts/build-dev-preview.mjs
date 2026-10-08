@@ -443,6 +443,49 @@ for (const relative of ['index.html','evroshtaketnik/index.html','naves/index.ht
   }
 }
 
+// Staff-only DEV gate page. A lost URL parameter must never expose the public booking form.
+const SURVEYOR_GATES_DIR = 'surveyor-gates';
+const surveyorGateOut = path.join(OUT, SURVEYOR_GATES_DIR);
+await mkdir(surveyorGateOut, {recursive:true});
+let surveyorGateHtml = await readFile(path.join(OUT, 'index.html'), 'utf8');
+const surveyorGateGuard = `<script id="kd-surveyor-gate-context">
+(function(){
+  var key='kd-surveyor-active-gates-v1';
+  var p=new URLSearchParams(location.search);
+  var ok=p.get('surveyor')==='1' && Boolean(p.get('survey'));
+  if(!ok){
+    var data=null;
+    try{data=JSON.parse(localStorage.getItem(key)||'null')}catch(e){}
+    var valid=data && data.version===1 && typeof data.surveyId==='string'
+      && /^[a-zA-Z0-9_-]{1,128}$/.test(data.surveyId)
+      && (Date.now()-data.createdAt)<7200000 && (Date.now()-data.createdAt)>=0;
+    if(!valid){location.replace('${BASE}/${DEV_TOOLS_DIR}/');return}
+    p.set('surveyor','1');p.set('survey',data.surveyId);
+    if(data.returnTo==='${BASE}/${DEV_TOOLS_DIR}/') p.set('returnTo',data.returnTo);
+    if(typeof data.editId==='string' && /^calc_[a-zA-Z0-9_-]{1,128}$/.test(data.editId))
+      p.set('edit',data.editId);
+    history.replaceState(null,'',location.pathname+'?'+p.toString()+location.hash);
+  }
+  document.documentElement.classList.add('kd-surveyor-mode','kd-surveyor-gates');
+  document.title='КД Замерщик · Ворота';
+})();
+</script>
+<style id="kd-surveyor-gates-only">
+ html.kd-surveyor-gates .topbar,html.kd-surveyor-gates .hero,
+ html.kd-surveyor-gates .package,html.kd-surveyor-gates .trust,
+ html.kd-surveyor-gates .order-steps,html.kd-surveyor-gates .faq,
+ html.kd-surveyor-gates .privacy-section,html.kd-surveyor-gates .final-cta,
+ html.kd-surveyor-gates footer,html.kd-surveyor-gates #mobileMeasureButton,
+ html.kd-surveyor-gates .mobile-price-breakdown .mobile-measure-button,
+ html.kd-surveyor-gates .mobile-payment-note,html.kd-surveyor-gates #sendButton,
+ html.kd-surveyor-gates .mobile-cta,html.kd-surveyor-gates #mobilePrimaryCta
+ {display:none!important}
+</style>`;
+if (!surveyorGateHtml.includes('${BASE}/surveyor-bridge.js'))
+  throw new Error('Gate surveyor route cannot load the transfer bridge');
+surveyorGateHtml = surveyorGateHtml.replace('</head>', surveyorGateGuard + '\n</head>');
+await writeFile(path.join(surveyorGateOut, 'index.html'), surveyorGateHtml, 'utf8');
+
 // Build one internal DEV work app. The surveyor shell is the start screen,
 // while the existing DEV calculators remain under the same broad PWA scope.
 await rm(DEV_TOOLS_OUT, {recursive:true, force:true});
@@ -498,6 +541,7 @@ const swPath = path.join(OUT, 'site-sw.js');
 let devSw = await readFile(swPath, 'utf8');
 const devShellCore = [
   DEV_APP_START,
+  `${BASE}/${SURVEYOR_GATES_DIR}/`,
   `${BASE}/${DEV_TOOLS_DIR}/styles.css`,
   `${BASE}/${DEV_TOOLS_DIR}/app.js`,
   `${BASE}/${DEV_TOOLS_DIR}/line-builder.js`,
@@ -591,6 +635,10 @@ if (!fencePrices?.fence || typeof fencePrices.fence !== 'object') throw new Erro
 for (const relative of ['index.html','evroshtaketnik/index.html','naves/index.html']) {
   const html = await readFile(path.join(OUT, relative), 'utf8');
   if (!html.includes(`${BASE}/surveyor-bridge.js`)) throw new Error(`DEV surveyor bridge missing: ${relative}`);
+}
+const dedicatedGateCheck = await readFile(path.join(OUT, SURVEYOR_GATES_DIR, 'index.html'), 'utf8');
+if (!dedicatedGateCheck.includes('kd-surveyor-gate-context') || !dedicatedGateCheck.includes('surveyor-bridge.js')) {
+  throw new Error('Dedicated surveyor gate route was not generated');
 }
 if (!(await readFile(path.join(OUT,'surveyor-bridge.js'),'utf8')).includes('kd-surveyor-transfer-v1')) {
   throw new Error('DEV surveyor bridge payload contract missing');
