@@ -32,14 +32,14 @@ test('single DEV work PWA starts in surveyor shell with card-based calculators',
   await page.locator('#surveyAddress').fill('Мелеуз, PWA тест');
   await page.locator('#saveSurveyBtn').click();
 
+  await expect(page.locator('#surveyDetailsDialog')).toBeVisible();
+  await expect(page.locator('.v3-product-tile')).toHaveCount(3);
+  await expect(page.locator('[data-v3-calc="gates"]')).toContainText('Ворота');
+  await expect(page.locator('[data-v3-calc="fence"]')).toContainText('Забор');
+  await expect(page.locator('[data-v3-calc="canopy"]')).toContainText('Навес');
+  await page.locator('#closeDetailsBtn').click();
   const card = page.locator('.survey-card').first();
-  await expect(card.locator('[data-quick-calculation]')).toBeVisible();
-  await card.locator('[data-quick-calculation]').click();
-  await expect(page.locator('#calculationPickerDialog')).toBeVisible();
-  await expect(page.locator('#calculationPickerDialog')).toContainText('Ворота');
-  await expect(page.locator('#calculationPickerDialog')).toContainText('Евроштакетник');
-  await expect(page.locator('#calculationPickerDialog')).toContainText('Навес');
-  await page.locator('#closeCalculationPickerBtn').click();
+  await expect(card.locator('[data-open-survey]')).toBeVisible();
 
   for (const href of [
     '/kuznechny-dvorik-gates/?app=1',
