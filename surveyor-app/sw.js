@@ -1,4 +1,4 @@
-const CACHE = 'kd-surveyor-stage2-v7';
+const CACHE = 'kd-surveyor-v3-stage1-v1';
 const CORE = ['./index.html','./styles.css','./app.js','./line-builder.js','./calculator-bridge.js','./manifest.webmanifest','./icon.svg'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(CORE)).then(() => self.skipWaiting()));
