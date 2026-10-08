@@ -57,7 +57,7 @@
             <div>
               <div class="eyebrow">КД ЗАМЕРЩИК · 3.0</div>
               <h2>Замеры без лишних шагов</h2>
-              <p>Телефон, адрес — и сразу каталог с фотографиями, визуалом и ценой.</p>
+              <p>Начните с расчёта — телефон и адрес можно добавить позже.</p>
             </div>
             <button id="newSurveyBtn" class="btn btn-primary btn-lg" type="button">+ Начать замер</button>
           </div>
@@ -159,10 +159,10 @@
       </div>
 
       <section id="surveyStep1" class="wizard-step active">
-        <h3>Куда едем на замер?</h3>
-        <p class="muted">Имя клиента и вид работ сейчас не нужны. Их можно добавить позже.</p>
-        <label class="field"><span>Телефон</span><input id="surveyClientPhone" inputmode="tel" required placeholder="+7 937 000-00-00" /></label>
-        <label class="field"><span>Адрес объекта</span><textarea id="surveyAddress" rows="2" required placeholder="Населённый пункт, улица, дом"></textarea></label>
+        <h3>Начинаем расчёт</h3>
+        <p class="muted">Телефон и адрес можно оставить пустыми и заполнить позже.</p>
+        <label class="field"><span>Телефон <small class="muted">необязательно</small></span><input id="surveyClientPhone" inputmode="tel" placeholder="+7 937 000-00-00" /></label>
+        <label class="field"><span>Адрес объекта <small class="muted">необязательно</small></span><textarea id="surveyAddress" rows="2" placeholder="Населённый пункт, улица, дом"></textarea></label>
         <label class="field"><span>Комментарий</span><textarea id="surveyNote" rows="2" placeholder="Например: позвонить за час"></textarea></label>
         <button id="saveSurveyBtn" class="btn btn-primary btn-lg btn-block" type="button">Начать замер</button>
       </section>
@@ -211,8 +211,8 @@
       <input id="surveyDataId" type="hidden" />
       <div class="stack survey-data-form">
         <label class="field"><span>Имя <small class="muted">необязательно до договора</small></span><input id="surveyDataName" autocomplete="name" /></label>
-        <label class="field"><span>Телефон</span><input id="surveyDataPhone" inputmode="tel" autocomplete="tel" required /></label>
-        <label class="field"><span>Адрес объекта</span><textarea id="surveyDataAddress" rows="2" required></textarea></label>
+        <label class="field"><span>Телефон <small class="muted">необязательно</small></span><input id="surveyDataPhone" inputmode="tel" autocomplete="tel" /></label>
+        <label class="field"><span>Адрес объекта <small class="muted">необязательно</small></span><textarea id="surveyDataAddress" rows="2"></textarea></label>
         <label class="field"><span>Комментарий</span><textarea id="surveyDataNote" rows="3" placeholder="Например: позвонить за час"></textarea></label>
         <button id="saveSurveyDataBtn" class="btn btn-primary btn-lg btn-block" type="button">Сохранить изменения</button>
       </div>
