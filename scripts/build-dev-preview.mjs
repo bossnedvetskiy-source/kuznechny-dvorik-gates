@@ -414,6 +414,28 @@ await cp(path.join(SURVEYOR_SOURCE, 'calculator-bridge.js'), path.join(OUT, 'sur
 for (const relative of ['index.html','evroshtaketnik/index.html','naves/index.html']) {
   const full = path.join(OUT, relative);
   let html = await readFile(full, 'utf8');
+  if (relative === 'index.html') {
+    // DEV-only early guard: even before the bridge loads, an on-site visit
+    // cannot briefly display the public "Order free measurement" button.
+    // No effect on normal customers or any production deployment.
+    const gateSurveyGuard = `<script>
+      (function(){
+        var p = new URLSearchParams(location.search);
+        if (p.get('surveyor') === '1' && p.get('survey')) {
+          document.documentElement.classList.add('kd-surveyor-mode','kd-surveyor-gates');
+          document.title = 'КД Замерщик · Ворота';
+        }
+      })();
+      </script>
+      <style>
+      html.kd-surveyor-gates #mobileMeasureButton,
+      html.kd-surveyor-gates .mobile-price-breakdown .mobile-measure-button,
+      html.kd-surveyor-gates .mobile-payment-note,
+      html.kd-surveyor-gates .mobile-cta,
+      html.kd-surveyor-gates #mobilePrimaryCta{display:none!important}
+      </style>`;
+    if (!html.includes('kd-surveyor-mode')) html = html.replace('</head>', `${gateSurveyGuard}\n</head>`);
+  }
   if (!html.includes(`${BASE}/surveyor-bridge.js`)) {
     if (!html.includes('</body>')) throw new Error(`DEV calculator page has no body: ${relative}`);
     html = html.replace('</body>', `<script src="${BASE}/surveyor-bridge.js?v=${encodeURIComponent(devSourceVersion)}"></script>\n</body>`);
