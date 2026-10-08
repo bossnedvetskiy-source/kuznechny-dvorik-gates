@@ -142,6 +142,7 @@ test('canopy calculator result returns into the same survey card', async ({page}
   await expect(page.locator('#surveyDetailsDialog')).toBeVisible({timeout:15000});
   await expect(page.locator('.calculation-card')).toHaveCount(1);
   await expect(page.locator('.calculation-card')).toContainText('Навес');
+  await expect(page.locator('.calculation-card img.canopy-farm-photo')).toHaveAttribute('src', /naves\/farm-icons\/icon-arched\.jpg$/);
   await expect(page.locator('.calculation-card-lines')).toContainText('Размер 3 × 5,9 м');
   await expect(page.locator('.calculation-card-lines')).toContainText('ферма');
   await expect(page.locator('.calculation-card-tags')).toContainText('Арочный');
@@ -208,3 +209,72 @@ for (const [type, file] of [
     await expect(page.locator('[data-field="length"][data-index="0"]')).toHaveValue('9.5');
   });
 }
+
+
+test('canopy surveyor: photos and support presets update a real public quote without exposing pricing rates', async ({page}) => {
+  await loginAndCreateSurvey(page, 'Мелеуз, тест готовых опор навеса');
+  await page.locator('[data-launch-calculation="canopy"]').click();
+  await expect(page.locator('#kdSurveyorBridge')).toBeVisible({timeout:15000});
+  await expect(page.locator('[data-farm-type]')).toHaveCount(7);
+  await expect(page.locator('[data-farm-type="Арочный"] .kd-farm-state')).toHaveText('Цена онлайн');
+  await expect(page.locator('[data-farm-type="Полуарочный"] .kd-farm-state')).toHaveText('По запросу');
+  await expect(page.locator('#kdSurveyorBridgeSave')).toBeDisabled();
+
+  await page.locator('#widthPosts').fill('3');
+  await page.locator('#lengthPosts').fill('5.9');
+  await expect(page.locator('#kdSurveyorBridgeSave')).toBeEnabled();
+  await expect(page.locator('#kdSurveyorBridge .kd-copy b')).toContainText('₽');
+  await expect(page.locator('#canopyViewport canvas')).toBeVisible({timeout:15000});
+  const before = await page.locator('#totalPrice').textContent();
+
+  await page.locator('[data-canopy-preset="all"]').click();
+  await expect(page.locator('#beamsExisting')).toBeChecked();
+  const postCount = Number(await page.locator('#existingPosts').inputValue());
+  expect(postCount).toBeGreaterThan(0);
+  await expect(page.locator('[data-canopy-preset="all"]')).toHaveClass(/is-selected/);
+  const after = await page.locator('#totalPrice').textContent();
+  expect(after).not.toBe(before);
+
+  await page.locator('#coverage').selectOption('Профнастил');
+  await expect(page.locator('#kdSurveyorBridgeSave')).toBeEnabled();
+  await page.locator('[data-farm-type="Полуарочный"]').click();
+  await expect(page.locator('#kdSurveyorBridgeSave')).toBeDisabled();
+  await page.locator('[data-farm-type="Арочный"]').click();
+  await expect(page.locator('#kdSurveyorBridgeSave')).toBeEnabled();
+  await page.locator('#kdSurveyorBridgeSave').click();
+  await expect(page.locator('#surveyDetailsDialog')).toBeVisible({timeout:15000});
+  await expect(page.locator('.calculation-card')).toHaveCount(1);
+  await expect(page.locator('.calculation-card img.canopy-farm-photo')).toHaveAttribute('src',/naves\/farm-icons\/icon-arched\.jpg$/);
+  await expect(page.locator('.calculation-card-tags')).toContainText('балки уже есть');
+  await expect(page.locator('.calculation-card-tags')).toContainText('Профнастил');
+
+  const saved = await page.evaluate(async () => {
+    const db = await new Promise((resolve,reject) => {
+      const request = indexedDB.open('kd-surveyor-stage1');
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    const rows = await new Promise((resolve,reject) => {
+      const request = db.transaction('surveys').objectStore('surveys').getAll();
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    db.close();
+    return rows.at(-1).configuration.calculations[0];
+  });
+  expect(saved.image).toContain('icon-arched.jpg');
+  expect(saved.payload.configuration.canopy).not.toHaveProperty('pricingSnapshot');
+  expect(saved.payload.configuration.canopy.input.beamsExisting).toBe(true);
+  expect(saved.payload.configuration.canopy.input.existingPosts).toBe(postCount);
+  expect(saved.payload.configuration.canopy.input.coverage).toBe('Профнастил');
+
+  await page.locator('[data-v3-preview]').click();
+  await expect(page.locator('.v3-customer-item img.canopy-farm-photo')).toHaveAttribute('src',/naves\/farm-icons\/icon-arched\.jpg$/);
+  await expect(page.locator('#customerPreviewContent')).toContainText('Стоимость изделия без доставки');
+  await expect(page.locator('#customerPreviewContent')).not.toContainText('pricingSnapshot');
+  await page.locator('#closeCustomerPreviewBtn').click();
+  await page.locator('.calculation-card-copy').click();
+  await expect(page.locator('#beamsExisting')).toBeChecked();
+  await expect(page.locator('#existingPosts')).toHaveValue(String(postCount));
+  await expect(page.locator('#coverage')).toHaveValue('Профнастил');
+});
