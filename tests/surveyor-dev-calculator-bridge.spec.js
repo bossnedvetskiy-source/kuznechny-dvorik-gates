@@ -74,7 +74,7 @@ async function loginAndCreateSurvey(page, address) {
   await page.locator('#surveyClientPhone').fill('89370000000');
   await page.locator('#surveyAddress').fill(address);
   await page.locator('#saveSurveyBtn').click();
-  await page.locator('.survey-card').first().click();
+  await expect(page.locator('#surveyDetailsDialog')).toBeVisible();
   await page.locator('[data-add-calculation]').click();
 }
 
