@@ -17,6 +17,8 @@ const LIVE_FENCE_PRICES = '/tmp/kuzdvor-live-fence-prices.json';
 const DEV_ICON_NAME = 'dev-site-icon.svg';
 const DEV_TOOLS_DIR = 'dev-tools';
 const DEV_TOOLS_OUT = path.join(ROOT, '_site', DEV_TOOLS_DIR);
+const DEV_TOOLS_FRESH_DIR = 'dev-tools-v4';
+const DEV_TOOLS_FRESH_OUT = path.join(ROOT, '_site', DEV_TOOLS_FRESH_DIR);
 
 const DEV_APP_START = `${BASE}/${DEV_TOOLS_DIR}/`;
 
@@ -421,9 +423,12 @@ for (const relative of ['index.html','evroshtaketnik/index.html','naves/index.ht
     const gateSurveyGuard = `<script>
       (function(){
         var p = new URLSearchParams(location.search);
-        if (p.get('surveyor') === '1' && p.get('survey')) {
-          document.documentElement.classList.add('kd-surveyor-mode','kd-surveyor-gates');
-          document.title = 'КД Замерщик · Ворота';
+        if ((location.pathname==='${BASE}/' || location.pathname==='${BASE}/index.html')
+            && p.get('surveyor') === '1' && p.get('survey')) {
+          // Old installed DEV PWA versions may still launch a survey at root.
+          // Redirect to the protected staff calculator before showing any UI.
+          location.replace('${BASE}/surveyor-gates/' + location.search + location.hash);
+          return;
         }
       })();
       </script>
@@ -461,7 +466,7 @@ const surveyorGateGuard = `<script id="kd-surveyor-gate-context">
       && (Date.now()-data.createdAt)<7200000 && (Date.now()-data.createdAt)>=0;
     if(!valid){location.replace('${BASE}/${DEV_TOOLS_DIR}/');return}
     p.set('surveyor','1');p.set('survey',data.surveyId);
-    if(data.returnTo==='${BASE}/${DEV_TOOLS_DIR}/') p.set('returnTo',data.returnTo);
+    if(data.returnTo==='${BASE}/${DEV_TOOLS_DIR}/' || data.returnTo==='${BASE}/${DEV_TOOLS_FRESH_DIR}/') p.set('returnTo',data.returnTo);
     if(typeof data.editId==='string' && /^calc_[a-zA-Z0-9_-]{1,128}$/.test(data.editId))
       p.set('edit',data.editId);
     history.replaceState(null,'',location.pathname+'?'+p.toString()+location.hash);
@@ -523,6 +528,24 @@ await writeFile(path.join(DEV_TOOLS_OUT,'manifest.webmanifest'),JSON.stringify({
   icons:[{src:`${BASE}/${DEV_ICON_NAME}`,sizes:'any',type:'image/svg+xml',purpose:'any maskable'}]
 },null,2)+'\n','utf8');
 
+// Dedicated fresh entry uses a distinct URL and asset paths. Old installed
+// versions may still serve stale dev-tools/app.js from a previous cache.
+// Both routes continue using the SAME origin/IndexedDB and existing records.
+await rm(DEV_TOOLS_FRESH_OUT, {recursive:true, force:true});
+await cp(DEV_TOOLS_OUT, DEV_TOOLS_FRESH_OUT, {recursive:true});
+const freshIndexPath = path.join(DEV_TOOLS_FRESH_OUT, 'index.html');
+let freshIndex = await readFile(freshIndexPath, 'utf8');
+freshIndex = freshIndex
+  .replace('<title>КД Замерщик DEV</title>', '<title>КД Замерщик DEV · новая версия</title>')
+  .replace('<div class="eyebrow">КД Замерщик · DEV</div>', '<div class="eyebrow">КД Замерщик · DEV · НОВАЯ СБОРКА</div>');
+await writeFile(freshIndexPath, freshIndex, 'utf8');
+const freshManifestPath = path.join(DEV_TOOLS_FRESH_OUT, 'manifest.webmanifest');
+const freshManifest = JSON.parse(await readFile(freshManifestPath, 'utf8'));
+freshManifest.name = 'КД Замерщик DEV · обновление';
+freshManifest.start_url = `${BASE}/${DEV_TOOLS_FRESH_DIR}/`;
+freshManifest.scope = `${BASE}/`;
+await writeFile(freshManifestPath,JSON.stringify(freshManifest,null,2)+'\n','utf8');
+
 // The public bundle adds a floating app menu when launched in standalone mode.
 // Point it to the actual static DEV menu instead of the Timeweb-only /app route.
 const siteBundlePath = path.join(OUT, 'site.bundle.js');
@@ -541,6 +564,11 @@ const swPath = path.join(OUT, 'site-sw.js');
 let devSw = await readFile(swPath, 'utf8');
 const devShellCore = [
   DEV_APP_START,
+  `${BASE}/${DEV_TOOLS_FRESH_DIR}/`,
+  `${BASE}/${DEV_TOOLS_FRESH_DIR}/styles.css`,
+  `${BASE}/${DEV_TOOLS_FRESH_DIR}/app.js`,
+  `${BASE}/${DEV_TOOLS_FRESH_DIR}/line-builder.js`,
+  `${BASE}/${DEV_TOOLS_FRESH_DIR}/manifest.webmanifest`,
   `${BASE}/${SURVEYOR_GATES_DIR}/`,
   `${BASE}/${DEV_TOOLS_DIR}/styles.css`,
   `${BASE}/${DEV_TOOLS_DIR}/app.js`,
@@ -635,6 +663,10 @@ if (!fencePrices?.fence || typeof fencePrices.fence !== 'object') throw new Erro
 for (const relative of ['index.html','evroshtaketnik/index.html','naves/index.html']) {
   const html = await readFile(path.join(OUT, relative), 'utf8');
   if (!html.includes(`${BASE}/surveyor-bridge.js`)) throw new Error(`DEV surveyor bridge missing: ${relative}`);
+}
+const freshAppCheck = await readFile(path.join(DEV_TOOLS_FRESH_OUT, 'index.html'), 'utf8');
+if (!freshAppCheck.includes('НОВАЯ СБОРКА') || !freshAppCheck.includes(devToolsAssetVersion)) {
+  throw new Error('Fresh DEV entry did not contain current version of the surveyor app');
 }
 const dedicatedGateCheck = await readFile(path.join(OUT, SURVEYOR_GATES_DIR, 'index.html'), 'utf8');
 if (!dedicatedGateCheck.includes('kd-surveyor-gate-context') || !dedicatedGateCheck.includes('surveyor-bridge.js')) {

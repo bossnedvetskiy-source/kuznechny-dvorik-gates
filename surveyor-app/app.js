@@ -1468,7 +1468,7 @@ function showLogin() {
 function showMain() {
   $('#loginView').hidden = true;
   $('#mainView').hidden = false;
-  if (/\/dev-tools(?:\/|$)/.test(location.pathname)) {
+  if (/\/(?:dev-tools|dev-tools-v4)(?:\/|$)/.test(location.pathname)) {
     try { localStorage.setItem(DEV_ACCESS_KEY, '1'); } catch {}
   }
   applyRoleUi();
@@ -1623,7 +1623,7 @@ function bindEvents() {
 async function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
   try {
-    const inDevShell = /\/dev-tools(?:\/|$)/.test(location.pathname);
+    const inDevShell = /\/(?:dev-tools|dev-tools-v4)(?:\/|$)/.test(location.pathname);
     const registration = await navigator.serviceWorker.register(
       inDevShell ? '../site-sw.js' : './sw.js',
       inDevShell ? {scope:'../', updateViaCache:'none'} : {updateViaCache:'none'}

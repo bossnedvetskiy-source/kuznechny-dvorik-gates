@@ -329,3 +329,39 @@ test('staff-only gate entry without survey context returns to app, never the cus
   await expect(page).toHaveURL(/\/dev-tools\//,{timeout:15000});
   await expect(page.locator('#mobileMeasureButton')).toHaveCount(0);
 });
+
+
+test('fresh DEV entry reuses existing survey database and launches staff-only gates', async ({page}) => {
+  await page.addInitScript(() => localStorage.setItem('kuzdvor-dev-access-v1','1'));
+  await page.goto('/kuznechny-dvorik-gates/dev-tools/');
+  await page.locator('#loginInput').fill('zamer');
+  await page.locator('#passwordInput').fill('1234');
+  await page.locator('#loginForm button[type="submit"]').click();
+  await expect(page.locator('#mainView')).toBeVisible();
+  await page.locator('#newSurveyBtn').click();
+  await page.locator('#surveyClientPhone').fill('89370000000');
+  await page.locator('#surveyAddress').fill('Мелеуз, проверка старого замера');
+  await page.locator('#saveSurveyBtn').click();
+  await expect(page.locator('#surveyDetailsDialog')).toBeVisible();
+  await page.goto('/kuznechny-dvorik-gates/dev-tools-v4/');
+  await expect(page).toHaveTitle(/новая версия/);
+  await expect(page.locator('body')).toContainText('НОВАЯ СБОРКА');
+  await expect(page.locator('.survey-card')).toHaveCount(1);
+  await page.locator('.survey-card').first().click();
+  await expect(page.locator('#surveyDetailsDialog')).toBeVisible();
+  await page.locator('[data-add-calculation]').click();
+  await page.locator('[data-launch-calculation="gates"]').click();
+  await expect(page).toHaveURL(/\/surveyor-gates\/\?surveyor=1/);
+  await expect(page.locator('#kdSurveyorBridgeSave')).toHaveText('Добавить в замер');
+  await expect(page.locator('#mobileMeasureButton')).toBeHidden();
+  await expect(page.locator('.mobile-payment-note')).toBeHidden();
+});
+
+test('legacy catalog URL from cached app is redirected into staff-only route', async ({page}) => {
+  await page.addInitScript(() => localStorage.setItem('kuzdvor-dev-access-v1','1'));
+  await page.goto('/kuznechny-dvorik-gates/?app=1&surveyor=1&survey=sv_legacy');
+  await expect(page).toHaveURL(/\/surveyor-gates\/\?/,{timeout:15000});
+  await expect(page).toHaveTitle('КД Замерщик · Ворота');
+  await expect(page.locator('#kdSurveyorBridge')).toBeVisible();
+  await expect(page.locator('#mobileMeasureButton')).toBeHidden();
+});
