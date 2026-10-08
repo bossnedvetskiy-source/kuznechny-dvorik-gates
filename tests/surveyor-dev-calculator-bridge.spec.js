@@ -24,7 +24,8 @@ test('gate calculator result returns into the same survey card', async ({page}) 
   await expect(page.locator('#calculationPickerDialog')).toBeVisible();
   await page.locator('[data-launch-calculation="gates"]').click();
 
-  await expect(page).toHaveURL(/surveyor=1/);
+  await expect(page).toHaveURL(/\/surveyor-gates\/\?surveyor=1/);
+  await expect(page).toHaveURL(/survey=sv_/);
   await expect(page.locator('#kdSurveyorBridge')).toBeVisible({timeout:15000});
   await expect(page).toHaveTitle(/КД Замерщик · Ворота/);
   await expect(page.locator('#catalog')).toBeVisible();
@@ -296,4 +297,35 @@ test('canopy surveyor: photos and support presets update a real public quote wit
   await expect(page.locator('#beamsExisting')).toBeChecked();
   await expect(page.locator('#existingPosts')).toHaveValue(String(postCount));
   await expect(page.locator('#coverage')).toHaveValue('Профнастил');
+});
+
+
+test('staff-only gates route recovers lost URL parameters, never shows client booking', async ({page}) => {
+  await page.addInitScript(() => {
+    localStorage.setItem('kuzdvor-dev-access-v1','1');
+    localStorage.setItem('kd-surveyor-active-gates-v1',JSON.stringify({
+      version:1,surveyId:'sv_123456',returnTo:'/kuznechny-dvorik-gates/dev-tools/',
+      editId:'',createdAt:Date.now()
+    }));
+  });
+  await page.goto('/kuznechny-dvorik-gates/surveyor-gates/');
+  await expect(page).toHaveURL(/\/surveyor-gates\/\?surveyor=1&survey=sv_123456/);
+  await expect(page).toHaveTitle('КД Замерщик · Ворота');
+  await expect(page.locator('#kdSurveyorBridge')).toBeVisible();
+  await expect(page.locator('#kdSurveyorBridgeSave')).toHaveText('Добавить в замер');
+  await expect(page.locator('#mobileMeasureButton')).toBeHidden();
+  await expect(page.locator('.mobile-price-breakdown .mobile-measure-button')).toBeHidden();
+  await expect(page.locator('.mobile-payment-note')).toBeHidden();
+  await expect(page.locator('#sendButton')).toBeHidden();
+  await expect(page.locator('.mobile-cta')).toBeHidden();
+});
+
+test('staff-only gate entry without survey context returns to app, never the customer catalog', async ({page}) => {
+  await page.addInitScript(() => {
+    localStorage.setItem('kuzdvor-dev-access-v1','1');
+    localStorage.removeItem('kd-surveyor-active-gates-v1');
+  });
+  await page.goto('/kuznechny-dvorik-gates/surveyor-gates/');
+  await expect(page).toHaveURL(/\/dev-tools\//,{timeout:15000});
+  await expect(page.locator('#mobileMeasureButton')).toHaveCount(0);
 });

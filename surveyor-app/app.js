@@ -1058,8 +1058,19 @@ function launchCalculation(type, options = {}) {
   let url;
   if (type === 'fence') url = new URL('evroshtaketnik/', root);
   else if (type === 'canopy') url = new URL('naves/', root);
+  else if (IS_PREVIEW) url = new URL('surveyor-gates/', root);
   else url = new URL(root.href);
-  if (type === 'gates') url.searchParams.set('app','1');
+  if (type === 'gates' && !IS_PREVIEW) url.searchParams.set('app','1');
+  if (type === 'gates' && IS_PREVIEW) {
+    // A dedicated, staff-only DEV route. Keep a short-lived same-origin handoff
+    // in case the installed PWA / Android browser drops the query on navigation.
+    try {
+      localStorage.setItem('kd-surveyor-active-gates-v1', JSON.stringify({
+        version:1, surveyId, returnTo:location.pathname,
+        editId:options.editId || '', createdAt:Date.now()
+      }));
+    } catch {}
+  }
   url.searchParams.set('surveyor','1');
   url.searchParams.set('survey',surveyId);
   if (options.editId) url.searchParams.set('edit', options.editId);

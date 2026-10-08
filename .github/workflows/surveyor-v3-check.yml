@@ -7,6 +7,7 @@ on:
       - feature/kd-surveyor-v3-fence-cards
       - feature/kd-surveyor-v3-canopy-ux
       - fix/surveyor-gates-no-measure-cta
+      - fix/surveyor-dedicated-gates-route
   workflow_dispatch:
 
 permissions:
@@ -43,5 +44,5 @@ jobs:
           node scripts/build-timeweb.mjs
           node scripts/build-dev-preview.mjs
       - run: npx playwright install --with-deps chromium
-      - name: Check surveyor gate CTAs and public client flow
-        run: npx playwright test tests/surveyor-dev-calculator-bridge.spec.js --grep "gate" --workers=1
+      - name: Check dedicated staff-only gates route and lost query recovery
+        run: npx playwright test tests/surveyor-dev-calculator-bridge.spec.js --grep "gate|staff-only" --workers=1
