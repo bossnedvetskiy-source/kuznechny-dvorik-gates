@@ -59,3 +59,23 @@ test('V3: shortcut for fence and canopy opens their real calculators', async ({p
   await expect(page.locator('#kdSurveyorBridge')).toBeVisible({timeout:15000});
   await expect(page.locator('.workspace')).toBeVisible();
 });
+
+
+test('V3: find surveys instantly by phone, address or number without losing local drafts', async ({page}) => {
+  await startNewSurvey(page);
+  const number = (await page.locator('#detailsNumber').textContent()).trim();
+  await page.locator('#closeDetailsBtn').click();
+  await expect(page.locator('.survey-card')).toHaveCount(1);
+  const search = page.locator('#surveySearch');
+  await search.fill('несуществующий адрес');
+  await expect(page.locator('.survey-card')).toHaveCount(0);
+  await expect(page.locator('#surveyEmpty')).toContainText('По вашему запросу ничего нет');
+  await search.fill('89370000000');
+  await expect(page.locator('.survey-card')).toHaveCount(1);
+  await search.fill('Мелеуз, тест V3');
+  await expect(page.locator('.survey-card')).toHaveCount(1);
+  await search.fill(number);
+  await expect(page.locator('.survey-card')).toHaveCount(1);
+  await search.fill('');
+  await expect(page.locator('.survey-card')).toHaveCount(1);
+});
