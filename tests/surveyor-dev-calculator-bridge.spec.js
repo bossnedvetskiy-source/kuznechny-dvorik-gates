@@ -433,7 +433,10 @@ test('new fence survey does not inherit previous survey draft; previous survey k
   await page.locator('[data-field="length"][data-index="0"]').fill('18');
   await page.locator('#addSection').click();
   await page.locator('[data-field="length"][data-index="1"]').fill('12');
-  await expect.poll(() => page.evaluate(() => Boolean(localStorage.getItem('kuzdvor:picket-draft-v1:survey:sv_unique-a'))),{timeout:6000}).toBe(true);
+  await expect.poll(() => page.evaluate(() => {
+    const data = JSON.parse(localStorage.getItem('kuzdvor:picket-draft-v1:survey:sv_unique-a') || 'null');
+    return data?.sections?.[0]?.length === 18 && data?.sections?.[1]?.length === 12;
+  }),{timeout:6000}).toBe(true);
   await page.goto('/kuznechny-dvorik-gates/evroshtaketnik/?surveyor=1&survey=sv_unique-b');
   await page.evaluate(() => window.KUZDVOR_FENCE_APP.ready);
   await expect(page.locator('[data-field="length"][data-index="0"]')).toHaveValue('');
