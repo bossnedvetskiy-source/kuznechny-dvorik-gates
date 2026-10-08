@@ -1060,17 +1060,23 @@ function calculationCardDetails(item) {
 }
 function calculationsHtml(survey) {
   const rows = surveyCalculations(survey);
-  const total = surveyCalculationsTotal(survey);
+  const estimate = unifiedEstimate(survey);
+  const warnings = [
+    estimate.missingDelivery ? 'Доставка рассчитана не для всех изделий. Проверьте её до оформления заказа.' : '',
+    estimate.unknownGateDelivery ? 'Доставка ворот включена в их цену, но отдельно не выделена: проверьте её при объединении с другими изделиями.' : '',
+    estimate.sharedSupportRisk ? 'У ворот и навеса могут быть общие столбы: проверьте пересечение работ и внесите корректировку.' : ''
+  ].filter(Boolean);
   return `<div class="details-section calculation-section">
     <div class="section-head compact">
       <div><h3>Сохранённые расчёты</h3><p class="muted">${rows.length ? rows.length+' '+plural(rows.length,['вариант','варианта','вариантов']) : 'Выберите изделие и сделайте первый расчёт.'}</p></div>
-      ${rows.length === 1 ? `<strong class="calculation-grand-total">${formatMoney(total)}</strong>` : ''}
     </div>
-    ${rows.length > 1 ? '<p class="v3-estimate-warning">Это отдельные расчёты, а не итог заказа. Альтернативы, общие столбы и доставку объединяем на следующем этапе.</p>' : ''}
+    ${rows.length > 0 ? '<p class="estimate-help">Отметьте изделия для общего заказа. Другие варианты останутся сохранёнными, но не будут прибавляться к итогу.</p>' : ''}
     <div class="calculation-list">
       ${rows.map(item=>{
         const details = calculationCardDetails(item);
-        return `<article class="calculation-card calculation-card-${escapeHtml(item.type)}" data-edit-calculation="${escapeHtml(item.id)}" role="button" tabindex="0" aria-label="Изменить расчёт: ${escapeHtml(details.title)}">
+        const included = estimateRole(item,rows) === 'included';
+        return `<article class="calculation-card calculation-card-${escapeHtml(item.type)} ${included?'estimate-included':'estimate-alternative'}"
+          data-edit-calculation="${escapeHtml(item.id)}" role="group" aria-label="${escapeHtml(details.title)}">
           ${calculationImage(item) ? `<img class="${item.type==='canopy'?'canopy-farm-photo':''}" src="${escapeHtml(calculationImage(item))}" alt="" loading="lazy">` : `<div class="calculation-card-icon ${escapeHtml(item.type)}">${item.type==='gates'?'▰':item.type==='fence'?'▥':'⌒'}</div>`}
           <div class="calculation-card-copy">
             <small>${escapeHtml(calculationTypeLabel(item.type))}</small>
@@ -1085,10 +1091,28 @@ function calculationsHtml(survey) {
               <button type="button" class="calculation-delete-btn" data-delete-calculation="${escapeHtml(item.id)}" aria-label="Удалить расчёт">×</button>
             </div>
           </div>
+          <button class="estimate-role-toggle" type="button" aria-pressed="${included}" data-estimate-choice="${escapeHtml(item.id)}">
+            <span aria-hidden="true">${included?'✓':'+'}</span>
+            ${included?'В общем заказе':'Добавить в общий заказ'}
+          </button>
         </article>`;
       }).join('') || '<div class="calculation-empty">Пока нет вариантов. Добавьте расчёт ворот, забора или навеса.</div>'}
     </div>
     <button class="btn btn-secondary btn-block v3-add-more" data-add-calculation="${survey.id}" type="button">+ Добавить другой вариант</button>
+    ${rows.length ? `<section class="estimate-summary" aria-label="Общая смета объекта">
+      <div class="estimate-summary-head"><b>Общая смета объекта</b><span>${estimate.selected.length} в заказе · ${estimate.alternatives.length} альтернатив</span></div>
+      ${estimate.selected.length ? `
+        <div class="estimate-summary-row"><span>Выбранные изделия</span><b>${formatMoney(estimate.productsTotal)}</b></div>
+        ${estimate.repeatedDelivery>0 ? `<div class="estimate-summary-row estimate-deduction"><span>Повторная доставка (учтена один раз)</span><b>−${formatMoney(estimate.repeatedDelivery)}</b></div>` : ''}
+        <label class="estimate-adjustment">Общие столбы, монтаж и другие согласованные корректировки, ₽
+          <input type="number" id="estimateAdjustment" inputmode="numeric" min="0" max="${Math.max(0,estimate.productsTotal)}" step="100" value="${Number(survey.configuration?.estimateAdjustment)||0}" aria-label="Корректировка общего заказа в рублях">
+        </label>
+        ${estimate.adjustment>0? `<div class="estimate-summary-row estimate-deduction"><span>Согласованная корректировка</span><b>−${formatMoney(estimate.adjustment)}</b></div>`:''}
+        <div class="estimate-grand-total"><span>Предварительно за выбранное</span><strong>${formatMoney(estimate.total)}</strong></div>
+        <p class="estimate-small-note">Цены альтернатив не входят в сумму. Корректировку общих работ указывайте только после проверки, чтобы не вычесть одну позицию дважды.</p>
+        ${warnings.length ? `<div class="estimate-warnings">${warnings.map(x=>`<p>⚠ ${escapeHtml(x)}</p>`).join('')}</div>` : ''}
+      ` : '<p class="estimate-small-note">Отметьте хотя бы одно изделие для формирования общей суммы.</p>'}
+    </section>` : ''}
   </div>`;
 }
 function openCalculationPicker(surveyId) {
@@ -1258,8 +1282,8 @@ async function openSurveyDetails(id) {
     </section>
     ${v3ProductTools(survey)}
     ${calculationsHtml(survey)}
-    ${rows.length ? `<section class="v3-preview-bar">
-      <div><small>${rows.length===1?'Цена для клиента':'Сохранено вариантов'}</small><b>${rows.length===1?formatMoney(rows[0].total):rows.length}</b></div>
+    ${unifiedEstimate(survey).selected.length ? `<section class="v3-preview-bar">
+      <div><small>Предварительно по заказу</small><b>${formatMoney(unifiedEstimate(survey).total)}</b></div>
       <button type="button" class="btn btn-primary" data-v3-preview>Показать клиенту →</button>
     </section>` : ''}
     ${survey.syncState === 'conflict' ? '<div class="details-section"><div class="notice notice-lock">На сервере есть новая версия этого замера. Данные на телефоне не перезаписаны.</div></div>' : ''}
@@ -1294,10 +1318,15 @@ async function openSurveyDetails(id) {
     card.addEventListener('click', openEdit);
     card.addEventListener('keydown', openEdit);
   });
-  $$('[data-delete-calculation]', detailsRoot).forEach(button => button.addEventListener('click', event => {
+  $('[data-delete-calculation]', detailsRoot).forEach(button => button.addEventListener('click', event => {
     event.stopPropagation();
     deleteCalculation(survey.id, button.dataset.deleteCalculation);
   }));
+  $('[data-estimate-choice]', detailsRoot).forEach(button => button.addEventListener('click', event => {
+    event.stopPropagation();
+    setEstimateRole(survey.id,button.dataset.estimateChoice,button.getAttribute('aria-pressed')!=='true');
+  }));
+  $('#estimateAdjustment')?.addEventListener('change',event=>setEstimateAdjustment(survey.id,event.target.value));
 }
 
 function showCustomerView(survey) {
