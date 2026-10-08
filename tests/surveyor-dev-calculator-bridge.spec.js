@@ -395,9 +395,12 @@ test('fence reset clears four sections and delivery after confirmation, preserve
   await page.locator('[data-field="length"][data-index="0"]').fill('13');
   await page.locator('#addSection').click();
   await page.locator('[data-field="length"][data-index="1"]').fill('9');
+  await page.locator('[data-section-card="0"] .section-openings summary').click();
   await page.locator('[data-field="gateOpening"][data-index="0"]').fill('3.4');
+  await page.locator('.manual-delivery summary').click();
   await page.locator('#manualDeliveryEnabled').check();
   await page.locator('#manualDelivery').fill('1500');
+  await page.locator('.site-conditions summary').click();
   await page.locator('#hasSlope').check();
   await page.locator('[data-type="horizontal-double"]').click();
   await expect.poll(() => page.evaluate(() => Boolean(localStorage.getItem('kuzdvor:picket-draft-v1:survey:sv_reset-a'))),{timeout:6000}).toBe(true);
