@@ -18,15 +18,15 @@ test('surveyor can create a mixed survey and reopen it offline', async ({page, c
   await page.locator('#surveyAddress').fill('Мелеуз, тестовый объект');
   await page.locator('#saveSurveyBtn').click();
 
+  await expect(page.locator('#surveyDetailsDialog')).toBeVisible();
+  await expect(page.locator('.v3-product-tile')).toHaveCount(3);
   const card = page.locator('.survey-card').first();
   await expect(card).toContainText('ЗМ-0001');
   await expect(card).toContainText('+7 937');
   await expect(card).toContainText('Расчётов пока нет');
-  await expect(card.locator('[data-quick-calculation]')).toBeVisible();
+  await expect(card.locator('[data-open-survey]')).toBeVisible();
 
-  await card.locator('[data-open-survey]').click();
-  await expect(page.locator('#surveyDetailsDialog')).toBeVisible();
-  await expect(page.locator('#surveyDetailsContent')).toContainText('Имя не требуется до договора');
+  await expect(page.locator('#surveyDetailsContent')).toContainText('+7 937');
 
   await page.locator('[data-edit-survey-data]').click();
   await expect(page.locator('#surveyDataDialog')).toBeVisible();
@@ -43,7 +43,7 @@ test('surveyor can create a mixed survey and reopen it offline', async ({page, c
   await expect(page.locator('#surveyDetailsContent')).toContainText('Мелеуз, ул. Ленина, 10');
   await expect(page.locator('#surveyDetailsContent')).toContainText('Позвонить за час');
   await expect(page.locator('[data-survey-work-types]')).toHaveCount(0);
-  await expect(page.locator('#surveyDetailsContent')).toContainText('Расчёты / варианты');
+  await expect(page.locator('#surveyDetailsContent')).toContainText('Сохранённые расчёты');
   await expect(page.locator('[data-add-calculation]')).toBeVisible();
 
   const surveyId = await card.getAttribute('data-survey-id');
@@ -73,11 +73,12 @@ test('surveyor can create a mixed survey and reopen it offline', async ({page, c
   }, {surveyId});
   await page.reload();
   await expect(page.locator('#surveyDetailsDialog')).toBeVisible();
-  await expect(page.locator('#surveyDetailsContent')).toContainText('Расчёты / варианты');
+  await expect(page.locator('#surveyDetailsContent')).toContainText('Сохранённые расчёты');
   await expect(page.locator('.calculation-card')).toContainText('Ворота с калиткой');
   await expect(page.locator('.calculation-card-price')).toContainText('56');
   await expect(page.locator('[data-survey-work-types]')).toHaveCount(0);
 
+  await page.locator('.v3-extra summary').click();
   await page.locator('[data-edit-plan]').click();
   await expect(page.locator('#planDialog')).toBeVisible();
   await expect(page.locator('#planCanvas .plan-part')).toHaveCount(5);
@@ -112,12 +113,13 @@ test('surveyor can create a mixed survey and reopen it offline', async ({page, c
   await page.locator('#savePlanBtn').click();
 
   await expect(page.locator('#surveyDetailsDialog')).toBeVisible();
+  await page.locator('.v3-extra summary').click();
   await expect(page.locator('.plan-mini-preview')).toBeVisible();
   await expect(page.locator('#surveyDetailsContent')).toContainText('6,1 м');
 
   await page.locator('[data-complete-survey]').click();
   await expect(page.locator('#surveyDetailsDialog')).toBeVisible();
-  await expect(page.locator('#surveyDetailsContent')).toContainText('Готов');
+  await expect(page.locator('#surveyDetailsContent')).toContainText('Замер завершён');
   await expect(page.locator('#surveyDetailsContent')).toContainText('Замер завершён');
   await page.locator('#closeDetailsBtn').click();
 
@@ -148,6 +150,7 @@ test('surveyor can create a mixed survey and reopen it offline', async ({page, c
   await expect(page.locator('#networkBadge')).toContainText('Офлайн');
 
   await page.locator('.survey-card').first().locator('[data-open-survey]').click();
+  await page.locator('.v3-extra summary').click();
   await expect(page.locator('.plan-mini-preview')).toBeVisible();
   await expect(page.locator('#surveyDetailsContent')).toContainText('+7 937 123-45-67');
   await expect(page.locator('#surveyDetailsContent')).toContainText('Позвонить за час');
