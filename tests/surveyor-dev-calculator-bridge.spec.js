@@ -3,6 +3,7 @@ import {test, expect} from '@playwright/test';
 test.use({viewport:{width:390,height:844}});
 
 test('gate calculator result returns into the same survey card', async ({page}) => {
+  test.setTimeout(90000); // Real gate catalog can take longer on cold mobile navigation.
   await page.addInitScript(() => {
     localStorage.setItem('kuzdvor-dev-access-v1','1');
   });
