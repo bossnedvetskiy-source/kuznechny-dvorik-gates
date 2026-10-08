@@ -900,6 +900,18 @@ function calcNumber(value) {
 function tubeLabel(value) {
   return String(value || '').trim().replace(/[xх*]/gi, '×');
 }
+const FENCE_IMAGE_NAMES = Object.freeze({
+  'vertical-double':'fence-double-brown-20260927.webp',
+  'vertical-single':'fence-single-gray-20260927.webp',
+  'horizontal-double':'fence-horizontal-real.webp'
+});
+function calculationImage(item) {
+  if (item.image) return item.image;
+  if (item.type !== 'fence') return '';
+  const type = item?.payload?.configuration?.fenceType;
+  const filename = FENCE_IMAGE_NAMES[type];
+  return filename ? new URL('../evroshtaketnik/assets/' + filename, location.href).pathname : '';
+}
 function calculationCardDetails(item) {
   const payload = item?.payload && typeof item.payload === 'object' ? item.payload : {};
   const config = payload.configuration && typeof payload.configuration === 'object' ? payload.configuration : {};
@@ -999,7 +1011,7 @@ function calculationsHtml(survey) {
       ${rows.map(item=>{
         const details = calculationCardDetails(item);
         return `<article class="calculation-card calculation-card-${escapeHtml(item.type)}" data-edit-calculation="${escapeHtml(item.id)}" role="button" tabindex="0" aria-label="Изменить расчёт: ${escapeHtml(details.title)}">
-          ${item.image ? `<img src="${escapeHtml(item.image)}" alt="" loading="lazy">` : `<div class="calculation-card-icon ${escapeHtml(item.type)}">${item.type==='gates'?'▰':item.type==='fence'?'▥':'⌒'}</div>`}
+          ${calculationImage(item) ? `<img src="${escapeHtml(calculationImage(item))}" alt="" loading="lazy">` : `<div class="calculation-card-icon ${escapeHtml(item.type)}">${item.type==='gates'?'▰':item.type==='fence'?'▥':'⌒'}</div>`}
           <div class="calculation-card-copy">
             <small>${escapeHtml(calculationTypeLabel(item.type))}</small>
             <b>${escapeHtml(details.title)}</b>
@@ -1188,7 +1200,7 @@ function showCustomerView(survey) {
     ${rows.map(item => {
       const d = calculationCardDetails(item);
       return `<article class="v3-customer-item">
-        ${item.image ? `<img src="${escapeHtml(item.image)}" alt="${escapeHtml(d.title)}" loading="lazy">` : ''}
+        ${calculationImage(item) ? `<img src="${escapeHtml(calculationImage(item))}" alt="${escapeHtml(d.title)}" loading="lazy">` : ''}
         <div><small>${escapeHtml(calculationTypeLabel(item.type))}</small><h3>${escapeHtml(d.title)}</h3>
         <p>${d.lines.map(escapeHtml).join(' · ')}</p>
         ${item.type === 'fence' && item.payload?.deliveryPending ? '<p class="v3-customer-delivery-note">Стоимость забора без доставки. Доставка рассчитывается отдельно.</p>' : ''}
