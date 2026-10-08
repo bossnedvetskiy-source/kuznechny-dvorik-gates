@@ -18,7 +18,7 @@ test('gate calculator result returns into the same survey card', async ({page}) 
   await page.locator('#surveyAddress').fill('Мелеуз, тест расчёта');
   await page.locator('#saveSurveyBtn').click();
 
-  await page.locator('.survey-card').first().click();
+  await expect(page.locator('#surveyDetailsDialog')).toBeVisible();
   await page.locator('[data-add-calculation]').click();
   await expect(page.locator('#calculationPickerDialog')).toBeVisible();
   await page.locator('[data-launch-calculation="gates"]').click();
