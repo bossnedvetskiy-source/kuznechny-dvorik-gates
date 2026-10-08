@@ -528,7 +528,20 @@ function switchScreen(name) {
 async function renderSurveys() {
   let surveys = (await idbGetAll('surveys')).filter(x => !x.archived).sort((a,b) => String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
   if (currentSurveyFilter !== 'all') surveys = surveys.filter(x => x.status === currentSurveyFilter);
-  $('#surveysCounter').textContent = `${surveys.length} ${plural(surveys.length, ['заказ','заказа','заказов'])}`;
+  const search = String($('#surveySearch')?.value || '').trim().toLocaleLowerCase('ru-RU');
+  const digits = search.replace(/\D/g, '');
+  const phoneSearch = digits.length === 11 && /^[78]/.test(digits) ? '7' + digits.slice(1) : digits;
+  if (search) surveys = surveys.filter(x =>
+    [displaySurveyNumber(x), x.clientName, x.clientPhone, x.address, x.note]
+      .some(value => String(value || '').toLocaleLowerCase('ru-RU').includes(search)) ||
+    (phoneSearch.length >= 3 && String(x.clientPhone || '').replace(/\D/g, '').includes(phoneSearch))
+  );
+  $('#surveysCounter').textContent = `${surveys.length} ${plural(surveys.length, ['замер','замера','замеров'])}`;
+  const empty = $('#surveyEmpty');
+  if (empty) {
+    empty.querySelector('h3').textContent = search ? 'По вашему запросу ничего нет' : 'Замеров пока нет';
+    empty.querySelector('p').textContent = search ? 'Попробуйте другой телефон, адрес или номер замера.' : 'Создайте первый замер — он сохранится на телефоне даже без интернета.';
+  }
   const list = $('#surveyList');
   list.innerHTML = surveys.map(survey => `
     <article class="survey-card" data-survey-id="${survey.id}">
@@ -541,7 +554,7 @@ async function renderSurveys() {
         <span class="status-pill ${survey.status}">${survey.status === 'ready' ? 'Готов' : 'Черновик'}</span>
       </div>
       <div class="badge-row">${calculationWorkTypes(survey).length ? calculationWorkTypes(survey).map(type => `<span class="type-badge ${WORK_TYPES[type]?.className || ''}">${WORK_TYPES[type]?.short || type}</span>`).join('') : '<span class="type-badge">Расчётов пока нет</span>'}</div>
-      ${surveyCalculations(survey).length ? `<div class="survey-card-total"><span>Расчёты</span><b>${formatMoney(surveyCalculationsTotal(survey))}</b></div>` : ''}
+       ${surveyCalculations(survey).length === 1 ? `<div class="survey-card-total"><span>Цена варианта</span><b>${formatMoney(surveyCalculations(survey)[0].total)}</b></div>` : surveyCalculations(survey).length > 1 ? `<div class="survey-card-variants"><b>${surveyCalculations(survey).length} расчёта</b><span>Варианты — не общая сумма</span></div>` : ''}
       <div class="survey-card-actions">
         <button type="button" class="open-survey-btn v3-open-survey" data-open-survey="${survey.id}">Открыть замер →</button>
       </div>
@@ -1467,6 +1480,7 @@ function bindEvents() {
   $('#syncNowBtn')?.addEventListener('click', () => syncNow({ silent:false }));
   $('#openTeamBtn')?.addEventListener('click', () => switchScreen('team'));
   $('#newSurveyBtn').addEventListener('click', () => { resetSurveyWizard(); $('#surveyDialog').showModal(); });
+  $('#surveySearch')?.addEventListener('input', () => renderSurveys());
   $('#saveSurveyBtn').addEventListener('click', async () => {
     const phone = $('#surveyClientPhone').value.replace(/\D/g,'');
     const address = $('#surveyAddress').value.trim();
