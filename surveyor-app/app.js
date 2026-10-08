@@ -1,6 +1,6 @@
 import {PLAN_ITEM_TYPES,MATERIAL_LABELS,ensureSitePlan,newItem,newLine,lineWidth,itemDescription,trimNumber} from './line-builder.js';
 
-const APP_VERSION = '0.3.7';
+const APP_VERSION = '0.4.0-v3-stage1';
 const DB_NAME = 'kd-surveyor-stage1';
 const DB_VERSION = 1;
 const STORE_NAMES = ['employees', 'clients', 'surveys', 'meta'];
@@ -535,7 +535,7 @@ async function renderSurveys() {
       <div class="card-top">
         <div>
           <div class="order-number">${escapeHtml(displaySurveyNumber(survey))}</div>
-          <div class="card-name">${escapeHtml(survey.clientName || survey.clientPhone || 'Клиент без имени')}</div>
+          <div class="card-name">${escapeHtml(survey.clientPhone || 'Телефон не указан')}</div>
           <div class="card-address">${escapeHtml(survey.address)}</div>
         </div>
         <span class="status-pill ${survey.status}">${survey.status === 'ready' ? 'Готов' : 'Черновик'}</span>
@@ -543,8 +543,7 @@ async function renderSurveys() {
       <div class="badge-row">${calculationWorkTypes(survey).length ? calculationWorkTypes(survey).map(type => `<span class="type-badge ${WORK_TYPES[type]?.className || ''}">${WORK_TYPES[type]?.short || type}</span>`).join('') : '<span class="type-badge">Расчётов пока нет</span>'}</div>
       ${surveyCalculations(survey).length ? `<div class="survey-card-total"><span>Расчёты</span><b>${formatMoney(surveyCalculationsTotal(survey))}</b></div>` : ''}
       <div class="survey-card-actions">
-        <button type="button" class="quick-calc-btn" data-quick-calculation="${survey.id}">+ Расчёт</button>
-        <button type="button" class="open-survey-btn" data-open-survey="${survey.id}">Карточка ›</button>
+        <button type="button" class="open-survey-btn v3-open-survey" data-open-survey="${survey.id}">Открыть замер →</button>
       </div>
       <div class="sync-row"><span>${formatDate(survey.updatedAt)}</span><span class="${syncClass(survey.syncState)}">${syncLabel(survey.syncState)}</span></div>
     </article>`).join('');
@@ -979,9 +978,10 @@ function calculationsHtml(survey) {
   const total = surveyCalculationsTotal(survey);
   return `<div class="details-section calculation-section">
     <div class="section-head compact">
-      <div><h3>Расчёты / варианты</h3><p class="muted">${rows.length ? rows.length+' '+plural(rows.length,['вариант','варианта','вариантов']) : 'Добавьте первый вариант для клиента.'}</p></div>
-      ${rows.length ? `<strong class="calculation-grand-total">${formatMoney(total)}</strong>` : ''}
+      <div><h3>Сохранённые расчёты</h3><p class="muted">${rows.length ? rows.length+' '+plural(rows.length,['вариант','варианта','вариантов']) : 'Выберите изделие и сделайте первый расчёт.'}</p></div>
+      ${rows.length === 1 ? `<strong class="calculation-grand-total">${formatMoney(total)}</strong>` : ''}
     </div>
+    ${rows.length > 1 ? '<p class="v3-estimate-warning">Это отдельные расчёты, а не итог заказа. Альтернативы, общие столбы и доставку объединяем на следующем этапе.</p>' : ''}
     <div class="calculation-list">
       ${rows.map(item=>{
         const details = calculationCardDetails(item);
@@ -1003,7 +1003,7 @@ function calculationsHtml(survey) {
         </article>`;
       }).join('') || '<div class="calculation-empty">Пока нет вариантов. Добавьте расчёт ворот, забора или навеса.</div>'}
     </div>
-    <button class="btn btn-primary btn-block" data-add-calculation="${survey.id}" type="button">+ Добавить расчёт</button>
+    <button class="btn btn-secondary btn-block v3-add-more" data-add-calculation="${survey.id}" type="button">+ Добавить другой вариант</button>
   </div>`;
 }
 function openCalculationPicker(surveyId) {
@@ -1081,35 +1081,72 @@ async function consumeCalculationTransfer() {
   return survey.id;
 }
 
+function surveySyncText(survey) {
+  if (survey.syncState === 'conflict') return 'Требуется проверить синхронизацию';
+  if (survey.syncState === 'pending') return 'На телефоне · ожидает отправки';
+  if (survey.syncState === 'synced') return 'Сохранено на сервере';
+  return 'Сохранено на этом устройстве';
+}
+
+function v3ProductTools(survey) {
+  return `<section class="v3-product-section" aria-label="Выбор изделия">
+    <h3>Что рассчитываем?</h3>
+    <p class="muted">Выберите изделие. Каталог, визуализация и стоимость откроются сразу.</p>
+    <div class="v3-product-grid">
+      <button type="button" class="v3-product-tile" data-v3-calc="gates">
+        <img src="../assets/catalog/art-17s-1.webp" alt="Кованые ворота" loading="lazy">
+        <span class="v3-product-label"><b>Ворота и калитки</b><small>Каталог Арт. с фото и ценами</small></span><span class="v3-product-arrow">→</span>
+      </button>
+      <button type="button" class="v3-product-tile" data-v3-calc="fence">
+        <img src="../evroshtaketnik/assets/fence-single-gray-20260927.webp" alt="Забор из евроштакетника" loading="lazy">
+        <span class="v3-product-label"><b>Забор</b><small>Варианты, размеры, схема, цена</small></span><span class="v3-product-arrow">→</span>
+      </button>
+      <button type="button" class="v3-product-tile" data-v3-calc="canopy">
+        <img src="../naves/farm-icons/original-farms.webp" alt="Типы ферм навеса" loading="lazy">
+        <span class="v3-product-label"><b>Навес</b><small>Фермы, покрытие, визуал и цена</small></span><span class="v3-product-arrow">→</span>
+      </button>
+    </div>
+  </section>`;
+}
+
 async function openSurveyDetails(id) {
   const survey = await idbGet('surveys', id);
   if (!survey) return;
   $('#detailsNumber').textContent = displaySurveyNumber(survey);
+  const rows = surveyCalculations(survey);
   $('#surveyDetailsContent').innerHTML = `
-    <div class="details-grid">
-      <div class="detail-box"><small>Клиент</small><b>${escapeHtml(survey.clientName || 'Имя не требуется до договора')}</b></div>
-      <div class="detail-box"><small>Телефон</small><b>${escapeHtml(survey.clientPhone)}</b></div>
-      <div class="detail-box"><small>Статус</small><b>${survey.status === 'ready' ? 'Готов' : 'Черновик'}</b></div>
-      <div class="detail-box"><small>Замерщик</small><b>${escapeHtml(survey.createdByName)}</b></div>
-    </div>
-    <button class="btn btn-secondary btn-block details-edit-data" data-edit-survey-data="${survey.id}" type="button">✎ Изменить данные</button>
-    <div class="details-section"><h3>Адрес объекта</h3><div class="details-note">${escapeHtml(survey.address)}</div></div>
-    ${survey.note ? `<div class="details-section"><h3>Комментарий</h3><div class="details-note">${escapeHtml(survey.note)}</div></div>` : ''}
+    <section class="v3-survey-head">
+      <div class="v3-address"><span>Адрес объекта</span><b>${escapeHtml(survey.address)}</b></div>
+      <button type="button" class="v3-edit-link" data-edit-survey-data="${escapeHtml(survey.id)}">Изменить</button>
+      <div class="v3-survey-meta"><span>☎ ${escapeHtml(survey.clientPhone)}</span><span>● ${escapeHtml(surveySyncText(survey))}</span></div>
+    </section>
+    ${v3ProductTools(survey)}
     ${calculationsHtml(survey)}
-    ${survey.syncState === 'conflict' ? '<div class="details-section"><div class="notice notice-lock">Есть более новая версия этого замера на сервере. Пока данные не затираются автоматически.</div></div>' : ''}
-    ${surveyPlanSummaryHtml(survey)}
-    <div class="details-actions">
-      ${survey.status === 'ready'
-        ? '<div class="notice notice-ready">✓ Замер завершён и находится в разделе «Готовые».</div>'
-        : `<button class="btn btn-primary btn-lg btn-block" data-complete-survey="${survey.id}" type="button">✓ Завершить замер</button>`}
-      ${currentUser.role === 'owner' ? `<button class="btn btn-danger btn-block" data-archive-survey="${survey.id}" type="button">Архивировать заказ</button>` : ''}
-    </div>`;
+    ${rows.length ? `<section class="v3-preview-bar">
+      <div><small>${rows.length===1?'Цена для клиента':'Сохранено вариантов'}</small><b>${rows.length===1?formatMoney(rows[0].total):rows.length}</b></div>
+      <button type="button" class="btn btn-primary" data-v3-preview>Показать клиенту →</button>
+    </section>` : ''}
+    ${survey.syncState === 'conflict' ? '<div class="details-section"><div class="notice notice-lock">На сервере есть новая версия этого замера. Данные на телефоне не перезаписаны.</div></div>' : ''}
+    <details class="v3-extra">
+      <summary>Дополнительно: схема, комментарии и завершение <span>⌄</span></summary>
+      ${survey.note ? `<p class="v3-note">${escapeHtml(survey.note)}</p>` : ''}
+      ${surveyPlanSummaryHtml(survey)}
+      <div class="details-actions">
+        ${survey.status === 'ready'
+          ? '<div class="notice notice-ready">✓ Замер завершён.</div>'
+          : `<button class="btn btn-secondary btn-block" data-complete-survey="${escapeHtml(survey.id)}" type="button">✓ Завершить замер</button>`}
+        ${currentUser.role === 'owner' ? `<button class="btn btn-danger btn-block" data-archive-survey="${escapeHtml(survey.id)}" type="button">Архивировать заказ</button>` : ''}
+      </div>
+    </details>`;
   $('#surveyDetailsDialog').showModal();
   $('[data-archive-survey]')?.addEventListener('click', () => archiveSurvey(survey.id));
   $('[data-complete-survey]')?.addEventListener('click', () => completeSurvey(survey.id));
   $('[data-edit-survey-data]')?.addEventListener('click', () => openSurveyDataDialog(survey.id));
   $('[data-edit-plan]')?.addEventListener('click', () => openPlanEditor(survey.id));
   $('[data-add-calculation]')?.addEventListener('click', () => openCalculationPicker(survey.id));
+  $('[data-v3-preview]')?.addEventListener('click', () => showCustomerView(survey));
+  $$('[data-v3-calc]', $('#surveyDetailsContent')).forEach(button =>
+    button.addEventListener('click', () => launchCalculation(button.dataset.v3Calc, {surveyId:survey.id})));
   const detailsRoot = $('#surveyDetailsContent');
   $$('[data-edit-calculation]', detailsRoot).forEach(card => {
     const openEdit = event => {
@@ -1125,6 +1162,31 @@ async function openSurveyDetails(id) {
     event.stopPropagation();
     deleteCalculation(survey.id, button.dataset.deleteCalculation);
   }));
+}
+
+function showCustomerView(survey) {
+  const rows = surveyCalculations(survey);
+  const dialog = $('#customerPreviewDialog');
+  if (!dialog || !rows.length) return;
+  $('#customerPreviewTitle').textContent = 'Ваши варианты';
+  $('#customerPreviewContent').innerHTML = `
+    <div class="v3-customer-brand">КУЗНЕЧНЫЙ ДВОРИКЪ · ВАШ РАСЧЁТ</div>
+    <p class="v3-customer-address">${escapeHtml(survey.address)}</p>
+    ${rows.map(item => {
+      const d = calculationCardDetails(item);
+      return `<article class="v3-customer-item">
+        ${item.image ? `<img src="${escapeHtml(item.image)}" alt="${escapeHtml(d.title)}" loading="lazy">` : ''}
+        <div><small>${escapeHtml(calculationTypeLabel(item.type))}</small><h3>${escapeHtml(d.title)}</h3>
+        <p>${d.lines.map(escapeHtml).join(' · ')}</p>
+        <strong>${formatMoney(item.total)}</strong></div>
+      </article>`;
+    }).join('')}
+    ${rows.length === 1
+      ? `<div class="v3-customer-total"><span>Стоимость варианта</span><b>${formatMoney(rows[0].total)}</b></div>`
+      : '<div class="v3-customer-disclaimer">Это цены отдельных вариантов. Общую смету с учётом доставки и общих элементов уточняем отдельно.</div>'}
+    <p class="v3-customer-foot">Индивидуальное изготовление · Гарантия 3 года</p>`;
+  $('#surveyDetailsDialog').close();
+  dialog.showModal();
 }
 
 async function openSurveyDataDialog(surveyId) {
@@ -1413,7 +1475,8 @@ function bindEvents() {
     });
     $('#surveyDialog').close();
     showToast(`${displaySurveyNumber(survey)} создан`);
-    renderSurveys();
+    await renderSurveys();
+    await openSurveyDetails(survey.id);
   });
   $('#surveyClientPhone').addEventListener('input', e => { e.target.value = formatPhone(e.target.value); });
   $('#surveyDataPhone')?.addEventListener('input', e => { e.target.value = formatPhone(e.target.value); });
@@ -1424,6 +1487,7 @@ function bindEvents() {
   $('#newEmployeeBtn').addEventListener('click', () => openEmployeeDialog());
   $('#saveEmployeeBtn').addEventListener('click', saveEmployee);
   $('#closeDetailsBtn').addEventListener('click', () => $('#surveyDetailsDialog').close());
+  $('#closeCustomerPreviewBtn')?.addEventListener('click', () => $('#customerPreviewDialog').close());
   $('#closeSurveyDataBtn')?.addEventListener('click', () => $('#surveyDataDialog')?.close());
   $('#saveSurveyDataBtn')?.addEventListener('click', saveSurveyData);
   $('#closeCalculationPickerBtn')?.addEventListener('click', () => $('#calculationPickerDialog')?.close());
