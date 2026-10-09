@@ -235,3 +235,23 @@
 .v3-alt-row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:9px 0;border-top:1px solid #eee8dc;font-size:12px}
 .v3-alt-row b{white-space:nowrap}
 @media(max-width:500px){.estimate-summary-head{display:grid;gap:3px}.estimate-summary-head span{text-align:left}.estimate-grand-total{align-items:flex-start;flex-direction:column;gap:4px}.v3-customer-adjustment{justify-content:flex-start}}
+
+/* Survey sketch lives next to the quote rather than hidden in "More". */
+.v3-plan-overview{background:#fffdf9;border:1px solid #e8dec8;border-radius:18px;padding:12px 14px;margin:15px 0 22px}
+.v3-plan-overview .section-head{margin-top:1px;margin-bottom:11px}
+.v3-plan-overview .plan-empty-card{gap:12px}
+.v3-plan-overview .plan-empty-card .btn{min-height:44px}
+.v3-plan-overview .mini-line{background:#f7f6f2}
+.v3-plan-overview .plan-mini-preview{max-height:290px;overflow:auto}
+.plan-post-summary{font-size:12px;line-height:1.5;color:#615644;margin-top:8px}
+.plan-post-summary b{color:#28231c}
+.plan-disclaimer{font-size:11px;line-height:1.5;color:#8a7d67;margin:8px 0 13px}
+.plan-quote-warnings{display:grid;gap:5px;margin:9px 0 13px}
+.plan-quote-warnings p{font-size:11px;line-height:1.4;color:#795924;background:#fff2d5;padding:9px 11px;border-radius:10px;margin:0}
+@media (max-width:500px){.v3-plan-overview .plan-empty-card{display:grid;gap:12px}.v3-plan-overview .plan-empty-card button{width:100%}}
+
+.plan-update-linked{background:#fef2d5!important;color:#71531a!important;margin:4px 0 10px}
+.v3-customer-plan{background:#fffdf7;border:1px solid #eae1ce;border-radius:18px;padding:15px;margin:8px 0 20px}
+.v3-customer-plan h3{font-size:17px;margin:0 0 11px}
+.v3-customer-plan p{font-size:11px;line-height:1.4;color:#837867;margin:10px 0 0}
+.v3-customer-plan .mini-line{background:#f9f7f1}

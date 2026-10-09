@@ -1,4 +1,4 @@
-import {PLAN_ITEM_TYPES,MATERIAL_LABELS,ensureSitePlan,newItem,newLine,lineWidth,itemDescription,trimNumber} from './line-builder.js';
+import {PLAN_ITEM_TYPES,MATERIAL_LABELS,ensureSitePlan,newItem,newLine,lineWidth,itemDescription,trimNumber,planFromCalculations,planDifferences,updateLinkedPlanSizes} from './line-builder.js';
 
 const APP_VERSION = '0.4.0-v3-stage1';
 const DB_NAME = 'kd-surveyor-stage1';
@@ -627,30 +627,81 @@ async function renderEmployees() {
 
 
 function surveyHasLinearPlan(survey) {
-  const types = calculationWorkTypes(survey);
+  const types = unifiedEstimate(survey).selected.map(item=>item.type);
   const existingLines = survey?.configuration?.sitePlan?.lines;
   return types.includes('gates') || types.includes('fence') || (Array.isArray(existingLines) && existingLines.length > 0);
 }
 
 function surveyPlanSummaryHtml(survey) {
   if (!surveyHasLinearPlan(survey)) return '';
-  const lines = survey?.configuration?.sitePlan?.lines;
-  if (!Array.isArray(lines) || !lines.length) {
-    return `<div class="details-section">
-      <div class="section-head compact"><div><h3>Схема установки</h3><p class="muted">Забор, ворота, калитка и столбы на одной линии.</p></div></div>
-      <div class="plan-empty-card">
-        <div><b>Схема ещё не заполнена</b><span>Добавьте фактический порядок элементов на объекте.</span></div>
-        <button class="btn btn-primary" data-edit-plan="${survey.id}" type="button">Создать схему</button>
-      </div>
-    </div>`;
+  const estimate=unifiedEstimate(survey);
+  const active=estimate.selected.filter(item=>item.type==='gates'||item.type==='fence');
+  const current=survey?.configuration?.sitePlan;
+  const lines=Array.isArray(current?.lines)?current.lines:[];
+  const proposal=planFromCalculations(active);
+  const warnings=lines.length ? planDifferences(current,active) : [];
+  const quoteWarnings=proposal.skipped;
+  const warningsHtml= [...new Set([...warnings,...quoteWarnings])]
+    .map(note=>`<p>⚠ ${escapeHtml(note)}</p>`).join('');
+  if(!lines.length) return `<section class="details-section v3-plan-overview" aria-label="Схема объекта">
+    <div class="section-head compact"><div><h3>Схема объекта</h3>
+      <p class="muted">Ворота, забор и столбы на одной наглядной схеме.</p></div></div>
+    <div class="plan-empty-card">
+      <div><b>Пока нет схемы</b><span>Возьмём размеры выбранных изделий из расчётов, без повторного ввода.</span></div>
+      ${proposal.sitePlan ? `<button class="btn btn-primary" data-build-plan-from-calcs="${escapeHtml(survey.id)}" type="button">Создать из расчётов</button>` : `<button class="btn btn-secondary" data-edit-plan="${escapeHtml(survey.id)}" type="button">Нарисовать вручную</button>`}
+    </div>
+    ${warningsHtml ? `<div class="plan-quote-warnings">${warningsHtml}</div>` : ''}
+  </section>`;
+  const total=lines.reduce((sum,line)=>sum+lineWidth(line),0);
+  const postCount=lines.reduce((sum,line)=>sum+(line.items||[]).filter(item=>item.type==='post').length,0);
+  const newPosts=lines.reduce((sum,line)=>sum+(line.items||[]).filter(item=>item.type==='post'&&item.state!=='existing').length,0);
+  return `<section class="details-section v3-plan-overview" aria-label="Схема объекта">
+    <div class="section-head compact"><div><h3>Схема объекта</h3><p class="muted">${lines.length} ${plural(lines.length,['линия','линии','линий'])} · ${trimNumber(total)} м</p></div></div>
+    <div class="plan-mini-preview">${lines.map(line=>miniLineHtml(line)).join('')}</div>
+    <div class="plan-post-summary">На эскизе столбов: <b>${postCount}</b>, из них новых: <b>${newPosts}</b>.</div>
+    <p class="plan-disclaimer">Эскиз по выбранным расчётам. Места общих столбов, пролёты с проёмами и привязку к объекту нужно подтвердить на замере. Количество столбов на разных линиях пока не объединяется, цены не меняются.</p>
+    ${warningsHtml ? `<div class="plan-quote-warnings">${warningsHtml}</div>` : ''}
+    ${warnings.length ? `<button class="btn btn-secondary btn-block plan-update-linked" data-refresh-plan-sizes="${escapeHtml(survey.id)}" type="button">↻ Обновить размеры из расчётов</button>` : ''}
+    <button class="btn btn-secondary btn-block" data-edit-plan="${escapeHtml(survey.id)}" type="button">Редактировать расположение и столбы →</button>
+  </section>`;
+}
+
+async function createPlanFromSavedCalculations(surveyId) {
+  const survey=await idbGet('surveys',surveyId);
+  if (!survey || survey?.configuration?.sitePlan?.lines?.length) {
+    return showToast('Схема уже есть. Откройте её для редактирования.');
   }
-  const total = lines.reduce((sum,line)=>sum+lineWidth(line),0);
-  const objects = lines.reduce((sum,line)=>sum+(line.items || []).length,0);
-  return `<div class="details-section">
-    <div class="section-head compact"><div><h3>Схема установки</h3><p class="muted">${lines.length} ${plural(lines.length,['линия','линии','линий'])} · ${trimNumber(total)} м · ${objects} элементов</p></div></div>
-    <div class="plan-mini-preview">${lines.slice(0,2).map(line=>miniLineHtml(line)).join('')}</div>
-    <button class="btn btn-secondary btn-block" data-edit-plan="${survey.id}" type="button">Редактировать схему</button>
-  </div>`;
+  const selected=unifiedEstimate(survey).selected.filter(item=>['gates','fence'].includes(item.type));
+  const {sitePlan,skipped}=planFromCalculations(selected);
+  if(!sitePlan) return showToast('Нет участков без проёмов или ворот с сохранёнными размерами.');
+  survey.configuration={...(survey.configuration||{}),sitePlan};
+  survey.updatedAt=new Date().toISOString();
+  survey.syncState=API_ENABLED?'pending':'local';
+  survey.schemaVersion=Math.max(Number(survey.schemaVersion)||0,4);
+  await idbPut('surveys',survey);
+  showToast(skipped.length ? 'Эскиз создан. Проверьте участки с проёмами.' : 'Схема создана из размеров расчётов');
+  await renderSurveys();
+  if($('#surveyDetailsDialog').open) $('#surveyDetailsDialog').close();
+  await openSurveyDetails(survey.id);
+  if(API_ENABLED && navigator.onLine) syncNow({silent:true});
+}
+
+async function refreshPlanSizesFromQuotes(surveyId) {
+  const survey=await idbGet('surveys',surveyId);
+  const plan=survey?.configuration?.sitePlan;
+  if(!plan?.lines?.length) return;
+  if(!window.confirm('Обновить размеры элементов по сохранённым расчётам? Расположение и столбы останутся прежними; стоимость заказа не изменится.')) return;
+  const active=unifiedEstimate(survey).selected.filter(item=>['gates','fence'].includes(item.type));
+  const result=updateLinkedPlanSizes(plan,active);
+  survey.configuration={...survey.configuration,sitePlan:result.sitePlan};
+  survey.updatedAt=new Date().toISOString();
+  survey.syncState=API_ENABLED?'pending':'local';
+  await idbPut('surveys',survey);
+  await renderSurveys();
+  if($('#surveyDetailsDialog').open)$('#surveyDetailsDialog').close();
+  await openSurveyDetails(surveyId);
+  showToast(result.skipped.length ? 'Размеры обновлены частично. Проверьте предупреждения.' : 'Размеры схемы обновлены');
+  if(API_ENABLED && navigator.onLine) syncNow({silent:true});
 }
 
 function miniLineHtml(line) {
@@ -868,10 +919,10 @@ function deletePlanLine() {
 async function savePlan() {
   const survey=await idbGet('surveys',activePlanSurveyId);
   if(!survey || !activePlanConfiguration) return;
-  survey.configuration=activePlanConfiguration;
+  survey.configuration={...(survey.configuration||{}),sitePlan:activePlanConfiguration.sitePlan};
   survey.updatedAt=new Date().toISOString();
   survey.syncState=API_ENABLED?'pending':'local';
-  survey.schemaVersion=3;
+  survey.schemaVersion=Math.max(Number(survey.schemaVersion)||0,4);
   await idbPut('surveys',survey);
   $('#planDialog').close();
   showToast('Схема сохранена');
@@ -1280,6 +1331,7 @@ async function openSurveyDetails(id) {
       <button type="button" class="v3-edit-link" data-edit-survey-data="${escapeHtml(survey.id)}">Изменить</button>
       <div class="v3-survey-meta"><span>${survey.clientPhone ? '☎ ' + escapeHtml(survey.clientPhone) : 'Телефон пока не указан'}</span>${survey.clientName ? `<span>${escapeHtml(survey.clientName)}</span>` : ''}<span>● ${escapeHtml(surveySyncText(survey))}</span></div>
     </section>
+    ${surveyPlanSummaryHtml(survey)}
     ${v3ProductTools(survey)}
     ${calculationsHtml(survey)}
     ${unifiedEstimate(survey).selected.length ? `<section class="v3-preview-bar">
@@ -1290,7 +1342,6 @@ async function openSurveyDetails(id) {
     <details class="v3-extra">
       <summary>Дополнительно: схема, комментарии и завершение <span>⌄</span></summary>
       ${survey.note ? `<p class="v3-note">${escapeHtml(survey.note)}</p>` : ''}
-      ${surveyPlanSummaryHtml(survey)}
       <div class="details-actions">
         ${survey.status === 'ready'
           ? '<div class="notice notice-ready">✓ Замер завершён.</div>'
@@ -1303,6 +1354,8 @@ async function openSurveyDetails(id) {
   $('[data-complete-survey]')?.addEventListener('click', () => completeSurvey(survey.id));
   $('[data-edit-survey-data]')?.addEventListener('click', () => openSurveyDataDialog(survey.id));
   $('[data-edit-plan]')?.addEventListener('click', () => openPlanEditor(survey.id));
+  $('[data-build-plan-from-calcs]')?.addEventListener('click', () => createPlanFromSavedCalculations(survey.id));
+  $('[data-refresh-plan-sizes]')?.addEventListener('click', () => refreshPlanSizesFromQuotes(survey.id));
   $('[data-add-calculation]')?.addEventListener('click', () => openCalculationPicker(survey.id));
   $('[data-v3-preview]')?.addEventListener('click', () => showCustomerView(survey));
   $$('[data-v3-calc]', $('#surveyDetailsContent')).forEach(button =>
@@ -1348,6 +1401,11 @@ function showCustomerView(survey) {
   $('#customerPreviewContent').innerHTML = `
     <div class="v3-customer-brand">КУЗНЕЧНЫЙ ДВОРИКЪ · ВАША СМЕТА</div>
     ${survey.address ? `<p class="v3-customer-address">${escapeHtml(survey.address)}</p>` : ''}
+    ${survey?.configuration?.sitePlan?.lines?.length ? `<section class="v3-customer-plan">
+      <h3>Схема установки</h3>
+      <div class="plan-mini-preview">${survey.configuration.sitePlan.lines.map(line=>miniLineHtml(line)).join('')}</div>
+      <p>Предварительный эскиз. Расположение опор и размеры сверяются на объекте.</p>
+    </section>` : ''}
     <h3 class="v3-estimate-client-heading">Выбранные изделия</h3>
     ${selected.map(customerCard).join('')}
     ${estimate.repeatedDelivery>0 ? `<div class="v3-customer-adjustment">Повторная доставка —${formatMoney(estimate.repeatedDelivery)}</div>`:''}
@@ -1689,6 +1747,7 @@ function bindEvents() {
   $('#savePlanBtn').addEventListener('click', savePlan);
   $('#cancelInsertBtn').addEventListener('click', closePlanSheets);
   $('#closePlanEditorBtn').addEventListener('click', closePlanSheets);
+  $('#donePlanItemBtn').addEventListener('click', closePlanSheets);
   $('#planSheetBackdrop').addEventListener('click', closePlanSheets);
   $('#movePlanItemLeftBtn').addEventListener('click', () => movePlanItem(-1));
   $('#movePlanItemRightBtn').addEventListener('click', () => movePlanItem(1));
