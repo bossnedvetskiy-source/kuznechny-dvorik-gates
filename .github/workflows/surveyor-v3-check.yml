@@ -14,6 +14,7 @@ on:
       - fix/fence-reset-per-survey-draft
       - feature/surveyor-unified-estimate-v1
       - feature/surveyor-plan-from-estimate-v1
+      - feature/surveyor-visual-post-controls
   workflow_dispatch:
 
 permissions:
