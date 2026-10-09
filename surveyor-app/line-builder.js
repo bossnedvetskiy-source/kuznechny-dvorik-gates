@@ -259,3 +259,46 @@ export function updateLinkedPlanSizes(plan, selected = []) {
   }
   return {sitePlan:updated,changed,skipped:[...new Set(skipped)]};
 }
+
+
+/** Split a fence span by adding one real support in its middle.
+ * Never change the total measured length or source quote reference. */
+export function splitFenceWithPost(items, fenceId) {
+  const index=items.findIndex(item=>item.id===fenceId);
+  const fence=items[index];
+  if(!fence || fence.type!=='fence') return {ok:false,reason:'Выберите пролёт забора.'};
+  const width=Number(fence.width);
+  if(!Number.isFinite(width)||width<0.4) return {ok:false,reason:'Слишком короткий пролёт для разделения. Уточните размеры.'};
+  const half=Math.round(width*500)/1000;
+  const nextWidth=Math.round((width-half)*1000)/1000;
+  const post={...newItem('post')};
+  const copy=items.map(item=>({...item}));
+  copy.splice(index,1,{...fence,width:half},post,{...fence,id:planId('fence'),width:nextWidth});
+  return {ok:true,items:copy,postId:post.id};
+}
+
+/** Remove a redundant support only when the drawn load path is still valid.
+ * Two adjacent fence spans become one, but never exceed the 2.5m limit.
+ * Terminal supports and posts between a gate / wicket cannot be removed. */
+export function removePostFromLine(items, postId) {
+  const index=items.findIndex(item=>item.id===postId);
+  if(index<0 || items[index]?.type!=='post') return {ok:false,reason:'Столб не найден.'};
+  const before=items[index-1],after=items[index+1];
+  const copy=items.map(item=>({...item}));
+  if(before?.type==='post'||after?.type==='post'){
+    copy.splice(index,1);
+    return {ok:true,items:copy};
+  }
+  if(before?.type==='fence' && after?.type==='fence'){
+    if(before.material!==after.material || Math.abs((Number(before.height)||0)-(Number(after.height)||0))>.01
+      || before.sourceCalculationId!==after.sourceCalculationId || before.sourceSectionIndex!==after.sourceSectionIndex){
+      return {ok:false,reason:'Это граница разных участков или материалов. Проверьте схему вручную.'};
+    }
+    const combined=Math.round(((Number(before.width)||0)+(Number(after.width)||0))*1000)/1000;
+    if(combined>2.5+0.0001) return {ok:false,reason:'Без столба пролёт будет '+trimNumber(combined)+' м. Максимум — 2,5 м.'};
+    copy.splice(index-1,3,{...before,width:combined});
+    return {ok:true,items:copy};
+  }
+  if(!before||!after) return {ok:false,reason:'Крайний столб нужен для опоры. Если он уже стоит, отметьте «Уже стоит».'};
+  return {ok:false,reason:'Этот столб поддерживает ворота, калитку или разделяет разные элементы. Если он готовый, отметьте «Уже стоит».'};
+}
