@@ -1,4 +1,4 @@
-import {PLAN_ITEM_TYPES,MATERIAL_LABELS,ensureSitePlan,newItem,newLine,lineWidth,itemDescription,trimNumber,planFromCalculations,planDifferences} from './line-builder.js';
+import {PLAN_ITEM_TYPES,MATERIAL_LABELS,ensureSitePlan,newItem,newLine,lineWidth,itemDescription,trimNumber,planFromCalculations,planDifferences,updateLinkedPlanSizes} from './line-builder.js';
 
 const APP_VERSION = '0.4.0-v3-stage1';
 const DB_NAME = 'kd-surveyor-stage1';
@@ -661,6 +661,7 @@ function surveyPlanSummaryHtml(survey) {
     <div class="plan-post-summary">На эскизе столбов: <b>${postCount}</b>, из них новых: <b>${newPosts}</b>.</div>
     <p class="plan-disclaimer">Эскиз по выбранным расчётам. Места общих столбов, пролёты с проёмами и привязку к объекту нужно подтвердить на замере. Количество столбов на разных линиях пока не объединяется, цены не меняются.</p>
     ${warningsHtml ? `<div class="plan-quote-warnings">${warningsHtml}</div>` : ''}
+    ${warnings.length ? `<button class="btn btn-secondary btn-block plan-update-linked" data-refresh-plan-sizes="${escapeHtml(survey.id)}" type="button">↻ Обновить размеры из расчётов</button>` : ''}
     <button class="btn btn-secondary btn-block" data-edit-plan="${escapeHtml(survey.id)}" type="button">Редактировать расположение и столбы →</button>
   </section>`;
 }
@@ -682,6 +683,24 @@ async function createPlanFromSavedCalculations(surveyId) {
   await renderSurveys();
   if($('#surveyDetailsDialog').open) $('#surveyDetailsDialog').close();
   await openSurveyDetails(survey.id);
+  if(API_ENABLED && navigator.onLine) syncNow({silent:true});
+}
+
+async function refreshPlanSizesFromQuotes(surveyId) {
+  const survey=await idbGet('surveys',surveyId);
+  const plan=survey?.configuration?.sitePlan;
+  if(!plan?.lines?.length) return;
+  if(!window.confirm('Обновить размеры элементов по сохранённым расчётам? Расположение и столбы останутся прежними; стоимость заказа не изменится.')) return;
+  const active=unifiedEstimate(survey).selected.filter(item=>['gates','fence'].includes(item.type));
+  const result=updateLinkedPlanSizes(plan,active);
+  survey.configuration={...survey.configuration,sitePlan:result.sitePlan};
+  survey.updatedAt=new Date().toISOString();
+  survey.syncState=API_ENABLED?'pending':'local';
+  await idbPut('surveys',survey);
+  await renderSurveys();
+  if($('#surveyDetailsDialog').open)$('#surveyDetailsDialog').close();
+  await openSurveyDetails(surveyId);
+  showToast(result.skipped.length ? 'Размеры обновлены частично. Проверьте предупреждения.' : 'Размеры схемы обновлены');
   if(API_ENABLED && navigator.onLine) syncNow({silent:true});
 }
 
@@ -1336,6 +1355,7 @@ async function openSurveyDetails(id) {
   $('[data-edit-survey-data]')?.addEventListener('click', () => openSurveyDataDialog(survey.id));
   $('[data-edit-plan]')?.addEventListener('click', () => openPlanEditor(survey.id));
   $('[data-build-plan-from-calcs]')?.addEventListener('click', () => createPlanFromSavedCalculations(survey.id));
+  $('[data-refresh-plan-sizes]')?.addEventListener('click', () => refreshPlanSizesFromQuotes(survey.id));
   $('[data-add-calculation]')?.addEventListener('click', () => openCalculationPicker(survey.id));
   $('[data-v3-preview]')?.addEventListener('click', () => showCustomerView(survey));
   $$('[data-v3-calc]', $('#surveyDetailsContent')).forEach(button =>
@@ -1381,6 +1401,11 @@ function showCustomerView(survey) {
   $('#customerPreviewContent').innerHTML = `
     <div class="v3-customer-brand">КУЗНЕЧНЫЙ ДВОРИКЪ · ВАША СМЕТА</div>
     ${survey.address ? `<p class="v3-customer-address">${escapeHtml(survey.address)}</p>` : ''}
+    ${survey?.configuration?.sitePlan?.lines?.length ? `<section class="v3-customer-plan">
+      <h3>Схема установки</h3>
+      <div class="plan-mini-preview">${survey.configuration.sitePlan.lines.map(line=>miniLineHtml(line)).join('')}</div>
+      <p>Предварительный эскиз. Расположение опор и размеры сверяются на объекте.</p>
+    </section>` : ''}
     <h3 class="v3-estimate-client-heading">Выбранные изделия</h3>
     ${selected.map(customerCard).join('')}
     ${estimate.repeatedDelivery>0 ? `<div class="v3-customer-adjustment">Повторная доставка —${formatMoney(estimate.repeatedDelivery)}</div>`:''}
