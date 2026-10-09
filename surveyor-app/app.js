@@ -1,4 +1,4 @@
-import {PLAN_ITEM_TYPES,MATERIAL_LABELS,ensureSitePlan,newItem,newLine,lineWidth,itemDescription,trimNumber,planFromCalculations,planDifferences,updateLinkedPlanSizes} from './line-builder.js';
+import {PLAN_ITEM_TYPES,MATERIAL_LABELS,ensureSitePlan,newItem,newLine,lineWidth,itemDescription,trimNumber,planFromCalculations,planDifferences,updateLinkedPlanSizes,splitFenceWithPost,removePostFromLine,postMoveRange,movePlanPost} from './line-builder.js';
 
 const APP_VERSION = '0.4.0-v3-stage1';
 const DB_NAME = 'kd-surveyor-stage1';
@@ -25,6 +25,8 @@ let activePlanSurveyId = '';
 let activePlanConfiguration = null;
 let activePlanLineId = '';
 let activePlanItemId = '';
+let activePlanQuickPost = false;
+let lastPlanPostAction = null;
 let activeInsertIndex = null;
 let activeCalculationSurveyId = '';
 const CALC_TRANSFER_KEY = 'kd-surveyor-transfer-v1';
@@ -732,6 +734,8 @@ async function openPlanEditor(surveyId) {
   activePlanConfiguration=ensureSitePlan(survey.configuration,calculationWorkTypes(survey));
   activePlanLineId=activePlanConfiguration.sitePlan.lines[0].id;
   activePlanItemId='';
+  activePlanQuickPost=false;
+  lastPlanPostAction=null;
   activeInsertIndex=null;
   $('#insertPanel').hidden=true;
   $('#planEditor').hidden=true;
@@ -756,19 +760,119 @@ function renderPlanEditor() {
   $('#planItemsCount').textContent=String((line.items || []).length);
   renderPlanCanvas(line);
   renderPlanItems(line);
+  renderQuickPostActions(line);
   renderPlanItemEditor(line);
 }
 
 function renderPlanCanvas(line) {
   const items=line.items || [];
-  $('#planCanvas').innerHTML=`<div class="plan-track">${items.map(item=>{
-    const grow=item.type === 'post' ? 0.16 :Math.max(.45,Number(item.width)||1);
+  const minimumWidth=Math.max(320,items.reduce((sum,item)=>sum+(item.type==='post'?40:72),0));
+  $('#planCanvas').innerHTML=`<div class="plan-track plan-visual-track" style="min-width:${minimumWidth}px">${items.map(item=>{
+    const grow=item.type==='post' ? .2 : Math.max(.5,Number(item.width)||1);
     const selected=item.id===activePlanItemId?' selected':'';
+    const state=item.type==='post'?(item.state==='existing'?'existing':'new'):'';
     const label=item.type==='post'?(item.state==='existing'?'есть':'новый'):(trimNumber(item.width)+' м');
-    return `<button type="button" class="plan-part ${item.type}${selected}" data-select-plan-item="${item.id}" style="--part:${grow}" title="${escapeHtml(itemDescription(item))}">
-      <span class="plan-part-shape"></span><b>${escapeHtml(PLAN_ITEM_TYPES[item.type]?.short || item.type)}</b><small>${escapeHtml(label)}</small>
-    </button>`;
+    const canSplit=item.type==='fence' && Number(item.width)>=.4;
+    return `<div class="plan-part-wrap ${item.type} ${state}" style="--part:${grow}">
+      <button type="button" class="plan-part ${item.type}${selected}" data-select-plan-item="${escapeHtml(item.id)}" title="${escapeHtml(itemDescription(item))}" aria-label="${item.type==='post'?'Столб, '+(item.state==='existing'?'уже стоит':'новый')+'. Нажмите для действий':escapeHtml(PLAN_ITEM_TYPES[item.type]?.label||item.type)+', '+escapeHtml(label)}">
+        <span class="plan-part-shape"></span><b>${escapeHtml(PLAN_ITEM_TYPES[item.type]?.short||item.type)}</b><small>${escapeHtml(label)}</small>
+      </button>
+      ${canSplit ? `<button type="button" class="plan-insert-post-dot" data-split-fence="${escapeHtml(item.id)}" aria-label="Добавить столб внутри пролёта ${escapeHtml(label)}" title="Поставить столб посередине пролёта">+</button>` : ''}
+    </div>`;
   }).join('')}</div>`;
+}
+
+function renderQuickPostActions(line) {
+  const quick=$('#planQuickPostActions');
+  const item=currentPlanItem();
+  if(!activePlanQuickPost || item?.type!=='post'){
+    quick.hidden=true;
+    quick.innerHTML='';
+  } else {
+    const index=line.items.findIndex(value=>value.id===item.id);
+    const position=postMoveRange(line.items,item.id);
+    quick.innerHTML=`<div class="plan-quick-head">
+      <div><b>Столб ${index+1}</b><small>${item.state==='existing'?'Уже стоит':'Новый'} · ${escapeHtml(item.profile||'100×100×3')}</small></div>
+      <button type="button" data-plan-post-details aria-label="Изменить профиль и параметры столба">⚙ Профиль</button>
+    </div>
+    <div class="plan-quick-buttons">
+      <button type="button" data-plan-post-toggle>${item.state==='existing'?'＋ Считать новым':'✓ Уже стоит'}</button>
+      <button type="button" data-plan-post-remove>✕ Убрать столб</button>
+    </div>
+    ${position ? `<label class="plan-quick-distance">
+      <span>Где поставить столб? <small>Расстояние слева, м</small></span>
+      <input type="number" inputmode="decimal" min="${position.min}" max="${position.max}" step="0.05" data-plan-post-position value="${position.left}">
+    </label>` : ''}`;
+    quick.hidden=false;
+  }
+  $('#undoPlanPostBtn').hidden=!lastPlanPostAction;
+}
+
+function keepPostUndo(line) {
+  lastPlanPostAction={lineId:line.id,items:structuredClone(line.items)};
+}
+function splitFenceOnCanvas(fenceId) {
+  const line=currentPlanLine();
+  if(!line) return;
+  const result=splitFenceWithPost(line.items,fenceId);
+  if(!result.ok) return showToast(result.reason);
+  keepPostUndo(line);
+  line.items=result.items;
+  activePlanItemId=result.postId;
+  activePlanQuickPost=true;
+  activeInsertIndex=null;
+  $('#planEditor').hidden=true;
+  $('#insertPanel').hidden=true;
+  renderPlanEditor();
+  syncPlanSheetBackdrop();
+  showToast('Столб добавлен. Размеры пролёта разделены пополам.');
+}
+function changeQuickPostState() {
+  const line=currentPlanLine(),item=currentPlanItem();
+  if(!line||item?.type!=='post') return;
+  keepPostUndo(line);
+  item.state=item.state==='existing'?'new':'existing';
+  renderPlanEditor();
+  showToast(item.state==='existing'?'Отметили: столб уже стоит':'Отметили: новый столб');
+}
+function removeQuickPost() {
+  const line=currentPlanLine(),item=currentPlanItem();
+  if(!line||item?.type!=='post') return;
+  const result=removePostFromLine(line.items,item.id);
+  if(!result.ok) return showToast(result.reason);
+  keepPostUndo(line);
+  line.items=result.items;
+  activePlanItemId='';
+  activePlanQuickPost=false;
+  renderPlanEditor();
+  syncPlanSheetBackdrop();
+  showToast('Столб убран. Нажмите «Отменить», если нужно вернуть.');
+}
+function moveQuickPostToDistance(value) {
+  const line=currentPlanLine(),item=currentPlanItem();
+  if(!line||item?.type!=='post') return;
+  const result=movePlanPost(line.items,item.id,String(value).replace(',','.'));
+  if(!result.ok) return showToast(result.reason);
+  keepPostUndo(line);
+  line.items=result.items;
+  renderPlanEditor();
+  showToast('Столб перемещён. Длина линии не изменилась.');
+}
+function undoLastPostAction() {
+  const action=lastPlanPostAction;
+  if(!action) return;
+  const line=(activePlanConfiguration?.sitePlan?.lines||[]).find(value=>value.id===action.lineId);
+  if(!line) {lastPlanPostAction=null;return;}
+  line.items=action.items;
+  lastPlanPostAction=null;
+  activePlanLineId=line.id;
+  activePlanItemId='';
+  activePlanQuickPost=false;
+  $('#planEditor').hidden=true;
+  $('#insertPanel').hidden=true;
+  renderPlanEditor();
+  syncPlanSheetBackdrop();
+  showToast('Последнее действие отменено');
 }
 
 function renderPlanItems(line) {
@@ -799,7 +903,7 @@ function materialOptions(selected, type) {
 function renderPlanItemEditor(line) {
   const item=currentPlanItem();
   const editor=$('#planEditor');
-  if(!item){ editor.hidden=true; return; }
+  if(!item || (item.type==='post' && activePlanQuickPost)){ editor.hidden=true; return; }
   editor.hidden=false;
   $('#planEditorTitle').textContent=PLAN_ITEM_TYPES[item.type]?.label || 'Элемент';
   if(item.type==='post'){
@@ -833,15 +937,17 @@ function syncPlanSheetBackdrop() {
 function closePlanSheets() {
   activeInsertIndex=null;
   activePlanItemId='';
+  activePlanQuickPost=false;
   $('#insertPanel').hidden=true;
   $('#planEditor').hidden=true;
   syncPlanSheetBackdrop();
   const line=currentPlanLine();
-  if(line){ renderPlanCanvas(line); renderPlanItems(line); }
+  if(line){ renderPlanCanvas(line); renderPlanItems(line); renderQuickPostActions(line); }
 }
 
-function selectPlanItem(id) {
+function selectPlanItem(id,quick=false) {
   activePlanItemId=id;
+  activePlanQuickPost=quick && currentPlanItem()?.type==='post';
   activeInsertIndex=null;
   $('#insertPanel').hidden=true;
   renderPlanEditor();
@@ -851,6 +957,7 @@ function selectPlanItem(id) {
 function showInsertPanel(index) {
   activeInsertIndex=Number(index);
   activePlanItemId='';
+  activePlanQuickPost=false;
   $('#planEditor').hidden=true;
   $('#insertPanel').hidden=false;
   syncPlanSheetBackdrop();
@@ -865,6 +972,7 @@ function addPlanItem(type) {
   const item=newItem(type);
   line.items.splice(index,0,item);
   activePlanItemId=item.id;
+  activePlanQuickPost=false;
   activeInsertIndex=null;
   $('#insertPanel').hidden=true;
   renderPlanEditor();
@@ -882,10 +990,19 @@ function movePlanItem(direction) {
 }
 
 function deletePlanItem() {
-  const line=currentPlanLine(), item=currentPlanItem();
-  if(!line || !item) return;
-  line.items=line.items.filter(value=>value.id!==item.id);
+  const line=currentPlanLine(),item=currentPlanItem();
+  if(!line||!item) return;
+  if(item.type==='post'){
+    const result=removePostFromLine(line.items,item.id);
+    if(!result.ok) return showToast(result.reason);
+    keepPostUndo(line);
+    line.items=result.items;
+  } else {
+    line.items=line.items.filter(value=>value.id!==item.id);
+    lastPlanPostAction=null;
+  }
   activePlanItemId='';
+  activePlanQuickPost=false;
   renderPlanEditor();
   syncPlanSheetBackdrop();
 }
@@ -897,6 +1014,8 @@ function addPlanLine() {
   lines.push(line);
   activePlanLineId=line.id;
   activePlanItemId='';
+  activePlanQuickPost=false;
+  lastPlanPostAction=null;
   activeInsertIndex=null;
   $('#insertPanel').hidden=true;
   $('#planEditor').hidden=true;
@@ -912,6 +1031,8 @@ function deletePlanLine() {
   lines.splice(index,1);
   activePlanLineId=lines[Math.max(0,index-1)]?.id || lines[0]?.id || '';
   activePlanItemId='';
+  activePlanQuickPost=false;
+  lastPlanPostAction=null;
   activeInsertIndex=null;
   $('#insertPanel').hidden=true;
   $('#planEditor').hidden=true;
@@ -1767,6 +1888,7 @@ function bindEvents() {
     if(!button) return;
     activePlanLineId=button.dataset.planLine;
     activePlanItemId='';
+    activePlanQuickPost=false;
     activeInsertIndex=null;
     $('#insertPanel').hidden=true;
     $('#planEditor').hidden=true;
@@ -1780,9 +1902,20 @@ function bindEvents() {
     if(row) selectPlanItem(row.dataset.selectPlanItem);
   });
   $('#planCanvas').addEventListener('click', e => {
+    const plus=e.target.closest('[data-split-fence]');
+    if(plus) return splitFenceOnCanvas(plus.dataset.splitFence);
     const part=e.target.closest('[data-select-plan-item]');
-    if(part) selectPlanItem(part.dataset.selectPlanItem);
+    if(part) selectPlanItem(part.dataset.selectPlanItem,true);
   });
+  $('#planQuickPostActions').addEventListener('click', e => {
+    if(e.target.closest('[data-plan-post-toggle]')) return changeQuickPostState();
+    if(e.target.closest('[data-plan-post-remove]')) return removeQuickPost();
+    if(e.target.closest('[data-plan-post-details]')) return selectPlanItem(activePlanItemId);
+  });
+  $('#planQuickPostActions').addEventListener('change',e => {
+    if(e.target.matches('[data-plan-post-position]')) moveQuickPostToDistance(e.target.value);
+  });
+  $('#undoPlanPostBtn').addEventListener('click',undoLastPostAction);
   $('#insertPanel').addEventListener('click', e => {
     const button=e.target.closest('[data-add-plan-item]');
     if(button) addPlanItem(button.dataset.addPlanItem);

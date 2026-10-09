@@ -259,3 +259,76 @@ export function updateLinkedPlanSizes(plan, selected = []) {
   }
   return {sitePlan:updated,changed,skipped:[...new Set(skipped)]};
 }
+
+
+/** Split a fence span by adding one real support in its middle.
+ * Never change the total measured length or source quote reference. */
+export function splitFenceWithPost(items, fenceId) {
+  const index=items.findIndex(item=>item.id===fenceId);
+  const fence=items[index];
+  if(!fence || fence.type!=='fence') return {ok:false,reason:'Выберите пролёт забора.'};
+  const width=Number(fence.width);
+  if(!Number.isFinite(width)||width<0.4) return {ok:false,reason:'Слишком короткий пролёт для разделения. Уточните размеры.'};
+  const half=Math.round(width*500)/1000;
+  const nextWidth=Math.round((width-half)*1000)/1000;
+  const post={...newItem('post')};
+  const copy=items.map(item=>({...item}));
+  copy.splice(index,1,{...fence,width:half},post,{...fence,id:planId('fence'),width:nextWidth});
+  return {ok:true,items:copy,postId:post.id};
+}
+
+/** Remove a redundant support only when the drawn load path is still valid.
+ * Two adjacent fence spans become one, but never exceed the 2.5m limit.
+ * Terminal supports and posts between a gate / wicket cannot be removed. */
+export function removePostFromLine(items, postId) {
+  const index=items.findIndex(item=>item.id===postId);
+  if(index<0 || items[index]?.type!=='post') return {ok:false,reason:'Столб не найден.'};
+  const before=items[index-1],after=items[index+1];
+  const copy=items.map(item=>({...item}));
+  if(before?.type==='post'||after?.type==='post'){
+    copy.splice(index,1);
+    return {ok:true,items:copy};
+  }
+  if(before?.type==='fence' && after?.type==='fence'){
+    if(before.material!==after.material || Math.abs((Number(before.height)||0)-(Number(after.height)||0))>.01
+      || before.sourceCalculationId!==after.sourceCalculationId || before.sourceSectionIndex!==after.sourceSectionIndex){
+      return {ok:false,reason:'Это граница разных участков или материалов. Проверьте схему вручную.'};
+    }
+    const combined=Math.round(((Number(before.width)||0)+(Number(after.width)||0))*1000)/1000;
+    if(combined>2.5+0.0001) return {ok:false,reason:'Без столба пролёт будет '+trimNumber(combined)+' м. Максимум — 2,5 м.'};
+    copy.splice(index-1,3,{...before,width:combined});
+    return {ok:true,items:copy};
+  }
+  if(!before||!after) return {ok:false,reason:'Крайний столб нужен для опоры. Если он уже стоит, отметьте «Уже стоит».'};
+  return {ok:false,reason:'Этот столб поддерживает ворота, калитку или разделяет разные элементы. Если он готовый, отметьте «Уже стоит».'};
+}
+
+
+/** Measured position of an intermediate post: the combined fence length stays
+ * unchanged and neither resulting fence span can exceed 2.5m. */
+export function postMoveRange(items,postId) {
+  const i=items.findIndex(item=>item.id===postId);
+  const left=items[i-1],right=items[i+1];
+  if(items[i]?.type!=='post'||left?.type!=='fence'||right?.type!=='fence') return null;
+  if(left.material!==right.material || Math.abs(Number(left.height)-Number(right.height))>.01
+     ||left.sourceCalculationId!==right.sourceCalculationId||left.sourceSectionIndex!==right.sourceSectionIndex) return null;
+  const length=Math.round((Number(left.width)+Number(right.width))*1000)/1000;
+  if(!Number.isFinite(length)||length<.4||length>5) return null;
+  const min=Math.max(.2,length-2.5),max=Math.min(2.5,length-.2);
+  if(min>max) return null;
+  return {min:Math.round(min*1000)/1000,max:Math.round(max*1000)/1000,
+    length,left:Math.round(Number(left.width)*1000)/1000};
+}
+export function movePlanPost(items,postId,widthLeft) {
+  const range=postMoveRange(items,postId);
+  if(!range) return {ok:false,reason:'Этот столб нельзя сместить без изменения расположения элементов.'};
+  const value=Math.round(Number(widthLeft)*1000)/1000;
+  if(!Number.isFinite(value)||value<range.min-0.0001||value>range.max+0.0001){
+    return {ok:false,reason:'Укажите расстояние от '+trimNumber(range.min)+' до '+trimNumber(range.max)+' м, чтобы каждый пролёт был не длиннее 2,5 м.'};
+  }
+  const index=items.findIndex(item=>item.id===postId);
+  const copy=items.map(item=>({...item}));
+  copy[index-1].width=value;
+  copy[index+1].width=Math.round((range.length-value)*1000)/1000;
+  return {ok:true,items:copy};
+}

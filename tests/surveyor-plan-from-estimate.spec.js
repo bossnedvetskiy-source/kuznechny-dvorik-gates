@@ -125,3 +125,76 @@ test('a fence section with openings cannot silently create wrong or duplicated g
   await expect(page.locator('[data-edit-plan]')).toContainText('Нарисовать вручную');
   expect((await rows(page))[0].configuration.sitePlan).toBeUndefined();
 });
+
+
+test('touch diagram splits a fence span, toggles post state, removes and undoes safely',async({page})=>{
+  await startSurvey(page);
+  await changeSurvey(page,'seed');
+  await reopen(page);
+  await page.locator('[data-build-plan-from-calcs]').click();
+  await page.locator('[data-edit-plan]').click();
+  await expect(page.locator('#planDialog')).toBeVisible();
+  await page.locator('#planLineTabs .plan-line-tab').nth(1).click();
+  await expect(page.locator('#planCanvas [data-split-fence]')).toHaveCount(3);
+  const originalWidth=await page.locator('#planLineWidth').textContent();
+  await page.locator('#planCanvas [data-split-fence]').first().click();
+  await expect(page.locator('#planQuickPostActions')).toBeVisible();
+  await expect(page.locator('#planQuickPostActions')).toContainText('Новый');
+  await expect(page.locator('#planLineWidth')).toHaveText(originalWidth);
+  await expect(page.locator('#planItems .plan-item-row')).toHaveCount(9);
+  await expect(page.locator('[data-plan-post-position]')).toHaveValue('1');
+  await page.locator('[data-plan-post-position]').fill('1.3');
+  await page.locator('[data-plan-post-position]').dispatchEvent('change');
+  await expect(page.locator('[data-plan-post-position]')).toHaveValue('1.3');
+  await expect(page.locator('#planLineWidth')).toHaveText(originalWidth);
+  await page.locator('[data-plan-post-toggle]').click();
+  await expect(page.locator('#planQuickPostActions')).toContainText('Уже стоит');
+  await page.locator('#undoPlanPostBtn').click();
+  await expect(page.locator('#planQuickPostActions')).toBeHidden();
+  await expect(page.locator('#planItems .plan-item-row')).toHaveCount(9);
+  // New middle post: select by known position in the visual diagram.
+  await page.locator('#planCanvas .plan-part-wrap.post [data-select-plan-item]').nth(1).click();
+  await expect(page.locator('[data-plan-post-remove]')).toBeVisible();
+  await page.locator('[data-plan-post-remove]').click();
+  await expect(page.locator('#planItems .plan-item-row')).toHaveCount(7);
+  await expect(page.locator('#planLineWidth')).toHaveText(originalWidth);
+  await page.locator('#undoPlanPostBtn').click();
+  await expect(page.locator('#planItems .plan-item-row')).toHaveCount(9);
+  // Do not permit a 4m span from deleting an existing intermediate support.
+  await page.locator('#planCanvas .plan-part-wrap.post [data-select-plan-item]').nth(3).click();
+  await page.locator('[data-plan-post-remove]').click();
+  await expect(page.locator('#planItems .plan-item-row')).toHaveCount(9);
+  await expect(page.locator('#toast')).toContainText('2,5 м');
+  await page.locator('#savePlanBtn').click();
+  const survey=(await rows(page))[0];
+  const items=survey.configuration.sitePlan.lines[1].items;
+  expect(items.filter(item=>item.type==='post')).toHaveLength(5);
+  expect(items.filter(item=>item.type==='fence')).toHaveLength(4);
+  expect(items.filter(item=>item.type==='fence').reduce((s,i)=>s+i.width,0)).toBeCloseTo(6);
+  expect(items.filter(item=>item.type==='fence')[0].width).toBeCloseTo(1.3);
+  expect(items.filter(item=>item.type==='fence')[1].width).toBeCloseTo(.7);
+  expect(survey.configuration.calculations.map(c=>c.total)).toEqual([73800,35000]);
+});
+
+test('gate support quick actions keep gate structurally supported and allow marking it existing',async({page})=>{
+  await startSurvey(page);
+  await changeSurvey(page,'seed');
+  await reopen(page);
+  await page.locator('[data-build-plan-from-calcs]').click();
+  await page.locator('[data-edit-plan]').click();
+  await page.locator('#planCanvas .plan-part-wrap.post [data-select-plan-item]').first().click();
+  await expect(page.locator('#planQuickPostActions')).toBeVisible();
+  await page.locator('[data-plan-post-remove]').click();
+  await expect(page.locator('#planCanvas .plan-part-wrap.post')).toHaveCount(3);
+  await expect(page.locator('#toast')).toContainText('Крайний столб');
+  await page.locator('[data-plan-post-toggle]').click();
+  await expect(page.locator('#planQuickPostActions')).toContainText('Уже стоит');
+  await page.locator('[data-plan-post-details]').click();
+  await expect(page.locator('#planEditor')).toBeVisible();
+  await expect(page.locator('#planEditorFields [data-plan-field="profile"]')).toBeVisible();
+  await page.locator('#donePlanItemBtn').click();
+  await page.locator('#savePlanBtn').click();
+  const survey=(await rows(page))[0];
+  expect(survey.configuration.sitePlan.lines[0].items[0].state).toBe('existing');
+  expect(survey.configuration.calculations[0].total).toBe(73800);
+});

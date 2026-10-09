@@ -259,3 +259,36 @@
 .plan-empty-actions{display:grid;gap:7px;min-width:160px}
 .plan-empty-actions .btn{min-height:41px;font-size:12px}
 @media(max-width:500px){.plan-empty-actions{width:100%}}
+
+/* Touch-first schematic editing: press a support for actions, plus for a new support. */
+.plan-canvas-hint{margin:5px 0 8px;color:#746a56;font-size:11px;line-height:1.4}
+.plan-canvas-hint b{font-size:14px;color:#ad7d20}
+.plan-canvas{overflow-x:auto;overflow-y:hidden;display:block;scrollbar-width:thin;scrollbar-color:#d2be90 transparent;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch}
+.plan-track.plan-visual-track{width:100%;align-items:end;min-height:82px}
+.plan-part-wrap{--part:1;position:relative;flex:var(--part) 1 0;min-width:68px;display:flex;align-items:end;height:75px}
+.plan-part-wrap.post{min-width:40px;flex:0 0 40px}
+.plan-part-wrap .plan-part{width:100%;min-width:0;flex:none;grid-template-rows:43px 12px 12px;height:74px;padding:0 1px;gap:0}
+.plan-part-wrap.post .plan-part{min-width:0;flex:none}
+.plan-part-wrap.post .plan-part-shape{width:9px;height:53px;background:#34342f;border:1px solid #242421;border-radius:2px}
+.plan-part-wrap.post.existing .plan-part-shape{background:#b88c3f;border-color:#9d731f}
+.plan-part-wrap.post.existing .plan-part{color:#916b27}
+.plan-part-wrap .plan-part b{font-size:9px;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.plan-part-wrap .plan-part small{font-size:8px;line-height:1.1}
+.plan-part-wrap .plan-part:focus-visible{outline:2px solid #c79635;outline-offset:0;border-radius:6px}
+.plan-insert-post-dot{position:absolute;z-index:2;left:50%;top:12px;transform:translateX(-50%);width:34px;height:34px;border:2px solid #a67d30;border-radius:999px;background:#fffcf3;color:#8a6217;box-shadow:0 2px 8px rgba(30,22,9,.18);display:grid;place-items:center;font-size:25px;font-weight:700;line-height:1;touch-action:manipulation}
+.plan-insert-post-dot:active{background:#f4dfa9}
+.plan-quick-post{display:grid;gap:8px;background:#fbf6e9;border:1px solid #ddc996;border-radius:13px;padding:10px;margin-top:9px}
+.plan-quick-post[hidden],.plan-undo-btn[hidden]{display:none!important}
+.plan-quick-head{display:flex;justify-content:space-between;align-items:center;gap:9px}
+.plan-quick-head>div{display:grid;gap:2px}
+.plan-quick-head b{font-size:13px}
+.plan-quick-head small{font-size:10px;color:#7b725f}
+.plan-quick-head button{border:1px solid #e2d6b8;border-radius:8px;background:#fff;color:#664d20;min-height:36px;padding:5px 10px;font-size:11px;font-weight:750}
+.plan-quick-buttons{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.plan-quick-buttons button{min-height:42px;border-radius:10px;border:1px solid #e0d5bc;background:#fff;color:#463a25;font-size:12px;font-weight:850;padding:8px 6px}
+.plan-quick-buttons [data-plan-post-remove]{background:#fff1ef;border-color:#edd0cc;color:#a03a36}
+.plan-undo-btn{display:block;width:100%;border:1px dashed #cdb985;background:#fffaf0;color:#825c14;border-radius:10px;min-height:34px;margin-top:7px;padding:7px;font-size:11px;font-weight:850}
+
+.plan-quick-distance{display:grid;grid-template-columns:1fr 100px;align-items:center;gap:12px;background:#fff;border:1px solid #e7dbc4;border-radius:10px;padding:7px 10px;font-size:12px;font-weight:800}
+.plan-quick-distance small{display:block;color:#766b54;font-size:10px;font-weight:600;margin-top:2px}
+.plan-quick-distance input{width:100%;max-width:100px;min-height:39px;border-radius:8px;border:1px solid #d7c18d;padding:7px 9px;color:#342b18;background:#fff;font-size:16px;font-weight:800}
