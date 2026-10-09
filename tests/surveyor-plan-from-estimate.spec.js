@@ -94,6 +94,7 @@ test('scheme gets selected gate and wicket plus fence spans, without inventing o
   await expect(page.locator('#planDialog')).toBeVisible();
   await page.locator('#planItems .plan-item-row').first().click();
   await page.locator('#planEditorFields [data-plan-field="state"]').selectOption('existing');
+  await page.locator('#donePlanItemBtn').click();
   await page.locator('#savePlanBtn').click();
   await expect(page.locator('#planDialog')).not.toBeVisible();
   await page.locator('[data-v3-preview]').click();
