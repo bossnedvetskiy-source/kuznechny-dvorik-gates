@@ -253,7 +253,10 @@
           <div><span>Элементов</span><b id="planItemsCount">0</b></div>
           <div><span>Линий</span><b id="planLinesCount">1</b></div>
         </div>
+        <p class="plan-canvas-hint">Нажмите столб для действий · <b>+</b> на заборе — поставить столб</p>
         <div id="planCanvas" class="plan-canvas" aria-label="Схема линии"></div>
+        <div id="planQuickPostActions" class="plan-quick-post" hidden aria-live="polite"></div>
+        <button id="undoPlanPostBtn" class="plan-undo-btn" type="button" hidden>↶ Отменить последнее действие</button>
       </div>
 
       <details class="plan-line-settings">
