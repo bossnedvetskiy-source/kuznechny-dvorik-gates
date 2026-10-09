@@ -1,4 +1,4 @@
-import {PLAN_ITEM_TYPES,MATERIAL_LABELS,ensureSitePlan,newItem,newLine,lineWidth,itemDescription,trimNumber,planFromCalculations,planDifferences,updateLinkedPlanSizes,splitFenceWithPost,removePostFromLine} from './line-builder.js';
+import {PLAN_ITEM_TYPES,MATERIAL_LABELS,ensureSitePlan,newItem,newLine,lineWidth,itemDescription,trimNumber,planFromCalculations,planDifferences,updateLinkedPlanSizes,splitFenceWithPost,removePostFromLine,postMoveRange,movePlanPost} from './line-builder.js';
 
 const APP_VERSION = '0.4.0-v3-stage1';
 const DB_NAME = 'kd-surveyor-stage1';
@@ -790,6 +790,7 @@ function renderQuickPostActions(line) {
     quick.innerHTML='';
   } else {
     const index=line.items.findIndex(value=>value.id===item.id);
+    const position=postMoveRange(line.items,item.id);
     quick.innerHTML=`<div class="plan-quick-head">
       <div><b>Столб ${index+1}</b><small>${item.state==='existing'?'Уже стоит':'Новый'} · ${escapeHtml(item.profile||'100×100×3')}</small></div>
       <button type="button" data-plan-post-details aria-label="Изменить профиль и параметры столба">⚙ Профиль</button>
@@ -797,7 +798,11 @@ function renderQuickPostActions(line) {
     <div class="plan-quick-buttons">
       <button type="button" data-plan-post-toggle>${item.state==='existing'?'＋ Считать новым':'✓ Уже стоит'}</button>
       <button type="button" data-plan-post-remove>✕ Убрать столб</button>
-    </div>`;
+    </div>
+    ${position ? `<label class="plan-quick-distance">
+      <span>Где поставить столб? <small>Расстояние слева, м</small></span>
+      <input type="number" inputmode="decimal" min="${position.min}" max="${position.max}" step="0.05" data-plan-post-position value="${position.left}">
+    </label>` : ''}`;
     quick.hidden=false;
   }
   $('#undoPlanPostBtn').hidden=!lastPlanPostAction;
@@ -842,6 +847,16 @@ function removeQuickPost() {
   renderPlanEditor();
   syncPlanSheetBackdrop();
   showToast('Столб убран. Нажмите «Отменить», если нужно вернуть.');
+}
+function moveQuickPostToDistance(value) {
+  const line=currentPlanLine(),item=currentPlanItem();
+  if(!line||item?.type!=='post') return;
+  const result=movePlanPost(line.items,item.id,String(value).replace(',','.'));
+  if(!result.ok) return showToast(result.reason);
+  keepPostUndo(line);
+  line.items=result.items;
+  renderPlanEditor();
+  showToast('Столб перемещён. Длина линии не изменилась.');
 }
 function undoLastPostAction() {
   const action=lastPlanPostAction;
@@ -1896,6 +1911,9 @@ function bindEvents() {
     if(e.target.closest('[data-plan-post-toggle]')) return changeQuickPostState();
     if(e.target.closest('[data-plan-post-remove]')) return removeQuickPost();
     if(e.target.closest('[data-plan-post-details]')) return selectPlanItem(activePlanItemId);
+  });
+  $('#planQuickPostActions').addEventListener('change',e => {
+    if(e.target.matches('[data-plan-post-position]')) moveQuickPostToDistance(e.target.value);
   });
   $('#undoPlanPostBtn').addEventListener('click',undoLastPostAction);
   $('#insertPanel').addEventListener('click', e => {
