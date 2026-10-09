@@ -51,4 +51,4 @@ jobs:
           node scripts/build-dev-preview.mjs
       - run: npx playwright install --with-deps chromium
       - name: Verify calculated dimensions flow into the scheme without double counting
-        run: npx playwright test tests/surveyor-plan-from-estimate.spec.js --workers=1
+        run: npx playwright test tests/surveyor-plan-from-estimate.spec.js tests/surveyor-mobile.spec.js --workers=1

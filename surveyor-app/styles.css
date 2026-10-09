@@ -255,3 +255,7 @@
 .v3-customer-plan h3{font-size:17px;margin:0 0 11px}
 .v3-customer-plan p{font-size:11px;line-height:1.4;color:#837867;margin:10px 0 0}
 .v3-customer-plan .mini-line{background:#f9f7f1}
+
+.plan-empty-actions{display:grid;gap:7px;min-width:160px}
+.plan-empty-actions .btn{min-height:41px;font-size:12px}
+@media(max-width:500px){.plan-empty-actions{width:100%}}
