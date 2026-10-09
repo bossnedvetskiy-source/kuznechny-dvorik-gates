@@ -302,3 +302,33 @@ export function removePostFromLine(items, postId) {
   if(!before||!after) return {ok:false,reason:'Крайний столб нужен для опоры. Если он уже стоит, отметьте «Уже стоит».'};
   return {ok:false,reason:'Этот столб поддерживает ворота, калитку или разделяет разные элементы. Если он готовый, отметьте «Уже стоит».'};
 }
+
+
+/** Measured position of an intermediate post: the combined fence length stays
+ * unchanged and neither resulting fence span can exceed 2.5m. */
+export function postMoveRange(items,postId) {
+  const i=items.findIndex(item=>item.id===postId);
+  const left=items[i-1],right=items[i+1];
+  if(items[i]?.type!=='post'||left?.type!=='fence'||right?.type!=='fence') return null;
+  if(left.material!==right.material || Math.abs(Number(left.height)-Number(right.height))>.01
+     ||left.sourceCalculationId!==right.sourceCalculationId||left.sourceSectionIndex!==right.sourceSectionIndex) return null;
+  const length=Math.round((Number(left.width)+Number(right.width))*1000)/1000;
+  if(!Number.isFinite(length)||length<.4||length>5) return null;
+  const min=Math.max(.2,length-2.5),max=Math.min(2.5,length-.2);
+  if(min>max) return null;
+  return {min:Math.round(min*1000)/1000,max:Math.round(max*1000)/1000,
+    length,left:Math.round(Number(left.width)*1000)/1000};
+}
+export function movePlanPost(items,postId,widthLeft) {
+  const range=postMoveRange(items,postId);
+  if(!range) return {ok:false,reason:'Этот столб нельзя сместить без изменения расположения элементов.'};
+  const value=Math.round(Number(widthLeft)*1000)/1000;
+  if(!Number.isFinite(value)||value<range.min-0.0001||value>range.max+0.0001){
+    return {ok:false,reason:'Укажите расстояние от '+trimNumber(range.min)+' до '+trimNumber(range.max)+' м, чтобы каждый пролёт был не длиннее 2,5 м.'};
+  }
+  const index=items.findIndex(item=>item.id===postId);
+  const copy=items.map(item=>({...item}));
+  copy[index-1].width=value;
+  copy[index+1].width=Math.round((range.length-value)*1000)/1000;
+  return {ok:true,items:copy};
+}
