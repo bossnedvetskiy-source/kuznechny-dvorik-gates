@@ -648,7 +648,10 @@ function surveyPlanSummaryHtml(survey) {
       <p class="muted">Ворота, забор и столбы на одной наглядной схеме.</p></div></div>
     <div class="plan-empty-card">
       <div><b>Пока нет схемы</b><span>Возьмём размеры выбранных изделий из расчётов, без повторного ввода.</span></div>
-      ${proposal.sitePlan ? `<button class="btn btn-primary" data-build-plan-from-calcs="${escapeHtml(survey.id)}" type="button">Создать из расчётов</button>` : `<button class="btn btn-secondary" data-edit-plan="${escapeHtml(survey.id)}" type="button">Нарисовать вручную</button>`}
+      <div class="plan-empty-actions">
+        ${proposal.sitePlan ? `<button class="btn btn-primary" data-build-plan-from-calcs="${escapeHtml(survey.id)}" type="button">Создать из расчётов</button>` : ''}
+        <button class="btn btn-secondary" data-edit-plan="${escapeHtml(survey.id)}" type="button">Нарисовать вручную</button>
+      </div>
     </div>
     ${warningsHtml ? `<div class="plan-quote-warnings">${warningsHtml}</div>` : ''}
   </section>`;
