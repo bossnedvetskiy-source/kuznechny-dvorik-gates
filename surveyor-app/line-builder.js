@@ -95,3 +95,117 @@ export function trimNumber(value) {
   if (!Number.isFinite(n)) return '0';
   return n.toLocaleString('ru-RU',{maximumFractionDigits:2});
 }
+
+
+/**
+ * Prepare a sketch from already priced variants, without inventing the position
+ * of openings. Never touch any saved plan or change a calculator/price.
+ * In fence drawings, posts are schematic (a physical survey still decides
+ * foundations and whether posts at different lines are shared).
+ */
+export function planFromCalculations(selected = []) {
+  const lines = [];
+  const skipped = [];
+  const gates = selected.filter(c => c?.type === 'gates');
+  const fences = selected.filter(c => c?.type === 'fence');
+  for (const quote of gates) {
+    const p = quote.payload || {};
+    const width = Number(p.width ?? p.configuration?.width);
+    const height = Number(p.height ?? p.configuration?.height) || 1.8;
+    const wicketWidth = Number(p.wicketWidth ?? p.configuration?.wicketWidth) || 0;
+    if (!(width > 0)) {
+      skipped.push('У ворот не сохранена ширина: добавьте их в схему вручную.');
+      continue;
+    }
+    const status = p.posts ? 'new' : 'existing';
+    const post = () => ({...newItem('post'),state:status});
+    const gate = {...newItem('gate'),width,height,material:'forged',sourceCalculationId:quote.id,sourceKind:'gate'};
+    const items = [post(),gate,post()];
+    if (wicketWidth > 0) {
+      items.push({...newItem('wicket'),width:wicketWidth,height:Number(p.wicketHeight ?? p.configuration?.wicketHeight)||height,
+        material:'forged',sourceCalculationId:quote.id,sourceKind:'wicket'});
+      items.push(post());
+    }
+    lines.push({...newLine([],lines.length),name:'Ворота и калитка',items});
+  }
+  for (const quote of fences) {
+    const config = quote.payload?.configuration || {};
+    const sections = Array.isArray(config.sections) ? config.sections : [];
+    sections.forEach((section,index) => {
+      const length = Number(section.length);
+      if (!(length > 0)) return;
+      if (Number(section.gateOpening) > 0 || Number(section.wicketOpening) > 0) {
+        skipped.push('Участок забора '+(index+1)+': есть проёмы. Укажите их расположение вручную, чтобы не дублировать ворота.');
+        return;
+      }
+      const post = () => ({...newItem('post'),state:config.includeNewPosts === false ? 'existing' : 'new'});
+      const material = String(config.fenceType||'').startsWith('horizontal') ? 'euro_horizontal' : 'euro_vertical';
+      const spans = Math.max(1,Math.ceil(length/2.5));
+      const width = Math.round(length / spans * 1000) / 1000;
+      const items = [post()];
+      for(let k=0;k<spans;k++){
+        const segmentWidth = k===spans-1 ? Math.round((length-width*(spans-1))*1000)/1000 : width;
+        items.push({...newItem('fence'),width:segmentWidth,
+          height:Number(section.height)||1.8,material,sourceCalculationId:quote.id,
+          sourceSectionIndex:index,sourceKind:'fence',sourceOriginalLength:length});
+        items.push(post());
+      }
+      lines.push({...newLine([],lines.length),name:'Забор · участок '+(index+1),items});
+    });
+  }
+  return {sitePlan:lines.length ? {version:2,source:'calculations',lines}:null,skipped};
+}
+
+// Return a warning for every linked element whose size no longer matches its
+// saved calculation. This is informational; the sketch is never overwritten
+// when a quote changes in a different screen.
+export function planDifferences(sitePlan, selected = []) {
+  const byId = new Map(selected.map(item=>[item.id,item]));
+  const groups = new Map();
+  const differences = [];
+  for (const line of sitePlan?.lines || []) {
+    for(const item of line.items || []) {
+      if (!item.sourceCalculationId) continue;
+      const quote = byId.get(item.sourceCalculationId);
+      if (!quote) {
+        differences.push('Элемент схемы связан с удалённым или исключённым расчётом.');
+        continue;
+      }
+      const p = quote.payload || {};
+      let expectedWidth;
+      let expectedHeight;
+      if(item.sourceKind==='gate') {
+        expectedWidth=Number(p.width ?? p.configuration?.width);
+        expectedHeight=Number(p.height ?? p.configuration?.height);
+      } else if(item.sourceKind==='wicket') {
+        expectedWidth=Number(p.wicketWidth ?? p.configuration?.wicketWidth);
+        expectedHeight=Number(p.wicketHeight ?? p.configuration?.wicketHeight);
+      } else if(item.sourceKind==='fence') {
+        const section=p.configuration?.sections?.[item.sourceSectionIndex];
+        if (!section || Number(section.gateOpening)>0 || Number(section.wicketOpening)>0) {
+          differences.push('Участок забора изменился: проверьте проёмы и ширину схемы.');
+          continue;
+        }
+        expectedWidth=Number(section.length);
+        expectedHeight=Number(section.height);
+        const key=item.sourceCalculationId+':'+item.sourceSectionIndex;
+        const group=groups.get(key)||{sum:0,expected:expectedWidth};
+        group.sum+=Number(item.width)||0;
+        groups.set(key,group);
+      }
+      if(item.sourceKind!=='fence' && Number.isFinite(expectedWidth)
+          && Math.abs((Number(item.width)||0)-expectedWidth)>0.01) {
+        differences.push('Размер ворот или калитки на схеме отличается от сохранённого расчёта.');
+      }
+      if(Number.isFinite(expectedHeight) && Math.abs((Number(item.height)||0)-expectedHeight)>0.01) {
+        differences.push('Высота элемента на схеме отличается от сохранённого расчёта.');
+      }
+    }
+  }
+  for (const group of groups.values()) {
+    if(Number.isFinite(group.expected) && Math.abs(group.sum-group.expected)>0.02){
+      differences.push('Суммарная длина пролётов забора отличается от расчёта.');
+    }
+  }
+  return [...new Set(differences)];
+}
