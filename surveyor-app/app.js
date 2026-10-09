@@ -1747,6 +1747,7 @@ function bindEvents() {
   $('#savePlanBtn').addEventListener('click', savePlan);
   $('#cancelInsertBtn').addEventListener('click', closePlanSheets);
   $('#closePlanEditorBtn').addEventListener('click', closePlanSheets);
+  $('#donePlanItemBtn').addEventListener('click', closePlanSheets);
   $('#planSheetBackdrop').addEventListener('click', closePlanSheets);
   $('#movePlanItemLeftBtn').addEventListener('click', () => movePlanItem(-1));
   $('#movePlanItemRightBtn').addEventListener('click', () => movePlanItem(1));
