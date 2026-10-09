@@ -142,6 +142,11 @@ test('touch diagram splits a fence span, toggles post state, removes and undoes 
   await expect(page.locator('#planQuickPostActions')).toContainText('Новый');
   await expect(page.locator('#planLineWidth')).toHaveText(originalWidth);
   await expect(page.locator('#planItems .plan-item-row')).toHaveCount(9);
+  await expect(page.locator('[data-plan-post-position]')).toHaveValue('1');
+  await page.locator('[data-plan-post-position]').fill('1.3');
+  await page.locator('[data-plan-post-position]').dispatchEvent('change');
+  await expect(page.locator('[data-plan-post-position]')).toHaveValue('1.3');
+  await expect(page.locator('#planLineWidth')).toHaveText(originalWidth);
   await page.locator('[data-plan-post-toggle]').click();
   await expect(page.locator('#planQuickPostActions')).toContainText('Уже стоит');
   await page.locator('#undoPlanPostBtn').click();
@@ -166,6 +171,8 @@ test('touch diagram splits a fence span, toggles post state, removes and undoes 
   expect(items.filter(item=>item.type==='post')).toHaveLength(5);
   expect(items.filter(item=>item.type==='fence')).toHaveLength(4);
   expect(items.filter(item=>item.type==='fence').reduce((s,i)=>s+i.width,0)).toBeCloseTo(6);
+  expect(items.filter(item=>item.type==='fence')[0].width).toBeCloseTo(1.3);
+  expect(items.filter(item=>item.type==='fence')[1].width).toBeCloseTo(.7);
   expect(survey.configuration.calculations.map(c=>c.total)).toEqual([73800,35000]);
 });
 
