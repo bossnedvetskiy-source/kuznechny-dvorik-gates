@@ -1873,6 +1873,7 @@ function bindEvents() {
     if(!button) return;
     activePlanLineId=button.dataset.planLine;
     activePlanItemId='';
+    activePlanQuickPost=false;
     activeInsertIndex=null;
     $('#insertPanel').hidden=true;
     $('#planEditor').hidden=true;
@@ -1886,9 +1887,17 @@ function bindEvents() {
     if(row) selectPlanItem(row.dataset.selectPlanItem);
   });
   $('#planCanvas').addEventListener('click', e => {
+    const plus=e.target.closest('[data-split-fence]');
+    if(plus) return splitFenceOnCanvas(plus.dataset.splitFence);
     const part=e.target.closest('[data-select-plan-item]');
-    if(part) selectPlanItem(part.dataset.selectPlanItem);
+    if(part) selectPlanItem(part.dataset.selectPlanItem,true);
   });
+  $('#planQuickPostActions').addEventListener('click', e => {
+    if(e.target.closest('[data-plan-post-toggle]')) return changeQuickPostState();
+    if(e.target.closest('[data-plan-post-remove]')) return removeQuickPost();
+    if(e.target.closest('[data-plan-post-details]')) return selectPlanItem(activePlanItemId);
+  });
+  $('#undoPlanPostBtn').addEventListener('click',undoLastPostAction);
   $('#insertPanel').addEventListener('click', e => {
     const button=e.target.closest('[data-add-plan-item]');
     if(button) addPlanItem(button.dataset.addPlanItem);
