@@ -922,15 +922,17 @@ function syncPlanSheetBackdrop() {
 function closePlanSheets() {
   activeInsertIndex=null;
   activePlanItemId='';
+  activePlanQuickPost=false;
   $('#insertPanel').hidden=true;
   $('#planEditor').hidden=true;
   syncPlanSheetBackdrop();
   const line=currentPlanLine();
-  if(line){ renderPlanCanvas(line); renderPlanItems(line); }
+  if(line){ renderPlanCanvas(line); renderPlanItems(line); renderQuickPostActions(line); }
 }
 
-function selectPlanItem(id) {
+function selectPlanItem(id,quick=false) {
   activePlanItemId=id;
+  activePlanQuickPost=quick && currentPlanItem()?.type==='post';
   activeInsertIndex=null;
   $('#insertPanel').hidden=true;
   renderPlanEditor();
@@ -940,6 +942,7 @@ function selectPlanItem(id) {
 function showInsertPanel(index) {
   activeInsertIndex=Number(index);
   activePlanItemId='';
+  activePlanQuickPost=false;
   $('#planEditor').hidden=true;
   $('#insertPanel').hidden=false;
   syncPlanSheetBackdrop();
@@ -954,6 +957,7 @@ function addPlanItem(type) {
   const item=newItem(type);
   line.items.splice(index,0,item);
   activePlanItemId=item.id;
+  activePlanQuickPost=false;
   activeInsertIndex=null;
   $('#insertPanel').hidden=true;
   renderPlanEditor();
@@ -971,10 +975,19 @@ function movePlanItem(direction) {
 }
 
 function deletePlanItem() {
-  const line=currentPlanLine(), item=currentPlanItem();
-  if(!line || !item) return;
-  line.items=line.items.filter(value=>value.id!==item.id);
+  const line=currentPlanLine(),item=currentPlanItem();
+  if(!line||!item) return;
+  if(item.type==='post'){
+    const result=removePostFromLine(line.items,item.id);
+    if(!result.ok) return showToast(result.reason);
+    keepPostUndo(line);
+    line.items=result.items;
+  } else {
+    line.items=line.items.filter(value=>value.id!==item.id);
+    lastPlanPostAction=null;
+  }
   activePlanItemId='';
+  activePlanQuickPost=false;
   renderPlanEditor();
   syncPlanSheetBackdrop();
 }
@@ -986,6 +999,8 @@ function addPlanLine() {
   lines.push(line);
   activePlanLineId=line.id;
   activePlanItemId='';
+  activePlanQuickPost=false;
+  lastPlanPostAction=null;
   activeInsertIndex=null;
   $('#insertPanel').hidden=true;
   $('#planEditor').hidden=true;
@@ -1001,6 +1016,8 @@ function deletePlanLine() {
   lines.splice(index,1);
   activePlanLineId=lines[Math.max(0,index-1)]?.id || lines[0]?.id || '';
   activePlanItemId='';
+  activePlanQuickPost=false;
+  lastPlanPostAction=null;
   activeInsertIndex=null;
   $('#insertPanel').hidden=true;
   $('#planEditor').hidden=true;
