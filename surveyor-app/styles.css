@@ -288,3 +288,7 @@
 .plan-quick-buttons button{min-height:42px;border-radius:10px;border:1px solid #e0d5bc;background:#fff;color:#463a25;font-size:12px;font-weight:850;padding:8px 6px}
 .plan-quick-buttons [data-plan-post-remove]{background:#fff1ef;border-color:#edd0cc;color:#a03a36}
 .plan-undo-btn{display:block;width:100%;border:1px dashed #cdb985;background:#fffaf0;color:#825c14;border-radius:10px;min-height:34px;margin-top:7px;padding:7px;font-size:11px;font-weight:850}
+
+.plan-quick-distance{display:grid;grid-template-columns:1fr 100px;align-items:center;gap:12px;background:#fff;border:1px solid #e7dbc4;border-radius:10px;padding:7px 10px;font-size:12px;font-weight:800}
+.plan-quick-distance small{display:block;color:#766b54;font-size:10px;font-weight:600;margin-top:2px}
+.plan-quick-distance input{width:100%;max-width:100px;min-height:39px;border-radius:8px;border:1px solid #d7c18d;padding:7px 9px;color:#342b18;background:#fff;font-size:16px;font-weight:800}
