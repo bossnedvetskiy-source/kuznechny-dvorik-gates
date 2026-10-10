@@ -1,5 +1,69 @@
 import {test, expect} from '@playwright/test';
 
+test('3D canopy has real truss, purlin, supports and roof dimensions', async ({page}) => {
+  await page.setViewportSize({width:390,height:844});
+  await page.goto('/naves/index.html',{waitUntil:'domcontentloaded'});
+  await expect(page.locator('#canopyViewport canvas')).toBeVisible({timeout:15000});
+  await page.locator('.advanced-settings summary').click();
+
+  for(const rise of [400,567,800,1000]){
+    await page.locator('#rise').fill(String(rise));
+    await expect(page.locator('#drawingStatus')).toHaveText('готово');
+    await expect.poll(async()=>page.evaluate(()=>window.Canopy3D.inspect()?.roof?.lengthM)).toBeCloseTo(8.8,5);
+    const values=await page.evaluate(()=>({
+      model:window.Canopy3D.inspect(),
+      g:window.__TRUSS_CURRENT,
+      p:window.__CANOPY_PUBLIC
+    }));
+    expect(values.model.trusses).toBe(values.p.trussCount);
+    expect(values.model.posts).toBe(values.p.totalPosts);
+    expect(values.model.beams).toBe(2);
+    expect(values.model.purlins).toBe(values.p.lagLines);
+    expect(values.model.maxPurlinStepM).toBeLessThanOrEqual(values.p.p.maxRib+1e-6);
+    expect(values.model.maxPurlinStepM).toBeCloseTo(values.p.lagStep,5);
+    expect(values.model.purlinVisualLengthM).toBeCloseTo(values.p.lengthM,5);
+    expect(values.model.roof.widthM).toBeCloseTo(values.g.widthM+2*values.p.p.polyOverhang,5);
+    expect(values.model.roof.lengthM).toBeCloseTo(values.p.coverageData.coverLengthM,5);
+    expect(values.model.roof.highestPointM).toBeCloseTo(values.p.visibleHeightM+values.g.riseM+.055,5);
+    expect(values.model.polycarbonateConnectors).toBe(values.p.coverageData.strips-1);
+    expect(values.model.newFoundations).toBe(values.p.newPosts);
+  }
+
+  // "Existing" changes only purchasing and foundation work, never 3D structure.
+  const supports=await page.evaluate(()=>window.__CANOPY_PUBLIC.totalPosts);
+  await page.locator('#existingPosts').fill(String(supports));
+  await page.locator('#beamsExisting').check();
+  const existing=await page.evaluate(()=>({model:window.Canopy3D.inspect(),p:window.__CANOPY_PUBLIC}));
+  expect(existing.p.newPosts).toBe(0);
+  expect(existing.p.beamCount).toBe(0);
+  expect(existing.model.posts).toBe(supports);
+  expect(existing.model.existingPosts).toBe(supports);
+  expect(existing.model.beams).toBe(2);
+  expect(existing.model.newFoundations).toBe(0);
+  await expect(page.locator('#clientSummary')).toContainText('уже установлены');
+  await expect(page.locator('.preview-note')).toContainText('существующие балки');
+
+  await page.locator('#beamsExisting').uncheck();
+  await page.locator('#existingPosts').fill('0');
+  await page.locator('#coverage').selectOption('Профнастил');
+  const prof=await page.evaluate(()=>({model:window.Canopy3D.inspect(),p:window.__CANOPY_PUBLIC}));
+  expect(prof.model.roof).not.toBeNull();
+  expect(prof.model.profiledSheetSeams).toBe(prof.p.coverageData.sheetsAcross-1);
+  expect(prof.model.profiledSheetOverlaps).toBe(prof.p.coverageData.parts-1);
+  expect(prof.model.polycarbonateConnectors).toBe(0);
+  expect(prof.model.purlins).toBe(prof.p.lagLines);
+  expect(prof.model.maxPurlinStepM).toBeLessThanOrEqual(prof.p.p.profLagMax+1e-6);
+
+  await page.locator('#coverage').selectOption('Без покрытия');
+  const empty=await page.evaluate(()=>({model:window.Canopy3D.inspect(),p:window.__CANOPY_PUBLIC}));
+  expect(empty.model.roof).toBeNull();
+  expect(empty.model.polycarbonateConnectors).toBe(0);
+  expect(empty.model.profiledSheetSeams).toBe(0);
+  expect(empty.model.beams).toBe(2);
+  expect(empty.model.trusses).toBe(empty.p.trussCount);
+  await expect(page.locator('#canopyViewport canvas')).toBeVisible();
+});
+
 test('canopy roof dimensions and quote follow 400, 567, 800 and 1000 mm rise', async ({page}) => {
   await page.setViewportSize({width:390,height:844});
   await page.goto('/naves/index.html',{waitUntil:'domcontentloaded'});
