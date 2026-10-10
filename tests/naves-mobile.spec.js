@@ -267,12 +267,28 @@ test('canopy client is simple and saved order keeps production/finance in admin'
   });
   expect(overflow.offenders,JSON.stringify(overflow)).toHaveLength(0);
 
-  // The private DEV finance/admin workspace requires the owner session.
-  await page.goto('/kuznechny-dvorik-gates/dev-tools/',{waitUntil:'domcontentloaded'});
-  await page.locator('#loginInput').fill('admin');
-  await page.locator('#passwordInput').fill('1234');
-  await page.locator('#loginForm button[type="submit"]').click();
-  await expect(page.locator('#mainView')).toBeVisible();
+  // This test executes before the protected /dev-tools/ preview gets built.
+  // Seed an owner-only IndexedDB session here; the full login and production
+  // handoff flow is tested later by surveyor-dev-calculator-bridge.spec.js.
+  await page.evaluate(async()=>{
+    const request=indexedDB.open('kd-surveyor-stage1',1);
+    request.onupgradeneeded=()=>{
+      if(!request.result.objectStoreNames.contains('employees'))
+        request.result.createObjectStore('employees',{keyPath:'id'});
+    };
+    const database=await new Promise((resolve,reject)=>{
+      request.onsuccess=()=>resolve(request.result);
+      request.onerror=()=>reject(request.error);
+    });
+    await new Promise((resolve,reject)=>{
+      const transaction=database.transaction('employees','readwrite');
+      transaction.objectStore('employees').put({id:'test-owner',active:true,role:'owner'});
+      transaction.oncomplete=resolve;
+      transaction.onerror=()=>reject(transaction.error);
+    });
+    database.close();
+    sessionStorage.setItem('kdSurveyorSession',JSON.stringify({id:'test-owner',ts:Date.now()}));
+  });
   // Open the same saved calculation in the owner DEV admin workspace.
   await page.goto('/naves/admin.html',{waitUntil:'domcontentloaded'});
   await expect(page.locator('[data-admin-tab="canopy-orders"]')).toBeVisible();
