@@ -1,5 +1,52 @@
 import {test, expect} from '@playwright/test';
 
+test('canopy roof dimensions and quote follow 400, 567, 800 and 1000 mm rise', async ({page}) => {
+  await page.setViewportSize({width:390,height:844});
+  await page.goto('/naves/index.html',{waitUntil:'domcontentloaded'});
+  await expect(page.locator('#canopyViewport canvas')).toBeVisible({timeout:15000});
+  await page.locator('.advanced-settings summary').click();
+  const prices=[];
+  const arcs=[];
+  for(const rise of [400,567,800,1000]){
+    await page.locator('#rise').fill(String(rise));
+    await expect(page.locator('#drawingStatus')).toHaveText('готово');
+    await expect(page.locator('#autoRise')).not.toBeChecked();
+    await expect(page.locator('#canopyViewport canvas')).toBeVisible();
+    await expect(page.locator('#clientSummary')).toContainText('Подъём дуги');
+    await expect(page.locator('#clientSummary')).toContainText(String(rise)+' мм');
+    await expect(page.locator('#clientSummary')).toContainText('Длина покрытия по дуге');
+    await expect(page.locator('#totalPrice')).toContainText('₽');
+    const data=await page.evaluate(()=>({
+      rise:window.__TRUSS_CURRENT.riseM,
+      top:window.__TRUSS_CURRENT.topCircle.length,
+      cover:window.__CANOPY_PUBLIC.coverageData.coverArcM,
+      total:window.__CANOPY_PUBLIC.total
+    }));
+    expect(data.rise*1000).toBeCloseTo(rise,5);
+    arcs.push(data.top);
+    prices.push(data.total);
+  }
+  for(let i=1;i<arcs.length;i++){
+    expect(arcs[i]).toBeGreaterThan(arcs[i-1]);
+    expect(prices[i]).toBeGreaterThan(prices[i-1]);
+  }
+
+  // Above a certain sagitta, extending the same roof arc beyond the truss
+  // is geometrically impossible; never allow that quote to be saved.
+  await page.locator('#rise').fill('1750');
+  await expect(page.locator('#totalPrice')).toHaveText('Требуется уточнение');
+  await expect(page.locator('#geometryWarning')).toContainText('выпуск покрытия');
+  await expect(page.locator('#canopyViewport canvas')).toBeVisible();
+  const saveError=await page.evaluate(()=>{
+    try {window.TrussApp.snapshot();return '';}
+    catch(e){return e.message;}
+  });
+  expect(saveError).toContain('ограничения покрытия');
+  await page.locator('#rise').fill('800');
+  await expect(page.locator('#totalPrice')).toContainText('₽');
+  expect(await page.evaluate(()=>window.TrussApp.snapshot().input.riseMm)).toBe(800);
+});
+
 test('manual arc rise recalculates canopy and keeps 3D mounted through intermediate values', async ({page}) => {
   await page.setViewportSize({width:390,height:844});
   await page.goto('/naves/index.html',{waitUntil:'domcontentloaded'});
