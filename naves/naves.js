@@ -31,7 +31,11 @@ function rawInput(){
 }
 function clientSummary(g,c){
   $('clientSummary').innerHTML=[
-    row('Размер',fmt(g.widthPostsM)+' × '+fmt(c.lengthM)+' м'),
+    row('Размер между столбами',fmt(g.widthPostsM)+' × '+fmt(c.lengthM)+' м'),
+    row('Ширина фермы с выпусками',fmt(g.widthM)+' м'),
+    row('Подъём дуги',Math.round(g.riseM*1000)+' мм'),
+    row('Длина верхней дуги',fmt(g.topCircle.length,2)+' м'),
+    row('Длина покрытия по дуге',c.coverage==='Без покрытия'?'не требуется':fmt(c.coverageData.coverArcM,2)+' м'),
     row('Площадь',fmt(c.area,1)+' м²'),
     row('Покрытие',c.coverage),
     row('Тип фермы',rawInput().farmType),
@@ -147,6 +151,7 @@ function normalizePhone(value){
 function snapshot(){
   const g=window.__TRUSS_CURRENT;
   if(!g?.ok||!currentRaw||!currentPublic)throw new Error('Сначала заполните корректные размеры');
+  if(window.__CANOPY_PUBLIC?.coverageData?.warning)throw new Error('Проверьте ограничения покрытия перед сохранением расчёта');
   const raw=currentRaw;
   const rates={...loadAdminPrices()};
   return {
