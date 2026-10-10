@@ -1569,15 +1569,15 @@ async function openSurveyDetails(id) {
     card.addEventListener('click', openEdit);
     card.addEventListener('keydown', openEdit);
   });
-  $('[data-send-canopy-production]', detailsRoot).forEach(button=>button.addEventListener('click',event=>{
+  $$('[data-send-canopy-production]', detailsRoot).forEach(button=>button.addEventListener('click',event=>{
     event.stopPropagation();
     sendCanopyToProduction(survey.id,button.dataset.sendCanopyProduction);
   }));
-  $('[data-open-canopy-production]', detailsRoot).forEach(button=>button.addEventListener('click',event=>{
+  $$('[data-open-canopy-production]', detailsRoot).forEach(button=>button.addEventListener('click',event=>{
     event.stopPropagation();
     openCanopyProduction(survey.id,button.dataset.openCanopyProduction);
   }));
-  $('[data-delete-calculation]', detailsRoot).forEach(button => button.addEventListener('click', event => {
+  $$('[data-delete-calculation]', detailsRoot).forEach(button => button.addEventListener('click', event => {
     event.stopPropagation();
     deleteCalculation(survey.id, button.dataset.deleteCalculation);
   }));
