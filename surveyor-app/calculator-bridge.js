@@ -621,7 +621,7 @@
         const on=Boolean(value);
         if(on && (document.getElementById('farmType')?.value!=='Арочный'
           || !window.__TRUSS_CURRENT?.ok
-          || !/^\\d[\\d\\s\\u00a0\\u202f]*₽$/.test(document.getElementById('totalPrice')?.textContent?.trim()||'')
+          || !/^\d[\d\s\u00a0\u202f]*₽$/.test(document.getElementById('totalPrice')?.textContent?.trim()||'')
           || document.getElementById('resultStatus')?.classList.contains('example'))){
           showMessage('Сначала задайте реальные размеры и выберите арочную ферму',true);
           return;
