@@ -150,6 +150,7 @@ test('manual arc rise recalculates canopy and keeps 3D mounted through intermedi
 });
 
 test('canopy client is simple and saved order keeps production/finance in admin', async ({page}) => {
+  await page.addInitScript(()=>localStorage.setItem('kuzdvor-dev-access-v1','1'));
   await page.setViewportSize({width:390,height:844});
   await page.goto('/naves/index.html',{waitUntil:'domcontentloaded'});
 
