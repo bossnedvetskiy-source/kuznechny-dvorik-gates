@@ -191,7 +191,21 @@ function productionMaterialTable(c){
     '<th>Материал</th><th>Использовано по расчёту</th><th>Хлыстов</th><th>Купить</th>'+
     '</tr></thead><tbody>'+rows+'</tbody></table></div>';
 }
-function printDoc(title,html){const w=window.open('','_blank');if(!w)return toast('Браузер заблокировал печать',true);w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>'+escape(title)+'</title><style>body{font:12px Arial,sans-serif;color:#111;margin:22px}h1{font-size:20px}h2{font-size:15px;margin-top:18px}svg{width:100%;height:auto}table{width:100%;border-collapse:collapse}th,td{border:1px solid #aaa;padding:5px;text-align:left}dl div{display:flex;justify-content:space-between;border-bottom:1px solid #ddd;padding:4px}dd{font-weight:bold}.note{margin-top:12px;font-size:10px}</style></head><body>'+html+'</body></html>');w.document.close();setTimeout(()=>{w.focus();w.print()},250)}
+function printDoc(title,html){
+  const w=window.open('','_blank');
+  if(!w)return toast('Браузер заблокировал печать',true);
+  const css='@page{size:A4 landscape;margin:10mm}body{font:11px Arial,sans-serif;color:#111;margin:10px}'+
+    'h1{font-size:19px}h2{font-size:14px;margin-top:17px}svg{width:100%;height:auto;max-height:170mm}'+
+    'table{width:100%;border-collapse:collapse;table-layout:auto}th,td{border:1px solid #aaa;padding:4px;text-align:left;font-size:9px;white-space:normal}'+
+    'dl div{display:flex;justify-content:space-between;border-bottom:1px solid #ddd;padding:4px}dd{font-weight:bold}'+
+    '.note{margin-top:12px;font-size:10px}.welder-drawing{break-after:page;page-break-after:always}'+
+    '.canopy-welder-note{padding:7px;background:#eee}.canopy-admin-table{overflow:visible!important}'+
+    '.canopy-stations div{font-family:monospace}.canopy-welder-count{font-weight:bold}tr{break-inside:avoid}';
+  w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>'+escape(title)+
+    '</title><style>'+css+'</style></head><body>'+html+'</body></html>');
+  w.document.close();
+  setTimeout(()=>{w.focus();w.print()},250);
+}
 function bindInnerTabs(){
   const buttons=[...body.querySelectorAll('[data-canopy-inner]')],panels=[...body.querySelectorAll('[data-canopy-panel]')];
   buttons.forEach(btn=>btn.addEventListener('click',()=>{
@@ -228,11 +242,13 @@ async function openItem(lead){
       </section>
 
       <section class="canopy-inner-panel" data-canopy-panel="production" hidden>
-        <div class="canopy-print-actions"><button class="reset-button canopy-print-primary" id="canopyPrintDrawing" type="button">Распечатать ТЗ сварщику</button></div>
+        <div class="canopy-print-actions"><button class="reset-button" id="canopyDownloadSvg" type="button">Скачать чертёж SVG</button><button class="reset-button canopy-print-primary" id="canopyPrintDrawing" type="button">Распечатать ТЗ сварщику</button></div>
         <h3 class="canopy-section-title">2D‑чертёж фермы</h3>
         <div class="canopy-admin-svg"><svg id="canopyAdminTrussSvg" viewBox="0 0 1200 640"></svg></div>
-        <h3 class="canopy-section-title">Раскрой фермы</h3>${cutTable(g,savedC)}
-        <h3 class="canopy-section-title">Материалы и закупка</h3>${materialTable(savedC)}
+        <h3 class="canopy-section-title">Контрольные размеры и радиусы</h3>
+        <section class="canopy-admin-box canopy-production-geometry">${geometrySummary(g,savedC)}</section>
+        <h3 class="canopy-section-title">Ведомость деталей и координат узлов</h3>${cutTable(g,savedC)}
+        <h3 class="canopy-section-title">Материалы без цен (для цеха)</h3>${productionMaterialTable(savedC)}
         <div class="canopy-admin-grid" style="margin-top:12px">
           <section class="canopy-admin-box"><h3>Сборка навеса</h3>${dl([
             ['Ферм',savedC.trussCount+' шт'],['Режим лаг',savedC.coverage==='Профнастил'?'Авто 80–100 см':savedC.lagMode],['Линий лаг',savedC.lagLines+' шт'],['Шаг лаг',fmt(savedC.lagStep*100,1)+' см'],
@@ -279,14 +295,25 @@ async function openItem(lead){
     window.TrussDrawing.render(svg,g);
     bindInnerTabs();
 
+    body.querySelector('#canopyDownloadSvg').onclick=()=>{
+      const source=window.TrussDrawing.serialize(svg);
+      const url=URL.createObjectURL(new Blob([source],{type:'image/svg+xml;charset=utf-8'}));
+      const link=document.createElement('a');
+      link.href=url;
+      link.download='naves-ferma-'+String(lead.id).replace(/[^a-zA-Z0-9_-]/g,'-')+'.svg';
+      document.body.append(link);link.click();link.remove();
+      setTimeout(()=>URL.revokeObjectURL(url),2000);
+    };
     body.querySelector('#canopyPrintDrawing').onclick=()=>printDoc(
-      'ТЗ навеса '+lead.id,
+      'ТЗ сварщику · навес '+lead.id,
       '<h1>ТЗ сварщику · навес #'+escape(lead.id)+'</h1>'+
-      '<p>Размер навеса: '+fmt(g.widthPostsM)+' × '+fmt(savedC.lengthM)+' м · ферм: '+savedC.trussCount+' шт. · тип: '+escape(g.trussType)+' · материал: '+escape(g.materialMode)+' · лаги: '+escape(savedC.coverage==='Профнастил'?'авто 80–100 см':savedC.lagMode)+'</p>'+
-      new XMLSerializer().serializeToString(svg)+
-      '<h2>Раскрой фермы</h2>'+cutTable(g,savedC)+
-      '<h2>Материалы</h2>'+materialTable(savedC)+
-      '<p class="note">Перед серийной резкой изготовить одну контрольную ферму по шаблону.</p>'
+      '<p>Размер по столбам: '+fmt(g.widthPostsM)+' × '+fmt(savedC.lengthM)+' м · ферм: '+savedC.trussCount+' шт. · обрешётка: '+escape(g.trussType)+' · пояс: '+escape(g.chordProfile)+' · внутренние элементы: '+escape(g.webProfile)+'</p>'+
+      '<section class="welder-drawing"><h2>Чертёж фермы · размеры по осям, мм</h2>'+
+      new XMLSerializer().serializeToString(svg)+'</section>'+
+      '<h2>Контрольные размеры и радиусы</h2>'+geometrySummary(g,savedC)+
+      '<h2>Ведомость деталей и координат узлов</h2>'+cutTable(g,savedC)+
+      '<h2>Материалы без цен</h2>'+productionMaterialTable(savedC)+
+      '<p class="note">Подтвердить физические размеры контрольной фермы на шаблоне до серийной резки и гибки.</p>'
     );
     body.querySelector('#canopyPrintFull').onclick=()=>printDoc(
       'Внутренний расчёт навеса '+lead.id,
