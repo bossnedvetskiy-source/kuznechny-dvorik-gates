@@ -1396,6 +1396,7 @@ async function setEstimateAdjustment(surveyId, value) {
 // Production handoff contains only a frozen public geometry snapshot, never
 // prices, manufacturing wages or owner-only profitability.
 async function sendCanopyToProduction(surveyId, calculationId) {
+  try {
   if (currentUser?.role !== 'owner') return showToast('Только руководитель может передать заказ в производство');
   const survey = await idbGet('surveys',surveyId);
   if (!survey) return showToast('Замер не найден');
@@ -1431,6 +1432,10 @@ async function sendCanopyToProduction(surveyId, calculationId) {
     await openSurveyDetails(surveyId);
   }
   if (API_ENABLED && navigator.onLine) syncNow({silent:true});
+  } catch(error) {
+    console.error('[canopy-production-dispatch]',error);
+    showToast('Не удалось сформировать ТЗ: '+(error?.message||'ошибка сохранения'));
+  }
 }
 function openCanopyProduction(surveyId,calculationId) {
   if(currentUser?.role!=='owner')return;
