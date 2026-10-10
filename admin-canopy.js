@@ -75,6 +75,10 @@ const style=document.createElement('style');style.textContent=`
 .canopy-admin-svg{margin-top:10px;border:1px solid var(--line);border-radius:13px;background:#f8f7f2;overflow:hidden}.canopy-admin-svg svg{display:block;width:100%;height:auto}
 .canopy-admin-table{overflow:auto;margin-top:10px;border:1px solid var(--line);border-radius:12px}.canopy-admin-table table{border-collapse:collapse;width:100%;min-width:760px}
 .canopy-admin-table th,.canopy-admin-table td{padding:8px 9px;border-bottom:1px solid var(--line);font-size:10px;text-align:left;white-space:nowrap}.canopy-admin-table th{background:#f1ece4}
+.canopy-cut-table table{min-width:1250px}.canopy-cut-table .canopy-stations{font:10px/1.6 monospace;min-width:175px;white-space:nowrap}
+.canopy-welder-note{margin-top:12px;margin-bottom:9px}.canopy-welder-count{font-size:12px;font-weight:800;color:#29251f}
+.canopy-production-geometry{margin-top:12px}
+
 .canopy-section-title{margin:16px 0 8px;font-size:14px}.canopy-print-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}.canopy-print-primary{background:#191713!important;color:#fff!important;border-color:#191713!important}
 @media(max-width:900px){.canopy-admin-price-grid{grid-template-columns:repeat(2,1fr)}.canopy-order-meta,.canopy-admin-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:620px){.canopy-admin-price-grid,.canopy-order-meta,.canopy-admin-grid,.canopy-finance-hero{grid-template-columns:1fr}.canopy-order-card-head{flex-direction:column}.canopy-dialog-shell{padding:11px}.canopy-inner-tabs{overflow:auto}.canopy-inner-tab{flex:0 0 auto}}
@@ -138,25 +142,54 @@ function calculate(lead){
 }
 const dl=rows=>'<dl class="canopy-admin-dl">'+rows.map(([a,b])=>'<div><dt>'+escape(a)+'</dt><dd>'+escape(b)+'</dd></div>').join('')+'</dl>';
 function materialTable(c){return '<div class="canopy-admin-table"><table><thead><tr><th>Материал</th><th>Используется</th><th>Хлыстов</th><th>Купить</th><th>Стоимость</th></tr></thead><tbody>'+c.materialRows.map(x=>'<tr><td>'+escape(x.name)+'</td><td>'+fmt(x.used)+' м</td><td>'+x.sticks+'</td><td>'+fmt(x.buy,0)+' м</td><td>'+money(x.cost)+'</td></tr>').join('')+'</tbody></table></div>'}
+const specOf=(g,c)=>window.TrussGeometry.productionSpec(g,c.trussCount);
+function geometrySummary(g,c){
+  const d=specOf(g,c).geometry;
+  return dl([
+    ['Полный габарит фермы',d.widthMm+' мм'],
+    ['Пролёт между столбами',d.postSpanMm+' мм'],
+    ['Выпуски фермы',d.trussOverhangMm+' мм слева и справа'],
+    ['Подъём верхней дуги',d.riseMm+' мм'],
+    ['Высота фермы по центру',d.heightMm+' мм'],
+    ['Верхний пояс: радиус по оси',d.upperRadiusMm+' мм'],
+    ['Верхний пояс: длина дуги',d.upperArcMm+' мм'],
+    ['Нижний пояс: радиус по оси',d.lowerRadiusMm+' мм'],
+    ['Нижний пояс: длина дуги',d.lowerArcMm+' мм'],
+    ['Нижний пояс: прямые концы',d.endFlatMm+' мм × 2'],
+    ['Нижний пояс: полная длина по оси',d.lowerTotalMm+' мм'],
+    ['Торцевые стойки',d.endPostMm+' мм × 2 на ферму'],
+    ['Шаг узлов по горизонтали',d.projectedStepMm+' мм (расчётный)']
+  ]);
+}
 function cutTable(g,c){
-  const rows=[
-    ['P1','Верхний пояс',g.chordProfile,window.TrussGeometry.mm(g.topCircle.length),1,c.trussCount,'дуга'],
-    ['P2','Нижний пояс',g.chordProfile,window.TrussGeometry.mm(g.lowerTotalM),1,c.trussCount,'дуга + края'],
-    ['T','Торцевая стойка',g.webProfile,window.TrussGeometry.mm(g.endPostM),2,2*c.trussCount,'90°']
-  ];
-  if(g.trussType==='Вертикальная'||g.trussType==='Усиленная'){
-    g.verticals.forEach(v=>rows.push([
-      'V'+v.index,'Вертикальная стойка '+v.index,g.webProfile,
-      window.TrussGeometry.mm(v.lengthM),1,c.trussCount,'90°'
-    ]));
-  }
-  if(g.trussType==='Треугольная'||g.trussType==='Усиленная'){
-    g.diagonals.forEach(d=>rows.push([
-      'D'+d.index,'Диагональ '+d.index,g.webProfile,
-      window.TrussGeometry.mm(d.lengthM),1,c.trussCount,fmt(d.angleDeg,1)+'°'
-    ]));
-  }
-  return '<div class="canopy-admin-table"><table><thead><tr><th>Поз.</th><th>Деталь</th><th>Профиль</th><th>Длина, мм</th><th>На 1</th><th>Всего</th><th>Угол</th></tr></thead><tbody>'+rows.map(r=>'<tr>'+r.map(x=>'<td>'+escape(x)+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>'
+  const spec=specOf(g,c);
+  const degrees=value=>value===null||value===undefined?'—':fmt(value,1)+'°';
+  const coord=p=>'('+p.xMm+'; '+p.yMm+')';
+  const placement=p=>coord(p.from)+' → '+coord(p.to);
+  const rows=spec.rows.map(row=>{
+    const positions=row.placements.map(p=>'<div>'+escape(placement(p))+'</div>').join('');
+    const axes=[...new Set(row.placements.map(p=>degrees(p.axisDeg)))].join(' / ');
+    return '<tr>'+
+      [row.id,row.name,row.profile,row.lengthMm,row.perTruss,row.total].map(x=>'<td>'+escape(x)+'</td>').join('')+
+      '<td class="canopy-stations">'+positions+'</td>'+
+      '<td>'+escape(axes)+'</td>'+
+      '<td>'+escape(row.note||'—')+'</td></tr>';
+  }).join('');
+  return '<div class="canopy-admin-table canopy-cut-table"><table><thead><tr>'+
+    '<th>Поз.</th><th>Деталь</th><th>Профиль</th><th>Длина по оси, мм</th><th>На 1 ферму</th>'+
+    '<th>На заказ</th><th>Узлы (x; y), мм</th><th>Угол оси</th><th>Примечание</th>'+
+    '</tr></thead><tbody>'+rows+'</tbody></table></div>'+
+    '<p class="canopy-snapshot-note canopy-welder-note">'+escape(spec.warning)+'</p>'+
+    '<p class="canopy-welder-count">На одну ферму: '+spec.membersPerTruss+
+    ' деталей · на заказ: '+spec.membersTotal+' деталей · ферм: '+spec.trusses+' шт.</p>';
+}
+function productionMaterialTable(c){
+  const rows=c.materialRows.map(x=>'<tr><td>'+escape(x.name)+'</td><td>'+
+    escape(fmt(x.used))+' м</td><td>'+escape(x.sticks)+'</td><td>'+
+    escape(fmt(x.buy,0))+' м</td></tr>').join('');
+  return '<div class="canopy-admin-table"><table><thead><tr>'+
+    '<th>Материал</th><th>Использовано по расчёту</th><th>Хлыстов</th><th>Купить</th>'+
+    '</tr></thead><tbody>'+rows+'</tbody></table></div>';
 }
 function printDoc(title,html){const w=window.open('','_blank');if(!w)return toast('Браузер заблокировал печать',true);w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>'+escape(title)+'</title><style>body{font:12px Arial,sans-serif;color:#111;margin:22px}h1{font-size:20px}h2{font-size:15px;margin-top:18px}svg{width:100%;height:auto}table{width:100%;border-collapse:collapse}th,td{border:1px solid #aaa;padding:5px;text-align:left}dl div{display:flex;justify-content:space-between;border-bottom:1px solid #ddd;padding:4px}dd{font-weight:bold}.note{margin-top:12px;font-size:10px}</style></head><body>'+html+'</body></html>');w.document.close();setTimeout(()=>{w.focus();w.print()},250)}
 function bindInnerTabs(){
