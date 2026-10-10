@@ -1,5 +1,43 @@
 import {test, expect} from '@playwright/test';
 
+test('manual arc rise recalculates canopy and keeps 3D mounted through intermediate values', async ({page}) => {
+  await page.setViewportSize({width:390,height:844});
+  await page.goto('/naves/index.html',{waitUntil:'domcontentloaded'});
+  const canvas=page.locator('#canopyViewport canvas');
+  await expect(canvas).toBeVisible({timeout:15000});
+  const originalPrice=await page.locator('#totalPrice').innerText();
+  const originalArc=await page.evaluate(()=>window.__TRUSS_CURRENT.topCircle.length);
+
+  await page.locator('.advanced-settings summary').click();
+  // Typing 800 can pass through 8 and 80: those intermediate states must not destroy 3D.
+  await page.locator('#rise').fill('100');
+  await expect(page.locator('#drawingStatus')).toHaveText('проверьте размеры');
+  await expect(canvas).toBeVisible();
+  await expect(page.locator('#canopyViewport .three-geometry-notice')).toBeVisible();
+
+  await page.locator('#rise').fill('800');
+  await expect(page.locator('#autoRise')).not.toBeChecked();
+  await expect(page.locator('#drawingStatus')).toHaveText('готово');
+  await expect(page.locator('#canopyViewport .three-geometry-notice')).toHaveCount(0);
+  await expect(canvas).toBeVisible();
+  await expect(page.locator('#totalPrice')).toContainText('₽');
+  await expect(page.locator('#totalPrice')).not.toHaveText(originalPrice);
+  const state=await page.evaluate(()=>({
+    rise:window.__TRUSS_CURRENT.riseM,
+    arc:window.__TRUSS_CURRENT.topCircle.length,
+    total:window.__CANOPY_PUBLIC.total
+  }));
+  expect(state.rise).toBeCloseTo(0.8,5);
+  expect(state.arc).toBeGreaterThan(originalArc);
+  expect(state.total).toBeGreaterThan(0);
+
+  // Even if a third-party component clears the container, the next edit restores WebGL.
+  await page.evaluate(()=>{document.getElementById('canopyViewport').innerHTML='';});
+  await page.locator('#rise').fill('750');
+  await expect(canvas).toBeVisible();
+  await expect(page.locator('#drawingStatus')).toHaveText('готово');
+});
+
 test('canopy client is simple and saved order keeps production/finance in admin', async ({page}) => {
   await page.setViewportSize({width:390,height:844});
   await page.goto('/naves/index.html',{waitUntil:'domcontentloaded'});
