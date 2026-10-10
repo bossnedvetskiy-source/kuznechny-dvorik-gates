@@ -39,6 +39,9 @@ function clientSummary(g,c){
     row('Площадь',fmt(c.area,1)+' м²'),
     row('Покрытие',c.coverage),
     row('Тип фермы',rawInput().farmType),
+    row('Фермы',c.trussCount+' шт.'),
+    row('Столбы',c.totalPosts+' шт. · новых '+c.newPosts+' · существующих '+c.existingPosts),
+    row('Продольные балки',c.beamsExisting?'2 шт. · уже установлены':'2 шт. · включены в расчёт'),
     row('Обрешётка',g.trussType),
     row('Материал фермы',g.materialMode),
     row('Лаги 40×20',c.coverage==='Профнастил'?('авто · '+c.lagLines+' линий'):(c.lagMode+' · '+c.lagLines+' линий')),
@@ -126,6 +129,13 @@ function render(){
     status.classList.remove('has-warning','example');
   }
   clientSummary(g,c);
+  const previewNote=document.querySelector('.preview-note');
+  if(previewNote){
+    const existing=c.existingPosts>0||c.beamsExisting;
+    previewNote.textContent=existing
+      ?'3D показывает полную конструкцию, включая существующие балки и столбы. Расположение уже установленных столбов на схеме условное.'
+      :'Это интерактивная 3D-модель по вашим размерам. Конструкцию можно вращать и приближать.';
+  }
   const lagInfo=$('lagModeInfo');
   const lagChoice=document.querySelector('.lag-choice');
   const lagHint=$('lagModeHint');
