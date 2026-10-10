@@ -418,6 +418,8 @@
       .kd-surveyor-canopy .kd-canopy-other-types .original-picker{display:grid;border:0;padding:0 12px 14px;gap:12px}
       .kd-surveyor-canopy .kd-canopy-other-types .original-picker-group:nth-child(2){display:none!important}
       .kd-surveyor-canopy .kd-canopy-existing-count[hidden]{display:none!important}
+      .kd-surveyor-canopy .kd-canopy-beams-manual{display:none!important}
+      .kd-surveyor-canopy.kd-canopy-partial-mode .kd-canopy-beams-manual{display:grid!important}
       .kd-surveyor-canopy .kd-canopy-partial{border:0;background:transparent;color:#edd399;text-align:left;padding:3px 0;font-size:12px;font-weight:700;cursor:pointer}
       .kd-surveyor-canopy .kd-canopy-preset-list{display:grid;grid-template-columns:1fr;gap:7px}
       .kd-surveyor-canopy .kd-canopy-preset-list button{border-radius:11px;min-height:43px}
@@ -528,6 +530,8 @@
       otherTypes.innerHTML = '<summary>Другие формы и конструкция фермы</summary>';
       originalPicker?.parentElement?.removeChild(originalPicker);
       if (originalPicker) otherTypes.append(originalPicker);
+      const technicalOptions=document.querySelector('.technical-options');
+      if (technicalOptions) otherTypes.append(technicalOptions);
       form?.querySelector('.simple-options')?.insertAdjacentElement('afterend',otherTypes);
 
       const step = document.createElement('div');
@@ -539,6 +543,7 @@
       const beams = document.getElementById('beamsExisting');
       const anchorField = existing?.closest('label');
       anchorField?.classList.add('kd-canopy-existing-count');
+      beams?.closest('label')?.classList.add('kd-canopy-beams-manual');
       const presets = document.createElement('section');
       presets.className = 'kd-canopy-presets';
       presets.innerHTML = `<strong>2 · Что уже есть у заказчика?</strong>
@@ -560,6 +565,7 @@
         const installed=Number(existing?.value||0);
         if(installed>0 && installed<totalPosts)partialOpen=true;
         if(anchorField)anchorField.hidden=!partialOpen;
+        document.documentElement.classList.toggle('kd-canopy-partial-mode',partialOpen);
         partialButton?.setAttribute('aria-expanded',partialOpen?'true':'false');
         if(partialButton)partialButton.textContent=partialOpen?'Скрыть ввод количества столбов':'Часть столбов уже есть? Указать количество';
       };
@@ -588,6 +594,7 @@
         const totalPosts = Number(window.__CANOPY_PUBLIC?.totalPosts || 0);
         if ((button.dataset.canopyPreset === 'posts' || button.dataset.canopyPreset === 'all') && totalPosts <= 0) return;
         presetInProgress = true;
+        partialOpen = false;
         existing.value = button.dataset.canopyPreset === 'new' ? '0' : String(totalPosts);
         beams.checked = button.dataset.canopyPreset === 'all';
         existing.dispatchEvent(new Event('input',{bubbles:true}));
