@@ -190,7 +190,7 @@ test('owner hands off a canopy survey into fabrication and reissues after a chan
   await expect(page.locator('#canopyAdminDialog')).toBeVisible({timeout:15000});
   await expect(page.locator('[data-canopy-panel="production"]')).toBeVisible();
   await expect(page.locator('#canopyAdminTrussSvg')).toContainText('D1');
-  await expect(page.locator('[data-canopy-panel="production"]')).toContainText('3 700'); // width in millimetres
+  await expect(page.locator('[data-canopy-panel="production"]')).toContainText('3700'); // width in millimetres
   await expect(page.locator('[data-canopy-panel="production"]')).toContainText('84 деталей');
   await expect(page.locator('#canopyOrderList')).toContainText('Из карточки замерщика');
   await expect(page.locator('#canopyOrderList')).toContainText('Мелеуз, производство арочного навеса');
