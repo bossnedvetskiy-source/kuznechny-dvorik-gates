@@ -1233,6 +1233,28 @@ function calculationCardDetails(item) {
 
   return fallback;
 }
+function canopyProductionJob(survey, calculationId) {
+  const jobs=survey?.configuration?.productionJobs;
+  return Array.isArray(jobs)?jobs.find(j=>j?.type==='canopy' && j.calculationId===calculationId):null;
+}
+function canopyProductionState(survey,item) {
+  const job=canopyProductionJob(survey,item?.id);
+  return job && item?.updatedAt===job.sourceUpdatedAt ? 'ready' : job ? 'outdated' : 'new';
+}
+function canopyProductionActions(survey,item,included) {
+  if(item.type!=='canopy'||currentUser?.role!=='owner')return '';
+  const state=canopyProductionState(survey,item);
+  const status=state==='ready'?'✓ ТЗ сформировано'
+    :state==='outdated'?'⚠ Расчёт изменён — ТЗ нужно обновить'
+    :'Для цеха · после подтверждения';
+  const canSend=included && item.payload?.configuration?.canopy?.input?.farmType==='Арочный';
+  const label=state==='outdated'?'Обновить ТЗ':state==='ready'?'Передать повторно':'Передать в производство';
+  return '<div class="canopy-production-actions">'+
+    '<span class="canopy-production-state'+(state==='outdated'?' is-old':'')+'">'+status+'</span>'+
+    (canSend?'<button class="canopy-production-send" type="button" data-send-canopy-production="'+escapeHtml(item.id)+'">'+label+'</button>':'')+
+    (state==='ready'?'<button class="canopy-production-open" type="button" data-open-canopy-production="'+escapeHtml(item.id)+'">Открыть ТЗ</button>':'')+
+    '</div>';
+}
 function calculationsHtml(survey) {
   const rows = surveyCalculations(survey);
   const estimate = unifiedEstimate(survey);
@@ -1266,6 +1288,7 @@ function calculationsHtml(survey) {
               <button type="button" class="calculation-delete-btn" data-delete-calculation="${escapeHtml(item.id)}" aria-label="Удалить расчёт">×</button>
             </div>
           </div>
+          ${canopyProductionActions(survey,item,included)}
           <button class="estimate-role-toggle" type="button" aria-pressed="${included}" data-estimate-choice="${escapeHtml(item.id)}">
             <span aria-hidden="true">${included?'✓':'+'}</span>
             ${included?'В общем заказе':'Добавить в общий заказ'}
@@ -1369,6 +1392,52 @@ async function setEstimateAdjustment(surveyId, value) {
     await openSurveyDetails(surveyId);
   }
   if (API_ENABLED && navigator.onLine) syncNow({silent:true});
+}
+// Production handoff contains only a frozen public geometry snapshot, never
+// prices, manufacturing wages or owner-only profitability.
+async function sendCanopyToProduction(surveyId, calculationId) {
+  if (currentUser?.role !== 'owner') return showToast('Только руководитель может передать заказ в производство');
+  const survey = await idbGet('surveys',surveyId);
+  if (!survey) return showToast('Замер не найден');
+  if (survey.syncState==='conflict') return showToast('Сначала разрешите конфликт синхронизации замера');
+  const calculations=surveyCalculations(survey);
+  const item=calculations.find(row=>row.id===calculationId && row.type==='canopy');
+  const input=item?.payload?.configuration?.canopy?.input;
+  if (!item || estimateRole(item,calculations)!=='included') return showToast('Выберите навес для общего заказа');
+  if (!input || input.farmType!=='Арочный' || input.trussType==='Плоская' ||
+      !(Number(input.widthPostsM)>0) || !(Number(input.lengthM)>0) ||
+      !(Number(item.total)>0)) return showToast('Сначала уточните размеры и конструкцию навеса');
+  const now=new Date().toISOString();
+  const previous=canopyProductionJob(survey,calculationId);
+  const entry={
+    version:1,type:'canopy',calculationId,
+    sourceUpdatedAt:item.updatedAt,
+    issuedAt:now,
+    issuedBy:currentUser.id,
+    input:JSON.parse(JSON.stringify(input))
+  };
+  survey.configuration=survey.configuration||{};
+  const jobs=Array.isArray(survey.configuration.productionJobs)?survey.configuration.productionJobs:[];
+  if(previous) jobs[jobs.indexOf(previous)]=entry;
+  else jobs.push(entry);
+  survey.configuration.productionJobs=jobs;
+  survey.updatedAt=now;
+  survey.syncState=API_ENABLED?'pending':'local';
+  await idbPut('surveys',survey);
+  showToast('ТЗ навеса подготовлено для производства');
+  await renderSurveys();
+  if ($('#surveyDetailsDialog').open) {
+    $('#surveyDetailsDialog').close();
+    await openSurveyDetails(surveyId);
+  }
+  if (API_ENABLED && navigator.onLine) syncNow({silent:true});
+}
+function openCanopyProduction(surveyId,calculationId) {
+  if(currentUser?.role!=='owner')return;
+  const url=new URL('../naves/admin.html',location.href);
+  url.searchParams.set('surveyId',surveyId);
+  url.searchParams.set('calculationId',calculationId);
+  location.href=url.href;
 }
 async function deleteCalculation(surveyId, calculationId) {
   const survey = await idbGet('surveys', surveyId);
@@ -1487,7 +1556,7 @@ async function openSurveyDetails(id) {
   const detailsRoot = $('#surveyDetailsContent');
   $$('[data-edit-calculation]', detailsRoot).forEach(card => {
     const openEdit = event => {
-      if (event?.target?.closest?.('[data-delete-calculation],[data-estimate-choice]')) return;
+      if (event?.target?.closest?.('[data-delete-calculation],[data-estimate-choice],[data-send-canopy-production],[data-open-canopy-production]')) return;
       if (event?.type === 'keydown' && !['Enter',' '].includes(event.key)) return;
       event?.preventDefault?.();
       editCalculation(survey.id, card.dataset.editCalculation);
@@ -1495,7 +1564,15 @@ async function openSurveyDetails(id) {
     card.addEventListener('click', openEdit);
     card.addEventListener('keydown', openEdit);
   });
-  $$('[data-delete-calculation]', detailsRoot).forEach(button => button.addEventListener('click', event => {
+  $('[data-send-canopy-production]', detailsRoot).forEach(button=>button.addEventListener('click',event=>{
+    event.stopPropagation();
+    sendCanopyToProduction(survey.id,button.dataset.sendCanopyProduction);
+  }));
+  $('[data-open-canopy-production]', detailsRoot).forEach(button=>button.addEventListener('click',event=>{
+    event.stopPropagation();
+    openCanopyProduction(survey.id,button.dataset.openCanopyProduction);
+  }));
+  $('[data-delete-calculation]', detailsRoot).forEach(button => button.addEventListener('click', event => {
     event.stopPropagation();
     deleteCalculation(survey.id, button.dataset.deleteCalculation);
   }));
