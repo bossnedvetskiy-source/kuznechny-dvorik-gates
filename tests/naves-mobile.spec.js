@@ -266,7 +266,13 @@ test('canopy client is simple and saved order keeps production/finance in admin'
   });
   expect(overflow.offenders,JSON.stringify(overflow)).toHaveLength(0);
 
-  // Open the same saved calculation in the DEV admin workspace.
+  // The private DEV finance/admin workspace requires the owner session.
+  await page.goto('/kuznechny-dvorik-gates/dev-tools/',{waitUntil:'domcontentloaded'});
+  await page.locator('#loginInput').fill('admin');
+  await page.locator('#passwordInput').fill('1234');
+  await page.locator('#loginForm button[type="submit"]').click();
+  await expect(page.locator('#mainView')).toBeVisible();
+  // Open the same saved calculation in the owner DEV admin workspace.
   await page.goto('/naves/admin.html',{waitUntil:'domcontentloaded'});
   await expect(page.locator('[data-admin-tab="canopy-orders"]')).toBeVisible();
   await page.locator('[data-admin-tab="canopy-orders"]').click();
