@@ -79,8 +79,18 @@ function render(){
     $('drawingStatus').textContent='проверьте размеры';
     $('totalPrice').textContent='—';
     $('clientSummary').innerHTML='';
+    // Do not remove the live WebGL canvas when a user is mid-typing (e.g. 8 -> 80 -> 800).
+    // Keep the last valid model visible and show a temporary notice instead.
     const viewport=$('canopyViewport');
-    if(viewport) viewport.innerHTML='<div class="three-fallback"><b>Проверьте размеры навеса</b><span>После исправления параметров 3D перестроится автоматически.</span></div>';
+    if(viewport){
+      let notice=viewport.querySelector('.three-geometry-notice');
+      if(!notice){
+        notice=document.createElement('div');
+        notice.className='three-geometry-notice three-config-notice';
+        viewport.append(notice);
+      }
+      notice.innerHTML='<b>Проверьте подъём дуги</b><span>Введите допустимый размер — навес и цена обновятся автоматически.</span>';
+    }
     return;
   }
   const c=C.compute(raw,g,loadAdminPrices());
@@ -90,7 +100,8 @@ function render(){
   currentPublic={total:Math.round(c.total),area:c.area,coverage:c.coverage,visibleHeightM:c.visibleHeightM,lengthM:c.lengthM,paint:c.paint};
 
   const warnings=[];
-  if(Math.abs(num('rise')-g.recommendedRiseMm)>=15)warnings.push('Подъём дуги отличается от рекомендуемого '+Math.round(g.recommendedRiseMm)+' мм.');
+  // The width / 6 rise is a suggestion, not an invalid geometry warning.
+  // A custom rise is allowed and must update pricing and 3D.
   warnings.push(...c.warnings);
   $('geometryWarning').hidden=warnings.length===0;
   $('geometryWarning').textContent=warnings.join(' ');
