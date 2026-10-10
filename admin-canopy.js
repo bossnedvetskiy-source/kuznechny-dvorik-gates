@@ -247,8 +247,8 @@ async function openItem(lead){
         <div class="canopy-admin-svg"><svg id="canopyAdminTrussSvg" viewBox="0 0 1200 640"></svg></div>
         <h3 class="canopy-section-title">Контрольные размеры и радиусы</h3>
         <section class="canopy-admin-box canopy-production-geometry">${geometrySummary(g,savedC)}</section>
-        <h3 class="canopy-section-title">Ведомость деталей и координат узлов</h3>${cutTable(g,savedC)}
-        <h3 class="canopy-section-title">Материалы без цен (для цеха)</h3>${productionMaterialTable(savedC)}
+        <h3 class="canopy-section-title">Раскрой фермы · детали и координаты узлов</h3>${cutTable(g,savedC)}
+        <h3 class="canopy-section-title">Материалы и закупка · без цен для цеха</h3>${productionMaterialTable(savedC)}
         <div class="canopy-admin-grid" style="margin-top:12px">
           <section class="canopy-admin-box"><h3>Сборка навеса</h3>${dl([
             ['Ферм',savedC.trussCount+' шт'],['Режим лаг',savedC.coverage==='Профнастил'?'Авто 80–100 см':savedC.lagMode],['Линий лаг',savedC.lagLines+' шт'],['Шаг лаг',fmt(savedC.lagStep*100,1)+' см'],
