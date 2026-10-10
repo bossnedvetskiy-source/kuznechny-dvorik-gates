@@ -307,7 +307,7 @@ test('canopy client is simple and saved order keeps production/finance in admin'
   await expect(welder.locator('body')).toContainText('ТЗ сварщику');
   const welderDocument=await welder.locator('body').innerText();
   expect(welderDocument).toContain('Контрольные размеры и радиусы');
-  expect(welderDocument).toContain('Координаты узлов');
+  expect(welderDocument).toContain('координат узлов');
   expect(welderDocument).toContain('V1');
   expect(welderDocument).toContain('D1');
   expect(welderDocument).not.toMatch(/₽|Себестоимость|Прибыль|Стоимость/);
