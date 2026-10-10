@@ -309,6 +309,7 @@ test('canopy surveyor: photos and support presets update a real public quote wit
   await expect(page.locator('[data-farm-type="Арочный"] .kd-farm-state')).toHaveText('Цена онлайн');
   await expect(page.locator('[data-farm-type="Полуарочный"] .kd-farm-state')).toHaveText('По запросу');
   await expect(page.locator('#kdSurveyorBridgeSave')).toBeDisabled();
+  await expect(page.locator('#kdCanopyPresent')).toBeDisabled();
 
   await page.locator('#widthPosts').fill('3');
   await page.locator('#lengthPosts').fill('5.9');
@@ -330,7 +331,9 @@ test('canopy surveyor: photos and support presets update a real public quote wit
   await page.locator('.kd-canopy-other-types summary').click();
   await page.locator('[data-farm-type="Полуарочный"]').click();
   await expect(page.locator('#kdSurveyorBridgeSave')).toBeDisabled();
+  await expect(page.locator('#kdCanopyPresent')).toBeDisabled();
   await page.locator('[data-farm-type="Арочный"]').click();
+  await expect(page.locator('#kdCanopyPresent')).toBeEnabled();
   await expect(page.locator('#kdSurveyorBridgeSave')).toBeEnabled();
   await page.locator('#kdSurveyorBridgeSave').click();
   await expect(page.locator('#surveyDetailsDialog')).toBeVisible({timeout:15000});
