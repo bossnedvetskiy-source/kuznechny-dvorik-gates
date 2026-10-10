@@ -99,19 +99,35 @@ function compute(raw,g,custom={}){
   const webOneM=2*g.endPostM+internalMembers.reduce((a,d)=>a+d.lengthM,0),webUsedM=webOneM*trussCount;
   const lagUsedM=lagLines*lengthM,beamCount=beamsExisting?0:2,beamPostUsedM=beamCount*lengthM+newPosts*postLen;
   const chordLengths=[];for(let i=0;i<trussCount;i++){chordLengths.push(g.topCircle.length,g.lowerTotalM);}
-  let chordSticks=0;for(const L of chordLengths)chordSticks+=L<=p.stick?1:Math.ceil(L/p.stick);
+  // Plan cuts together when chords and lattice use the same stock profile.
+  // Offcuts from bending the chord are suitable for short lattice members.
+  const chordPack=binPack(chordLengths,p.stick),chordSticks=chordPack.sticks;
   const webPieces=[];for(let i=0;i<trussCount;i++){webPieces.push(g.endPostM,g.endPostM,...internalMembers.map(d=>d.lengthM));}
-  const webPack=binPack(webPieces,p.stick),lagsSticks=lagSticks(lagLines,lengthM,p.stick),tube80Sticks=sticks80(beamCount,lengthM,newPosts,postLen,p);
-  const chordCost=chordSticks*p.stick*profilePrice(g.chordProfile,p),webCost=webPack.sticks*p.stick*profilePrice(g.webProfile,p,'web'),lagCost=lagsSticks*p.stick*p.tube40x20,tube80Cost=tube80Sticks*p.stick*p.tube80;
+  const webPack=binPack(webPieces,p.stick);
+  const sameProfile=g.chordProfile===g.webProfile;
+  const combinedProfilePack=sameProfile?binPack([...chordLengths,...webPieces],p.stick):null;
+  // Only additional sticks are attributed to lattice; shared offcuts are counted once.
+  const webPurchaseSticks=sameProfile?Math.max(0,combinedProfilePack.sticks-chordSticks):webPack.sticks;
+  const lagsSticks=lagSticks(lagLines,lengthM,p.stick),tube80Sticks=sticks80(beamCount,lengthM,newPosts,postLen,p);
+  const chordCost=chordSticks*p.stick*profilePrice(g.chordProfile,p),webCost=webPurchaseSticks*p.stick*profilePrice(g.webProfile,p,'web'),lagCost=lagsSticks*p.stick*p.tube40x20,tube80Cost=tube80Sticks*p.stick*p.tube80;
   const metalCost=chordCost+webCost+lagCost+tube80Cost;
-  const coverWidthM=g.widthM+2*p.polyOverhang,coverRadius=g.topCircle.radius,coverArcM=2*coverRadius*Math.asin(Math.min(1,coverWidthM/(2*coverRadius))),coverLengthM=lengthM+2*p.endOverhang;
-  let coverageCost=0,fittingsCost=0,coverageData={type:coverage,coverArcM,coverLengthM};
+  const coverWidthM=g.widthM+2*p.polyOverhang,coverRadius=g.topCircle.radius;
+  // A circular roof cannot extend beyond its circle's diameter. Never silently
+  // clip its calculated material length and quote an invalid roof as final.
+  const invalidRoofArc=coverWidthM>2*coverRadius+1e-9;
+  const coverArcM=2*coverRadius*Math.asin(Math.min(1,coverWidthM/(2*coverRadius)));
+  const coverLengthM=lengthM+2*p.endOverhang;
+  const roofArcWarning=invalidRoofArc&&coverage!=='Без покрытия'
+    ?'При таком подъёме дуги невозможно выполнить выпуск покрытия 100 мм по тому же радиусу. Уменьшите подъём или согласуйте форму покрытия.'
+    :'';
+  let coverageCost=0,fittingsCost=0,coverageData={type:coverage,coverArcM,coverLengthM,warning:roofArcWarning};
   if(coverage==='Поликарбонат'){
     const strips=Math.ceil(coverLengthM/p.polyWidth),buy=polyPurchase(coverArcM,strips,p.polyWidth,p),seams=Math.max(0,strips-1),connectors=connectorSticks(seams,coverArcM,p.stick),endProfiles=strips*2;
     coverageCost=buy.meters*p.poly;fittingsCost=connectors*p.connector+endProfiles*p.endProfile;
-    coverageData={...coverageData,strips,buyMeters:buy.meters,buyCounts:buy.counts,connectors,endProfiles,warning:buy.warning,polyArea:buy.area};
+    coverageData={...coverageData,strips,buyMeters:buy.meters,buyCounts:buy.counts,connectors,endProfiles,warning:roofArcWarning||buy.warning,polyArea:buy.area};
   }else if(coverage==='Профнастил'){
-    const sheetsAcross=Math.ceil(coverArcM/p.profWorkWidth),parts=coverLengthM<=p.profMaxPart?1:Math.ceil(coverLengthM/(p.profMaxPart-p.profOverlap)),partLength=parts===1?coverLengthM:coverLengthM/parts+p.profOverlap,totalParts=sheetsAcross*parts,buyArea=totalParts*p.profFullWidth*partLength;
+    // Only (parts - 1) joints need an overlap; the first/last sections do not.
+    const sheetsAcross=Math.ceil(coverArcM/p.profWorkWidth),parts=coverLengthM<=p.profMaxPart?1:Math.ceil((coverLengthM-p.profOverlap)/(p.profMaxPart-p.profOverlap)),partLength=parts===1?coverLengthM:(coverLengthM+(parts-1)*p.profOverlap)/parts,totalParts=sheetsAcross*parts,buyArea=totalParts*p.profFullWidth*partLength;
     coverageCost=buyArea*p.profnastil;coverageData={...coverageData,sheetsAcross,parts,partLength,totalParts,buyArea};
   }
   const consumables=trussCount*(p.wire+p.discs),weld=trussCount*p.weld4m*(g.widthM/4),mountRate=coverage==='Без покрытия'?p.mountNoCover:p.mountCover,mount=area*mountRate,postMount=newPosts*(installType==='Бетонирование'?p.postConcrete:p.postPlate);
@@ -124,11 +140,11 @@ function compute(raw,g,custom={}){
   if(coverageData.warning)warnings.push(coverageData.warning);
   const materialRows=[
     {name:'Пояса ферм '+g.chordProfile,used:chordUsedM,sticks:chordSticks,buy:chordSticks*p.stick,cost:chordCost,note:'Верхний + нижний пояс'},
-    {name:(g.trussType==='Вертикальная'?'Вертикальная решётка ':g.trussType==='Усиленная'?'Усиленная решётка ':'Треугольная решётка ')+g.webProfile,used:webUsedM,sticks:webPack.sticks,buy:webPack.sticks*p.stick,cost:webCost,note:(g.trussType==='Вертикальная'?'Вертикальные стойки':g.trussType==='Усиленная'?'Диагонали + вертикальные стойки':'Диагонали')+' + торцевые стойки'},
+    {name:(g.trussType==='Вертикальная'?'Вертикальная решётка ':g.trussType==='Усиленная'?'Усиленная решётка ':'Треугольная решётка ')+g.webProfile+(sameProfile?' (с учётом обрезков)':''),used:webUsedM,sticks:webPurchaseSticks,buy:webPurchaseSticks*p.stick,cost:webCost,note:(g.trussType==='Вертикальная'?'Вертикальные стойки':g.trussType==='Усиленная'?'Диагонали + вертикальные стойки':'Диагонали')+' + торцевые стойки'+(sameProfile?'; остатки от поясов уже учтены':'')},
     {name:'Лаги 40×20×2',used:lagUsedM,sticks:lagsSticks,buy:lagsSticks*p.stick,cost:lagCost,note:(coverage==='Профнастил'?'Авто 80–100 см':lagMode==='Эконом'?'Эконом ≤50 см':'Стандарт ≈40 см')+'; стыкуемые куски не короче 2 м'},
     {name:'80×80×3',used:beamPostUsedM,sticks:tube80Sticks,buy:tube80Sticks*p.stick,cost:tube80Cost,note:(beamCount?beamCount+' балки + ':'')+newPosts+' новых столбов'}
   ];
-  return {p,lengthM,visibleHeightM,delivery,coverage,installType,paint,postsNeeded,beamsExisting,totalPosts,postsPerSide,existingPosts,newPosts,clearPostStep,postLen,trussCount,area,lagMode,intervals,lagLines,lagStep,chordUsedM,webUsedM,lagUsedM,beamCount,beamPostUsedM,chordSticks,webPack,lagsSticks,tube80Sticks,chordCost,webCost,lagCost,tube80Cost,metalCost,coverageCost,fittingsCost,coverageData,consumables,weld,mountRate,mount,postMount,paintArea,paintCost,base,markup,priceNoDelivery,total,ownerMount,actualExpenses,profit,margin,trussType:g.trussType,materialMode:g.materialMode,oneTruss:{metal:oneTrussMetal,weld:oneTrussWeld,consumables:oneTrussConsumables,paintArea:oneTrussPaintArea,paint:oneTrussPaint,cost:oneCost,priceNoPaint:oneNoPaint,pricePaint:onePaint,profitNoPaint:oneNoPaint-oneCost,profitPaint:onePaint-oneCost-oneTrussPaint},materialRows,warnings};
+  return {p,lengthM,visibleHeightM,delivery,coverage,installType,paint,postsNeeded,beamsExisting,totalPosts,postsPerSide,existingPosts,newPosts,clearPostStep,postLen,trussCount,area,lagMode,intervals,lagLines,lagStep,chordUsedM,webUsedM,lagUsedM,beamCount,beamPostUsedM,chordSticks,chordPack,webPack,webPurchaseSticks,combinedProfilePack,lagsSticks,tube80Sticks,chordCost,webCost,lagCost,tube80Cost,metalCost,coverageCost,fittingsCost,coverageData,consumables,weld,mountRate,mount,postMount,paintArea,paintCost,base,markup,priceNoDelivery,total,ownerMount,actualExpenses,profit,margin,trussType:g.trussType,materialMode:g.materialMode,oneTruss:{metal:oneTrussMetal,weld:oneTrussWeld,consumables:oneTrussConsumables,paintArea:oneTrussPaintArea,paint:oneTrussPaint,cost:oneCost,priceNoPaint:oneNoPaint,pricePaint:onePaint,profitNoPaint:oneNoPaint-oneCost,profitPaint:onePaint-oneCost-oneTrussPaint},materialRows,warnings};
 }
 window.CanopyPricing={DEFAULTS:P,mergePrices,autoTrussCount,compute,lagSticks,binPack,polyPurchase,connectorSticks,sticks80,profilePrice,profilePerimeter};
 })();
