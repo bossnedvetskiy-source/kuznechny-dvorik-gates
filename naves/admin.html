@@ -21,7 +21,47 @@
 let toastTimer;
 window.showToast=function(message,error=false){clearTimeout(toastTimer);const e=document.getElementById('toast');e.textContent=message;e.className='toast show'+(error?' error':'');toastTimer=setTimeout(()=>e.className='toast',2600)};
 </script>
-<script src="../admin-canopy.js"></script>
-<script>setTimeout(()=>document.querySelector('[data-admin-tab="canopy-orders"]')?.click(),0);</script>
+<div id="canopyAdminAccess" class="admin-tab-panel" role="alert" hidden style="margin:14px auto;max-width:760px;padding:20px">
+  <h2>Доступ только для руководителя</h2>
+  <p>Откройте приложение КД Замерщик и войдите под учётной записью руководителя. После входа вернитесь сюда.</p>
+  <a href="../dev-tools/">Перейти в КД Замерщик</a>
+</div>
+<script>
+(async function(){
+  // The financial DEV workspace must not be unlocked merely by having the
+  // protected preview's shared password. Require a local owner session.
+  async function ownerSession(){
+    let info;
+    try {info=JSON.parse(sessionStorage.getItem('kdSurveyorSession')||'null')}catch{return false}
+    if(!info?.id)return false;
+    return new Promise(resolve=>{
+      try{
+        const req=indexedDB.open('kd-surveyor-stage1');
+        req.onerror=()=>resolve(false);
+        req.onupgradeneeded=()=>{req.transaction.abort();resolve(false)};
+        req.onsuccess=()=>{
+          const db=req.result;
+          if(!db.objectStoreNames.contains('employees')){db.close();resolve(false);return}
+          const get=db.transaction('employees','readonly').objectStore('employees').get(info.id);
+          get.onerror=()=>{db.close();resolve(false)};
+          get.onsuccess=()=>{
+            const allowed=Boolean(get.result?.active && get.result.role==='owner');
+            db.close();resolve(allowed);
+          };
+        };
+      }catch{resolve(false)}
+    });
+  }
+  if(!(await ownerSession())){
+    document.getElementById('canopyAdminAccess').hidden=false;
+    return;
+  }
+  const script=document.createElement('script');
+  script.src='../admin-canopy.js';
+  script.onload=()=>document.querySelector('[data-admin-tab="canopy-orders"]')?.click();
+  script.onerror=()=>{document.getElementById('canopyAdminAccess').hidden=false};
+  document.body.append(script);
+})();
+</script>
 </body>
 </html>
