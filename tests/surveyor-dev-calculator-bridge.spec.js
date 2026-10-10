@@ -149,6 +149,7 @@ test('owner hands off a canopy survey into fabrication and reissues after a chan
 
   await page.locator('#newSurveyBtn').click();
   await page.locator('#surveyAddress').fill('Мелеуз, производство арочного навеса');
+  await page.locator('#surveyNote').fill('Проверить фундамент перед установкой');
   await page.locator('#saveSurveyBtn').click();
   await expect(page.locator('#surveyDetailsDialog')).toBeVisible();
 
@@ -189,6 +190,7 @@ test('owner hands off a canopy survey into fabrication and reissues after a chan
   await expect(page).toHaveURL(/\/naves\/admin\.html\?surveyId=/);
   await expect(page.locator('#canopyAdminDialog')).toBeVisible({timeout:15000});
   await expect(page.locator('[data-canopy-panel="production"]')).toBeVisible();
+  await expect(page.locator('[data-canopy-panel="production"]')).toContainText('Проверить фундамент перед установкой');
   await expect(page.locator('#canopyAdminTrussSvg')).toContainText('D1');
   await expect(page.locator('[data-canopy-panel="production"]')).toContainText('3700'); // width in millimetres
   await expect(page.locator('[data-canopy-panel="production"]')).toContainText('84 деталей');
