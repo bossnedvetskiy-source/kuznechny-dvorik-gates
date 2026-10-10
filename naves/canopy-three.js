@@ -114,16 +114,24 @@ function roofArcY(g,x){
   const cy=-(r-g.riseM);
   return cy+Math.sqrt(Math.max(0,r*r-x*x));
 }
+// Placing members at equal x intervals gives unequal distances along a curve.
+// Use the actual circle angle for spacing, matching the pricing arc length.
+function xAtArcFraction(radius,halfAngle,fraction){
+  return radius*Math.sin(-halfAngle+2*halfAngle*fraction);
+}
 function buildRoof(group,g,c,baseY){
   if(c.coverage==='Без покрытия')return;
   const width=g.widthM+.20;     // 10 cm beyond the truss each side
   const length=c.lengthM+.40;   // 20 cm front/back, from the calculator rules
   const nx=48,nz=1;
+  const coverRadius=g.topCircle.radius;
+  const coverHalfAngle=Math.asin(Math.min(1,width/(2*coverRadius)));
+  const roofX=f=>xAtArcFraction(coverRadius,coverHalfAngle,f);
   const positions=[],indices=[];
   for(let iz=0;iz<=nz;iz++){
     const z=-length/2+length*iz/nz;
     for(let ix=0;ix<=nx;ix++){
-      const x=-width/2+width*ix/nx;
+      const x=roofX(ix/nx);
       positions.push(x,baseY+roofArcY(g,x)+.055,z);
     }
   }
@@ -150,13 +158,51 @@ function buildRoof(group,g,c,baseY){
   mesh.renderOrder=isPoly?3:0;
   group.add(mesh);
 
+  // Physically visible sheet joints follow the calculator's material layout.
+  // Polycarbonate connectors run across the arc every 2.1 m of canopy length.
+  // Profiled sheet seams follow their 1.1 m working width along the arc.
+  const seamMat=material(isPoly?0x6e5030:0x3a3d42,{shininess:35});
+  const seamProfile=isPoly?.023:.008;
+  const addAcrossArc=(z,name)=>{
+    const pts=[];
+    for(let i=0;i<=32;i++){
+      const x=roofX(i/32);
+      pts.push(new THREE.Vector3(x,baseY+roofArcY(g,x)+.062,z));
+    }
+    addCurveProfile(group,pts,seamProfile,seamProfile,seamMat,name);
+  };
+  if(isPoly){
+    const strips=c.coverageData?.strips||Math.ceil(length/2.1);
+    for(let i=1;i<strips;i++){
+      const z=-length/2+i*c.p.polyWidth;
+      if(z<length/2-1e-6)addAcrossArc(z,'polycarbonate connector');
+    }
+  }else{
+    const sheets=c.coverageData?.sheetsAcross||Math.ceil(g.topCircle.length/1.1);
+    for(let i=1;i<sheets;i++){
+      const arcM=i*c.p.profWorkWidth;
+      if(arcM>=c.coverageData.coverArcM-1e-6)break;
+      const x=coverRadius*Math.sin(-coverHalfAngle+arcM/coverRadius);
+      addBoxBetween(group,
+        {x,y:baseY+roofArcY(g,x)+.065,z:-length/2},
+        {x,y:baseY+roofArcY(g,x)+.065,z:length/2},
+        .009,.009,seamMat,'profiled sheet seam');
+    }
+    const parts=c.coverageData?.parts||1;
+    const partLength=c.coverageData?.partLength||length;
+    for(let i=1;i<parts;i++){
+      const z=-length/2+i*(partLength-c.p.profOverlap);
+      if(z<length/2-1e-6)addAcrossArc(z,'profiled sheet overlap');
+    }
+  }
+
   if(isPoly){
     const edgeMat=material(0x6e5030,{shininess:55});
     const edgeSize=.022;
     [-length/2,length/2].forEach(z=>{
       const pts=[];
       for(let i=0;i<=48;i++){
-        const x=-width/2+width*i/48;
+        const x=roofX(i/48);
         pts.push(new THREE.Vector3(x,baseY+roofArcY(g,x)+.058,z));
       }
       addCurveProfile(group,pts,edgeSize,edgeSize,edgeMat,'polycarbonate edge');
@@ -170,21 +216,32 @@ function buildSupports(group,g,c,baseY,frameMat){
   const zs=Array.from({length:n},(_,i)=>n===1?0:-c.lengthM/2+c.lengthM*i/(n-1));
 
   if(c.totalPosts>0){
+    let index=0;
     for(const z of zs)for(const x of xPosts){
-      addBoxBetween(group,{x,y:0,z},{x,y:baseY,z},postSize,postSize,frameMat,'pillar');
+      // Post placement is schematic when only an existing-post count is known.
+      // Still render all supports, but do not imply new footings on existing posts.
+      const existing=index<(c.existingPosts||0);
+      index++;
+      const pillar=addBoxBetween(group,{x,y:0,z},{x,y:baseY,z},postSize,postSize,frameMat,'pillar');
+      if(pillar)pillar.userData.existing=existing;
+      if(existing)continue;
       if(c.installType==='Бетонирование'){
         const footing=new THREE.Mesh(new THREE.CylinderGeometry(.18,.22,.36,18),material(0x777777,{shininess:8}));
+        footing.name='new footing';
         footing.position.set(x,-.16,z);group.add(footing);
       }else{
         const flange=new THREE.Mesh(new THREE.BoxGeometry(.18,.012,.18),material(0x2d2d2d));
+        flange.name='new mounting flange';
         flange.position.set(x,.006,z);group.add(flange);
       }
     }
   }
-  if(!c.beamsExisting){
-    for(const x of xPosts){
-      addBoxBetween(group,{x,y:baseY-.04,z:-c.lengthM/2},{x,y:baseY-.04,z:c.lengthM/2},beamSize,beamSize,frameMat,'longitudinal beam');
-    }
+  // Existing longitudinal beams are still part of the finished canopy.
+  // The existing flag affects material costs, never geometry visibility.
+  const beamMaterial=c.beamsExisting?material(0x45484c,{shininess:32}):frameMat;
+  for(const x of xPosts){
+    const beam=addBoxBetween(group,{x,y:baseY-.04,z:-c.lengthM/2},{x,y:baseY-.04,z:c.lengthM/2},beamSize,beamSize,beamMaterial,'longitudinal beam');
+    if(beam)beam.userData.existing=Boolean(c.beamsExisting);
   }
 }
 function buildPurlins(group,g,c,baseY,purlinMat){
@@ -192,9 +249,10 @@ function buildPurlins(group,g,c,baseY,purlinMat){
   const width=g.widthM;
   const [pw,ph]=[.040,.020];
   for(let i=0;i<count;i++){
-    const x=-width/2+width*i/(count-1);
+    const x=xAtArcFraction(g.topCircle.radius,g.topCircle.theta/2,i/(count-1));
     const y=baseY+topY(g,x)+.028;
-    addBoxBetween(group,{x,y,z:-c.lengthM/2-.20},{x,y,z:c.lengthM/2+.20},pw,ph,purlinMat,'purlin');
+    // The 20 cm front/back projection is the sheet overhang, not extra lag stock.
+    addBoxBetween(group,{x,y,z:-c.lengthM/2},{x,y,z:c.lengthM/2},pw,ph,purlinMat,'purlin');
   }
 }
 function buildBase(group,g,c){
@@ -230,6 +288,45 @@ function buildModel(g,c){
   buildPurlins(root,g,c,baseY,purlinMat);
   buildRoof(root,g,c,baseY);
   return root;
+}
+function inspect(){
+  if(!STATE.model)return null;
+  const groups={};
+  const purlinX=[],postPlacement=[];
+  const roof=[];
+  STATE.model.traverse(node=>{
+    if(!node.isMesh)return;
+    groups[node.name]=(groups[node.name]||0)+1;
+    if(node.name==='purlin')purlinX.push(node.position.x);
+    if(node.name==='pillar')postPlacement.push({x:node.position.x,z:node.position.z,existing:Boolean(node.userData.existing)});
+    if(node.name==='roof'){
+      const vertices=node.geometry.attributes.position;
+      let minX=Infinity,maxX=-Infinity,minZ=Infinity,maxZ=-Infinity,maxY=-Infinity;
+      for(let i=0;i<vertices.count;i++){
+        minX=Math.min(minX,vertices.getX(i));maxX=Math.max(maxX,vertices.getX(i));
+        minZ=Math.min(minZ,vertices.getZ(i));maxZ=Math.max(maxZ,vertices.getZ(i));
+        maxY=Math.max(maxY,vertices.getY(i));
+      }
+      roof.push({widthM:maxX-minX,lengthM:maxZ-minZ,highestPointM:maxY});
+    }
+  });
+  const g=window.__TRUSS_CURRENT;
+  const purlinDistances=purlinX.sort((a,b)=>a-b).map(x=>g?.topCircle?.radius*Math.asin(x/g.topCircle.radius));
+  const steps=purlinDistances.slice(1).map((v,i)=>v-purlinDistances[i]);
+  return {
+    trusses:groups['top chord']?STATE.model.children.filter(n=>n.name==='farm').length:0,
+    posts:groups.pillar||0,
+    existingPosts:postPlacement.filter(p=>p.existing).length,
+    beams:groups['longitudinal beam']||0,
+    purlins:groups.purlin||0,
+    maxPurlinStepM:steps.length?Math.max(...steps):0,
+    purlinVisualLengthM:STATE.model.children.find(n=>n.name==='purlin')?.geometry?.parameters?.depth||0,
+    roof:roof[0]||null,
+    polycarbonateConnectors:(groups['polycarbonate connector']||0)/32,
+    profiledSheetSeams:groups['profiled sheet seam']||0,
+    profiledSheetOverlaps:(groups['profiled sheet overlap']||0)/32,
+    newFoundations:(groups['new footing']||0)+(groups['new mounting flange']||0)
+  };
 }
 function renderOnce(){
   if(!STATE.renderer||!STATE.scene||!STATE.camera)return;
@@ -343,7 +440,7 @@ function update(host,g,c){
     showError(host,error?.message);
   }
 }
-window.Canopy3D={render:update,resetView(){
+window.Canopy3D={render:update,inspect,resetView(){
   const g=window.__TRUSS_CURRENT,c=window.__CANOPY_PUBLIC;
   if(g?.ok&&c)fitCamera(g,c,true);
 }};
