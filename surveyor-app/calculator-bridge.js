@@ -425,6 +425,8 @@
       .kd-surveyor-canopy .kd-canopy-preset-list button{border-radius:11px;min-height:43px}
       .kd-surveyor-canopy .kd-canopy-preset-list button.is-selected:before{content:'✓ ';font-weight:900}
       .kd-surveyor-canopy .kd-canopy-display{border:1px solid #a47c3e;border-radius:11px;background:#242015;color:#efd49a;padding:10px 12px;font-size:12px;font-weight:800;cursor:pointer}
+      .kd-surveyor-canopy .kd-canopy-display:disabled,
+      .kd-surveyor-canopy #kdCanopyPresent:disabled{opacity:.42;cursor:not-allowed}
       .kd-surveyor-canopy #kdSurveyorBridge .kd-row{grid-template-columns:auto minmax(0,1fr) auto auto;gap:6px}
       .kd-surveyor-canopy #kdSurveyorBridge .kd-present{background:#30312f;color:#f2d48a;border:1px solid #7c6541}
       .kd-surveyor-canopy.kd-canopy-presenting .client-controls{display:none!important}
@@ -617,6 +619,13 @@
       fieldGrid?.append(display);
       const showPresentation = value => {
         const on=Boolean(value);
+        if(on && (document.getElementById('farmType')?.value!=='Арочный'
+          || !window.__TRUSS_CURRENT?.ok
+          || !/^\\d[\\d\\s\\u00a0\\u202f]*₽$/.test(document.getElementById('totalPrice')?.textContent?.trim()||'')
+          || document.getElementById('resultStatus')?.classList.contains('example'))){
+          showMessage('Сначала задайте реальные размеры и выберите арочную ферму',true);
+          return;
+        }
         document.documentElement.classList.toggle('kd-canopy-presenting',on);
         present?.setAttribute('aria-pressed',String(on));
         if(present)present.textContent=on?'Изменить':'3D клиенту';
@@ -649,6 +658,8 @@
           document.getElementById('farmType')?.value === 'Арочный' &&
           document.getElementById('trussType')?.value !== 'Плоская';
         if (saveNode) saveNode.disabled = !valid;
+        if(present)present.disabled=!valid;
+        display.disabled=!valid;
         titleNode.textContent = valid ? 'Навес · ' + price : 'Навес · цена по запросу';
         messageNode.textContent = valid
           ? 'Покажите 3D клиенту · добавьте в замер'
