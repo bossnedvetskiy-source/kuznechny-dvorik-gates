@@ -270,12 +270,20 @@ function fitCamera(g,c,force=false){
   STATE.controls.update();
 }
 function init(host){
-  if(STATE.host===host&&STATE.renderer)return;
+  // The preview container may be cleared by other UI states or an earlier
+  // invalid input. A cached renderer is reusable only while its canvas is mounted.
+  if(STATE.host===host&&STATE.renderer&&STATE.renderer.domElement.parentElement===host)return;
   if(STATE.renderer){
     STATE.observer?.disconnect();
     cancelAnimationFrame(STATE.raf);
+    if(STATE.model){
+      STATE.scene?.remove(STATE.model);
+      disposeObject(STATE.model);
+      STATE.model=null;
+    }
     STATE.renderer.dispose();
-    STATE.host?.querySelector('canvas')?.remove();
+    STATE.renderer.domElement.remove();
+    STATE.lastFitKey='';
   }
   STATE.disposed=false;
   STATE.host=host;
