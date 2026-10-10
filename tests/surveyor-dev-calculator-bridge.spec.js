@@ -153,7 +153,7 @@ test('owner hands off a canopy survey into fabrication and reissues after a chan
   await page.locator('#saveSurveyBtn').click();
   await expect(page.locator('#surveyDetailsDialog')).toBeVisible();
 
-  await page.locator('[data-launch-calculation="canopy"]').click();
+  await page.locator('[data-v3-calc="canopy"]').click();
   await expect(page.locator('#kdSurveyorBridge')).toBeVisible({timeout:15000});
   await page.locator('#widthPosts').fill('3.4');
   await page.locator('#lengthPosts').fill('8.4');
