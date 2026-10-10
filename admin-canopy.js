@@ -24,6 +24,7 @@ panel.innerHTML=`
   <div class="canopy-admin-toolbar"><div id="canopyAdminStats"></div><button class="reset-button" id="canopyReload" type="button">Обновить</button></div>
   <div id="canopyOrderList" class="canopy-order-list"></div>
   <p id="canopyEmpty" class="empty-photos" hidden>Сохранённых расчётов навесов пока нет.</p>
+  <p class="canopy-snapshot-note">Задания из замеров DEV появляются здесь, если их передал руководитель на этом устройстве. В обычном DEV-превью обмен между устройствами пока не включён.</p>
 
   <details class="canopy-price-settings">
     <summary><span><b>Прайс и внутренние ставки навесов</b><small>Используются для новых расчётов и текущего пересчёта</small></span><i>⌄</i></summary>
@@ -102,6 +103,50 @@ function buildPriceGrid(){
   PRICE_FIELDS.forEach(([k])=>panel.querySelector('#cap-price-'+k).addEventListener('change',()=>{savePrices();toast('Ставки навеса сохранены')}))
 }
 function readLocal(){try{return JSON.parse(localStorage.getItem(DEV_SAVED_KEY)||'[]').map(x=>({...x,_local:true}))}catch{return[]}}
+async function readSurveyProduction(){
+  // DEV preview: same-origin IndexedDB, not a remote cross-device inbox.
+  // The survey record is the source of truth, but production uses the last
+  // explicitly approved frozen input snapshot, never live editable inputs.
+  return new Promise(resolve=>{
+    try {
+      const req=indexedDB.open('kd-surveyor-stage1');
+      req.onerror=()=>resolve([]);
+      req.onupgradeneeded=()=>{req.transaction?.abort();resolve([])};
+      req.onsuccess=()=>{
+        const database=req.result;
+        if(!database.objectStoreNames.contains('surveys')){database.close();resolve([]);return}
+        const tx=database.transaction('surveys','readonly');
+        const get=tx.objectStore('surveys').getAll();
+        get.onerror=()=>{database.close();resolve([])};
+        get.onsuccess=()=>{
+          database.close();
+          const result=[];
+          for(const survey of get.result||[]){
+            const jobs=Array.isArray(survey.configuration?.productionJobs)?survey.configuration.productionJobs:[];
+            const calcs=Array.isArray(survey.configuration?.calculations)?survey.configuration.calculations:[];
+            for(const job of jobs){
+              if(job?.type!=='canopy'||!job.input||job.input.farmType!=='Арочный')continue;
+              const calc=calcs.find(c=>c.id===job.calculationId&&c.type==='canopy');
+              const outdated=!calc||calc.updatedAt!==job.sourceUpdatedAt;
+              result.push({
+                id:'ЗАМЕР-'+String(survey.number||survey.localNumber||survey.id).replace(/[^a-zA-ZА-Яа-яЁё0-9_-]/g,'-'),
+                city:survey.address||'Без адреса',
+                phone:survey.clientPhone||'',
+                total:Number(calc?.total)||0,
+                created_at:job.issuedAt,
+                _survey:true,_local:true,_outdated:outdated,
+                _surveyId:survey.id,_calculationId:job.calculationId,
+                note:survey.note||'',
+                configuration:{canopy:{version:6,input:job.input,publicSummary:{total:Number(calc?.total)||0}}}
+              });
+            }
+          }
+          resolve(result);
+        };
+      };
+    }catch{resolve([])}
+  });
+}
 async function readServer(){
   try{const r=await fetch('/api/admin/leads?category=canopy&limit=100',{headers:{accept:'application/json'},cache:'no-store'});if(!r.ok)throw new Error('server unavailable');const d=await r.json();return Array.isArray(d.leads)?d.leads:[]}
   catch{return[]}
@@ -112,18 +157,28 @@ function renderList(){
   list.innerHTML=items.map((lead,index)=>{
     const s=snapOf(lead),inp=s?.input||{},local=lead._local?' · DEV локально':'';
     return `<article class="canopy-order-card">
-      <div class="canopy-order-card-head"><div><b>#${escape(lead.id)} · ${escape(lead.city||'Без населённого пункта')}</b><small>${escape(date(lead.created_at))} · ${escape(lead.phone||'')}${local}</small></div><strong class="canopy-order-price">${money(lead.total)}</strong></div>
+      <div class="canopy-order-card-head"><div><b>#${escape(lead.id)} · ${escape(lead.city||'Без населённого пункта')}</b><small>${escape(date(lead.created_at))} · ${escape(lead.phone||'')}${local}${lead._survey?' · Из карточки замерщика':''}</small></div><strong class="canopy-order-price">${money(lead.total)}</strong></div>
+      ${lead._survey?'<div class="canopy-snapshot-note">'+(lead._outdated?'⚠ Исходный расчёт изменён или удалён. Обновите ТЗ из карточки замера.':'✓ Руководитель передал расчёт в производство')+'</div>':''}
       <div class="canopy-order-meta"><span>Размер <b>${escape(fmt(inp.widthPostsM))} × ${escape(fmt(inp.lengthM))} м</b></span><span>Тип <b>${escape(inp.farmType||'Арочный')}</b></span><span>Обрешётка <b>${escape(inp.trussType||'Треугольная')}</b></span></div>
-      <div class="canopy-order-actions"><button class="reset-button" data-open-canopy="${index}" type="button">Открыть заказ</button></div>
+      <div class="canopy-order-actions">${lead._outdated?'<span class="canopy-snapshot-note">ТЗ ожидает обновления</span>':`<button class="reset-button" data-open-canopy="${index}" type="button">${lead._survey?'Открыть ТЗ':'Открыть заказ'}</button>`}</div>
     </article>`
   }).join('');
   list.querySelectorAll('[data-open-canopy]').forEach(b=>b.addEventListener('click',()=>openItem(items[Number(b.dataset.openCanopy)])))
 }
 async function load(){
   await ensureTools();buildPriceGrid();
-  const server=await readServer(),local=readLocal(),ids=new Set(server.map(x=>String(x.id)));
-  items=[...server,...local.filter(x=>!ids.has(String(x.id)))].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
-  renderList()
+  const [server,localJobs]=await Promise.all([readServer(),readSurveyProduction()]);
+  const local=readLocal(),ids=new Set(server.map(x=>String(x.id)));
+  items=[...localJobs,...server,...local.filter(x=>!ids.has(String(x.id)))].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
+  renderList();
+  const params=new URLSearchParams(location.search);
+  const requested=items.find(x=>x._survey && !x._outdated &&
+    x._surveyId===params.get('surveyId') && x._calculationId===params.get('calculationId'));
+  if(requested){
+    await openItem(requested);
+    const button=body.querySelector('[data-canopy-inner="production"]');
+    button?.click();
+  }
 }
 function calculate(lead){
   const snap=snapOf(lead);if(!snap?.input)throw new Error('В расчёте нет исходных параметров');
