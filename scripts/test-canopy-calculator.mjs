@@ -38,6 +38,12 @@ assert(base.geometry.diagonals.length>0,'Triangular truss must contain diagonal 
 assert.equal(base.geometry.verticals.length,0,'Triangular truss must not contain vertical lattice members');
 assert(base.price.total>0,'Baseline total must be positive');
 
+// Manual arc rise must change structural geometry, materials and customer price.
+const tallerArc=calc({riseMm:800});
+assert.equal(tallerArc.geometry.riseM,0.8);
+assert(tallerArc.geometry.topCircle.length>base.geometry.topCircle.length);
+assert.notEqual(tallerArc.price.total,base.price.total,'Manual rise change must recalculate price');
+
 const twoPosts=calc({existingPosts:2});
 assert.equal(twoPosts.price.newPosts,6);
 assert(twoPosts.price.total<base.price.total);
