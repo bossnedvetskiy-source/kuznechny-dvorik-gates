@@ -138,6 +138,106 @@ test('fence calculator result returns into the same survey card', async ({page})
   await expect(page.locator('.calculation-card-lines')).toContainText('Длина 12 м');
 });
 
+test('owner hands off a canopy survey into fabrication and reissues after a change', async ({page}) => {
+  test.setTimeout(90000);
+  await page.addInitScript(()=>localStorage.setItem('kuzdvor-dev-access-v1','1'));
+  await page.goto('/kuznechny-dvorik-gates/dev-tools/');
+  await page.locator('#loginInput').fill('admin');
+  await page.locator('#passwordInput').fill('1234');
+  await page.locator('#loginForm button[type="submit"]').click();
+  await expect(page.locator('#mainView')).toBeVisible();
+
+  await page.locator('#newSurveyBtn').click();
+  await page.locator('#surveyAddress').fill('Мелеуз, производство арочного навеса');
+  await page.locator('#saveSurveyBtn').click();
+  await expect(page.locator('#surveyDetailsDialog')).toBeVisible();
+
+  await page.locator('[data-launch-calculation="canopy"]').click();
+  await expect(page.locator('#kdSurveyorBridge')).toBeVisible({timeout:15000});
+  await page.locator('#widthPosts').fill('3.4');
+  await page.locator('#lengthPosts').fill('8.4');
+  await expect(page.locator('#kdSurveyorBridgeSave')).toBeEnabled();
+  await page.locator('#kdSurveyorBridgeSave').click();
+  await page.waitForURL(/\/dev-tools\/\?resumeSurvey=/,{waitUntil:'domcontentloaded',timeout:45000});
+  await expect(page.locator('#surveyDetailsDialog')).toBeVisible();
+  await expect(page.locator('[data-send-canopy-production]')).toHaveText('Передать в производство');
+  await expect(page.locator('[data-open-canopy-production]')).toHaveCount(0);
+
+  await page.locator('[data-send-canopy-production]').click();
+  await expect(page.locator('.canopy-production-state')).toContainText('ТЗ сформировано');
+  await expect(page.locator('[data-open-canopy-production]')).toBeVisible();
+  const initial=await page.evaluate(async()=>{
+    const db=await new Promise((resolve,reject)=>{
+      const req=indexedDB.open('kd-surveyor-stage1');req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);
+    });
+    const all=await new Promise((resolve,reject)=>{
+      const req=db.transaction('surveys').objectStore('surveys').getAll();
+      req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);
+    });
+    db.close();
+    const survey=all.find(x=>x.address==='Мелеуз, производство арочного навеса');
+    const job=survey.configuration.productionJobs[0];
+    return {surveyId:survey.id,job,calculation:survey.configuration.calculations[0]};
+  });
+  expect(initial.job.input.widthPostsM).toBe(3.4);
+  expect(initial.job.input.lengthM).toBe(8.4);
+  expect(initial.job.sourceUpdatedAt).toBe(initial.calculation.updatedAt);
+  expect(initial.job).not.toHaveProperty('pricingSnapshot');
+  expect(JSON.stringify(initial.job)).not.toMatch(/pricingSnapshot|profit|margin|tube30|rates|weld|ownerMount/);
+
+  await page.locator('[data-open-canopy-production]').click();
+  await expect(page).toHaveURL(/\/naves\/admin\.html\?surveyId=/);
+  await expect(page.locator('#canopyAdminDialog')).toBeVisible({timeout:15000});
+  await expect(page.locator('[data-canopy-panel="production"]')).toBeVisible();
+  await expect(page.locator('#canopyAdminTrussSvg')).toContainText('D1');
+  await expect(page.locator('[data-canopy-panel="production"]')).toContainText('3 700'); // width in millimetres
+  await expect(page.locator('[data-canopy-panel="production"]')).toContainText('84 деталей');
+  await expect(page.locator('#canopyOrderList')).toContainText('Из карточки замерщика');
+  await expect(page.locator('#canopyOrderList')).toContainText('Мелеуз, производство арочного навеса');
+
+  await page.goto('/kuznechny-dvorik-gates/dev-tools/?resumeSurvey='+encodeURIComponent(initial.surveyId));
+  await expect(page.locator('#surveyDetailsDialog')).toBeVisible({timeout:15000});
+  await page.locator('.calculation-card-copy').click();
+  await expect(page).toHaveURL(/edit=calc_/);
+  await page.locator('#lengthPosts').fill('6.2');
+  await page.locator('#kdSurveyorBridgeSave').click();
+  await page.waitForURL(/\/dev-tools\/\?resumeSurvey=/,{waitUntil:'domcontentloaded',timeout:45000});
+  await expect(page.locator('.canopy-production-state')).toContainText('нужно обновить');
+  await expect(page.locator('[data-open-canopy-production]')).toHaveCount(0);
+  await expect(page.locator('[data-send-canopy-production]')).toHaveText('Обновить ТЗ');
+  await page.locator('[data-send-canopy-production]').click();
+  await expect(page.locator('.canopy-production-state')).toContainText('ТЗ сформировано');
+  const refreshed=await page.evaluate(async(id)=>{
+    const db=await new Promise((resolve,reject)=>{
+      const req=indexedDB.open('kd-surveyor-stage1');req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);
+    });
+    const survey=await new Promise((resolve,reject)=>{
+      const req=db.transaction('surveys').objectStore('surveys').get(id);
+      req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);
+    });
+    db.close();
+    return survey.configuration.productionJobs;
+  },initial.surveyId);
+  expect(refreshed).toHaveLength(1);
+  expect(refreshed[0].input.lengthM).toBe(6.2);
+});
+
+test('surveyor cannot dispatch a canopy or open the owner finance admin', async ({page}) => {
+  await loginAndCreateSurvey(page,'Мелеуз, замер без финансов');
+  await page.locator('[data-launch-calculation="canopy"]').click();
+  await page.locator('#widthPosts').fill('3.4');
+  await page.locator('#lengthPosts').fill('6.2');
+  await expect(page.locator('#kdSurveyorBridgeSave')).toBeEnabled({timeout:15000});
+  await page.locator('#kdSurveyorBridgeSave').click();
+  await page.waitForURL(/\/dev-tools\/\?resumeSurvey=/,{waitUntil:'domcontentloaded',timeout:45000});
+  await expect(page.locator('[data-send-canopy-production]')).toHaveCount(0);
+  await expect(page.locator('[data-open-canopy-production]')).toHaveCount(0);
+  await page.goto('/naves/admin.html');
+  await expect(page.locator('#canopyAdminAccess')).toBeVisible();
+  await expect(page.locator('[data-admin-tab="canopy-orders"]')).toHaveCount(0);
+  await expect(page.locator('body')).not.toContainText('Прибыль до налогов');
+});
+
 test('canopy calculator result returns into the same survey card', async ({page}) => {
   await loginAndCreateSurvey(page, 'Мелеуз, тест навеса');
   await page.locator('[data-launch-calculation="canopy"]').click();
