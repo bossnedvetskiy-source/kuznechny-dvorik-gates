@@ -87,7 +87,58 @@ assert.equal(economy3.price.lagLines,8,'3 m canopy economy mode must use 8 purli
 assert(economy3.price.lagStep<=0.5+1e-9,'Economy purlin step must not exceed 50 cm');
 assert(economy3.price.lagCost<standard3.price.lagCost,'Economy purlin mode must reduce 40×20 cost');
 
+// Manual arc rise: independently check radius/arc length and that purchasing,
+// roof cutting and customer quotes track all four commonly used heights.
+let previous=null;
+for(const riseMm of [400,567,800,1000]){
+  const {raw,geometry:g,price:c}=calc({riseMm});
+  const riseM=riseMm/1000;
+  const widthM=raw.widthPostsM+2*raw.overhangMm/1000;
+  const radius=widthM*widthM/(8*riseM)+riseM/2;
+  const angle=2*Math.asin(widthM/(2*radius));
+  assert(Math.abs(g.topCircle.radius-radius)<1e-9,'Top arc radius must match chord and sagitta');
+  assert(Math.abs(g.topCircle.length-radius*angle)<1e-9,'Top arc length must use custom rise');
+  assert(Math.abs(g.lowerTotalM-(g.lowerCircle.length+2*g.endFlatM))<1e-9,'Bottom chord must include both straight ends');
+  assert(c.lagStep<=c.p.maxRib+1e-9,'Roof purlin spacing must not exceed 50 cm');
+  assert(c.chordUsedM+c.webUsedM<=(c.chordSticks+c.webPurchaseSticks)*c.p.stick+1e-6,'Truss stock must cover all measured tube');
+  assert.equal(c.chordSticks+c.webPurchaseSticks,c.combinedProfilePack.sticks,'Same-profile truss uses one common cutting plan');
+  assert.equal(c.materialRows.reduce((sum,row)=>sum+row.cost,0),c.metalCost,'Procurement rows must reconcile with metal cost');
+  assert.equal(c.coverageData.warning,'','Normal arc rises must have a valid polycarbonate roof');
+  assert(c.coverageData.coverArcM>=g.topCircle.length,'Cover with two overhangs must be longer than top chord');
+  assert(c.coverageData.buyMeters>=c.coverageData.coverArcM*c.coverageData.strips-c.p.stick*1e-9,'Purchased polycarbonate must cover strips');
+  assert(c.total>0);
+  if(previous){
+    assert(g.topCircle.length>previous.geometry.topCircle.length,'A greater sagitta lengthens the upper arc');
+    assert(g.lowerTotalM>previous.geometry.lowerTotalM,'A greater sagitta lengthens the lower chord');
+    assert(c.coverageData.coverArcM>previous.price.coverageData.coverArcM,'A greater sagitta lengthens the roof');
+    assert(c.total>previous.price.total,'Example client quote must reflect added material at these heights');
+  }
+  previous={geometry:g,price:c};
+}
+
+assert(base.price.webPack.sticks>base.price.webPurchaseSticks,'Offcuts must reduce the additional tube purchase');
+assert.equal(base.price.chordSticks+base.price.webPurchaseSticks,13,'567 mm example needs 13 six-metre 30×30 sticks with shared offcuts');
+assert.equal(base.price.webPurchaseSticks,1,'Only one extra stock tube is needed for lattice after reusing chord offcuts');
+
+// On multi-section profiled sheets the overlap is needed only at the joints.
+const profCut=calc({coverage:'Профнастил'});
+assert.equal(profCut.price.coverageData.parts,3);
+assert(profCut.price.coverageData.partLength<=profCut.price.p.profMaxPart);
+assert(Math.abs(
+  profCut.price.coverageData.parts*profCut.price.coverageData.partLength
+  -(profCut.price.coverageData.parts-1)*profCut.price.p.profOverlap
+  -profCut.price.coverageData.coverLengthM
+)<1e-8,'Profiled roof must have exactly the required joined length');
+assert(Math.abs(profCut.price.coverageData.buyArea-
+  profCut.price.coverageData.totalParts*profCut.price.p.profFullWidth*profCut.price.coverageData.partLength
+)<1e-8);
+
+const disallowedRoof=calc({riseMm:1750});
+assert(disallowedRoof.price.coverageData.warning.includes('выпуск покрытия'),'Impossible circular 100 mm overhang must not be quoted without a warning');
+assert.equal(calc({riseMm:1750,coverage:'Без покрытия'}).price.coverageData.warning,'','No-cover truss does not require roof overhang validation');
+
 const legacy=calc({materialMode:'Авто'});
 assert.equal(legacy.geometry.chordProfile,'25×25×1,5','Legacy Auto mode must remain readable for old orders');
+assert.equal(legacy.price.webPurchaseSticks,legacy.price.webPack.sticks,'Different chord and web profiles must never mix offcuts');
 
 console.log('Canopy calculator checks passed:',Math.round(base.price.total),'₽; 3m lags standard/economy:',standard3.price.lagLines,'/',economy3.price.lagLines);
