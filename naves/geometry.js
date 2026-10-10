@@ -163,5 +163,77 @@
     };
   }
 
-  window.TrussGeometry={compute,circle,arcY,mm,fmt,resolveProfiles};
+  // Manufacturing coordinates in millimetres are measured along the PROFILE
+  // CENTERLINES, from the left tip of the full truss. They are deliberately
+  // not presented as saw-cut allowances or end bevel angles.
+  function productionSpec(g,quantity=1){
+    if(!g?.ok) throw new Error('Для ТЗ требуются корректные размеры фермы');
+    const trusses=Math.max(1,Math.floor(Number(quantity)||1));
+    const xAt=x=>x+g.widthM/2;
+    const point=(x,y)=>({xMm:mm(xAt(x)),yMm:mm(y)});
+    const rows=[];
+    const add=(id,name,profile,lengthM,placements,note='')=>{
+      const row={
+        id,name,profile,lengthM,lengthMm:mm(lengthM),
+        perTruss:placements.length,total:placements.length*trusses,
+        placements,note
+      };
+      rows.push(row);
+      return row;
+    };
+    add('P1','Верхний пояс (гибка)',g.chordProfile,g.topCircle.length,[
+      {from:point(-g.widthM/2,0),to:point(g.widthM/2,0),axisDeg:null}
+    ],'Длина дуги по оси; радиус '+mm(g.topCircle.radius)+' мм; подъём '+mm(g.riseM)+' мм');
+    add('P2','Нижний пояс (дуга + края)',g.chordProfile,g.lowerTotalM,[
+      {from:point(-g.widthM/2,0),to:point(g.widthM/2,0),axisDeg:null}
+    ],'Дуга '+mm(g.lowerCircle.length)+' мм (R '+mm(g.lowerCircle.radius)+' мм) + прямые края '+mm(g.endFlatM)+' мм × 2');
+    add('T','Торцевая стойка',g.webProfile,g.endPostM,[
+      {from:point(-g.innerChordM/2,0),to:point(-g.innerChordM/2,g.endPostM),axisDeg:90},
+      {from:point(g.innerChordM/2,0),to:point(g.innerChordM/2,g.endPostM),axisDeg:90}
+    ],'По одной слева и справа');
+    if(g.trussType==='Вертикальная'||g.trussType==='Усиленная'){
+      for(const v of g.verticals){
+        add('V'+v.index,'Вертикальная стойка',g.webProfile,v.lengthM,[
+          {from:point(v.x,v.yLower),to:point(v.x,v.yUpper),axisDeg:90}
+        ]);
+      }
+    }
+    if(g.trussType==='Треугольная'||g.trussType==='Усиленная'){
+      for(const d of g.diagonals){
+        add('D'+d.index,'Диагональ',g.webProfile,d.lengthM,[
+          {from:point(d.x1,d.y1),to:point(d.x2,d.y2),
+            axisDeg:Math.atan2(d.y2-d.y1,d.x2-d.x1)*180/Math.PI}
+        ]);
+      }
+    }
+    const geometry={
+      widthMm:mm(g.widthM),
+      postSpanMm:mm(g.widthPostsM),
+      trussOverhangMm:mm(g.overhangM),
+      riseMm:mm(g.riseM),
+      heightMm:mm(g.heightM),
+      endFlatMm:mm(g.endFlatM),
+      innerChordMm:mm(g.innerChordM),
+      lowerRiseMm:mm(g.lowerRiseM),
+      upperRadiusMm:mm(g.topCircle.radius),
+      lowerRadiusMm:mm(g.lowerCircle.radius),
+      upperArcMm:mm(g.topCircle.length),
+      lowerArcMm:mm(g.lowerCircle.length),
+      lowerTotalMm:mm(g.lowerTotalM),
+      endPostMm:mm(g.endPostM),
+      projectedStepMm:mm(g.projectedStepM)
+    };
+    return {
+      trusses,type:g.trussType,chordProfile:g.chordProfile,webProfile:g.webProfile,
+      geometry,rows,
+      membersPerTruss:rows.reduce((sum,row)=>sum+row.perTruss,0),
+      membersTotal:rows.reduce((sum,row)=>sum+row.total,0),
+      axisMetalM:rows.reduce((sum,row)=>sum+row.lengthM*row.perTruss,0),
+      warning:'Размеры и длины приведены по геометрическим осям профилей. '+
+        'Угол оси диагонали НЕ является углом реза. Торцевые резы, '+
+        'технологические припуски и гибку уточнить по контрольному шаблону перед серией.'
+    };
+  }
+
+  window.TrussGeometry={compute,circle,arcY,mm,fmt,resolveProfiles,productionSpec};
 })();
