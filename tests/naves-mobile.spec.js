@@ -289,6 +289,29 @@ test('canopy client is simple and saved order keeps production/finance in admin'
   await expect(page.locator('[data-canopy-panel="production"]')).toContainText('Раскрой фермы');
   await expect(page.locator('[data-canopy-panel="production"]')).toContainText('Материалы и закупка');
   await expect(page.locator('#canopyPrintDrawing')).toContainText('Распечатать ТЗ сварщику');
+  await expect(page.locator('#canopyDownloadSvg')).toBeVisible();
+  await expect(page.locator('[data-canopy-panel="production"]')).toContainText('Контрольные размеры и радиусы');
+  await expect(page.locator('[data-canopy-panel="production"]')).toContainText('Верхний пояс: радиус по оси');
+  await expect(page.locator('[data-canopy-panel="production"]')).toContainText('Нижний пояс: полная длина по оси');
+  await expect(page.locator('[data-canopy-panel="production"]')).toContainText('Узлы (x; y), мм');
+  await expect(page.locator('[data-canopy-panel="production"]')).toContainText('Угол оси');
+  await expect(page.locator('[data-canopy-panel="production"]')).toContainText('НЕ является углом реза');
+  const svgDownload=page.waitForEvent('download');
+  await page.locator('#canopyDownloadSvg').click();
+  const exported=await svgDownload;
+  expect(exported.suggestedFilename()).toMatch(/^naves-ferma-.*\.svg$/);
+
+  const welderPopup=page.waitForEvent('popup');
+  await page.locator('#canopyPrintDrawing').click();
+  const welder=await welderPopup;
+  await expect(welder.locator('body')).toContainText('ТЗ сварщику');
+  const welderDocument=await welder.locator('body').innerText();
+  expect(welderDocument).toContain('Контрольные размеры и радиусы');
+  expect(welderDocument).toContain('Координаты узлов');
+  expect(welderDocument).toContain('V1');
+  expect(welderDocument).toContain('D1');
+  expect(welderDocument).not.toMatch(/₽|Себестоимость|Прибыль|Стоимость/);
+  await welder.close();
 
   await page.locator('[data-canopy-inner="finance"]').click();
   await expect(page.locator('[data-canopy-panel="finance"]')).toBeVisible();
