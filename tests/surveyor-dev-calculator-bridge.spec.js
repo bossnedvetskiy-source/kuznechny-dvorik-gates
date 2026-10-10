@@ -231,6 +231,76 @@ for (const [type, file] of [
 }
 
 
+test('surveyor canopy has simple steps and 3D customer presentation without losing quote', async ({page}) => {
+  await loginAndCreateSurvey(page, 'Мелеуз, 3D показ клиенту');
+  await page.locator('[data-launch-calculation="canopy"]').click();
+  await expect(page.locator('#kdSurveyorBridge')).toBeVisible({timeout:15000});
+
+  const details=page.locator('.kd-canopy-other-types');
+  await expect(details).not.toHaveAttribute('open','');
+  await expect(page.locator('[data-farm-type="Полуарочный"]')).toBeHidden();
+  await expect(page.locator('#widthPosts')).toBeVisible();
+  await expect(page.locator('#coverage')).toBeVisible();
+  await expect(page.locator('.kd-canopy-step')).toContainText('Размеры');
+  await expect(page.locator('[data-canopy-preset="new"]')).toHaveClass(/is-selected/);
+  await expect(page.locator('#existingPosts')).toBeHidden();
+  await expect(page.locator('.kd-canopy-beams-manual')).toBeHidden();
+
+  await page.locator('#widthPosts').fill('3.6');
+  await page.locator('#lengthPosts').fill('6');
+  await expect(page.locator('#kdSurveyorBridgeSave')).toBeEnabled({timeout:15000});
+  const first=await page.locator('#totalPrice').textContent();
+
+  await page.locator('[data-canopy-preset="posts"]').click();
+  await expect(page.locator('[data-canopy-preset="posts"]')).toHaveClass(/is-selected/);
+  const totalPosts=Number(await page.locator('#existingPosts').inputValue());
+  expect(totalPosts).toBeGreaterThan(0);
+  await expect(page.locator('#beamsExisting')).not.toBeChecked();
+
+  await page.locator('#kdCanopyPartial').click();
+  await expect(page.locator('#existingPosts')).toBeVisible();
+  await expect(page.locator('#beamsExisting')).toBeVisible();
+  await page.locator('#existingPosts').fill('2');
+  await page.locator('#beamsExisting').check();
+  await expect(page.locator('#totalPrice')).not.toHaveText(first);
+
+  await page.locator('.kd-canopy-display').click();
+  await expect(page.locator('html')).toHaveClass(/kd-canopy-presenting/);
+  await expect(page.locator('.client-controls')).toBeHidden();
+  await expect(page.locator('#canopyViewport canvas')).toBeVisible();
+  await expect(page.locator('#totalPrice')).toBeVisible();
+  await expect(page.locator('#kdCanopyPresent')).toHaveAttribute('aria-pressed','true');
+  await expect(page.locator('#kdSurveyorBridgeSave')).toBeHidden();
+
+  await page.locator('#kdCanopyPresent').click();
+  await expect(page.locator('html')).not.toHaveClass(/kd-canopy-presenting/);
+  await expect(page.locator('#widthPosts')).toBeVisible();
+  await expect(page.locator('#widthPosts')).toHaveValue('3.6');
+  await expect(page.locator('#existingPosts')).toHaveValue('2');
+  await expect(page.locator('#beamsExisting')).toBeChecked();
+  await expect(page.locator('#kdSurveyorBridgeSave')).toBeVisible();
+  await page.locator('#kdSurveyorBridgeSave').click();
+
+  await expect(page.locator('#surveyDetailsDialog')).toBeVisible({timeout:45000});
+  await expect(page.locator('.calculation-card')).toHaveCount(1);
+  await expect(page.locator('.calculation-card-tags')).toContainText('Арочный');
+  await expect(page.locator('.calculation-card-price')).toContainText('₽');
+  const surveyCalc=await page.evaluate(async()=>{
+    const request=indexedDB.open('kd-surveyor-stage1');
+    const db=await new Promise((resolve,reject)=>{request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);});
+    const all=await new Promise((resolve,reject)=>{
+      const tx=db.transaction('surveys').objectStore('surveys').getAll();
+      tx.onsuccess=()=>resolve(tx.result);tx.onerror=()=>reject(tx.error);
+    });
+    db.close();
+    return all.at(-1)?.configuration?.calculations?.[0];
+  });
+  expect(surveyCalc.payload.configuration.canopy).not.toHaveProperty('pricingSnapshot');
+  expect(surveyCalc.payload.configuration.canopy.input.widthPostsM).toBe(3.6);
+  expect(surveyCalc.payload.configuration.canopy.input.existingPosts).toBe(2);
+  expect(surveyCalc.payload.configuration.canopy.input.beamsExisting).toBe(true);
+});
+
 test('canopy surveyor: photos and support presets update a real public quote without exposing pricing rates', async ({page}) => {
   await loginAndCreateSurvey(page, 'Мелеуз, тест готовых опор навеса');
   await page.locator('[data-launch-calculation="canopy"]').click();
@@ -257,6 +327,7 @@ test('canopy surveyor: photos and support presets update a real public quote wit
 
   await page.locator('#coverage').selectOption('Профнастил');
   await expect(page.locator('#kdSurveyorBridgeSave')).toBeEnabled();
+  await page.locator('.kd-canopy-other-types summary').click();
   await page.locator('[data-farm-type="Полуарочный"]').click();
   await expect(page.locator('#kdSurveyorBridgeSave')).toBeDisabled();
   await page.locator('[data-farm-type="Арочный"]').click();
