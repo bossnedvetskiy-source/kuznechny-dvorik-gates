@@ -404,6 +404,42 @@
       .kd-surveyor-canopy .workspace{margin-top:0!important}
       .kd-surveyor-canopy .client-result{order:2!important;position:static!important}
       .kd-surveyor-canopy .right-column{order:2!important}
+      .kd-surveyor-canopy .client-controls .panel-head{margin-bottom:9px}
+      .kd-surveyor-canopy .client-main-fields{gap:10px!important}
+      .kd-surveyor-canopy .client-main-fields > .field span{font-size:13px}
+      .kd-surveyor-canopy .client-main-fields > .field input,
+      .kd-surveyor-canopy .client-main-fields > .field select{min-height:48px;border-radius:11px}
+      .kd-surveyor-canopy .kd-canopy-step{grid-column:1/-1;font-weight:800;font-size:12px;color:#e2b861;padding-top:5px}
+      .kd-surveyor-canopy .kd-canopy-other-types{margin-top:12px;border:1px solid #41464b;border-radius:13px;background:#121518;overflow:hidden}
+      .kd-surveyor-canopy .kd-canopy-other-types>summary{list-style:none;cursor:pointer;padding:14px;font-size:12px;font-weight:800;color:#edd399}
+      .kd-surveyor-canopy .kd-canopy-other-types>summary::-webkit-details-marker{display:none}
+      .kd-surveyor-canopy .kd-canopy-other-types>summary:after{content:'⌄';float:right}
+      .kd-surveyor-canopy .kd-canopy-other-types[open]>summary:after{content:'⌃'}
+      .kd-surveyor-canopy .kd-canopy-other-types .original-picker{display:grid;border:0;padding:0 12px 14px;gap:12px}
+      .kd-surveyor-canopy .kd-canopy-other-types .original-picker-group:nth-child(2){display:none!important}
+      .kd-surveyor-canopy .kd-canopy-existing-count[hidden]{display:none!important}
+      .kd-surveyor-canopy .kd-canopy-partial{border:0;background:transparent;color:#edd399;text-align:left;padding:3px 0;font-size:12px;font-weight:700;cursor:pointer}
+      .kd-surveyor-canopy .kd-canopy-preset-list{display:grid;grid-template-columns:1fr;gap:7px}
+      .kd-surveyor-canopy .kd-canopy-preset-list button{border-radius:11px;min-height:43px}
+      .kd-surveyor-canopy .kd-canopy-preset-list button.is-selected:before{content:'✓ ';font-weight:900}
+      .kd-surveyor-canopy .kd-canopy-display{border:1px solid #a47c3e;border-radius:11px;background:#242015;color:#efd49a;padding:10px 12px;font-size:12px;font-weight:800;cursor:pointer}
+      .kd-surveyor-canopy #kdSurveyorBridge .kd-row{grid-template-columns:auto minmax(0,1fr) auto auto;gap:6px}
+      .kd-surveyor-canopy #kdSurveyorBridge .kd-present{background:#30312f;color:#f2d48a;border:1px solid #7c6541}
+      .kd-surveyor-canopy.kd-canopy-presenting .client-controls{display:none!important}
+      .kd-surveyor-canopy.kd-canopy-presenting .workspace{display:block!important}
+      .kd-surveyor-canopy.kd-canopy-presenting .right-column{display:flex!important;flex-direction:column!important}
+      .kd-surveyor-canopy.kd-canopy-presenting .canopy-preview-panel{order:0!important}
+      .kd-surveyor-canopy.kd-canopy-presenting .client-result{order:1!important}
+      .kd-surveyor-canopy.kd-canopy-presenting .canopy-preview-panel .panel-head h2{font-size:19px}
+      .kd-surveyor-canopy.kd-canopy-presenting #clientSummary{display:none!important}
+      .kd-surveyor-canopy.kd-canopy-presenting #resultStatus{display:none!important}
+      .kd-surveyor-canopy.kd-canopy-presenting .preview-note{display:none!important}
+      .kd-surveyor-canopy.kd-canopy-presenting .canopy-three-viewport{height:min(62vh,570px);min-height:340px}
+      .kd-surveyor-canopy.kd-canopy-presenting .client-result{padding:16px!important}
+      .kd-surveyor-canopy.kd-canopy-presenting .client-result .total-price{margin-bottom:0}
+      .kd-surveyor-canopy.kd-canopy-presenting #kdSurveyorBridge .kd-present{background:#e2b861;color:#17140d}
+      .kd-surveyor-canopy.kd-canopy-presenting #kdSurveyorBridgeSave{visibility:hidden}
+      .kd-surveyor-canopy .kd-canopy-preview-jump{display:none!important}
       .kd-surveyor-canopy .client-controls{order:1!important}
       .kd-surveyor-canopy .farm-type-grid{gap:8px!important}
       .kd-surveyor-canopy .farm-type-option{position:relative!important;min-height:85px!important;padding:5px 5px 23px!important;border:1px solid #3f454b!important;border-radius:9px!important;overflow:hidden}
@@ -421,6 +457,13 @@
       .kd-surveyor-canopy #kdSurveyorBridge .kd-copy b{font-size:15px;line-height:1.2}
       .kd-surveyor-canopy #kdSurveyorBridge .kd-copy span{font-size:10px}
       .kd-surveyor-canopy #kdSurveyorBridgeSave:disabled{opacity:.55;cursor:not-allowed}
+      @media(max-width:600px){
+        .kd-surveyor-canopy .client-main-fields{grid-template-columns:1fr 1fr!important}
+        .kd-surveyor-canopy .client-main-fields>.field:nth-of-type(3){grid-column:1/-1}
+        .kd-surveyor-canopy .client-main-fields>.technical-options{grid-column:1/-1}
+        .kd-surveyor-canopy #kdSurveyorBridge .kd-save{font-size:11px;padding:9px 7px}
+        .kd-surveyor-canopy #kdSurveyorBridge .kd-present{padding:8px;min-width:44px}
+      }
 
       @media(max-width:520px){
         #kdSurveyorBridge .kd-row{grid-template-columns:46px minmax(0,1fr) auto}
@@ -459,11 +502,15 @@
       <div class="kd-row">
         <button type="button" class="kd-back" id="kdSurveyorBridgeBack">← В замер</button>
         <div class="kd-copy"><b>${editState ? 'Редактирование расчёта' : 'Расчёт для замера'}</b><span id="kdSurveyorBridgeMessage">${editState ? 'Восстанавливаем сохранённые параметры…' : 'Настройте калькулятор и сохраните результат'}</span></div>
+        ${calculatorType === 'canopy' ? '<button type="button" class="kd-present" id="kdCanopyPresent" aria-pressed="false">3D клиенту</button>' : ''}
         <button type="button" class="kd-save" id="kdSurveyorBridgeSave">${editState ? 'Сохранить изменения' : 'Добавить в замер'}</button>
       </div>`;
     document.body.append(bar);
 
     if (calculatorType === 'canopy') {
+      const form = document.querySelector('.client-controls');
+      const fieldGrid = document.querySelector('.client-main-fields');
+      const originalPicker = document.querySelector('.original-picker');
       const typeGrid = document.querySelector('.farm-type-grid');
       typeGrid?.querySelectorAll('[data-farm-type]').forEach(button => {
         const badge = document.createElement('span');
@@ -473,28 +520,54 @@
         button.setAttribute('aria-label', (button.dataset.farmType || 'Ферма') +
           (button.dataset.farmType === 'Арочный' ? ', доступен расчёт цены' : ', цена по запросу'));
       });
-      const jump = document.createElement('button');
-      jump.type = 'button';
-      jump.className = 'kd-canopy-preview-jump';
-      jump.textContent = 'Посмотреть 3D-модель навеса ↓';
-      jump.addEventListener('click', () =>
-        document.getElementById('canopyViewport')?.scrollIntoView({behavior:'smooth',block:'center'}));
-      typeGrid?.insertAdjacentElement('afterend',jump);
+
+      // Move the catalogue to an optional details block. In surveyor mode,
+      // on-site dimensions come first, not the 7 decorative farm cards.
+      const otherTypes = document.createElement('details');
+      otherTypes.className = 'kd-canopy-other-types';
+      otherTypes.innerHTML = '<summary>Другие формы и конструкция фермы</summary>';
+      originalPicker?.parentElement?.removeChild(originalPicker);
+      if (originalPicker) otherTypes.append(originalPicker);
+      form?.querySelector('.simple-options')?.insertAdjacentElement('afterend',otherTypes);
+
+      const step = document.createElement('div');
+      step.className='kd-canopy-step';
+      step.textContent='1 · Размеры и покрытие';
+      fieldGrid?.prepend(step);
 
       const existing = document.getElementById('existingPosts');
       const beams = document.getElementById('beamsExisting');
       const anchorField = existing?.closest('label');
+      anchorField?.classList.add('kd-canopy-existing-count');
       const presets = document.createElement('section');
       presets.className = 'kd-canopy-presets';
-      presets.innerHTML = `<strong>Что уже установлено у клиента?</strong>
+      presets.innerHTML = `<strong>2 · Что уже есть у заказчика?</strong>
         <div class="kd-canopy-preset-list">
-          <button type="button" data-canopy-preset="new">Нужны новые столбы и балки</button>
-          <button type="button" data-canopy-preset="posts">Столбы уже стоят · нужны балки</button>
-          <button type="button" data-canopy-preset="all">Есть столбы и продольные балки</button>
+          <button type="button" data-canopy-preset="new">Нужны столбы и балки</button>
+          <button type="button" data-canopy-preset="posts">Столбы есть, нужны балки</button>
+          <button type="button" data-canopy-preset="all">Столбы и балки уже есть</button>
         </div>
-        <small>Если готова только часть столбов, укажите их количество в поле выше.</small>`;
+        <button type="button" class="kd-canopy-partial" id="kdCanopyPartial" aria-expanded="false">Часть столбов уже есть? Указать количество</button>`;
       anchorField?.insertAdjacentElement('afterend',presets);
 
+      // Put the conditions next to other primary inputs. Only partial-support
+      // cases need a separate numeric field; preset buttons cover routine jobs.
+      if (fieldGrid && presets) fieldGrid.append(presets);
+      const partialButton = presets.querySelector('#kdCanopyPartial');
+      let partialOpen = false;
+      const syncPartial = () => {
+        const totalPosts=Number(window.__CANOPY_PUBLIC?.totalPosts||0);
+        const installed=Number(existing?.value||0);
+        if(installed>0 && installed<totalPosts)partialOpen=true;
+        if(anchorField)anchorField.hidden=!partialOpen;
+        partialButton?.setAttribute('aria-expanded',partialOpen?'true':'false');
+        if(partialButton)partialButton.textContent=partialOpen?'Скрыть ввод количества столбов':'Часть столбов уже есть? Указать количество';
+      };
+      partialButton?.addEventListener('click',()=>{
+        partialOpen=!partialOpen;
+        syncPartial();
+        if(partialOpen)existing?.focus();
+      });
       let presetInProgress = false;
       const updatePresets = () => {
         const totalPosts = Number(window.__CANOPY_PUBLIC?.totalPosts || 0);
@@ -502,8 +575,12 @@
         const hasBeams = Boolean(beams?.checked);
         const chosen = installed === 0 && !hasBeams ? 'new' :
           totalPosts > 0 && installed >= totalPosts ? (hasBeams ? 'all' : 'posts') : '';
-        presets.querySelectorAll('[data-canopy-preset]').forEach(button =>
-          button.classList.toggle('is-selected',button.dataset.canopyPreset === chosen));
+        presets.querySelectorAll('[data-canopy-preset]').forEach(button =>{
+          const selected=button.dataset.canopyPreset===chosen;
+          button.classList.toggle('is-selected',selected);
+          button.setAttribute('aria-pressed',String(selected));
+        });
+        syncPartial();
       };
       presets.addEventListener('click', event => {
         const button = event.target.closest('[data-canopy-preset]');
@@ -523,6 +600,32 @@
       for (const id of ['lengthPosts','widthPosts']) document.getElementById(id)?.addEventListener('input',updatePresets);
       updatePresets();
 
+      // One touch opens a clear customer presentation with live 3D and public
+      // price; the editable inputs return in place without losing their values.
+      const present = document.getElementById('kdCanopyPresent');
+      const display = document.createElement('button');
+      display.type='button';
+      display.className='kd-canopy-display';
+      display.textContent='3 · Показать клиенту 3D и цену';
+      fieldGrid?.append(display);
+      const showPresentation = value => {
+        const on=Boolean(value);
+        document.documentElement.classList.toggle('kd-canopy-presenting',on);
+        present?.setAttribute('aria-pressed',String(on));
+        if(present)present.textContent=on?'Изменить':'3D клиенту';
+        const model=document.getElementById('canopyViewport');
+        if(on){
+          document.querySelector('.canopy-preview-panel')?.scrollIntoView({behavior:'auto',block:'start'});
+        }else{
+          form?.scrollIntoView({behavior:'auto',block:'start'});
+        }
+        if(model && window.__TRUSS_CURRENT?.ok && window.__CANOPY_PUBLIC)
+          window.Canopy3D?.render?.(model,window.__TRUSS_CURRENT,window.__CANOPY_PUBLIC);
+      };
+      display.addEventListener('click',()=>showPresentation(true));
+      present?.addEventListener('click',()=>showPresentation(!document.documentElement.classList.contains('kd-canopy-presenting')));
+      // Keep all interactive fields available during edit. The presentation
+      // mode is never persisted to a saved quote.
       const priceNode = document.getElementById('totalPrice');
       const statusNode = document.getElementById('resultStatus');
       const warningNode = document.getElementById('geometryWarning');
