@@ -27,7 +27,13 @@
     svg.append(el('rect',{x:0,y:0,width:W,height:H,fill:'#f8f7f2'}));
     const title=el('text',{x:55,y:45,fill:'#121416','font-size':27,'font-weight':800},'АРОЧНАЯ ФЕРМА — ВИД СБОКУ');
     svg.append(title);
-    svg.append(el('text',{x:55,y:73,fill:'#687078','font-size':15},'Размеры пересчитываются автоматически • значения по геометрической оси'));
+    svg.append(el('text',{x:55,y:73,fill:'#687078','font-size':15},'Размеры по осям профилей • узлы обозначены D и V • не является шаблоном для реза')); 
+    const spec=window.TrussGeometry.productionSpec(g,g.trussCount);
+    const sg=spec.geometry;
+    svg.append(el('text',{x:55,y:111,fill:'#38434b','font-size':15,'font-weight':800},
+      'ВЕРХНИЙ ПОЯС  R '+sg.upperRadiusMm+' мм  •  дуга '+sg.upperArcMm+' мм'));
+    svg.append(el('text',{x:55,y:132,fill:'#38434b','font-size':15,'font-weight':800},
+      'НИЖНИЙ ПОЯС  R '+sg.lowerRadiusMm+' мм  •  дуга '+sg.lowerArcMm+' мм  +  края '+sg.endFlatMm+' × 2 мм'));
     const pts=(chord,sag,n=80)=>Array.from({length:n+1},(_,i)=>{
       const x=-chord/2+chord*i/n;
       return {x,y:window.TrussGeometry.arcY(x,chord,sag)};
@@ -42,6 +48,11 @@
     svg.append(el('line',{x1:X(g.innerChordM/2),y1:Y(0),x2:X(g.widthM/2),y2:Y(0),...common}));
     const leftPostTop=window.TrussGeometry.arcY(-g.innerChordM/2,g.widthM,g.riseM);
     const rightPostTop=window.TrussGeometry.arcY(g.innerChordM/2,g.widthM,g.riseM);
+    for(const side of [-1,1]){
+      const x=side*g.innerChordM/2;
+      svg.append(el('text',{x:X(x)+(side<0?-8:8),y:Y(0)-10,fill:'#59616a',
+        'font-size':11,'font-weight':800,'text-anchor':side<0?'end':'start'},'T'));
+    }
     svg.append(el('line',{x1:X(-g.innerChordM/2),y1:Y(0),x2:X(-g.innerChordM/2),y2:Y(leftPostTop),...common}));
     svg.append(el('line',{x1:X(g.innerChordM/2),y1:Y(0),x2:X(g.innerChordM/2),y2:Y(rightPostTop),...common}));
     if(g.trussType==='Вертикальная'||g.trussType==='Усиленная'){
@@ -96,7 +107,7 @@
         :('D1…D'+g.diagonalCount);
     svg.append(el('text',{x:55,y:H-34,fill:'#454c52','font-size':14,'font-weight':700},
       'Тип: '+g.trussType+'   •   Материал: '+g.materialMode+'   •   '+memberLabel));
-    svg.append(el('text',{x:W-55,y:H-34,fill:'#454c52','font-size':14,'font-weight':700,'text-anchor':'end'},'Ферм в заказе: '+g.trussCount));
+    svg.append(el('text',{x:W-55,y:H-34,fill:'#454c52','font-size':14,'font-weight':700,'text-anchor':'end'},'Ферм в заказе: '+spec.trusses));
   }
   function serialize(svg){
     const copy=svg.cloneNode(true);
