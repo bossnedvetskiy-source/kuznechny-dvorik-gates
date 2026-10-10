@@ -165,6 +165,7 @@ test('owner hands off a canopy survey into fabrication and reissues after a chan
   await expect(page.locator('[data-open-canopy-production]')).toHaveCount(0);
 
   await page.locator('[data-send-canopy-production]').click();
+  await expect(page.locator('#toast')).toContainText('ТЗ навеса подготовлено');
   await expect(page.locator('.canopy-production-state')).toContainText('ТЗ сформировано');
   await expect(page.locator('[data-open-canopy-production]')).toBeVisible();
   const initial=await page.evaluate(async()=>{
