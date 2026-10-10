@@ -297,6 +297,7 @@ async function openItem(lead){
       </section>
 
       <section class="canopy-inner-panel" data-canopy-panel="production" hidden>
+        ${lead._survey?`<div class="canopy-snapshot-note"><b>Объект:</b> ${escape(lead.city||'Без адреса')}${lead.note?'<div><b>Комментарий замерщика:</b> '+escape(lead.note)+'</div>':''}<div>Источник: подтверждённая карточка замера. Расчёт не переносился вручную.</div></div>`:''}
         <div class="canopy-print-actions"><button class="reset-button" id="canopyDownloadSvg" type="button">Скачать чертёж SVG</button><button class="reset-button canopy-print-primary" id="canopyPrintDrawing" type="button">Распечатать ТЗ сварщику</button></div>
         <h3 class="canopy-section-title">2D‑чертёж фермы</h3>
         <div class="canopy-admin-svg"><svg id="canopyAdminTrussSvg" viewBox="0 0 1200 640"></svg></div>
@@ -362,6 +363,8 @@ async function openItem(lead){
     body.querySelector('#canopyPrintDrawing').onclick=()=>printDoc(
       'ТЗ сварщику · навес '+lead.id,
       '<h1>ТЗ сварщику · навес #'+escape(lead.id)+'</h1>'+
+      (lead._survey?'<p><b>Адрес:</b> '+escape(lead.city||'Без адреса')+'</p>'+
+        (lead.note?'<p><b>Комментарий замерщика:</b> '+escape(lead.note)+'</p>':''):'')+
       '<p>Размер по столбам: '+fmt(g.widthPostsM)+' × '+fmt(savedC.lengthM)+' м · ферм: '+savedC.trussCount+' шт. · обрешётка: '+escape(g.trussType)+' · пояс: '+escape(g.chordProfile)+' · внутренние элементы: '+escape(g.webProfile)+'</p>'+
       '<section class="welder-drawing"><h2>Чертёж фермы · размеры по осям, мм</h2>'+
       new XMLSerializer().serializeToString(svg)+'</section>'+
