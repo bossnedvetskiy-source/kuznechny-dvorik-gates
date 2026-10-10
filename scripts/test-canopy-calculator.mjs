@@ -141,4 +141,60 @@ const legacy=calc({materialMode:'Авто'});
 assert.equal(legacy.geometry.chordProfile,'25×25×1,5','Legacy Auto mode must remain readable for old orders');
 assert.equal(legacy.price.webPurchaseSticks,legacy.price.webPack.sticks,'Different chord and web profiles must never mix offcuts');
 
+// Production geometry is the single source for printed drawings and weld lists.
+// All lengths are centerline distances; a measured axis angle is NOT a saw angle.
+for(const type of ['Треугольная','Вертикальная','Усиленная']){
+  for(const riseMm of [400,567,800,1000]){
+    const {geometry:g,price:c}=calc({trussType:type,riseMm});
+    const spec=G.productionSpec(g,c.trussCount);
+    const dims=spec.geometry;
+    assert.equal(spec.trusses,c.trussCount);
+    assert.equal(dims.widthMm,G.mm(g.widthM));
+    assert.equal(dims.riseMm,riseMm);
+    assert.equal(dims.upperRadiusMm,G.mm(g.topCircle.radius));
+    assert.equal(dims.lowerRadiusMm,G.mm(g.lowerCircle.radius));
+    assert.equal(dims.upperArcMm,G.mm(g.topCircle.length));
+    assert.equal(dims.lowerTotalMm,G.mm(g.lowerTotalM));
+    assert.equal(dims.endFlatMm,G.mm(g.endFlatM));
+    assert.equal(spec.rows[0].id,'P1');
+    assert.equal(spec.rows[1].id,'P2');
+    assert.equal(spec.rows[2].id,'T');
+    assert.equal(spec.rows[2].perTruss,2);
+    assert.equal(spec.rows[2].total,2*c.trussCount);
+    assert.equal(spec.membersTotal,spec.membersPerTruss*c.trussCount);
+    assert.equal(spec.rows.filter(x=>x.id.startsWith('D')).length,g.diagonals.length);
+    assert.equal(spec.rows.filter(x=>x.id.startsWith('V')).length,g.verticals.length);
+    const oneTrussActualM=g.topCircle.length+g.lowerTotalM+2*g.endPostM+
+      g.diagonals.reduce((sum,d)=>sum+d.lengthM,0)+g.verticals.reduce((sum,v)=>sum+v.lengthM,0);
+    assert(Math.abs(spec.axisMetalM-oneTrussActualM)<1e-8,'Welder list must reconcile with truss geometry');
+    for(const row of spec.rows){
+      assert.equal(row.perTruss,row.placements.length);
+      assert.equal(row.total,row.perTruss*c.trussCount);
+      assert.equal(row.lengthMm,G.mm(row.lengthM));
+      for(const placement of row.placements){
+        for(const node of [placement.from,placement.to]){
+          assert(node.xMm>=0 && node.xMm<=dims.widthMm,'Station must be inside full truss');
+          assert(node.yMm>=0 && node.yMm<=dims.riseMm,'Node height must be inside truss');
+        }
+        if(!row.id.startsWith('P')){
+          const dx=(placement.to.xMm-placement.from.xMm)/1000;
+          const dy=(placement.to.yMm-placement.from.yMm)/1000;
+          assert(Math.abs(Math.hypot(dx,dy)-row.lengthM)<0.002,'Straight member length must match node coordinates');
+        }
+      }
+    }
+    assert(spec.warning.includes('НЕ является углом реза'),'Never confuse axis slope with saw cut');
+  }
+}
+const baselineSpec=G.productionSpec(base.geometry,base.price.trussCount);
+assert.equal(baselineSpec.geometry.widthMm,3700);
+assert.equal(baselineSpec.geometry.postSpanMm,3400);
+assert.equal(baselineSpec.geometry.endFlatMm,300);
+assert.equal(baselineSpec.rows[2].placements[0].from.xMm,300);
+assert.equal(baselineSpec.rows[2].placements[1].from.xMm,3400);
+assert.equal(baselineSpec.geometry.upperArcMm,3928);
+assert.equal(baselineSpec.geometry.lowerTotalMm,3786);
+assert.equal(baselineSpec.membersPerTruss,14);
+assert.equal(baselineSpec.membersTotal,84);
+
 console.log('Canopy calculator checks passed:',Math.round(base.price.total),'₽; 3m lags standard/economy:',standard3.price.lagLines,'/',economy3.price.lagLines);
