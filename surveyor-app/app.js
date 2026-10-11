@@ -5,9 +5,21 @@ const DB_NAME = 'kd-surveyor-stage1';
 const DB_VERSION = 1;
 const STORE_NAMES = ['employees', 'clients', 'surveys', 'meta'];
 const IS_PREVIEW = location.hostname.endsWith('github.io') || ['localhost','127.0.0.1'].includes(location.hostname);
-const FORCE_SERVER = new URLSearchParams(location.search).get('server') === '1';
-const API_ENABLED = !IS_PREVIEW || FORCE_SERVER;
-const API_BASE = IS_PREVIEW ? 'https://kuzdvor.tw1.ru/api/surveyor' : '/api/surveyor';
+// DEV may sync ONLY with an explicitly provisioned isolated staging endpoint.
+// Never route a GitHub Pages preview to the live production API, including via ?server=1.
+const DEV_API_SETTING = String(window.KD_DEV_SURVEYOR_API || '').trim().replace(/\/$/, '');
+const DEV_API_URL = (() => {
+  if (!IS_PREVIEW || !DEV_API_SETTING) return '';
+  try {
+    const url = new URL(DEV_API_SETTING);
+    if (url.protocol !== 'https:' || url.username || url.password ||
+        url.hostname === 'kuzdvor.tw1.ru' || url.hostname.endsWith('.github.io') ||
+        url.pathname !== '/api/surveyor' || url.search || url.hash) return '';
+    return url.origin + url.pathname;
+  } catch { return ''; }
+})();
+const API_ENABLED = !IS_PREVIEW || Boolean(DEV_API_URL);
+const API_BASE = IS_PREVIEW ? DEV_API_URL : '/api/surveyor';
 
 const WORK_TYPES = {
   gates: { label: 'Ворота / калитка', short: 'Ворота', className: 'gates' },
@@ -377,7 +389,7 @@ async function applyServerSurvey(server, { force = false } = {}) {
 async function syncNow({ silent = false } = {}) {
   if (syncInFlight) return false;
   if (!API_ENABLED) {
-    lastSyncMessage = 'DEV-превью: локальный режим';
+    lastSyncMessage = 'DEV: тестовый сервер не подключён, данные остаются на телефоне';
     updateSyncUi();
     return false;
   }
@@ -485,7 +497,7 @@ async function updateSyncUi() {
   const token = await metaGet('serverToken', '');
   if (!API_ENABLED) {
     status.textContent = 'Локальный DEV';
-    detail.textContent = 'Серверная синхронизация подготовлена, но не включена в обычном DEV-превью.';
+    detail.textContent = 'Сервер DEV ещё не настроен. Замеры сохраняются локально, без отправки на основной сайт.';
     button.disabled = true;
     return;
   }
