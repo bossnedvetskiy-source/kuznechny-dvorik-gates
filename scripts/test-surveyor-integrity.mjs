@@ -60,4 +60,30 @@ for (const table of ['surveyor_users','surveyor_sessions','surveyor_clients','su
 if (!build.includes("path.join(root, 'surveyor-app')") || !build.includes("'Disallow: /surveyor-app'")) {
   throw new Error('Timeweb package does not contain/protect surveyor app');
 }
+// DEV sync may never be toggled through a query string or aimed at the
+// production hostname. An isolated HTTPS endpoint must be provisioned explicitly.
+for (const needle of [
+  'window.KD_DEV_SURVEYOR_API',
+  "url.protocol !== 'https:'",
+  "url.hostname === 'kuzdvor.tw1.ru'",
+  "url.pathname !== '/api/surveyor'",
+  "const API_ENABLED = !IS_PREVIEW || Boolean(DEV_API_URL)",
+  "const API_BASE = IS_PREVIEW ? DEV_API_URL : '/api/surveyor'",
+  "serverRevision:Number(x.serverRevision||0)",
+  "if (!navigator.onLine)",
+  "if (syncInFlight) return false"
+]) if(!app.includes(needle)) throw new Error('DEV staging guard or retry handling missing: '+needle);
+if (app.includes("FORCE_SERVER") || app.includes("new URLSearchParams(location.search).get('server')"))
+  throw new Error('Unsafe DEV production override detected');
+for(const needle of [
+  "// Contact and address can be supplied after the initial offline measurement.",
+  "if ($phone !== ''",
+  "c.updated_by=? OR EXISTS",
+  "o.created_by=?",
+  "if ((string)$session['role'] === 'owner')",
+  "elseif" // corrected below: marker from the explicit conflict branches
+].slice(0,-1)) if(!api.includes(needle))throw new Error('Staging API integrity missing: '+needle);
+const preview=await readFile('scripts/build-dev-preview.mjs','utf8');
+if(!preview.includes('process.env.DEV_SURVEYOR_API_URL') || !preview.includes("url.pathname!=='/api/surveyor'"))
+  throw new Error('Staging endpoint build wiring missing');
 console.log('Surveyor app/server integrity OK');
