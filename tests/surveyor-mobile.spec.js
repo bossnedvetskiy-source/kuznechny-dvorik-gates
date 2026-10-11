@@ -15,7 +15,7 @@ test('compact survey card shows all product choices and usable canopy image on m
   await expect(page.locator('.v3-product-tile')).toHaveCount(3);
   await expect(page.locator('.v3-product-heading')).toContainText('Добавить изделие');
   await expect(page.locator('.v3-address')).toContainText('Адрес не указан');
-  await expect(page.locator('.v3-survey-meta')).toContainText('Телефон не указан');
+  await expect(page.locator('.v3-survey-meta')).toContainText('Контакты не заполнены');
   await expect(page.locator('.calculation-section')).toContainText('Сохранённые расчёты');
   await expect(page.locator('.calculation-section.is-empty')).toBeVisible();
   await expect(page.locator('.calculation-section .calculation-list')).toHaveCount(0);
