@@ -332,7 +332,9 @@ function kd_surveyor_sync_order(array $item, array $session): array
     $updatedAt = mb_substr(trim((string)($item['updatedAt'] ?? '')),0,40);
     $incomingRevision = max(0,(int)($item['serverRevision'] ?? 0));
     $key = kd_surveyor_principal_key($session);
-    if (strlen(preg_replace('/\D/', '', $phone) ?? '') < 10 || $address === '') kd_surveyor_json(['error' => 'Для замера нужны телефон и адрес объекта'],400);
+    // A site visit may be saved before contact details or an address are known.
+    if ($phone !== '' && strlen(preg_replace('/\\D/', '', $phone) ?? '') < 10)
+        kd_surveyor_json(['error'=>'Проверьте телефон или оставьте поле пустым'],400);
 
     $stmt = kd_db()->prepare('SELECT * FROM surveyor_orders WHERE uuid=? LIMIT 1');
     $stmt->execute([$uuid]);
@@ -395,11 +397,18 @@ function kd_surveyor_sync(): never
     }
 
     $serverNow = (string)kd_db()->query("SELECT DATE_FORMAT(UTC_TIMESTAMP(),'%Y-%m-%d %H:%i:%s')")->fetchColumn();
-    $clientStmt = kd_db()->prepare('SELECT * FROM surveyor_clients WHERE updated_at>=? ORDER BY updated_at ASC LIMIT 1000');
-    $clientStmt->execute([$since]);
-    $pullClients = array_map('kd_surveyor_row_to_client', $clientStmt->fetchAll());
-
+    // Surveyors receive only contacts for their own orders or contact edits.
     $key = kd_surveyor_principal_key($session);
+    if ((string)$session['role'] === 'owner') {
+        $clientStmt = kd_db()->prepare('SELECT * FROM surveyor_clients WHERE updated_at>=? ORDER BY updated_at ASC LIMIT 1000');
+        $clientStmt->execute([$since]);
+    } else {
+        $clientStmt = kd_db()->prepare('SELECT c.* FROM surveyor_clients c WHERE c.updated_at>=? AND
+          (c.updated_by=? OR EXISTS (SELECT 1 FROM surveyor_orders o WHERE o.client_uuid=c.uuid AND o.created_by=?))
+          ORDER BY c.updated_at ASC LIMIT 1000');
+        $clientStmt->execute([$since,$key,$key]);
+    }
+    $pullClients = array_map('kd_surveyor_row_to_client', $clientStmt->fetchAll());
     if ((string)$session['role'] === 'owner') {
         $orderStmt = kd_db()->prepare('SELECT * FROM surveyor_orders WHERE updated_at>=? ORDER BY updated_at ASC LIMIT 1000');
         $orderStmt->execute([$since]);
