@@ -1559,9 +1559,8 @@ async function openSurveyDetails(id) {
     <section class="v3-survey-head">
       <div class="v3-address"><span>Объект</span><b>${escapeHtml(survey.address || 'Адрес не указан')}</b></div>
       <button type="button" class="v3-edit-link" data-edit-survey-data="${escapeHtml(survey.id)}">${survey.address ? 'Изменить' : 'Добавить'}</button>
-      <div class="v3-survey-meta"><span>${survey.clientPhone ? '☎ ' + escapeHtml(survey.clientPhone) : 'Телефон не указан'}</span>${survey.clientName ? `<span>${escapeHtml(survey.clientName)}</span>` : ''}<span class="v3-save-status">${escapeHtml(surveySyncText(survey))}</span></div>
+      <div class="v3-survey-meta"><span>${survey.clientPhone ? '☎ ' + escapeHtml(survey.clientPhone) : (survey.address ? 'Телефон не указан' : 'Контакты не заполнены')}</span>${survey.clientName ? `<span>${escapeHtml(survey.clientName)}</span>` : ''}<span class="v3-save-status">${escapeHtml(surveySyncText(survey))}</span></div>
     </section>
-    ${surveyPlanSummaryHtml(survey)}
     ${v3ProductTools(survey)}
     ${calculationsHtml(survey)}
     ${unifiedEstimate(survey).selected.length ? `<section class="v3-preview-bar">
@@ -1570,19 +1569,21 @@ async function openSurveyDetails(id) {
     </section>` : ''}
     ${survey.syncState === 'conflict' ? '<div class="details-section"><div class="notice notice-lock">На сервере есть новая версия этого замера. Данные на телефоне не перезаписаны.</div></div>' : ''}
     <details class="v3-extra">
-      <summary>Дополнительно: схема, комментарии и завершение <span>⌄</span></summary>
-      ${survey.note ? `<p class="v3-note">${escapeHtml(survey.note)}</p>` : ''}
-      <div class="details-actions">
-        ${survey.status === 'ready'
-          ? '<div class="notice notice-ready">✓ Замер завершён.</div>'
-          : `<button class="btn btn-secondary btn-block" data-complete-survey="${escapeHtml(survey.id)}" type="button">✓ Завершить замер</button>`}
-        ${currentUser.role === 'owner' ? `<button class="btn btn-danger btn-block" data-archive-survey="${escapeHtml(survey.id)}" type="button">Архивировать заказ</button>` : ''}
-      </div>
-    </details>`;
+      <summary>Схема участка и заметки <span>⌄</span></summary>
+      ${surveyPlanSummaryHtml(survey)}
+      ${survey.note ? `<p class="v3-note"><b>Комментарий:</b> ${escapeHtml(survey.note)}</p>` : ''}
+      <button type="button" class="v3-edit-note" data-edit-survey-data="${escapeHtml(survey.id)}">${survey.note ? 'Изменить заметки' : 'Добавить заметку'}</button>
+      ${currentUser.role === 'owner' ? `<div class="v3-archive-action"><button class="btn btn-danger btn-block" data-archive-survey="${escapeHtml(survey.id)}" type="button">В архив</button></div>` : ''}
+    </details>
+    <section class="v3-complete-action">
+      ${survey.status === 'ready'
+        ? '<div class="notice notice-ready">✓ Замер завершён</div>'
+        : `<button class="btn btn-primary btn-block" data-complete-survey="${escapeHtml(survey.id)}" type="button">✓ Завершить замер</button>`}
+    </section>`;
   $('#surveyDetailsDialog').showModal();
   $('[data-archive-survey]')?.addEventListener('click', () => archiveSurvey(survey.id));
   $('[data-complete-survey]')?.addEventListener('click', () => completeSurvey(survey.id));
-  $('[data-edit-survey-data]')?.addEventListener('click', () => openSurveyDataDialog(survey.id));
+  $('[data-edit-survey-data]').forEach(button=>button.addEventListener('click', () => openSurveyDataDialog(survey.id)));
   $('[data-edit-plan]')?.addEventListener('click', () => openPlanEditor(survey.id));
   $('[data-build-plan-from-calcs]')?.addEventListener('click', () => createPlanFromSavedCalculations(survey.id));
   $('[data-refresh-plan-sizes]')?.addEventListener('click', () => refreshPlanSizesFromQuotes(survey.id));
