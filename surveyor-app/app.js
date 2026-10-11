@@ -1593,7 +1593,7 @@ async function openSurveyDetails(id) {
   const detailsRoot = $('#surveyDetailsContent');
   $$('[data-edit-calculation]', detailsRoot).forEach(card => {
     const openEdit = event => {
-      if (event?.target?.closest?.('[data-delete-calculation],[data-estimate-choice],[data-send-canopy-production],[data-open-canopy-production]')) return;
+      if (event?.target?.closest?.('[data-delete-calculation],[data-estimate-choice],[data-send-canopy-production],[data-open-canopy-production],[data-show-calculation]')) return;
       if (event?.type === 'keydown' && !['Enter',' '].includes(event.key)) return;
       event?.preventDefault?.();
       editCalculation(survey.id, card.dataset.editCalculation);
@@ -1601,7 +1601,11 @@ async function openSurveyDetails(id) {
     card.addEventListener('click', openEdit);
     card.addEventListener('keydown', openEdit);
   });
-  $$('[data-send-canopy-production]', detailsRoot).forEach(button=>button.addEventListener('click',event=>{
+  $('[data-show-calculation]', detailsRoot).forEach(button=>button.addEventListener('click',event=>{
+    event.stopPropagation();
+    showCustomerView(survey,button.dataset.showCalculation);
+  }));
+  $('[data-send-canopy-production]', detailsRoot).forEach(button=>button.addEventListener('click',event=>{
     event.stopPropagation();
     sendCanopyToProduction(survey.id,button.dataset.sendCanopyProduction);
   }));
@@ -1620,12 +1624,16 @@ async function openSurveyDetails(id) {
   $('#estimateAdjustment')?.addEventListener('change',event=>setEstimateAdjustment(survey.id,event.target.value));
 }
 
-function showCustomerView(survey) {
+function showCustomerView(survey, onlyCalculationId = '') {
   const estimate = unifiedEstimate(survey);
-  const selected = estimate.selected;
+  const onlyItem = onlyCalculationId ? surveyCalculations(survey).find(item=>item.id===onlyCalculationId) : null;
+  if (onlyCalculationId && !onlyItem) return;
+  // Individual previews do not alter the total order or include alternative
+  // prices, shared work deductions, or details of other designs.
+  const selected = onlyItem ? [onlyItem] : estimate.selected;
   const dialog = $('#customerPreviewDialog');
   if (!dialog || !selected.length) return;
-  $('#customerPreviewTitle').textContent = 'Смета объекта';
+  $('#customerPreviewTitle').textContent = onlyItem ? 'Вариант изделия' : 'Смета объекта';
   const customerCard = item => {
     const d=calculationCardDetails(item);
     return `<article class="v3-customer-item">
@@ -1639,18 +1647,18 @@ function showCustomerView(survey) {
   $('#customerPreviewContent').innerHTML = `
     <div class="v3-customer-brand">КУЗНЕЧНЫЙ ДВОРИКЪ · ВАША СМЕТА</div>
     ${survey.address ? `<p class="v3-customer-address">${escapeHtml(survey.address)}</p>` : ''}
-    ${survey?.configuration?.sitePlan?.lines?.length ? `<section class="v3-customer-plan">
+    ${!onlyItem && survey?.configuration?.sitePlan?.lines?.length ? `<section class="v3-customer-plan">
       <h3>Схема установки</h3>
       <div class="plan-mini-preview">${survey.configuration.sitePlan.lines.map(line=>miniLineHtml(line)).join('')}</div>
       <p>Предварительный эскиз. Расположение опор и размеры сверяются на объекте.</p>
     </section>` : ''}
-    <h3 class="v3-estimate-client-heading">Выбранные изделия</h3>
+    <h3 class="v3-estimate-client-heading">${onlyItem ? 'Выбранный вариант' : 'Выбранные изделия'}</h3>
     ${selected.map(customerCard).join('')}
-    ${estimate.repeatedDelivery>0 ? `<div class="v3-customer-adjustment">Повторная доставка —${formatMoney(estimate.repeatedDelivery)}</div>`:''}
-    ${estimate.adjustment>0 ? `<div class="v3-customer-adjustment">Корректировка совместных работ —${formatMoney(estimate.adjustment)}</div>`:''}
-    <div class="v3-customer-total"><span>Предварительная стоимость</span><b>${formatMoney(estimate.total)}</b></div>
-    ${estimate.needsReview ? '<div class="v3-customer-disclaimer">Стоимость предварительная. Доставка и общие столбы могут потребовать уточнения до оформления договора.</div>' : ''}
-    ${estimate.alternatives.length ? `<section class="v3-customer-alternatives">
+    ${!onlyItem && estimate.repeatedDelivery>0 ? `<div class="v3-customer-adjustment">Повторная доставка —${formatMoney(estimate.repeatedDelivery)}</div>`:''}
+    ${!onlyItem && estimate.adjustment>0 ? `<div class="v3-customer-adjustment">Корректировка совместных работ —${formatMoney(estimate.adjustment)}</div>`:''}
+    <div class="v3-customer-total"><span>${onlyItem ? 'Предварительная цена варианта' : 'Предварительная стоимость'}</span><b>${formatMoney(onlyItem ? onlyItem.total : estimate.total)}</b></div>
+    ${onlyItem ? '<div class="v3-customer-disclaimer">Это стоимость одного варианта, без учёта других изделий и совместных работ.</div>' : (estimate.needsReview ? '<div class="v3-customer-disclaimer">Стоимость предварительная. Доставка и общие столбы могут потребовать уточнения до оформления договора.</div>' : '')}
+    ${!onlyItem && estimate.alternatives.length ? `<section class="v3-customer-alternatives">
       <h3>Другие рассмотренные варианты</h3>
       <p>Не включены в общую стоимость.</p>
       ${estimate.alternatives.map(item=>`<div class="v3-alt-row"><span>${escapeHtml(calculationCardDetails(item).title)}</span><b>${formatMoney(item.total)}</b></div>`).join('')}
