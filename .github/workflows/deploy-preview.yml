@@ -135,6 +135,8 @@ jobs:
           node -e "const x=JSON.parse(require('fs').readFileSync('/tmp/kuzdvor-live-fence-prices.json','utf8')); if(!x.fence) throw Error('Fence prices missing'); console.log('Live fence prices snapshot OK')"
 
       - name: Prepare protected dev preview
+        env:
+          DEV_SURVEYOR_API_URL: ${{ vars.DEV_SURVEYOR_API_URL }}
         run: node scripts/build-dev-preview.mjs
 
       - name: Test surveyor test PWA installability
