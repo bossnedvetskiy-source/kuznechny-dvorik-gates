@@ -17,6 +17,11 @@ test('compact survey card shows all product choices and usable canopy image on m
   await expect(page.locator('.v3-address')).toContainText('Адрес не указан');
   await expect(page.locator('.v3-survey-meta')).toContainText('Телефон не указан');
   await expect(page.locator('.calculation-section')).toContainText('Сохранённые расчёты');
+  await expect(page.locator('.calculation-section.is-empty')).toBeVisible();
+  await expect(page.locator('.calculation-section .calculation-list')).toHaveCount(0);
+  await expect(page.locator('[data-add-calculation]')).toHaveCount(0);
+  await expect(page.locator('.v3-complete-action')).toBeVisible();
+  await expect(page.locator('.v3-extra summary')).toContainText('Схема участка и заметки');
   const measures=await page.evaluate(()=>{
     const selectors=['.v3-details-dialog .sheet-head','.v3-survey-head','.v3-product-section',
       '.v3-product-tile','.calculation-section'];
@@ -79,7 +84,7 @@ test('surveyor can create a mixed survey and reopen it offline', async ({page, c
   await expect(page.locator('#surveyDetailsContent')).toContainText('Позвонить за час');
   await expect(page.locator('[data-survey-work-types]')).toHaveCount(0);
   await expect(page.locator('#surveyDetailsContent')).toContainText('Сохранённые расчёты');
-  await expect(page.locator('[data-add-calculation]')).toBeVisible();
+  await expect(page.locator('[data-add-calculation]')).toHaveCount(0);
 
   const surveyId = await card.getAttribute('data-survey-id');
   expect(surveyId).toBeTruthy();
@@ -111,6 +116,17 @@ test('surveyor can create a mixed survey and reopen it offline', async ({page, c
   await expect(page.locator('#surveyDetailsContent')).toContainText('Сохранённые расчёты');
   await expect(page.locator('.calculation-card')).toContainText('Ворота с калиткой');
   await expect(page.locator('.calculation-card-price')).toContainText('56');
+  await expect(page.locator('[data-add-calculation]')).toBeVisible();
+  await expect(page.locator('[data-show-calculation]')).toBeVisible();
+  await page.locator('[data-show-calculation]').click();
+  await expect(page.locator('#customerPreviewDialog')).toBeVisible();
+  await expect(page.locator('#customerPreviewTitle')).toContainText('Вариант изделия');
+  await expect(page.locator('#customerPreviewContent')).toContainText('56');
+  await expect(page.locator('#customerPreviewContent')).toContainText('одного варианта');
+  await expect(page.locator('#customerPreviewContent')).not.toContainText('Себестоимость');
+  await expect(page.locator('#customerPreviewContent')).not.toContainText('Прибыль');
+  await page.locator('#closeCustomerPreviewBtn').click();
+  await expect(page.locator('#surveyDetailsDialog')).toBeVisible();
   await expect(page.locator('[data-survey-work-types]')).toHaveCount(0);
 
   await page.locator('.v3-extra summary').click();
