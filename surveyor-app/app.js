@@ -1295,7 +1295,7 @@ function calculationsHtml(survey) {
   ].filter(Boolean);
   return `<div class="details-section calculation-section">
     <div class="section-head compact">
-      <div><h3>Сохранённые расчёты</h3><p class="muted">${rows.length ? rows.length+' '+plural(rows.length,['вариант','варианта','вариантов']) : 'Выберите изделие и сделайте первый расчёт.'}</p></div>
+      <div><h3>Сохранённые расчёты</h3><p class="muted">${rows.length ? rows.length+' '+plural(rows.length,['вариант','варианта','вариантов']) : 'Пока нет расчётов'}</p></div>
     </div>
     ${rows.length > 0 ? '<p class="estimate-help">Отметьте изделия для общего заказа. Другие варианты останутся сохранёнными, но не будут прибавляться к итогу.</p>' : ''}
     <div class="calculation-list">
@@ -1324,7 +1324,7 @@ function calculationsHtml(survey) {
             ${included?'В общем заказе':'Добавить в общий заказ'}
           </button>
         </article>`;
-      }).join('') || '<div class="calculation-empty">Пока нет вариантов. Добавьте расчёт ворот, забора или навеса.</div>'}
+      }).join('') || '<div class="calculation-empty">Выберите изделие выше — готовый расчёт появится здесь.</div>'}
     </div>
     <button class="btn btn-secondary btn-block v3-add-more" data-add-calculation="${survey.id}" type="button">+ Добавить другой вариант</button>
     ${rows.length ? `<section class="estimate-summary" aria-label="Общая смета объекта">
@@ -1529,8 +1529,7 @@ function surveySyncText(survey) {
 
 function v3ProductTools(survey) {
   return `<section class="v3-product-section" aria-label="Выбор изделия">
-    <h3>Что рассчитываем?</h3>
-    <p class="muted">Выберите изделие. Каталог, визуализация и стоимость откроются сразу.</p>
+    <div class="v3-product-heading"><h3>Добавить изделие</h3><span class="v3-product-hint">Выберите для расчёта</span></div>
     <div class="v3-product-grid">
       <button type="button" class="v3-product-tile" data-v3-calc="gates">
         <img src="../catalog/art-17s-1.webp" alt="Кованые ворота" loading="lazy">
@@ -1541,7 +1540,7 @@ function v3ProductTools(survey) {
         <span class="v3-product-label"><b>Забор</b><small>Варианты, размеры, схема, цена</small></span><span class="v3-product-arrow">→</span>
       </button>
       <button type="button" class="v3-product-tile" data-v3-calc="canopy">
-        <img src="../naves/farm-icons/original-farms.webp" alt="Типы ферм навеса" loading="eager" decoding="async" onerror="this.onerror=null;this.src='../naves/farm-icons/icon-arched.jpg'">
+        <img class="v3-canopy-thumb" src="../naves/farm-icons/icon-arched.jpg" alt="Арочная ферма навеса" loading="eager" decoding="async">
         <span class="v3-product-label"><b>Навес</b><small>Фермы, покрытие, визуал и цена</small></span><span class="v3-product-arrow">→</span>
       </button>
     </div>
@@ -1555,9 +1554,9 @@ async function openSurveyDetails(id) {
   const rows = surveyCalculations(survey);
   $('#surveyDetailsContent').innerHTML = `
     <section class="v3-survey-head">
-      <div class="v3-address"><span>Адрес объекта</span><b>${escapeHtml(survey.address || 'Адрес пока не указан')}</b></div>
-      <button type="button" class="v3-edit-link" data-edit-survey-data="${escapeHtml(survey.id)}">Изменить</button>
-      <div class="v3-survey-meta"><span>${survey.clientPhone ? '☎ ' + escapeHtml(survey.clientPhone) : 'Телефон пока не указан'}</span>${survey.clientName ? `<span>${escapeHtml(survey.clientName)}</span>` : ''}<span>● ${escapeHtml(surveySyncText(survey))}</span></div>
+      <div class="v3-address"><span>Объект</span><b>${escapeHtml(survey.address || 'Адрес не указан')}</b></div>
+      <button type="button" class="v3-edit-link" data-edit-survey-data="${escapeHtml(survey.id)}">${survey.address ? 'Изменить' : 'Добавить'}</button>
+      <div class="v3-survey-meta"><span>${survey.clientPhone ? '☎ ' + escapeHtml(survey.clientPhone) : 'Телефон не указан'}</span>${survey.clientName ? `<span>${escapeHtml(survey.clientName)}</span>` : ''}<span class="v3-save-status">${escapeHtml(surveySyncText(survey))}</span></div>
     </section>
     ${surveyPlanSummaryHtml(survey)}
     ${v3ProductTools(survey)}
