@@ -1310,7 +1310,7 @@ function calculationsHtml(survey) {
             <small>${escapeHtml(calculationTypeLabel(item.type))}</small>
             <b>${escapeHtml(details.title)}</b>
             ${details.lines.length ? `<div class="calculation-card-lines">${details.lines.slice(0,2).map(line=>`<span>${escapeHtml(line)}</span>`).join('')}</div>` : ''}
-            ${details.tags.length ? `<div class="calculation-card-tags">${details.tags.slice(0,2).map(tag=>`<span>${escapeHtml(tag)}</span>`).join('')}</div>` : ''}
+            ${details.tags.length ? `<div class="calculation-card-tags">${details.tags.map(tag=>`<span>${escapeHtml(tag)}</span>`).join('')}</div>` : ''}
           </div>
           <div class="calculation-card-price">
             <small>Цена клиенту</small>
@@ -1606,7 +1606,7 @@ async function openSurveyDetails(id) {
     event.stopPropagation();
     showCustomerView(survey,button.dataset.showCalculation);
   }));
-  $('[data-send-canopy-production]', detailsRoot).forEach(button=>button.addEventListener('click',event=>{
+  $$('[data-send-canopy-production]', detailsRoot).forEach(button=>button.addEventListener('click',event=>{
     event.stopPropagation();
     sendCanopyToProduction(survey.id,button.dataset.sendCanopyProduction);
   }));
