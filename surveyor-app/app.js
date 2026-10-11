@@ -1572,7 +1572,7 @@ async function openSurveyDetails(id) {
       <summary>Схема участка и заметки <span>⌄</span></summary>
       ${surveyPlanSummaryHtml(survey)}
       ${survey.note ? `<p class="v3-note"><b>Комментарий:</b> ${escapeHtml(survey.note)}</p>` : ''}
-      <button type="button" class="v3-edit-note" data-edit-survey-data="${escapeHtml(survey.id)}">${survey.note ? 'Изменить заметки' : 'Добавить заметку'}</button>
+      <button type="button" class="v3-edit-note" data-edit-survey-note="${escapeHtml(survey.id)}">${survey.note ? 'Изменить заметки' : 'Добавить заметку'}</button>
       ${currentUser.role === 'owner' ? `<div class="v3-archive-action"><button class="btn btn-danger btn-block" data-archive-survey="${escapeHtml(survey.id)}" type="button">В архив</button></div>` : ''}
     </details>
     <section class="v3-complete-action">
@@ -1583,7 +1583,7 @@ async function openSurveyDetails(id) {
   $('#surveyDetailsDialog').showModal();
   $('[data-archive-survey]')?.addEventListener('click', () => archiveSurvey(survey.id));
   $('[data-complete-survey]')?.addEventListener('click', () => completeSurvey(survey.id));
-  $('[data-edit-survey-data]').forEach(button=>button.addEventListener('click', () => openSurveyDataDialog(survey.id)));
+  $$('[data-edit-survey-data],[data-edit-survey-note]').forEach(button=>button.addEventListener('click', () => openSurveyDataDialog(survey.id)));
   $('[data-edit-plan]')?.addEventListener('click', () => openPlanEditor(survey.id));
   $('[data-build-plan-from-calcs]')?.addEventListener('click', () => createPlanFromSavedCalculations(survey.id));
   $('[data-refresh-plan-sizes]')?.addEventListener('click', () => refreshPlanSizesFromQuotes(survey.id));
