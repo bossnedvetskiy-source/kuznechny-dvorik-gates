@@ -2,6 +2,41 @@ import {test, expect} from '@playwright/test';
 
 test.use({viewport:{width:390,height:844}});
 
+test('compact survey card shows all product choices and usable canopy image on mobile', async ({page}) => {
+  await page.goto('/surveyor-app/index.html');
+  await page.locator('#loginInput').fill('zamer');
+  await page.locator('#passwordInput').fill('1234');
+  await page.locator('#loginForm button[type="submit"]').click();
+  await expect(page.locator('#mainView')).toBeVisible();
+  await page.locator('#newSurveyBtn').click();
+  // A first measurement may have neither a phone number nor an address.
+  await page.locator('#saveSurveyBtn').click();
+  await expect(page.locator('#surveyDetailsDialog')).toBeVisible();
+  await expect(page.locator('.v3-product-tile')).toHaveCount(3);
+  await expect(page.locator('.v3-product-heading')).toContainText('Добавить изделие');
+  await expect(page.locator('.v3-address')).toContainText('Адрес не указан');
+  await expect(page.locator('.v3-survey-meta')).toContainText('Телефон не указан');
+  await expect(page.locator('.calculation-section')).toContainText('Сохранённые расчёты');
+  const measures=await page.evaluate(()=>{
+    const selectors=['.v3-details-dialog .sheet-head','.v3-survey-head','.v3-product-section',
+      '.v3-product-tile','.calculation-section'];
+    const bounds=selectors.map(sel=>document.querySelector(sel)?.getBoundingClientRect());
+    const cards=[...document.querySelectorAll('.v3-product-tile')]
+      .map(el=>({width:el.getBoundingClientRect().width,height:el.getBoundingClientRect().height}));
+    const img=document.querySelector('.v3-canopy-thumb');
+    return {bounds:bounds.map(x=>x&&({top:x.top,bottom:x.bottom})),cards,
+      canopyLoaded:img.complete && img.naturalWidth>0,
+      canopySrc:img.getAttribute('src'),
+      viewport:innerWidth};
+  });
+  expect(measures.cards.every(x=>x.height>=72&&x.height<=92)).toBeTruthy();
+  expect(measures.cards.every(x=>x.width<=measures.viewport)).toBeTruthy();
+  expect(measures.bounds[4].top).toBeLessThan(755);
+  expect(measures.canopyLoaded).toBeTruthy();
+  expect(measures.canopySrc).toContain('/farm-icons/icon-arched.jpg');
+  await expect(page.locator('[data-v3-calc="canopy"]')).toBeVisible();
+});
+
 test('surveyor can create a mixed survey and reopen it offline', async ({page, context}) => {
   await page.goto('/surveyor-app/index.html');
   await expect(page).toHaveTitle('КД Замерщик');
