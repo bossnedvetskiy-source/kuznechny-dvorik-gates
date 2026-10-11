@@ -69,6 +69,8 @@ jobs:
           node scripts/test-picket-calculator.mjs
           node scripts/test-canopy-calculator.mjs
           node scripts/test-surveyor-integrity.mjs
+          node --check dev-sync/server.mjs
+          node --test dev-sync/test.mjs
           npm run build
           node scripts/build-timeweb.mjs
           test -s timeweb-dist/index.html
