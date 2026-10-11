@@ -348,3 +348,54 @@
   .v3-product-label small{font-size:10px}
   .v3-survey-meta{gap:5px 10px}
 }
+
+/* V3.6 — clean empty state and concise saved quotes */
+.v3-details-dialog .calculation-section.is-empty{margin-top:18px;border:1px solid #e8e4d9;background:#fff;border-radius:15px;padding:13px 15px;box-shadow:none}
+.v3-details-dialog .calculation-section.is-empty>.section-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0}
+.v3-details-dialog .calculation-section.is-empty>.section-head h3{font-size:16px;margin:0;line-height:1.3}
+.v3-saved-count{display:inline-block;font-size:11px;color:#8a8276;text-align:right}
+.v3-details-dialog .calculation-section.has-calculations{background:#fffdf8;border-color:#e7e1d4;padding:13px}
+.v3-details-dialog .calculation-section.has-calculations .section-head{align-items:baseline}
+.v3-details-dialog .calculation-section .estimate-help{font-size:11px;margin:7px 0 12px;line-height:1.4}
+.v3-details-dialog .calculation-card{display:grid;grid-template-columns:72px minmax(0,1fr);align-items:start;gap:9px 12px;padding:11px;border-radius:15px;background:#fff;border:1px solid #e7e3da;box-shadow:0 3px 11px rgba(25,20,10,.035);cursor:default}
+.v3-details-dialog .calculation-card>img,.v3-details-dialog .calculation-card>.calculation-card-icon{width:72px;height:72px;border-radius:11px;object-fit:cover}
+.v3-details-dialog .calculation-card-copy{gap:3px}
+.v3-details-dialog .calculation-card-copy>small{font-size:10px}
+.v3-details-dialog .calculation-card-copy>b{font-size:15px;line-height:1.23;color:#24211c}
+.v3-details-dialog .calculation-card-lines{gap:2px}
+.v3-details-dialog .calculation-card-lines>span{font-size:11px;line-height:1.35;color:#676257}
+.v3-details-dialog .calculation-card-tags{margin-top:3px}
+.v3-details-dialog .calculation-card-tags>span{font-size:9px}
+.v3-details-dialog .calculation-card-price{grid-column:1/-1;display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:9px 0 1px;border-top:1px solid #f0ebe1;margin:0}
+.v3-details-dialog .calculation-card-price small{font-size:11px;color:#80786a}
+.v3-details-dialog .calculation-card-price>b{font-size:20px;font-weight:900;color:#72501b;white-space:nowrap}
+.v3-details-dialog .calculation-card-actions{grid-column:1/-1;display:grid;grid-template-columns:minmax(75px,.85fr) minmax(145px,1.55fr) 38px;gap:7px;align-items:stretch}
+.v3-details-dialog .calculation-card-actions button{min-height:42px;border-radius:10px;padding:7px 10px;font-size:11px;font-weight:850;white-space:nowrap}
+.v3-details-dialog .calculation-card-actions .calculation-edit-btn{border:1px solid #e1d9c9;background:#f6f3eb;color:#4d463b}
+.v3-details-dialog .calculation-card-actions .calculation-show-btn{background:#c79a43;color:#19160f;border:1px solid #c79a43}
+.v3-details-dialog .calculation-card-actions .calculation-delete-btn{height:auto;width:38px;background:#f5eeed;color:#9b4d49;font-size:22px;padding:0}
+.v3-details-dialog .calculation-card-actions button:focus-visible,.v3-edit-note:focus-visible{outline:3px solid #c79a43;outline-offset:2px}
+.v3-details-dialog .estimate-role-toggle{margin-top:2px;min-height:42px}
+.v3-details-dialog .v3-add-more{min-height:44px;margin-top:12px}
+.v3-details-dialog .v3-extra{margin:14px 0 12px}
+.v3-details-dialog .v3-extra>summary{padding:14px 0}
+.v3-details-dialog .v3-extra .v3-plan-overview{margin:4px 0 12px}
+.v3-details-dialog .v3-extra .v3-plan-overview .section-head{margin:0 0 8px}
+.v3-edit-note{display:block;width:100%;min-height:42px;border:1px solid #ddd5c2;border-radius:11px;background:#f8f4eb;color:#71511d;font-size:12px;font-weight:850;margin:9px 0 14px}
+.v3-archive-action{padding:10px 0 3px;border-top:1px solid #eee8df}
+.v3-complete-action{margin:12px 0 20px}
+.v3-complete-action .btn{min-height:50px;font-size:14px;border-radius:14px}
+.v3-complete-action .notice-ready{text-align:center;padding:13px;font-weight:850}
+@media(max-width:420px){
+  .v3-details-dialog .calculation-card-actions{grid-template-columns:minmax(72px,.85fr) minmax(134px,1.55fr) 38px}
+  .v3-details-dialog .calculation-card-actions button{padding-left:6px;padding-right:6px}
+  .v3-details-dialog .calculation-card-price>b{font-size:19px}
+  .v3-details-dialog .calculation-section.is-empty{padding:13px}
+}
+@media(max-width:355px){
+  .v3-details-dialog .calculation-card{grid-template-columns:60px minmax(0,1fr)}
+  .v3-details-dialog .calculation-card>img,.v3-details-dialog .calculation-card>.calculation-card-icon{width:60px;height:62px}
+  .v3-details-dialog .calculation-card-actions{grid-template-columns:1fr 1.35fr 34px;gap:5px}
+  .v3-details-dialog .calculation-card-actions .calculation-delete-btn{width:34px}
+  .v3-details-dialog .calculation-card-actions button{font-size:10px}
+}
