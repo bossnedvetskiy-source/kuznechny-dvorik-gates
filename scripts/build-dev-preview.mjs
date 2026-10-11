@@ -506,6 +506,19 @@ devToolsIndex = devToolsIndex
   .replace('href="styles.css"', `href="styles.css?v=${devToolsAssetVersion}"`)
   .replace('src="app.js"', `src="app.js?v=${devToolsAssetVersion}"`)
   .replace('href="manifest.webmanifest"', `href="manifest.webmanifest?v=${devToolsAssetVersion}"`);
+// Deployment sets an isolated staging endpoint through GitHub Actions vars.
+// It is a public URL (never a password), and stays empty until provisioned.
+const stagingApi=String(process.env.DEV_SURVEYOR_API_URL||'').trim();
+if(stagingApi){
+  const url=new URL(stagingApi);
+  if(url.protocol!=='https:'||url.hostname==='kuzdvor.tw1.ru'||
+      url.hostname.endsWith('.github.io')||url.pathname!=='/api/surveyor'||
+      url.search||url.hash||url.username||url.password)
+    throw new Error('DEV_SURVEYOR_API_URL must be an isolated HTTPS /api/surveyor endpoint');
+  const encoded=JSON.stringify(url.origin+url.pathname).replaceAll('<','\\u003c');
+  devToolsIndex=devToolsIndex.replace('</head>',
+    '<script>window.KD_DEV_SURVEYOR_API='+encoded+';</script>\\n</head>');
+}
 await writeFile(devToolsIndexPath, devToolsIndex, 'utf8');
 
 const devToolsAppPath = path.join(DEV_TOOLS_OUT, 'app.js');
