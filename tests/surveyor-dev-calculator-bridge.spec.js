@@ -20,9 +20,8 @@ test('gate calculator result returns into the same survey card', async ({page}) 
   await page.locator('#saveSurveyBtn').click();
 
   await expect(page.locator('#surveyDetailsDialog')).toBeVisible();
-  await page.locator('[data-add-calculation]').click();
-  await expect(page.locator('#calculationPickerDialog')).toBeVisible();
-  await page.locator('[data-launch-calculation="gates"]').click();
+  await expect(page.locator('[data-add-calculation]')).toHaveCount(0);
+  await page.locator('[data-v3-calc="gates"]').click();
 
   await expect(page).toHaveURL(/\/surveyor-gates\/\?surveyor=1/);
   await expect(page).toHaveURL(/survey=sv_/);
@@ -95,12 +94,11 @@ async function loginAndCreateSurvey(page, address) {
   await page.locator('#surveyAddress').fill(address);
   await page.locator('#saveSurveyBtn').click();
   await expect(page.locator('#surveyDetailsDialog')).toBeVisible();
-  await page.locator('[data-add-calculation]').click();
 }
 
 test('fence calculator result returns into the same survey card', async ({page}) => {
   await loginAndCreateSurvey(page, 'Мелеуз, тест забора');
-  await page.locator('[data-launch-calculation="fence"]').click();
+  await page.locator('[data-v3-calc="fence"]').click();
 
   await expect(page).toHaveURL(/\/evroshtaketnik\//);
   await expect(page.locator('#kdSurveyorBridge')).toBeVisible({timeout:15000});
@@ -227,7 +225,7 @@ test('owner hands off a canopy survey into fabrication and reissues after a chan
 
 test('surveyor cannot dispatch a canopy or open the owner finance admin', async ({page}) => {
   await loginAndCreateSurvey(page,'Мелеуз, замер без финансов');
-  await page.locator('[data-launch-calculation="canopy"]').click();
+  await page.locator('[data-v3-calc="canopy"]').click();
   await page.locator('#widthPosts').fill('3.4');
   await page.locator('#lengthPosts').fill('6.2');
   await expect(page.locator('#kdSurveyorBridgeSave')).toBeEnabled({timeout:15000});
@@ -243,7 +241,7 @@ test('surveyor cannot dispatch a canopy or open the owner finance admin', async 
 
 test('canopy calculator result returns into the same survey card', async ({page}) => {
   await loginAndCreateSurvey(page, 'Мелеуз, тест навеса');
-  await page.locator('[data-launch-calculation="canopy"]').click();
+  await page.locator('[data-v3-calc="canopy"]').click();
 
   await expect(page).toHaveURL(/\/naves\//);
   await expect(page.locator('#kdSurveyorBridge')).toBeVisible({timeout:15000});
@@ -291,7 +289,7 @@ for (const [type, file] of [
 ]) {
   test(`fence ${type}: photo and price survive roundtrip, public survey payload only`, async ({page}) => {
     await loginAndCreateSurvey(page, 'Мелеуз, тест ' + type);
-    await page.locator('[data-launch-calculation="fence"]').click();
+    await page.locator('[data-v3-calc="fence"]').click();
     await expect(page.locator('#kdSurveyorBridge')).toBeVisible({timeout:15000});
     await page.locator(`[data-type="${type}"]`).click();
     await page.locator('[data-field="length"][data-index="0"]').fill('9.5');
@@ -336,7 +334,7 @@ for (const [type, file] of [
 
 test('surveyor canopy has simple steps and 3D customer presentation without losing quote', async ({page}) => {
   await loginAndCreateSurvey(page, 'Мелеуз, 3D показ клиенту');
-  await page.locator('[data-launch-calculation="canopy"]').click();
+  await page.locator('[data-v3-calc="canopy"]').click();
   await expect(page.locator('#kdSurveyorBridge')).toBeVisible({timeout:15000});
 
   const details=page.locator('.kd-canopy-other-types');
@@ -406,7 +404,7 @@ test('surveyor canopy has simple steps and 3D customer presentation without losi
 
 test('canopy surveyor: photos and support presets update a real public quote without exposing pricing rates', async ({page}) => {
   await loginAndCreateSurvey(page, 'Мелеуз, тест готовых опор навеса');
-  await page.locator('[data-launch-calculation="canopy"]').click();
+  await page.locator('[data-v3-calc="canopy"]').click();
   await expect(page.locator('#kdSurveyorBridge')).toBeVisible({timeout:15000});
   await expect(page.locator('[data-farm-type]')).toHaveCount(7);
   await expect(page.locator('[data-farm-type="Арочный"] .kd-farm-state')).toHaveText('Цена онлайн');
@@ -526,8 +524,7 @@ test('fresh DEV entry reuses existing survey database and launches staff-only ga
   await expect(page.locator('.survey-card')).toHaveCount(1);
   await page.locator('.survey-card').first().click();
   await expect(page.locator('#surveyDetailsDialog')).toBeVisible();
-  await page.locator('[data-add-calculation]').click();
-  await page.locator('[data-launch-calculation="gates"]').click();
+  await page.locator('[data-v3-calc="gates"]').click();
   await expect(page).toHaveURL(/\/surveyor-gates\/\?surveyor=1/);
   await expect(page.locator('#kdSurveyorBridgeSave')).toHaveText('Добавить в замер');
   await expect(page.locator('#mobileMeasureButton')).toBeHidden();
