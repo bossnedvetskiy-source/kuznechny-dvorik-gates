@@ -1602,7 +1602,7 @@ async function openSurveyDetails(id) {
     card.addEventListener('click', openEdit);
     card.addEventListener('keydown', openEdit);
   });
-  $('[data-show-calculation]', detailsRoot).forEach(button=>button.addEventListener('click',event=>{
+  $$('[data-show-calculation]', detailsRoot).forEach(button=>button.addEventListener('click',event=>{
     event.stopPropagation();
     showCustomerView(survey,button.dataset.showCalculation);
   }));
