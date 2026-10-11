@@ -333,7 +333,7 @@ function kd_surveyor_sync_order(array $item, array $session): array
     $incomingRevision = max(0,(int)($item['serverRevision'] ?? 0));
     $key = kd_surveyor_principal_key($session);
     // A site visit may be saved before contact details or an address are known.
-    if ($phone !== '' && strlen(preg_replace('/\\D/', '', $phone) ?? '') < 10)
+    if ($phone !== '' && strlen(preg_replace('/\D/', '', $phone) ?? '') < 10)
         kd_surveyor_json(['error'=>'Проверьте телефон или оставьте поле пустым'],400);
 
     $stmt = kd_db()->prepare('SELECT * FROM surveyor_orders WHERE uuid=? LIMIT 1');
