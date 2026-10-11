@@ -426,8 +426,26 @@ async function syncNow({ silent = false } = {}) {
     };
     const data = await apiRequest('/sync', { method:'POST', body:JSON.stringify(payload) });
 
-    for (const item of data.acks?.clients || []) await applyServerClient(item, { force:true });
-    for (const item of data.acks?.surveys || []) await applyServerSurvey(item, { force:true });
+    // The user may edit a survey while an HTTP sync is in flight. Never let
+    // the server's acknowledgement replace those newer unsent local edits.
+    const sentClients = new Map(pendingClients.map(row=>[row.id,row.updatedAt]));
+    const sentSurveys = new Map(pendingSurveys.map(row=>[row.id,row.updatedAt]));
+    async function acceptAcknowledgement(store, server, sentVersions, toLocal) {
+      const current=await idbGet(store,server.id);
+      if(!sentVersions.has(server.id))return;
+      if(current && current.updatedAt !== sentVersions.get(server.id)){
+        const preserved={...current,
+          serverRevision:Number(server.serverRevision)||current.serverRevision||0,
+          syncState:'pending',serverConflict:null};
+        await idbPut(store,preserved);
+        return;
+      }
+      await idbPut(store,toLocal(server,current||{}));
+    }
+    for (const item of data.acks?.clients || [])
+      await acceptAcknowledgement('clients',item,sentClients,serverClientToLocal);
+    for (const item of data.acks?.surveys || [])
+      await acceptAcknowledgement('surveys',item,sentSurveys,serverSurveyToLocal);
     const conflictIds = new Set((data.conflicts || []).map(item => item.entity + ':' + item.id));
     for (const item of data.pull?.clients || []) {
       if (!conflictIds.has('client:' + item.id)) await applyServerClient(item);
