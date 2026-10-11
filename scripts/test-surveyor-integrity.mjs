@@ -76,7 +76,7 @@ for (const needle of [
 if (app.includes("FORCE_SERVER") || app.includes("new URLSearchParams(location.search).get('server')"))
   throw new Error('Unsafe DEV production override detected');
 for(const needle of [
-  "// Contact and address can be supplied after the initial offline measurement.",
+  "if ($phone !== '' && strlen(",
   "if ($phone !== ''",
   "c.updated_by=? OR EXISTS",
   "o.created_by=?",
