@@ -1293,12 +1293,13 @@ function calculationsHtml(survey) {
     estimate.unknownGateDelivery ? 'Доставка ворот включена в их цену, но отдельно не выделена: проверьте её при объединении с другими изделиями.' : '',
     estimate.sharedSupportRisk ? 'У ворот и навеса могут быть общие столбы: проверьте пересечение работ и внесите корректировку.' : ''
   ].filter(Boolean);
-  return `<div class="details-section calculation-section">
+  return `<div class="details-section calculation-section ${rows.length ? 'has-calculations' : 'is-empty'}">
     <div class="section-head compact">
-      <div><h3>Сохранённые расчёты</h3><p class="muted">${rows.length ? rows.length+' '+plural(rows.length,['вариант','варианта','вариантов']) : 'Пока нет расчётов'}</p></div>
+      <div><h3>Сохранённые расчёты</h3></div>
+      <span class="v3-saved-count">${rows.length ? rows.length+' '+plural(rows.length,['вариант','варианта','вариантов']) : 'Пока нет расчётов'}</span>
     </div>
     ${rows.length > 0 ? '<p class="estimate-help">Отметьте изделия для общего заказа. Другие варианты останутся сохранёнными, но не будут прибавляться к итогу.</p>' : ''}
-    <div class="calculation-list">
+    ${rows.length ? `<div class="calculation-list">
       ${rows.map(item=>{
         const details = calculationCardDetails(item);
         const included = estimateRole(item,rows) === 'included';
@@ -1308,15 +1309,17 @@ function calculationsHtml(survey) {
           <div class="calculation-card-copy">
             <small>${escapeHtml(calculationTypeLabel(item.type))}</small>
             <b>${escapeHtml(details.title)}</b>
-            ${details.lines.length ? `<div class="calculation-card-lines">${details.lines.map(line=>`<span>${escapeHtml(line)}</span>`).join('')}</div>` : ''}
-            ${details.tags.length ? `<div class="calculation-card-tags">${details.tags.map(tag=>`<span>${escapeHtml(tag)}</span>`).join('')}</div>` : ''}
+            ${details.lines.length ? `<div class="calculation-card-lines">${details.lines.slice(0,2).map(line=>`<span>${escapeHtml(line)}</span>`).join('')}</div>` : ''}
+            ${details.tags.length ? `<div class="calculation-card-tags">${details.tags.slice(0,2).map(tag=>`<span>${escapeHtml(tag)}</span>`).join('')}</div>` : ''}
           </div>
           <div class="calculation-card-price">
+            <small>Цена клиенту</small>
             <b>${formatMoney(item.total)}</b>
-            <div class="calculation-card-actions">
-              <button type="button" class="calculation-edit-btn" data-edit-calculation-button="${escapeHtml(item.id)}">Изменить</button>
-              <button type="button" class="calculation-delete-btn" data-delete-calculation="${escapeHtml(item.id)}" aria-label="Удалить расчёт">×</button>
-            </div>
+          </div>
+          <div class="calculation-card-actions">
+            <button type="button" class="calculation-edit-btn" data-edit-calculation-button="${escapeHtml(item.id)}">Изменить</button>
+            <button type="button" class="calculation-show-btn" data-show-calculation="${escapeHtml(item.id)}">Показать клиенту</button>
+            <button type="button" class="calculation-delete-btn" data-delete-calculation="${escapeHtml(item.id)}" aria-label="Удалить расчёт ${escapeHtml(details.title)}">×</button>
           </div>
           ${canopyProductionActions(survey,item,included)}
           <button class="estimate-role-toggle" type="button" aria-pressed="${included}" data-estimate-choice="${escapeHtml(item.id)}">
@@ -1324,9 +1327,9 @@ function calculationsHtml(survey) {
             ${included?'В общем заказе':'Добавить в общий заказ'}
           </button>
         </article>`;
-      }).join('') || '<div class="calculation-empty">Выберите изделие выше — готовый расчёт появится здесь.</div>'}
+      }).join('')}
     </div>
-    <button class="btn btn-secondary btn-block v3-add-more" data-add-calculation="${survey.id}" type="button">+ Добавить другой вариант</button>
+    <button class="btn btn-secondary btn-block v3-add-more" data-add-calculation="${survey.id}" type="button">+ Добавить ещё вариант</button>` : ''}
     ${rows.length ? `<section class="estimate-summary" aria-label="Общая смета объекта">
       <div class="estimate-summary-head"><b>Общая смета объекта</b><span>${estimate.selected.length} в заказе · ${estimate.alternatives.length} альтернатив</span></div>
       ${estimate.selected.length ? `
