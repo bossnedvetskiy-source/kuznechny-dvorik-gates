@@ -1187,9 +1187,11 @@ function renderInternal(result) {
   $('costDetails').innerHTML =
     row('Евроштакетник', money(c.picket)) +
     row('Проф. труба 40×20×2', money(c.tube)) +
-    row('Столбы', money(c.posts)) +
+    row('Столбы · металл', money(c.posts)) +
+    row('В том числе наценка на металл столбов', money(c.postMetalMarkup)) +
     row('Материалы всего', money(c.materials)) +
     row('Покраска металла', money(c.paint)) +
+    row('В том числе наценка на покраску столбов', money(c.postPaintMarkup)) +
     row('Работа по забору', money(c.work)) +
     row('Установка столбов', money(c.postInstall)) +
     row('Саморезы', money(c.screws)) +
