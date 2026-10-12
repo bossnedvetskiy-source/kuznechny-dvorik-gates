@@ -152,6 +152,8 @@ const FENCE_PRICE_DEFINITIONS = [
   ['post60Price','Столб 60×60×2','₽/м',1,'prices'],
   ['post80Price','Столб 80×80×3','₽/м',1,'prices'],
   ['post100Price','Столб 100×100×3','₽/м',1,'prices'],
+  ['postMetalMarkupPercent','Наценка на металл столбов','%',1,'prices'],
+  ['postPaintMarkupPercent','Наценка на покраску столбов','%',1,'prices'],
   ['paintPrice','Покраска профильных труб','₽/м²',10,'prices'],
   ['workVerticalSingle','Работа: вертикальный односторонний','₽/п.м.',10,'prices'],
   ['workVerticalDouble','Работа: вертикальный двусторонний','₽/п.м.',10,'prices'],
@@ -203,7 +205,8 @@ function renderFencePrices() {
         : '10000000';
     input.step = String(step);
     input.inputMode = 'decimal';
-    input.value = String(Number(fence[key]) || 0);
+    const postMarkupDefault = ['postMetalMarkupPercent','postPaintMarkupPercent'].includes(key) ? 40 : 0;
+    input.value = String(Number(fence[key] ?? postMarkupDefault) || 0);
     input.dataset.fenceKey = key;
     input.addEventListener('input', () => setPriceDirty());
     label.append(title,input);
