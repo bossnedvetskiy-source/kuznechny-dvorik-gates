@@ -15,6 +15,7 @@ on:
       - feature/surveyor-unified-estimate-v1
       - feature/surveyor-plan-from-estimate-v1
       - feature/surveyor-visual-post-controls
+      - feature/kd-surveyor-offline-first-android
   workflow_dispatch:
 
 permissions:
@@ -39,6 +40,8 @@ jobs:
         run: |
           node --check surveyor-app/app.js
           node --check surveyor-app/sw.js
+          node --check surveyor-app/offline-readiness.js
+          node --check scripts/build-dev-preview.mjs
           node --check scripts/test-surveyor-integrity.mjs
           node scripts/test-surveyor-integrity.mjs
       - name: Prepare DEV preview and calculator assets
@@ -52,4 +55,4 @@ jobs:
           node scripts/build-dev-preview.mjs
       - run: npx playwright install --with-deps chromium
       - name: Verify calculated dimensions flow into the scheme without double counting
-        run: npx playwright test tests/surveyor-plan-from-estimate.spec.js tests/surveyor-mobile.spec.js --workers=1
+        run: npx playwright test tests/surveyor-plan-from-estimate.spec.js tests/surveyor-mobile.spec.js tests/surveyor-offline-readiness.spec.js --workers=1
