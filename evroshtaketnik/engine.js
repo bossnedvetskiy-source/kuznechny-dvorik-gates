@@ -8,6 +8,8 @@ export const FENCE_SETTINGS = Object.freeze({
   post60Price: 305,
   post80Price: 600,
   post100Price: 750,
+  postMetalMarkupPercent: 40,
+  postPaintMarkupPercent: 40,
   paintPrice: 650,
   workVerticalSingle: 1300,
   workVerticalDouble: 1800,
@@ -78,6 +80,8 @@ const normalizedSettings = input => {
   settings.screwVertical = Math.max(0, Math.floor(finite(settings.screwVertical)));
   settings.screwHorizontal = Math.max(0, Math.floor(finite(settings.screwHorizontal)));
   settings.picketReservePerSide = Math.max(0, Math.floor(finite(settings.picketReservePerSide)));
+  settings.postMetalMarkupPercent = Math.max(0, finite(settings.postMetalMarkupPercent));
+  settings.postPaintMarkupPercent = Math.max(0, finite(settings.postPaintMarkupPercent));
   return settings;
 };
 const ceilDiv = (count, perStock) => count <= 0 ? 0 : Math.ceil(count / Math.max(1, perStock));
@@ -502,10 +506,17 @@ export function calculateFence(input = {}) {
 
   const picketCost = roundMoney(picketLmCosted * type.picketPrice);
   const tubeCost = roundMoney(tubePurchased * settings.tube40Price);
-  const postCost = roundMoney(postLm * post.pricePerM);
+  // The 40% surcharges are ONLY on new post metal and its painting.
+  // Keep tube/picket prices, rail painting and installation unchanged.
+  const postBaseCost = roundMoney(postLm * post.pricePerM);
+  const postMetalMarkup = roundMoney(postLm * post.pricePerM * settings.postMetalMarkupPercent / 100);
+  const postCost = postBaseCost + postMetalMarkup;
   const materialsTotal = picketCost + tubeCost + postCost;
+  const postPaintBaseCost = roundMoney(postLm * post.perimeter * settings.paintPrice);
+  const postPaintMarkup = roundMoney(postLm * post.perimeter * settings.paintPrice * settings.postPaintMarkupPercent / 100);
   const paintArea = tubeUsed * 0.12 + postLm * post.perimeter;
-  const paintCost = roundMoney(paintArea * settings.paintPrice);
+  // Preserve existing combined painting rounding, then add post-only margin.
+  const paintCost = roundMoney(paintArea * settings.paintPrice) + postPaintMarkup;
   const workCost = roundMoney(totalLength * type.workRate);
   const postInstallCost = roundMoney(newPosts * settings.postInstallPrice);
   const screwCost = roundMoney(screws * settings.screwPrice);
@@ -617,8 +628,12 @@ export function calculateFence(input = {}) {
       picket: picketCost,
       tube: tubeCost,
       posts: postCost,
+      postBase: postBaseCost,
+      postMetalMarkup,
       materials: materialsTotal,
       paint: paintCost,
+      postPaintBase: postPaintBaseCost,
+      postPaintMarkup,
       work: workCost,
       postInstall: postInstallCost,
       screws: screwCost,
