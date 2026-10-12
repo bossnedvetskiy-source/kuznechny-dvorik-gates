@@ -506,6 +506,19 @@ devToolsIndex = devToolsIndex
   .replace('href="styles.css"', `href="styles.css?v=${devToolsAssetVersion}"`)
   .replace('src="app.js"', `src="app.js?v=${devToolsAssetVersion}"`)
   .replace('href="manifest.webmanifest"', `href="manifest.webmanifest?v=${devToolsAssetVersion}"`);
+// DEV-only preparation button; it does not affect the public site or test PWA.
+if (!devToolsIndex.includes('<h2>Приложение</h2>')) throw new Error('DEV settings section was not found');
+devToolsIndex = devToolsIndex
+  .replace(
+    '<h2>Приложение</h2>',
+    `<h2>Приложение</h2>
+     <div class="settings-row" id="kdOfflineReadiness">
+       <div><b>Офлайн-база калькуляторов</b><span id="kdOfflineState" role="status" aria-live="polite">Проверяем базу…</span></div>
+       <button id="kdOfflineDownload" class="btn btn-secondary" type="button">Скачать базу</button>
+     </div>`
+  )
+  .replace('<b>Офлайн-режим</b>', '<b>Локальное сохранение замеров</b>')
+  .replace('</body>', `<script src="./offline-readiness.js?v=${devToolsAssetVersion}" defer></script>\n</body>`);
 // Deployment sets an isolated staging endpoint through GitHub Actions vars.
 // It is a public URL (never a password), and stays empty until provisioned.
 const stagingApi=String(process.env.DEV_SURVEYOR_API_URL||'').trim();
@@ -601,6 +614,7 @@ const devShellCore = [
   `${BASE}/${DEV_TOOLS_FRESH_DIR}/`,
   `${BASE}/${DEV_TOOLS_FRESH_DIR}/styles.css`,
   `${BASE}/${DEV_TOOLS_FRESH_DIR}/app.js`,
+  `${BASE}/${DEV_TOOLS_FRESH_DIR}/offline-readiness.js`,
   `${BASE}/${DEV_TOOLS_FRESH_DIR}/line-builder.js`,
   `${BASE}/${DEV_TOOLS_FRESH_DIR}/manifest.webmanifest`,
   `${BASE}/${SURVEYOR_GATES_DIR}/`,
@@ -608,6 +622,7 @@ const devShellCore = [
   `${BASE}/naves/farm-icons/icon-arched.jpg`,
   `${BASE}/${DEV_TOOLS_DIR}/styles.css`,
   `${BASE}/${DEV_TOOLS_DIR}/app.js`,
+  `${BASE}/${DEV_TOOLS_DIR}/offline-readiness.js`,
   `${BASE}/${DEV_TOOLS_DIR}/line-builder.js`,
   `${BASE}/${DEV_TOOLS_DIR}/manifest.webmanifest`,
   `${BASE}/${DEV_TOOLS_DIR}/icon.svg`,
@@ -668,6 +683,7 @@ for (const required of [
   `${BASE}/${DEV_TOOLS_DIR}/styles.css`,
   `${BASE}/${DEV_TOOLS_DIR}/app.js`,
   `${BASE}/${DEV_TOOLS_DIR}/line-builder.js`,
+  `${BASE}/${DEV_TOOLS_DIR}/offline-readiness.js`,
   `${BASE}/${DEV_TOOLS_DIR}/manifest.webmanifest`,
   `${BASE}/surveyor-bridge.js`
 ]) {
@@ -701,7 +717,7 @@ for (const relative of ['index.html','evroshtaketnik/index.html','naves/index.ht
   if (!html.includes(`${BASE}/surveyor-bridge.js`)) throw new Error(`DEV surveyor bridge missing: ${relative}`);
 }
 const freshAppCheck = await readFile(path.join(DEV_TOOLS_FRESH_OUT, 'index.html'), 'utf8');
-if (!freshAppCheck.includes('НОВАЯ СБОРКА') || !freshAppCheck.includes(devToolsAssetVersion)) {
+if (!freshAppCheck.includes('НОВАЯ СБОРКА') || !freshAppCheck.includes(devToolsAssetVersion) || !freshAppCheck.includes('offline-readiness.js')) {
   throw new Error('Fresh DEV entry did not contain current version of the surveyor app');
 }
 const dedicatedGateCheck = await readFile(path.join(OUT, SURVEYOR_GATES_DIR, 'index.html'), 'utf8');
