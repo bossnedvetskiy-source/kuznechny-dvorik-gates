@@ -576,6 +576,27 @@ await writeFile(siteBundlePath, siteBundle, 'utf8');
 const swPath = path.join(OUT, 'site-sw.js');
 let devSw = await readFile(swPath, 'utf8');
 const devShellCore = [
+  // Complete staff app + all three calculators must be in the FIRST install cache.
+  // Previous DEV builds cached the launcher but could miss API data and the V2 app.
+  `${BASE}/api/catalog-images`,
+  `${BASE}/api/fence-prices`,
+  `${BASE}/api/offline-version`,
+  `${BASE}/${SURVEYOR_V2_DIR}/`,
+  `${BASE}/${SURVEYOR_V2_DIR}/styles.css`,
+  `${BASE}/${SURVEYOR_V2_DIR}/app.js`,
+  `${BASE}/${SURVEYOR_V2_DIR}/line-builder.js`,
+  `${BASE}/${SURVEYOR_V2_DIR}/calculator-bridge.js`,
+  `${BASE}/${SURVEYOR_V2_DIR}/manifest.webmanifest`,
+  `${BASE}/${SURVEYOR_V2_DIR}/icon-192.png`,
+  `${BASE}/${SURVEYOR_V2_DIR}/icon-512.png`,
+  `${BASE}/${SURVEYOR_V2_DIR}/icon.svg`,
+  `${BASE}/${DEV_TOOLS_DIR}/calculator-bridge.js`,
+  `${BASE}/${DEV_TOOLS_FRESH_DIR}/calculator-bridge.js`,
+  `${BASE}/${DEV_TOOLS_FRESH_DIR}/icon.svg`,
+  `${BASE}/evroshtaketnik/assets/fence-single-gray-20260927.webp`,
+  `${BASE}/evroshtaketnik/assets/fence-double-brown-20260927.webp`,
+  `${BASE}/evroshtaketnik/assets/fence-horizontal-real.webp`,
+  `${BASE}/assets/catalog/art-17s-1.webp`,
   DEV_APP_START,
   `${BASE}/${DEV_TOOLS_FRESH_DIR}/`,
   `${BASE}/${DEV_TOOLS_FRESH_DIR}/styles.css`,
@@ -599,7 +620,7 @@ devSw = devSw
   .replaceAll('__kuzdvor_offline_meta__', '__kuzdvor_dev_offline_meta__')
   .replaceAll(`${BASE}/site-icon.svg`, `${BASE}/${DEV_ICON_NAME}`);
 const surveyorTestFetchNeedle = "self.addEventListener('fetch',event=>{\n  const request=event.request;\n  const url=new URL(request.url);";
-const surveyorTestFetchReplacement = surveyorTestFetchNeedle + `\n  // standalone surveyor PWA bypass\n  if(url.pathname==='${BASE}/${SURVEYOR_TEST_DIR}'||url.pathname.startsWith('${BASE}/${SURVEYOR_TEST_DIR}/')||url.pathname==='${BASE}/${SURVEYOR_V2_DIR}'||url.pathname.startsWith('${BASE}/${SURVEYOR_V2_DIR}/'))return;`;
+const surveyorTestFetchReplacement = surveyorTestFetchNeedle + `\n  // The un-gated test PWA has its own worker. V2 uses the shared root worker\n  // so its links to gates / fence / canopy remain available without internet.\n  if(url.pathname==='${BASE}/${SURVEYOR_TEST_DIR}'||url.pathname.startsWith('${BASE}/${SURVEYOR_TEST_DIR}/'))return;`;
 if (!devSw.includes(surveyorTestFetchNeedle)) throw new Error('DEV service worker fetch handler not found');
 devSw = devSw.replace(surveyorTestFetchNeedle, surveyorTestFetchReplacement);
 await writeFile(swPath, devSw, 'utf8');
