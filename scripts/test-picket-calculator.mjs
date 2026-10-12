@@ -21,15 +21,15 @@ assert.equal(verticalDouble.summary.picketsActual, 162);
 assert.equal(verticalDouble.summary.tubeStocks, 6);
 assert.equal(verticalDouble.costs.picket, 37518);
 assert.equal(verticalDouble.costs.tube, 5184);
-assert.equal(verticalDouble.costs.posts, 12600);
-assert.equal(verticalDouble.costs.materials, 55302);
-assert.equal(verticalDouble.costs.paint, 6608);
+assert.equal(verticalDouble.costs.posts, 17640);
+assert.equal(verticalDouble.costs.materials, 60342);
+assert.equal(verticalDouble.costs.paint, 8355);
 assert.equal(verticalDouble.costs.work, 27000);
 assert.equal(verticalDouble.costs.postInstall, 5600);
 assert.equal(verticalDouble.costs.screws, 1296);
-assert.equal(verticalDouble.costs.order, 95806);
-assert.equal(verticalDouble.costs.measurer, 3832);
-assert.equal(verticalDouble.costs.total, 104138);
+assert.equal(verticalDouble.costs.order, 102593);
+assert.equal(verticalDouble.costs.measurer, 4104);
+assert.equal(verticalDouble.costs.total, 111197);
 
 const horizontal = calculateFence({
   type: 'horizontal-double',
@@ -48,14 +48,14 @@ assert.equal(horizontal.sections[0].rearPerSpan, 10);
 assert.equal(horizontal.sections[0].picketLengthMm, 2280);
 assert.equal(horizontal.costs.picket, 32308);
 assert.equal(horizontal.costs.tube, 8640);
-assert.equal(horizontal.costs.posts, 13500);
-assert.equal(horizontal.costs.paint, 8564);
+assert.equal(horizontal.costs.posts, 18900);
+assert.equal(horizontal.costs.paint, 10436);
 assert.equal(horizontal.costs.work, 24000);
 assert.equal(horizontal.costs.postInstall, 4800);
 assert.equal(horizontal.costs.screws, 1260);
-assert.equal(horizontal.costs.order, 93072);
-assert.equal(horizontal.costs.measurer, 3723);
-assert.equal(horizontal.costs.total, 96795);
+assert.equal(horizontal.costs.order, 100344);
+assert.equal(horizontal.costs.measurer, 4014);
+assert.equal(horizontal.costs.total, 104358);
 
 const singleExistingPosts = calculateFence({
   type: 'vertical-single',
@@ -82,6 +82,50 @@ assert.equal(singleExistingPosts.costs.order, 24081);
 assert.equal(singleExistingPosts.costs.measurer, 963);
 assert.equal(singleExistingPosts.costs.total, 26044);
 
+
+// One fence line (10.3 m × 1.8 m) must use 5 new posts and 40% only on
+// post steel and post paint, across all supported section sizes.
+for (const [post, pricePerM, perimeter] of [
+  ['60x60x2', 305, 0.24],
+  ['80x80x3', 600, 0.32],
+  ['100x100x3', 750, 0.4]
+]) {
+  const baseInput = {
+    type: 'vertical-single', post, includeNewPosts: true,
+    deliveryCost: 0, sections: [{length: 10.3, height: 1.8}]
+  };
+  const newRate = calculateFence(baseInput);
+  const oldRate = calculateFence({
+    ...baseInput, settings: {postMetalMarkupPercent:0, postPaintMarkupPercent:0}
+  });
+  assert.equal(newRate.summary.newPosts, 5, post);
+  assert.equal(newRate.costs.postBase, 5 * 3 * pricePerM, post);
+  assert.equal(newRate.costs.postMetalMarkup, Math.round(5 * 3 * pricePerM * 0.4), post);
+  assert.equal(newRate.costs.postPaintBase, Math.round(5 * 3 * perimeter * 650), post);
+  assert.equal(newRate.costs.postPaintMarkup, Math.round(5 * 3 * perimeter * 650 * 0.4), post);
+  assert.equal(newRate.costs.posts, oldRate.costs.posts + newRate.costs.postMetalMarkup, post);
+  assert.equal(newRate.costs.paint, oldRate.costs.paint + newRate.costs.postPaintMarkup, post);
+  assert.equal(newRate.costs.tube, oldRate.costs.tube, post);
+  assert.equal(newRate.costs.picket, oldRate.costs.picket, post);
+  assert.equal(newRate.costs.work, oldRate.costs.work, post);
+  assert.equal(newRate.costs.postInstall, oldRate.costs.postInstall, post);
+}
+const post80Five = calculateFence({
+  type:'vertical-single', post:'80x80x3', includeNewPosts:true,
+  sections:[{length:10.3,height:1.8}]
+});
+assert.equal(post80Five.costs.posts, 12600);
+assert.equal(post80Five.costs.postPaintBase, 3120);
+assert.equal(post80Five.costs.postPaintMarkup, 1248);
+assert.equal(post80Five.costs.postInstall, 4000);
+assert.equal(post80Five.costs.posts + post80Five.costs.postPaintBase + post80Five.costs.postPaintMarkup + post80Five.costs.postInstall, 20968);
+const post80Custom = calculateFence({
+  type:'vertical-single', post:'80x80x3', includeNewPosts:true,
+  sections:[{length:10.3,height:1.8}],
+  settings:{postMetalMarkupPercent:25,postPaintMarkupPercent:10}
+});
+assert.equal(post80Custom.costs.postMetalMarkup, 2250);
+assert.equal(post80Custom.costs.postPaintMarkup, 312);
 
 const runtimeBase = calculateFence({
   type: 'vertical-double',
