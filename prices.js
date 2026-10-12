@@ -87,6 +87,8 @@ window.PRICE_DATA = {
     post60Price: 305,
     post80Price: 600,
     post100Price: 750,
+    postMetalMarkupPercent: 40,
+    postPaintMarkupPercent: 40,
     paintPrice: 650,
     workVerticalSingle: 1300,
     workVerticalDouble: 1800,
