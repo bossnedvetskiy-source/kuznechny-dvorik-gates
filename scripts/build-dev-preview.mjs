@@ -1,6 +1,7 @@
-import { cp, mkdir, readFile, readdir, rm, writeFile, unlink } from 'node:fs/promises';
+import { cp, mkdir, readFile, readdir, rm, stat, writeFile, unlink } from 'node:fs/promises';
 import path from 'node:path';
 import {deflateSync} from 'node:zlib';
+import {runInNewContext} from 'node:vm';
 
 const ROOT = process.cwd();
 const SOURCE = path.join(ROOT, 'timeweb-dist');
@@ -609,7 +610,7 @@ const devShellCore = [
   `${BASE}/evroshtaketnik/assets/fence-single-gray-20260927.webp`,
   `${BASE}/evroshtaketnik/assets/fence-double-brown-20260927.webp`,
   `${BASE}/evroshtaketnik/assets/fence-horizontal-real.webp`,
-  `${BASE}/assets/catalog/art-17s-1.webp`,
+  `${BASE}/catalog/art-17s-1.webp`,
   DEV_APP_START,
   `${BASE}/${DEV_TOOLS_FRESH_DIR}/`,
   `${BASE}/${DEV_TOOLS_FRESH_DIR}/styles.css`,
@@ -639,6 +640,29 @@ const surveyorTestFetchReplacement = surveyorTestFetchNeedle + `\n  // The un-ga
 if (!devSw.includes(surveyorTestFetchNeedle)) throw new Error('DEV service worker fetch handler not found');
 devSw = devSw.replace(surveyorTestFetchNeedle, surveyorTestFetchReplacement);
 await writeFile(swPath, devSw, 'utf8');
+
+// An incorrect mandatory asset once made EVERY offline download show
+// "Загрузка не завершена", even with working internet. Reject any such URL
+// during the DEV build, rather than waiting for a surveyor's phone to find it.
+const devCoreExpression = devSw.match(/const CORE=(\[[^\n]+\]);/);
+if (!devCoreExpression) throw new Error('Cannot inspect DEV offline core list');
+const devCoreUrls = runInNewContext(devCoreExpression[1]);
+const missingDevCore = [];
+for (const url of devCoreUrls) {
+  const pathname = new URL(url, 'https://example.test').pathname;
+  if (!pathname.startsWith(BASE + '/')) {
+    missingDevCore.push(url + ' (outside DEV prefix)');
+    continue;
+  }
+  const relative = pathname.slice(BASE.length + 1);
+  const file = path.join(OUT, relative, pathname.endsWith('/') ? 'index.html' : '');
+  try {
+    if (!(await stat(file)).isFile()) missingDevCore.push(url);
+  } catch { missingDevCore.push(url); }
+}
+if (missingDevCore.length) {
+  throw new Error('DEV offline required files are missing:\\n' + missingDevCore.join('\\n'));
+}
 
 // A Pages project site lives under /kuznechny-dvorik-gates/.
 await writeFile(path.join(OUT, '.nojekyll'), '', 'utf8');
