@@ -67,7 +67,14 @@
       send('GET_OFFLINE_STATUS').catch(error => setState(error.message));
     }
     if (data.type === 'OFFLINE_PARTIAL') {
-      setState('Загрузка не завершена. Проверьте интернет и повторите.');
+      const missing = Array.isArray(data.criticalFailures) ? data.criticalFailures.filter(Boolean) : [];
+      const issue = missing[0] || '';
+      const label = issue === 'offline-catalog-storage'
+        ? 'Недостаточно памяти для сохранения каталога.'
+        : issue
+          ? 'Не скачан обязательный файл: ' + issue.split('/').filter(Boolean).slice(-2).join('/')
+          : 'Не удалось проверить сохранённую базу.';
+      setState(label + ' Повторите загрузку после обновления DEV.');
     }
     if (data.type === 'OFFLINE_UP_TO_DATE') {
       if (!busy) setState('База актуальна. Проверьте калькуляторы без интернета.', {ready: true});
