@@ -113,6 +113,8 @@ test('single DEV work PWA starts in surveyor shell with card-based calculators',
 test('cross-calculator offline navigation works inside the installed DEV work PWA', async ({page, context}) => {
   await page.goto('/kuznechny-dvorik-gates/dev-tools/');
   await expect(page.locator('#loginView')).toBeVisible();
+  // DEV security gate is local and must already be unlocked while offline.
+  await page.evaluate(() => localStorage.setItem('kuzdvor-dev-access-v1', '1'));
 
   // A successful install has to cache the actual calculators and their API
   // data, not only the surveyor launch screen.
