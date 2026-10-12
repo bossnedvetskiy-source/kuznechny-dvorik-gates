@@ -1877,6 +1877,8 @@ async function bootstrap() {
   await seedDatabase();
   currentUser = await restoreSession();
   bindEvents();
+  // Avoid a lost click while IndexedDB and PBKDF2 demo users are seeding.
+  $('#loginForm button[type="submit"]').disabled = false;
   updateNetworkState();
   if (currentUser) {
     const returnedSurveyId = await consumeCalculationTransfer();
