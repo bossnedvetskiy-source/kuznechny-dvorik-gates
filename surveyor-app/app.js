@@ -1870,6 +1870,9 @@ function resetSurveyWizard() {
 }
 
 async function bootstrap() {
+  // Register the offline worker before any login, database or API work: a failed
+  // startup must not prevent the next offline launch from being prepared.
+  registerServiceWorker();
   db = await openDb();
   await seedDatabase();
   currentUser = await restoreSession();
@@ -1885,7 +1888,6 @@ async function bootstrap() {
   } else {
     showLogin();
   }
-  registerServiceWorker();
 }
 function showLogin() {
   $('#loginView').hidden = false;
@@ -2063,12 +2065,30 @@ function bindEvents() {
 async function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
   try {
-    const inDevShell = /\/(?:dev-tools|dev-tools-v4)(?:\/|$)/.test(location.pathname);
+    const isCleanDevPwa = /\/zamer-app-v2(?:\/|$)/.test(location.pathname);
+    const inDevShell = /\/(?:dev-tools|dev-tools-v4)(?:\/|$)/.test(location.pathname) || isCleanDevPwa;
+    // The old clean DEV PWA registered ./sw.js, whose narrow scope cannot
+    // serve the sibling gates, fence and canopy calculators when offline.
+    // Retire only that old worker; never touch other app registrations.
+    let migratedFromLocalWorker = false;
+    if (isCleanDevPwa) {
+      const previous = await navigator.serviceWorker.getRegistration('./');
+      const localScope = new URL('./', location.href).href;
+      if (previous?.scope === localScope) {
+        migratedFromLocalWorker = await previous.unregister();
+      }
+    }
     const registration = await navigator.serviceWorker.register(
       inDevShell ? '../site-sw.js' : './sw.js',
       inDevShell ? {scope:'../', updateViaCache:'none'} : {updateViaCache:'none'}
     );
     try { await registration.update(); } catch {}
+    if (migratedFromLocalWorker && navigator.onLine &&
+        navigator.serviceWorker.controller?.scriptURL.includes('/zamer-app-v2/sw.js') &&
+        sessionStorage.getItem('kd-surveyor-sw-migrated') !== '1') {
+      sessionStorage.setItem('kd-surveyor-sw-migrated', '1');
+      location.reload();
+    }
   } catch (e) {
     console.warn('SW registration failed', e);
   }
