@@ -108,3 +108,47 @@ test('single DEV work PWA starts in surveyor shell with card-based calculators',
   await expect(page.locator('#mainView')).toBeVisible();
   await expect(page.locator('#networkBadge')).toContainText('Офлайн');
 });
+
+
+test('cross-calculator offline navigation works inside the installed DEV work PWA', async ({page, context}) => {
+  await page.goto('/kuznechny-dvorik-gates/dev-tools/');
+  await expect(page.locator('#loginView')).toBeVisible();
+
+  // A successful install has to cache the actual calculators and their API
+  // data, not only the surveyor launch screen.
+  await expect.poll(() => page.evaluate(async () => {
+    const keys = await caches.keys();
+    const current = keys.find(key => key.startsWith('kuzdvor-dev-offline-') && key.endsWith('-shell'));
+    if (!current) return false;
+    const cache = await caches.open(current);
+    const required = [
+      '/kuznechny-dvorik-gates/dev-tools/',
+      '/kuznechny-dvorik-gates/surveyor-gates/',
+      '/kuznechny-dvorik-gates/evroshtaketnik/',
+      '/kuznechny-dvorik-gates/naves/',
+      '/kuznechny-dvorik-gates/api/catalog-images',
+      '/kuznechny-dvorik-gates/api/fence-prices'
+    ];
+    const rows = await Promise.all(required.map(url => cache.match(url, {ignoreSearch:true})));
+    return rows.every(Boolean);
+  }), {timeout:15000}).toBe(true);
+
+  await page.reload();
+  await expect.poll(
+    () => page.evaluate(() => navigator.serviceWorker.controller?.scriptURL.includes('/site-sw.js') || false),
+    {timeout:7000}
+  ).toBe(true);
+
+  await context.setOffline(true);
+  await page.goto('/kuznechny-dvorik-gates/evroshtaketnik/?surveyor=1&survey=offline_test', {waitUntil:'domcontentloaded'});
+  await expect(page.locator('#fenceForm')).toBeVisible();
+
+  await page.goto('/kuznechny-dvorik-gates/naves/?surveyor=1&survey=offline_test', {waitUntil:'domcontentloaded'});
+  await expect(page.locator('#totalPrice')).toBeVisible();
+
+  await page.goto('/kuznechny-dvorik-gates/surveyor-gates/?surveyor=1&survey=offline_test', {waitUntil:'domcontentloaded'});
+  await expect(page.locator('#kuzdvor-dev-gate')).toHaveCount(0);
+
+  await page.goto('/kuznechny-dvorik-gates/dev-tools/', {waitUntil:'domcontentloaded'});
+  await expect(page.locator('#loginView')).toBeVisible();
+});
