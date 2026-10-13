@@ -31,26 +31,37 @@ window.showToast=function(message,error=false){clearTimeout(toastTimer);const e=
   // The financial DEV workspace must not be unlocked merely by having the
   // protected preview's shared password. Require a local owner session.
   async function ownerSession(){
-    let info;
-    try {info=JSON.parse(sessionStorage.getItem('kdSurveyorSession')||'null')}catch{return false}
-    if(!info?.id)return false;
-    return new Promise(resolve=>{
-      try{
+    // Android PWA relaunches clear sessionStorage. The surveyor now stores its
+    // signed-in employee ID in IndexedDB until an explicit logout; do not
+    // restore owner privileges from the shared DEV preview access cookie.
+    let db;
+    try {
+      db = await new Promise((resolve,reject)=>{
         const req=indexedDB.open('kd-surveyor-stage1');
-        req.onerror=()=>resolve(false);
-        req.onupgradeneeded=()=>{req.transaction.abort();resolve(false)};
-        req.onsuccess=()=>{
-          const db=req.result;
-          if(!db.objectStoreNames.contains('employees')){db.close();resolve(false);return}
-          const get=db.transaction('employees','readonly').objectStore('employees').get(info.id);
-          get.onerror=()=>{db.close();resolve(false)};
-          get.onsuccess=()=>{
-            const allowed=Boolean(get.result?.active && get.result.role==='owner');
-            db.close();resolve(allowed);
-          };
-        };
-      }catch{resolve(false)}
-    });
+        req.onerror=()=>reject(req.error);
+        req.onupgradeneeded=()=>{req.transaction.abort();reject(new Error('No employee database'))};
+        req.onsuccess=()=>resolve(req.result);
+      });
+      if (!db.objectStoreNames.contains('employees') || !db.objectStoreNames.contains('meta')) return false;
+      const saved = await new Promise((resolve,reject)=>{
+        const req=db.transaction('meta','readonly').objectStore('meta').get('persistentSession');
+        req.onsuccess=()=>resolve(req.result?.value || null);
+        req.onerror=()=>reject(req.error);
+      });
+      let id = saved?.id;
+      if (!id && !saved) {
+        // Legacy fallback while old PWA tabs are still open during migration.
+        try { id=JSON.parse(sessionStorage.getItem('kdSurveyorSession')||'null')?.id } catch {}
+      }
+      if(typeof id!=='string'||!id)return false;
+      const user = await new Promise((resolve,reject)=>{
+        const req=db.transaction('employees','readonly').objectStore('employees').get(id);
+        req.onsuccess=()=>resolve(req.result || null);
+        req.onerror=()=>reject(req.error);
+      });
+      return Boolean(user?.active && user.role==='owner');
+    } catch { return false }
+    finally { db?.close(); }
   }
   if(!(await ownerSession())){
     document.getElementById('canopyAdminAccess').hidden=false;
