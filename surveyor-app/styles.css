@@ -399,3 +399,50 @@
   .v3-details-dialog .calculation-card-actions .calculation-delete-btn{width:34px}
   .v3-details-dialog .calculation-card-actions button{font-size:10px}
 }
+
+/* KD SURVEY CARD — GOLD OUTLINE DESIGN V1. Scoped to survey details only. */
+.v3-details-dialog{background:#111114!important;color:#f1ece3!important}
+.v3-details-dialog .sheet{background:linear-gradient(180deg,#151517,#101113)!important;color:#f1ece3!important}
+.v3-details-dialog .sheet-head{background:rgba(17,17,19,.98)!important;border-bottom:1px solid #4b402d!important}
+.v3-details-dialog .sheet-head h2{font-family:Georgia,'Times New Roman',serif!important;font-weight:600!important;font-size:29px!important;color:#fff8eb!important}
+.v3-details-dialog .sheet-head .eyebrow{color:#c9a04e!important;letter-spacing:.14em!important}
+.v3-details-dialog .icon-btn{background:#242426!important;border:1px solid #4b4033!important;color:#f2e2bf!important}
+.v3-details-dialog .v3-survey-head{background:linear-gradient(120deg,#242326,#1b1b1e)!important;border:1px solid #4b4334!important;border-radius:19px!important;padding:17px!important;box-shadow:0 12px 25px rgba(0,0,0,.18)!important}
+.v3-details-dialog .v3-address span{color:#c6a059!important;letter-spacing:.13em;text-transform:uppercase;font-size:10px!important;font-weight:800}
+.v3-details-dialog .v3-address b{color:#f9f4e9!important;font-size:18px!important}
+.v3-details-dialog .v3-edit-link{background:#352e22!important;color:#e9c780!important;border:1px solid #635239!important}
+.v3-details-dialog .v3-survey-meta{border-top:1px solid #4d4537!important;color:#b6ada0!important;padding-top:11px!important}
+.v3-details-dialog .v3-product-section{margin-top:28px!important}
+.v3-details-dialog .v3-product-section h3{font-family:Georgia,'Times New Roman',serif;font-weight:500!important;font-size:clamp(23px,5.8vw,30px)!important;line-height:1.15!important;color:#f7f2e7!important}
+.v3-details-dialog .v3-product-hint{color:#a89e8d!important}
+.v3-details-dialog .v3-product-grid{gap:12px!important}
+.v3-details-dialog .v3-product-tile{grid-template-columns:80px minmax(0,1fr) 26px!important;min-height:120px!important;gap:14px!important;padding:13px!important;border-radius:21px!important;background:linear-gradient(110deg,#242428,#1b1b1f 65%,#28241e)!important;border:1px solid #50493c!important;color:#f8f1e4!important;box-shadow:0 6px 21px rgba(0,0,0,.18)!important;text-align:left}
+.v3-details-dialog .v3-product-tile[data-v3-calc="gates"],.v3-details-dialog .v3-product-tile[data-v3-calc="fence"]{border-color:#7a623a!important}
+.v3-details-dialog .v3-product-tile:active{background:#332d24!important}
+.v3-details-dialog .v3-category-icon{display:grid;place-items:center;width:80px;height:80px;border-radius:20px;border:1px solid #766039;background:linear-gradient(145deg,#2c2b28,#201f20);color:#d5b268;flex-shrink:0}
+.v3-details-dialog .v3-category-icon svg{width:53px;height:53px;display:block}
+.v3-details-dialog .v3-product-label{gap:7px!important}
+.v3-details-dialog .v3-product-label b{font-family:Georgia,'Times New Roman',serif;font-weight:500!important;font-size:22px!important;line-height:1.12!important;color:#f9f3e6!important}
+.v3-details-dialog .v3-product-label small{color:#ada69b!important;font-size:12px!important;line-height:1.45!important}
+.v3-details-dialog .v3-product-arrow{font-size:29px!important;color:#d8ad58!important;text-align:right}
+.v3-details-dialog .calculation-section,.v3-details-dialog .calculation-section.is-empty,.v3-details-dialog .calculation-section.has-calculations{margin-top:25px!important;padding:16px!important;background:#222225!important;border:1px solid #4c4439!important;border-radius:19px!important;color:#f5ebd8!important}
+.v3-details-dialog .calculation-section .section-head h3{color:#f7eedf!important}
+.v3-details-dialog .calculation-section .section-head p,.v3-details-dialog .v3-saved-count,.v3-details-dialog .calculation-empty{color:#bcb3a6!important}
+.v3-details-dialog .calculation-section .calculation-empty{background:#2b2a2a!important;border-color:#4b4339!important}
+.v3-details-dialog .calculation-section .calculation-card{background:#2a292a!important;border-color:#5a4c3b!important}
+.v3-details-dialog .calculation-card-copy>b{color:#fcf5e9!important}
+.v3-details-dialog .calculation-card-copy small,.v3-details-dialog .calculation-card-lines{color:#c1b7a6!important}
+.v3-details-dialog .v3-preview-bar{background:#28241f!important;border:1px solid #80683b}
+.v3-details-dialog .v3-extra{background:#212124!important;border:1px solid #4b4337!important;color:#f5eedf!important;border-radius:18px!important}
+.v3-details-dialog .v3-extra summary{font-size:16px!important}
+.v3-details-dialog .v3-note{background:#373126!important;color:#f8e8c8}
+.v3-details-dialog .v3-complete-action{padding-bottom:12px}
+.v3-details-dialog .v3-complete-action .btn{min-height:66px!important;background:linear-gradient(115deg,#a97723,#e1b34e)!important;border:1px solid #dbb75d!important;border-radius:17px!important;color:#18130e!important;font-size:17px!important;font-weight:900;box-shadow:0 12px 24px rgba(172,127,44,.18)}
+.v3-details-dialog :is(button,a):focus-visible{outline:3px solid #e6c172!important;outline-offset:3px}
+@media(max-width:390px){
+.v3-details-dialog .v3-product-tile{grid-template-columns:68px minmax(0,1fr) 20px!important;min-height:104px!important;gap:10px!important;padding:10px!important}
+.v3-details-dialog .v3-category-icon{width:68px;height:68px;border-radius:16px}
+.v3-details-dialog .v3-category-icon svg{width:45px;height:45px}
+.v3-details-dialog .v3-product-label b{font-size:19px!important}
+.v3-details-dialog .v3-product-label small{font-size:11px!important}
+}
