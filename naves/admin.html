@@ -42,12 +42,16 @@ window.showToast=function(message,error=false){clearTimeout(toastTimer);const e=
         req.onupgradeneeded=()=>{req.transaction.abort();reject(new Error('No employee database'))};
         req.onsuccess=()=>resolve(req.result);
       });
-      if (!db.objectStoreNames.contains('employees') || !db.objectStoreNames.contains('meta')) return false;
-      const saved = await new Promise((resolve,reject)=>{
-        const req=db.transaction('meta','readonly').objectStore('meta').get('persistentSession');
-        req.onsuccess=()=>resolve(req.result?.value || null);
-        req.onerror=()=>reject(req.error);
-      });
+      if (!db.objectStoreNames.contains('employees')) return false;
+      // Old offline installs may not have a meta store yet. Keep their
+      // previously signed-in owner session valid during migration.
+      const saved = db.objectStoreNames.contains('meta')
+        ? await new Promise((resolve,reject)=>{
+            const req=db.transaction('meta','readonly').objectStore('meta').get('persistentSession');
+            req.onsuccess=()=>resolve(req.result?.value || null);
+            req.onerror=()=>reject(req.error);
+          })
+        : null;
       let id = saved?.id;
       if (!id && !saved) {
         // Legacy fallback while old PWA tabs are still open during migration.
