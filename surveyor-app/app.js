@@ -148,16 +148,37 @@ async function seedDatabase() {
   if (!(await idbGet('meta', 'nextSurveyNumber'))) await metaSet('nextSurveyNumber', 1);
 }
 
-function saveSession(user) { sessionStorage.setItem('kdSurveyorSession', JSON.stringify({ id: user.id, ts: Date.now() })); }
-async function restoreSession() {
-  try {
-    const session = JSON.parse(sessionStorage.getItem('kdSurveyorSession') || 'null');
-    if (!session?.id) return null;
-    const user = await idbGet('employees', session.id);
-    return user?.active ? user : null;
-  } catch { return null; }
+// Persistent PWA sign-in: browser sessionStorage is discarded when Android
+// closes an installed app, so use the same IndexedDB that holds local surveys.
+// Only the employee ID is stored; never save login passwords or raw credentials.
+const SESSION_META_KEY = 'persistentSession';
+const LEGACY_SESSION_KEY = 'kdSurveyorSession';
+async function saveSession(user) {
+  await metaSet(SESSION_META_KEY, {id:user.id, signedInAt:Date.now()});
+  // Older installs kept the session only until the next app process restart.
+  try { sessionStorage.removeItem(LEGACY_SESSION_KEY); } catch {}
 }
-function clearSession() { sessionStorage.removeItem('kdSurveyorSession'); }
+async function restoreSession() {
+  let session = await metaGet(SESSION_META_KEY);
+  if (!session?.id) {
+    // One-time non-destructive migration of an existing signed-in PWA tab.
+    try { session = JSON.parse(sessionStorage.getItem(LEGACY_SESSION_KEY) || 'null'); }
+    catch { session = null; }
+  }
+  if (typeof session?.id !== 'string' || !session.id) return null;
+  const user = await idbGet('employees', session.id);
+  if (!user?.active) {
+    await clearSession();
+    return null;
+  }
+  // Store migrated sessions before leaving bootstrap (also while offline).
+  if (!(await metaGet(SESSION_META_KEY))?.id) await saveSession(user);
+  return user;
+}
+async function clearSession() {
+  await metaDelete(SESSION_META_KEY);
+  try { sessionStorage.removeItem(LEGACY_SESSION_KEY); } catch {}
+}
 
 function formatPhone(raw) {
   const digits = String(raw || '').replace(/\D/g, '');
@@ -1910,7 +1931,7 @@ async function logout() {
     try { await apiRequest('/logout', { method:'POST', body:'{}' }); } catch {}
   }
   await metaDelete('serverToken');
-  clearSession();
+  await clearSession();
   try { localStorage.removeItem(DEV_ACCESS_KEY); } catch {}
   currentUser = null;
   showLogin();
@@ -1927,8 +1948,8 @@ function bindEvents() {
         $('#loginError').hidden = false;
         return;
       }
+      await saveSession(user);
       currentUser = user;
-      saveSession(user);
       $('#loginForm').reset();
       const returnedSurveyId = await consumeCalculationTransfer();
       showMain();
