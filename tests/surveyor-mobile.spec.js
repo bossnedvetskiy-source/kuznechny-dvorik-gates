@@ -34,7 +34,7 @@ test('compact survey card shows all product choices and gold vector icons on mob
       tilesHaveNoPhotos:document.querySelectorAll('.v3-product-tile img').length===0,
       viewport:innerWidth};
   });
-  expect(measures.cards.every(x=>x.height>=100&&x.height<=185)).toBeTruthy();
+  expect(measures.cards.every(x=>x.height>=84&&x.height<=145)).toBeTruthy();
   expect(measures.cards.every(x=>x.width<=measures.viewport)).toBeTruthy();
   expect(measures.bounds[4].top).toBeLessThan(1050);
   expect(measures.vectorIcons).toBeTruthy();
