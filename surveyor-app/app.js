@@ -1552,20 +1552,30 @@ function surveySyncText(survey) {
 }
 
 function v3ProductTools(survey) {
+  // Matching the gold-outline category illustrations in the customer's
+  // preferred dark catalog. SVGs work offline and don't need image downloads.
+  const icon = name => {
+    const parts = {
+      gates:'<rect x="9" y="22" width="46" height="31" rx="1"/><path d="M32 22v31M12 26h40M14 50h36M17 29v18M47 29v18M20 31l9 9-9 9M44 31l-9 9 9 9M7 55h50"/>',
+      fence:'<path d="M7 56h50M11 22v34M21 17v39M31 22v34M41 17v39M51 22v34M8 28h46M8 49h46M11 22l5-7 5 7M31 22l5-7 5 7M51 22l5-7"/>',
+      canopy:'<path d="M7 53h50M11 53V31M53 53V31M7 31l25-15 25 15M7 36l25-15 25 15M12 31h40M14 35v9M50 35v9M15 43h34"/>'
+    };
+    return '<span class="v3-category-icon" aria-hidden="true"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">'+parts[name]+'</svg></span>';
+  };
   return `<section class="v3-product-section" aria-label="Выбор изделия">
-    <div class="v3-product-heading"><h3>Добавить изделие</h3><span class="v3-product-hint">Выберите для расчёта</span></div>
+    <div class="v3-product-heading"><h3>Что хотите рассчитать?</h3><span class="v3-product-hint">Выберите изделие</span></div>
     <div class="v3-product-grid">
       <button type="button" class="v3-product-tile" data-v3-calc="gates">
-        <img src="../catalog/art-17s-1.webp" alt="Кованые ворота" loading="lazy">
-        <span class="v3-product-label"><b>Ворота и калитки</b><small>Каталог Арт. с фото и ценами</small></span><span class="v3-product-arrow">→</span>
+        ${icon('gates')}
+        <span class="v3-product-label"><b>Ворота с калиткой</b><small>Каталог Арт. · фото и цены</small></span><span class="v3-product-arrow">→</span>
       </button>
       <button type="button" class="v3-product-tile" data-v3-calc="fence">
-        <img src="../evroshtaketnik/assets/fence-single-gray-20260927.webp" alt="Забор из евроштакетника" loading="lazy">
-        <span class="v3-product-label"><b>Забор</b><small>Варианты, размеры, схема, цена</small></span><span class="v3-product-arrow">→</span>
+        ${icon('fence')}
+        <span class="v3-product-label"><b>Забор из евроштакетника</b><small>Варианты, размеры, схема и цена</small></span><span class="v3-product-arrow">→</span>
       </button>
       <button type="button" class="v3-product-tile" data-v3-calc="canopy">
-        <img class="v3-canopy-thumb" src="../naves/farm-icons/icon-arched.jpg" alt="Арочная ферма навеса" loading="eager" decoding="async">
-        <span class="v3-product-label"><b>Навес</b><small>Фермы, покрытие, визуал и цена</small></span><span class="v3-product-arrow">→</span>
+        ${icon('canopy')}
+        <span class="v3-product-label"><b>Автомобильный навес</b><small>Фермы, покрытие, визуал и цена</small></span><span class="v3-product-arrow">→</span>
       </button>
     </div>
   </section>`;
