@@ -148,6 +148,9 @@ jobs:
       - name: Test DEV calculators PWA install start
         run: npx playwright test tests/dev-pwa.spec.js
 
+      - name: Test persistent surveyor sign-in and logout
+        run: npx playwright test tests/surveyor-persistent-session.spec.js --workers=1
+
       - name: Test surveyor DEV calculator bridge
         run: npx playwright test tests/surveyor-dev-calculator-bridge.spec.js
 
