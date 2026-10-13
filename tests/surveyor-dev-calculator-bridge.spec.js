@@ -541,7 +541,7 @@ test('legacy catalog URL from cached app is redirected into staff-only route', a
 });
 
 
-test('fresh surveyor app displays downloaded canopy thumbnail and fallback online', async ({page}) => {
+test('fresh surveyor app displays offline-ready golden outline canopy icon', async ({page}) => {
   await page.addInitScript(() => localStorage.setItem('kuzdvor-dev-access-v1', '1'));
   await page.goto('/kuznechny-dvorik-gates/dev-tools-v4/');
   await page.locator('#loginInput').fill('zamer');
@@ -552,13 +552,11 @@ test('fresh surveyor app displays downloaded canopy thumbnail and fallback onlin
   await page.locator('#surveyClientPhone').fill('89370000000');
   await page.locator('#surveyAddress').fill('Мелеуз, проверка изображения навеса');
   await page.locator('#saveSurveyBtn').click();
-  const photo = page.locator('[data-v3-calc="canopy"] img');
-  await expect(photo).toBeVisible();
-  await expect.poll(() => photo.evaluate(el => el.complete && el.naturalWidth > 0),{timeout:15000}).toBe(true);
-  const main = await page.request.get('/kuznechny-dvorik-gates/naves/farm-icons/original-farms.webp');
-  const backup = await page.request.get('/kuznechny-dvorik-gates/naves/farm-icons/icon-arched.jpg');
-  expect(main.ok()).toBe(true);
-  expect(backup.ok()).toBe(true);
+  const icon = page.locator('[data-v3-calc="canopy"] .v3-category-icon svg');
+  await expect(icon).toBeVisible();
+  await expect(icon.locator('path')).toHaveCount(1);
+  await expect(page.locator('[data-v3-calc="canopy"] img')).toHaveCount(0);
+  // The icon is inline SVG, so it remains visible when no photos are cached.
 });
 
 
