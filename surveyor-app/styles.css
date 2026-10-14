@@ -1046,3 +1046,31 @@
  .plan-dialog .plan-fast-add-caption b{font-size:12px}
  .plan-dialog .plan-fast-add-caption small{font-size:9px}
 }
+
+
+/* KD plan on phones: stable work surface. A bottom sheet whose height follows
+   its contents jumps when a gate/post is selected, obscuring the drawing. */
+@media(max-width:699px){
+  #planDialog.sheet-dialog{
+    width:100%;
+    height:calc(100dvh - 12px);
+    max-height:calc(100dvh - 12px);
+    margin:auto auto 0;
+  }
+  #planDialog .plan-sheet{
+    display:flex;
+    flex-direction:column;
+    min-height:100%;
+    height:100%;
+    max-height:100%;
+    overflow-y:auto;
+    overflow-x:hidden;
+    overscroll-behavior-y:contain;
+  }
+  #planDialog .plan-visual-sticky{flex:0 0 auto}
+  #planDialog .plan-footer{
+    flex-shrink:0;
+    margin-top:auto!important;
+    padding-top:12px!important;
+  }
+}
