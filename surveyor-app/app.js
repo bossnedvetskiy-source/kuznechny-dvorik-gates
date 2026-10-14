@@ -792,10 +792,22 @@ async function openPlanEditor(surveyId) {
   $('#planEditor').hidden=true;
   $('#planSheetBackdrop').hidden=true;
   $('#planTitle').textContent=displaySurveyNumber(survey)+' · схема';
+  setPlanVisualMode(true);
   renderPlanEditor();
   $('#planDialog').showModal();
 }
 
+let planVisualMode = true;
+function setPlanVisualMode(visual) {
+  planVisualMode = Boolean(visual);
+  const legacy = $('#planLegacyList');
+  if (legacy) legacy.hidden = planVisualMode;
+  const visualBtn = $('#planVisualModeBtn'), listBtn = $('#planListModeBtn');
+  visualBtn?.classList.toggle('active', planVisualMode);
+  listBtn?.classList.toggle('active', !planVisualMode);
+  visualBtn?.setAttribute('aria-pressed', String(planVisualMode));
+  listBtn?.setAttribute('aria-pressed', String(!planVisualMode));
+}
 function renderPlanEditor() {
   const lines=activePlanConfiguration?.sitePlan?.lines || [];
   let line=currentPlanLine();
@@ -2054,6 +2066,8 @@ function bindEvents() {
     syncPlanSheetBackdrop();
     renderPlanEditor();
   });
+  $('#planVisualModeBtn').addEventListener('click', () => setPlanVisualMode(true));
+  $('#planListModeBtn').addEventListener('click', () => setPlanVisualMode(false));
   $('#planItems').addEventListener('click', e => {
     const insert=e.target.closest('[data-plan-insert]');
     if(insert) return showInsertPanel(Number(insert.dataset.planInsert));
