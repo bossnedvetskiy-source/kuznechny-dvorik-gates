@@ -69,6 +69,7 @@ jobs:
           node scripts/test-picket-calculator.mjs
           node scripts/test-canopy-calculator.mjs
           node scripts/test-surveyor-integrity.mjs
+          node scripts/test-plan-auto-divide.mjs
           node --check dev-sync/server.mjs
           node --test dev-sync/test.mjs
           npm run build
