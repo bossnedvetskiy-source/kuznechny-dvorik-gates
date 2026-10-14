@@ -376,6 +376,7 @@
       localStorage.removeItem('kuzdvor-manager-leads-v1');
       if('serviceWorker'in navigator)navigator.serviceWorker.register('/manager-sw.js',{scope:'/manager',updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
       showLogin();
+      if(!navigator.onLine)return;
       try{const data=await api('/api/admin/leads?limit=1');session=data.user||{};authenticated=true;showApp();await loadTeam();await loadLeads();await syncPushButton()}catch(error){showLogin();if(!error.auth&&navigator.onLine){loginError.textContent=error.message;loginError.hidden=false}}
     }
     boot();

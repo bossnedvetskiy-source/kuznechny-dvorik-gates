@@ -41,6 +41,12 @@ jobs:
         run: |
           npm ci
           npx playwright install --with-deps chromium
+      - name: Build production Timeweb package
+        run: |
+          npm run build
+          node scripts/build-timeweb.mjs
+          test -s timeweb-dist/manager-app.js
+          test -s timeweb-dist/backend/manager-workflow.php
       - name: Check manager in Chromium
         run: npx playwright test tests/manager-app.spec.js
       - name: Upload browser failure details
