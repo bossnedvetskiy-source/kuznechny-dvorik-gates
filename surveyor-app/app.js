@@ -787,6 +787,7 @@ async function openPlanEditor(surveyId) {
   activePlanItemId='';
   activePlanQuickPost=false;
   activePlanQuickElement=false;
+  planAddPickerOpen=false;
   lastPlanPostAction=null;
   activeInsertIndex=null;
   $('#insertPanel').hidden=true;
@@ -800,6 +801,20 @@ async function openPlanEditor(surveyId) {
 
 let planVisualMode = true;
 let activePlanQuickElement = false;
+let planAddPickerOpen = false;
+function renderPlanAddPicker(){
+  const line=currentPlanLine();
+  const selected=line?.items.find(item=>item.id===activePlanItemId);
+  const text=$('#planFastAddPosition');
+  if(text)text.textContent=selected
+    ? 'После: '+(PLAN_ITEM_TYPES[selected.type]?.label || selected.type)
+    : 'В конец линии';
+  const title=$('#planAddToggleBtn .plan-fast-add-caption b');
+  if(title)title.textContent=selected?'Добавить после выбранного':'Добавить в конец';
+  const choices=$('#planAddChoices');
+  if(choices)choices.hidden=!planAddPickerOpen;
+  $('#planAddToggleBtn')?.setAttribute('aria-expanded',String(planAddPickerOpen));
+}
 function setPlanVisualMode(visual) {
   planVisualMode = Boolean(visual);
   const legacy = $('#planLegacyList');
@@ -836,15 +851,16 @@ function renderPlanEditor() {
   renderPlanItems(line);
   renderQuickPostActions(line);
   renderQuickElementActions(line);
+  renderPlanAddPicker();
   renderPlanItemEditor(line);
 }
 
 function planItemArtwork(item) {
   const line = 'fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"';
   const start = '<svg viewBox="0 0 80 65" width="100%" height="100%" aria-hidden="true">';
-  if(item.type==='post') return start+'<rect x="31" y="8" width="18" height="52" rx="2" fill="#bd9148" stroke="#efd28d" stroke-width="2"/><path d="M27 10L40 2L53 10Z" fill="#e3bb6a" stroke="#f3d99e" stroke-width="1.5"/><path d="M38 15V54" stroke="#f0d390" stroke-width="2"/></svg>';
+  if(item.type==='post') return '<svg viewBox="0 0 32 80" width="100%" height="100%" aria-hidden="true"><rect x="6" y="14" width="20" height="62" rx="2.5" fill="#96753f" stroke="#f3d28b" stroke-width="2.2"/><path d="M4 15L16 5L28 15Z" fill="#dbb46b" stroke="#f8dfa0" stroke-width="2"/><path d="M12 22V69" stroke="#e9c982" stroke-width="2.5"/></svg>';
   if(item.type==='gate') return start+'<rect x="3" y="11" width="74" height="49" rx="2" fill="#414a4c" stroke="#dcb76d" stroke-width="2"/><path d="M40 12V59M7 16L36 54M73 16L44 54" '+line+'/><path d="M8 20H35M45 20H72M8 52H35M45 52H72" stroke="#a3aba9" stroke-width="1.4"/><circle cx="36" cy="36" r="2" fill="#ead18c"/><circle cx="44" cy="36" r="2" fill="#ead18c"/></svg>';
-  if(item.type==='wicket') return start+'<rect x="25" y="10" width="30" height="50" rx="2" fill="#50595b" stroke="#dcb76d" stroke-width="2"/><path d="M29 17H51M29 51H51M29 18L51 50" '+line+'/><circle cx="49" cy="37" r="2" fill="#ead18c"/></svg>';
+  if(item.type==='wicket') return start+'<rect x="13" y="7" width="54" height="53" rx="2" fill="#50595b" stroke="#e4bf76" stroke-width="2.3"/><path d="M19 14H61M19 53H61M19 15L61 52" '+line+'/><circle cx="55" cy="35" r="2.5" fill="#ead18c"/></svg>';
   if(item.type==='fence') return start+'<path d="M4 16H76M4 55H76" stroke="#d3ac67" stroke-width="3"/>'+[10,23,36,49,62].map(x=>'<rect x="'+x+'" y="12" width="8" height="46" rx="1.6" fill="#767e7f" stroke="#c5c8c2" stroke-width="1"/>').join('')+'</svg>';
   return start+'<path d="M5 45H75" stroke="#d8b672" stroke-width="2.5" stroke-dasharray="6 5"/><path d="M9 26V56M71 26V56M9 39H71M9 39l9 -8M9 39l9 8M71 39l-9 -8M71 39l-9 8" '+line+'/></svg>';
 }
@@ -855,7 +871,7 @@ function renderPlanCanvas(line) {
   // Keep ordinary facades fully visible on a phone; only genuinely long lines scroll.
   const minimumWidth=Math.max(260,items.reduce((sum,item)=>sum+(item.type==='post'?24:55),0)+16);
   canvas.innerHTML=`<div class="plan-track plan-visual-track" style="min-width:${minimumWidth}px">${items.map((item,index)=>{
-    const grow=item.type==='post' ? .22 : Math.max(.65,Number(item.width)||1);
+    const grow=item.type==='post' ? .33 : item.type==='gate' ? 2.6 : item.type==='wicket' ? 1.3 : item.type==='fence' ? 2 : 1.25;
     const selected=item.id===activePlanItemId?' selected':'';
     const state=item.type==='post'?(item.state==='existing'?'existing':'new'):'';
     const label=item.type==='post'?(item.state==='existing'?'Есть':'Новый'):(trimNumber(item.width)+' м');
@@ -903,9 +919,6 @@ function renderQuickElementActions(line) {
       </div>`;
     panel.hidden=false;
   }
-  const selected=currentPlanItem();
-  const text=$('#planFastAddPosition');
-  if(text) text.textContent=selected?'После: '+(PLAN_ITEM_TYPES[selected.type]?.short||selected.type):'В конец линии';
 }
 function renderQuickPostActions(line) {
   const quick=$('#planQuickPostActions');
@@ -1088,6 +1101,7 @@ function selectPlanItem(id,quick=false) {
   activePlanItemId=id;
   activePlanQuickPost=quick && currentPlanItem()?.type==='post';
   activePlanQuickElement=quick && currentPlanItem()?.type!=='post';
+  planAddPickerOpen=false;
   activeInsertIndex=null;
   $('#insertPanel').hidden=true;
   renderPlanEditor(); // Refresh the drawing and inline editor, not just the legacy sheet.
@@ -1132,6 +1146,7 @@ function quickAddPlanItem(type) {
   activePlanItemId=item.id;
   activePlanQuickPost=type==='post';
   activePlanQuickElement=type!=='post';
+  planAddPickerOpen=false;
   activeInsertIndex=null;
   $('#insertPanel').hidden=true;
   $('#planEditor').hidden=true;
@@ -2184,6 +2199,10 @@ function bindEvents() {
     renderPlanEditor();
   });
   $('#planVisualModeBtn').addEventListener('click', () => setPlanVisualMode(true));
+  $('#planAddToggleBtn').addEventListener('click', () => {
+    planAddPickerOpen=!planAddPickerOpen;
+    renderPlanAddPicker();
+  });
   $('#planListModeBtn').addEventListener('click', () => setPlanVisualMode(false));
   $('#planItems').addEventListener('click', e => {
     const insert=e.target.closest('[data-plan-insert]');
