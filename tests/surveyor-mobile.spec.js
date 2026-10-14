@@ -135,6 +135,10 @@ test('surveyor can create a mixed survey and reopen it offline', async ({page, c
   await expect(page.locator('#planCanvas .plan-part')).toHaveCount(5);
   await expect(page.locator('#planItemsCount')).toHaveText('5');
 
+  await expect(page.locator('#planLegacyList')).toBeHidden();
+  await expect(page.locator('#planVisualModeBtn')).toHaveAttribute('aria-pressed','true');
+  await page.locator('#planListModeBtn').click();
+  await expect(page.locator('#planLegacyList')).toBeVisible();
   const rowHeights = await page.locator('#planItems .plan-item-row').evaluateAll(rows => rows.map(row => row.getBoundingClientRect().height));
   expect(Math.max(...rowHeights)).toBeLessThanOrEqual(66);
 
@@ -150,6 +154,8 @@ test('surveyor can create a mixed survey and reopen it offline', async ({page, c
   await expect(page.locator('#planEditor')).toBeHidden();
   await expect(page.locator('#planSheetBackdrop')).toBeHidden();
 
+  await page.locator('#planVisualModeBtn').click();
+  await expect(page.locator('#planLegacyList')).toBeHidden();
   // Tap + directly on the visual scheme to insert a span at the correct position.
   await expect(page.locator('#planCanvas [data-plan-insert-canvas]')).toHaveCount(5);
   await page.locator('#planCanvas [data-plan-insert-canvas="3"]').click();
