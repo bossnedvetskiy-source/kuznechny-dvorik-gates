@@ -135,6 +135,10 @@ test('surveyor can create a mixed survey and reopen it offline', async ({page, c
   await expect(page.locator('#planCanvas .plan-part')).toHaveCount(5);
   await expect(page.locator('#planItemsCount')).toHaveText('5');
   await expect(page.locator('#planGeometryAudit')).toContainText('Размеры проверены');
+  await expect(page.locator('#planAddChoices')).toBeHidden();
+  await expect(page.locator('#planAddToggleBtn')).toHaveAttribute('aria-expanded','false');
+  // The drawing is the hero of the screen, not five permanent action tiles.
+  expect(await page.locator('#planCanvas').evaluate(el => el.getBoundingClientRect().height)).toBeGreaterThanOrEqual(195);
 
   await expect(page.locator('#planLegacyList')).toBeHidden();
   await expect(page.locator('#planVisualModeBtn')).toHaveAttribute('aria-pressed','true');
@@ -174,7 +178,10 @@ test('surveyor can create a mixed survey and reopen it offline', async ({page, c
   await page.locator('#undoPlanPostBtn').click();
   await expect(page.locator('#planLineWidth')).toHaveText('4,4 м');
   // Quick palette adds an element next to the selected position; undo restores the sketch.
+  await page.locator('#planAddToggleBtn').click();
+  await expect(page.locator('#planAddChoices')).toBeVisible();
   await page.locator('[data-plan-quick-add="post"]').click();
+  await expect(page.locator('#planAddChoices')).toBeHidden();
   await expect(page.locator('#planItemsCount')).toHaveText('6');
   expect(await page.locator('#planCanvas').evaluate(
     el => el.scrollWidth <= el.clientWidth + 8
@@ -184,6 +191,9 @@ test('surveyor can create a mixed survey and reopen it offline', async ({page, c
   // To insert inside a facade, select the preceding item and tap its product
   // in the quick-add palette. No floating buttons cover the diagram.
   await page.locator('#planCanvas .plan-part').nth(2).click();
+  await expect(page.locator('#planAddChoices')).toBeHidden();
+  await expect(page.locator('#planFastAddPosition')).toContainText('После:');
+  await page.locator('#planAddToggleBtn').click();
   await page.locator('[data-plan-quick-add="fence"]').click();
   await expect(page.locator('#planQuickElementActions')).toBeVisible();
   await page.locator('[data-plan-inline-field="width"]').fill('1.7');
