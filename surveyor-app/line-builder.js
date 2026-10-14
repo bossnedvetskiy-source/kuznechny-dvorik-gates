@@ -353,3 +353,28 @@ export function inspectPlanLine(line, maxFenceSpan=2.5) {
   return {width:lineWidth(line),posts:posts.length,existingPosts:posts.filter(x=>x.state==='existing').length,
     oversizedFenceSpans:fenceOversized,issues};
 }
+
+/** On explicit tap, divide a single span into valid spans with distinct posts.
+ * Preserve its measured width, materials and calculation linkage. */
+export function divideFenceIntoSpans(items,fenceId,maxSpan=2.5) {
+  const index=items.findIndex(x=>x.id===fenceId);
+  const source=items[index];
+  if(source?.type!=='fence') return {ok:false,reason:'Выберите пролёт забора.'};
+  const width=Number(source.width);
+  if(!Number.isFinite(width)||width<=0) return {ok:false,reason:'Укажите ширину пролёта.'};
+  if(!(maxSpan>0)) return {ok:false,reason:'Некорректный предел пролёта.'};
+  const count=Math.ceil((width-1e-9)/maxSpan);
+  if(count<=1) return {ok:false,reason:'Пролёт уже не превышает '+trimNumber(maxSpan)+' м.'};
+  if(count>100) return {ok:false,reason:'Слишком длинный участок. Разделите его на линии.'};
+  const totalMm=Math.round(width*1000);
+  const baseMm=Math.floor(totalMm/count);
+  const remainder=totalMm-baseMm*count;
+  const parts=[];
+  for(let i=0;i<count;i++){
+    const mm=baseMm+(i<remainder?1:0);
+    parts.push({...source,id:i===0?source.id:planId('fence'),width:mm/1000});
+    if(i<count-1) parts.push(newItem('post'));
+  }
+  return {ok:true,items:[...items.slice(0,index),...parts,...items.slice(index+1)],
+    spans:count,addedPosts:count-1,originalWidth:width};
+}
