@@ -1,0 +1,20 @@
+import assert from 'node:assert/strict';
+import {newItem,divideFenceIntoSpans,inspectPlanLine,lineWidth} from '../surveyor-app/line-builder.js';
+
+const fence={...newItem('fence'),width:6.6,height:1.8,material:'euro_vertical',sourceCalculationId:'q1'};
+const before=[newItem('post'),fence,newItem('post')];
+const result=divideFenceIntoSpans(before,fence.id);
+assert.equal(result.ok,true);
+assert.equal(result.spans,3);
+assert.equal(result.addedPosts,2);
+assert.equal(result.items.filter(x=>x.type==='post').length,4);
+assert.equal(result.items.filter(x=>x.type==='fence').length,3);
+assert.ok(result.items.filter(x=>x.type==='fence').every(x=>x.width<=2.5));
+assert.ok(result.items.filter(x=>x.type==='fence').every(x=>x.sourceCalculationId==='q1'));
+assert.ok(Math.abs(lineWidth({items:result.items})-6.6)<0.0001);
+assert.equal(inspectPlanLine({items:result.items}).oversizedFenceSpans.length,0);
+assert.equal(before.length,3);
+assert.equal(before[1].width,6.6);
+const short=divideFenceIntoSpans(before.map(x=>x===fence?{...x,width:2.4}:x),fence.id);
+assert.equal(short.ok,false);
+console.log('Plan automatic subdivision checks passed');
