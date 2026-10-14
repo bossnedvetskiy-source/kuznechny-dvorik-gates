@@ -159,6 +159,15 @@ test('surveyor can create a mixed survey and reopen it offline', async ({page, c
   await expect(page.locator('#planLegacyList')).toBeHidden();
   // New linear constructor: edit dimensions without opening the old modal.
   await expect(page.locator('#planCanvas .plan-part-shape svg')).toHaveCount(5);
+  // Every + belongs to a dedicated row above illustrations, never over labels.
+  const insertionButtonsClearArtwork = await page.locator('#planCanvas [data-plan-insert-canvas]').evaluateAll(buttons =>
+    buttons.every(button => {
+      const wrap=button.closest('.plan-part-wrap');
+      const artwork=wrap.querySelector('.plan-part-shape');
+      return button.getBoundingClientRect().bottom <= artwork.getBoundingClientRect().top + 2;
+    })
+  );
+  expect(insertionButtonsClearArtwork).toBe(true);
   await page.locator('#planCanvas .plan-part.gate').first().click();
   await expect(page.locator('#planQuickElementActions')).toBeVisible();
   await expect(page.locator('#planEditor')).toBeHidden();
@@ -183,6 +192,17 @@ test('surveyor can create a mixed survey and reopen it offline', async ({page, c
   await page.locator('[data-plan-field="width"]').blur();
   await page.locator('[data-plan-field="material"]').selectOption('euro_vertical');
   await page.locator('#closePlanEditorBtn').click();
+  await page.locator('#planCanvas .plan-part.fence').first().click();
+  await expect(page.locator('#planQuickElementActions')).toBeVisible();
+  await expect(page.locator('[data-plan-inline-split]')).toBeVisible();
+  await expect(page.locator('#planSwipeHint')).toBeVisible();
+  // The save button must be after the whole editor, never overlay editable fields.
+  const footerDoesNotCoverInputs = await page.evaluate(() => {
+    const editor=document.querySelector('#planQuickElementActions').getBoundingClientRect();
+    const footer=document.querySelector('#planDialog .plan-footer').getBoundingClientRect();
+    return footer.top >= editor.bottom - 1;
+  });
+  expect(footerDoesNotCoverInputs).toBe(true);
   await expect(page.locator('#savePlanBtn')).toBeVisible();
   await page.locator('#savePlanBtn').click();
 
