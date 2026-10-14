@@ -23,6 +23,8 @@
     let drafts={};
     let loading=null;
     let saving=false;
+    let photoProcessing=false;
+    let sessionEpoch=0;
     let savedAt=0;
     let authenticated=false;
     let offlineKey=null;
@@ -65,7 +67,7 @@
         return data;
       }catch(error){if(error.name==='AbortError')throw new Error('Сервер не ответил вовремя. Повторите попытку.');throw error}finally{clearTimeout(timer)}
     }
-    function showLogin(){loginView.hidden=false;appView.hidden=true;logoutButton.hidden=true;clearTimeout(pollTimer);offlineForm.hidden=!localStorage.getItem(ACCESS_KEY)}
+    function showLogin(){sessionEpoch++;loginView.hidden=false;appView.hidden=true;logoutButton.hidden=true;clearTimeout(pollTimer);offlineForm.hidden=!localStorage.getItem(ACCESS_KEY)}
     function showApp(){loginView.hidden=true;appView.hidden=false;logoutButton.hidden=false;startPolling()}
     const bytesTo64=bytes=>{let raw='';for(let i=0;i<bytes.length;i+=8192)raw+=String.fromCharCode(...bytes.subarray(i,i+8192));return btoa(raw)};
     const from64=value=>Uint8Array.from(atob(value),c=>c.charCodeAt(0));
@@ -94,7 +96,11 @@
       const query=search.value.trim().toLocaleLowerCase('ru-RU');
       if(query&&![lead.name,lead.phone,lead.city,lead.article,lead.comment,workflows[String(lead.id)]?.address].some(v=>String(v||'').toLocaleLowerCase('ru-RU').includes(query)))return false;
       if(activeFilter==='closed')return ['completed','lost'].includes(stage);
-      if(activeFilter==='measurement'&&dayFilter.value){const when=workflows[String(lead.id)]?.nextActionAt||'';const today=new Date();const day=new Date(today.getTime()-today.getTimezoneOffset()*60000).toISOString().slice(0,10);if(dayFilter.value==='overdue'){if(!when||when>=new Date(today.getTime()-today.getTimezoneOffset()*60000).toISOString().slice(0,16))return false}else{if(dayFilter.value==='tomorrow'){today.setDate(today.getDate()+1)}const target=new Date(today.getTime()-today.getTimezoneOffset()*60000).toISOString().slice(0,10);if(when.slice(0,10)!==target)return false}}
+      if(activeFilter==='measurement'&&dayFilter.value){
+        const wf=workflows[String(lead.id)]||{};const when=wf.nextActionAt||'';
+        if(dayFilter.value==='overdue'){if(!when||(wf.nextActionTimestamp?wf.nextActionTimestamp*1000>=Date.now():when>=new Date().toISOString().slice(0,16)))return false}
+        else{const now=new Date();if(dayFilter.value==='tomorrow')now.setDate(now.getDate()+1);const target=new Intl.DateTimeFormat('sv-SE',{timeZone:wf.timeZone||'Asia/Yekaterinburg',year:'numeric',month:'2-digit',day:'2-digit'}).format(now);if(when.slice(0,10)!==target)return false}
+      }
       if(activeFilter==='new') return stage==='new';
       if(activeFilter==='work') return ['contacted','measurement_done','contract','production','installation'].includes(stage);
       if(activeFilter==='measurement') return stage==='measurement_scheduled';
@@ -112,14 +118,14 @@
       updateCounts();roleText.textContent=session.username?session.username+' · '+({admin:'Администратор',manager:'Менеджер',surveyor:'Замерщик'}[session.role]||''):'Заявки';
       const openDetails=[...leadList.querySelectorAll('.measurement-details[open]')].map(x=>x.closest('.lead-card').dataset.leadId);
       const focused=document.activeElement;const focusId=focused?.closest?.('.lead-card')?.dataset.leadId;const focusField=focused?.getAttribute?.('data-field');const position=focused?.selectionStart;
-      const items=leads.filter(matches).sort((a,b)=>activeFilter==='measurement'?String(workflows[String(a.id)]?.nextActionAt||'9999').localeCompare(String(workflows[String(b.id)]?.nextActionAt||'9999')):Number(b.id)-Number(a.id));
+      const items=leads.filter(matches).sort((a,b)=>activeFilter==='measurement'?((workflows[String(a.id)]?.nextActionTimestamp??Number.MAX_SAFE_INTEGER)-(workflows[String(b.id)]?.nextActionTimestamp??Number.MAX_SAFE_INTEGER)||String(workflows[String(a.id)]?.nextActionAt||'9999').localeCompare(String(workflows[String(b.id)]?.nextActionAt||'9999'))):Number(b.id)-Number(a.id));
       emptyView.hidden=items.length>0;
       leadList.innerHTML=items.map(lead=>{
         const wf={...(workflows[String(lead.id)]||{}),...(drafts[String(lead.id)]||{})};
         const stage=wf.stage||stageOf(lead);
         const digits=phoneDigits(lead.phone);
         const wa=digits?('https://wa.me/'+(digits.startsWith('8')?'7'+digits.slice(1):digits)):'#';
-        const title=[categoryLabel(lead.category),lead.article].filter(Boolean).join(' · ');
+        const title=[lead.product_title||categoryLabel(lead.category),lead.article].filter(Boolean).join(' · ');
         const size=lead.width&&lead.height?lead.width+'×'+lead.height+' м':'—';
         const wicket=lead.wicket_width?lead.wicket_width+(lead.wicket_height?'×'+lead.wicket_height:'')+' м':'—';
         const when=String(wf.nextActionAt||'').slice(0,16);const m=wf.measurement||{};
@@ -135,6 +141,7 @@
           ${lead.delivery_pending?'<p class="error">Стоимость доставки требует уточнения</p>':''}${lead.delivery_out_of_area?'<p class="error">Объект вне зоны обслуживания</p>':''}
           ${lead.comment?`<p><b>Комментарий клиента:</b> ${escape(lead.comment)}</p>`:''}
           <details><summary>Полная заявка</summary><p>${escape(lead.message||'')}</p>${Object.entries(lead.configuration||{}).map(([k,v])=>`<p>${escape(k)}: ${escape(typeof v==='object'?JSON.stringify(v):v)}</p>`).join('')}</details></div>
+          ${wf.address?`<p class="lead-details"><a href="https://yandex.ru/maps/?text=${encodeURIComponent([lead.city,wf.address].filter(Boolean).join(', '))}" target="_blank" rel="noopener">Открыть адрес на карте</a></p>`:''}
           <div class="contact-row">${digits?`<a href="tel:+${digits}">☎ Позвонить</a><a href="${wa}" target="_blank" rel="noopener">WhatsApp</a>`:'<span>Телефон требует уточнения</span>'}</div>
           <div class="workflow">
             <div class="workflow-grid">
@@ -153,8 +160,9 @@
             ${[['width','Фактическая ширина'],['height','Фактическая высота'],['wicketWidth','Ширина калитки'],['wicketHeight','Высота калитки'],['diagonal1','Диагональ 1'],['diagonal2','Диагональ 2'],['slope','Перепад уровня, см'],['posts','Материал и состояние столбов'],['opening','Направление открывания'],['obstacles','Препятствия'],['notes','Пожелания и условия монтажа'],['sketch','Эскиз и расположение элементов']].map(([key,label])=>`<label class="field"><span>${label}</span><textarea data-m="${key}" data-field="m-${key}" maxlength="4000">${escape(m[key]||'')}</textarea></label>`).join('')}
             </div><label class="field"><span>До 4 фотографий объекта или эскиза</span><input data-photo type="file" accept="image/*" capture="environment" multiple></label>
             <div class="photo-list">${(m.photos||[]).map((photo,i)=>`<div><img src="${escape(photo)}" alt="Фото объекта ${i+1}" loading="lazy"><button type="button" data-remove-photo="${i}">Удалить фото ${i+1}</button></div>`).join('')}</div></details>
-            ${drafts[String(lead.id)]?.conflict?`<div class="conflict"><p>На сервере: ${escape(stageLabel(workflows[String(lead.id)]?.stage||'new'))}, ${escape(workflows[String(lead.id)]?.nextActionAt||'без даты')}<br>Заметка: ${escape(workflows[String(lead.id)]?.note||'—')}</p><button type="button" data-rebase>Сохранить мой черновик поверх этой версии</button><button type="button" data-discard>Принять серверную версию</button></div>`:''}
+            ${drafts[String(lead.id)]?.conflict?`<div class="conflict"><p>На сервере: ${escape(stageLabel(workflows[String(lead.id)]?.stage||'new'))}, ${escape(workflows[String(lead.id)]?.nextActionAt||'без даты')}<br>Заметка: ${escape(workflows[String(lead.id)]?.note||'—')}</p><details><summary>Остальные данные на сервере</summary><p>Адрес: ${escape(workflows[String(lead.id)]?.address||'—')}<br>Исполнитель: ${escape(team.find(u=>u.id===workflows[String(lead.id)]?.assignedTo)?.username||'Не назначен')}<br>Причина отказа: ${escape(workflows[String(lead.id)]?.lossReason||'—')}</p>${Object.entries(workflows[String(lead.id)]?.measurement||{}).filter(([key])=>key!=='photos').map(([key,value])=>`<p>${escape(({width:'Ширина',height:'Высота',wicketWidth:'Ширина калитки',wicketHeight:'Высота калитки',diagonal1:'Диагональ 1',diagonal2:'Диагональ 2',slope:'Перепад уровня',posts:'Столбы',opening:'Открывание',obstacles:'Препятствия',notes:'Условия',sketch:'Эскиз'})[key]||key)}: ${escape(value)}</p>`).join('')}<p>Фотографий: ${workflows[String(lead.id)]?.measurement?.photos?.length||0}</p></details><button type="button" data-rebase>Сохранить мой черновик поверх этой версии</button><button type="button" data-discard>Принять серверную версию</button></div>`:''}
             <p data-draft-state role="status">${drafts[String(lead.id)]?'Есть несохранённые изменения':''}</p>
+            ${drafts[String(lead.id)]&&!drafts[String(lead.id)].conflict?'<button type="button" data-discard>Отменить изменения</button>':''}
             <div class="save-row"><button class="measurement-button" data-schedule type="button">📅 Назначить замер</button><button class="save-button" data-save type="button">Сохранить</button></div>
           </div>
         </article>`;
@@ -164,15 +172,15 @@
     }
 
     async function loadLeads({silent=false}={}){
-      if(loading||saving||!navigator.onLine)return loading;
+      if(loading||saving||photoProcessing||!navigator.onLine)return loading;const epoch=sessionEpoch;
       loading=(async()=>{
         if(!silent)syncText.textContent='Обновляем заявки…';
         try{
           const next=[];const nextWorkflows={};let before=0;const seen=new Set();
           do{
             const data=await api('/api/admin/leads?limit=100'+(before?'&before_id='+before:''));if(data.user){if(session.id&&session.id!==data.user.id){await cacheWrite;clearCache()}session=data.user}
-            const batch=Array.isArray(data.leads)?data.leads:[];next.push(...batch);
-            const ids=batch.map(x=>Number(x.id)).filter(Boolean);if(ids.length){const wfData=await api('/api/admin/lead-workflows?ids='+encodeURIComponent(ids.join(',')));Object.assign(nextWorkflows,wfData.workflows||{})}
+            if(epoch!==sessionEpoch)return;const batch=Array.isArray(data.leads)?data.leads:[];next.push(...batch);
+            const ids=batch.map(x=>Number(x.id)).filter(Boolean);if(ids.length){const wfData=await api('/api/admin/lead-workflows?ids='+encodeURIComponent(ids.join(',')));if(epoch!==sessionEpoch)return;Object.assign(nextWorkflows,wfData.workflows||{})}
             const cursor=Number(data.page?.nextBeforeId)||0;if(!data.page?.hasMore||!cursor)break;if(seen.has(cursor))throw new Error('Ошибка загрузки следующей страницы');seen.add(cursor);before=cursor;
           }while(true);
           const oldLatest=latestId;leads=[...new Map(next.map(x=>[x.id,x])).values()];for(const [id,draft] of Object.entries(drafts)){if(nextWorkflows[id]&&draft.expectedRevision!==nextWorkflows[id].revision)draft.conflict=true}workflows=nextWorkflows;authenticated=true;savedAt=Date.now();latestId=Math.max(0,...leads.map(x=>Number(x.id)||0));
@@ -182,7 +190,7 @@
       })();try{await loading}finally{loading=null}
     }
     async function saveWorkflow(card){
-      if(saving)return;capture(card);const id=String(card.dataset.leadId);const payload={...drafts[id]};
+      if(photoProcessing){showToast('Дождитесь обработки фотографий.',true);return}if(saving)return;capture(card);const id=String(card.dataset.leadId);const payload={...drafts[id]};
       if(payload.stage==='measurement_scheduled'&&(!payload.nextActionAt||payload.actionType!=='measurement')){showToast('Для назначения замера укажите дату и выберите действие «Замер».',true);return}
       if(payload.stage==='measurement_done'&&(!payload.address.trim()||!payload.measurement.width||!payload.measurement.height||!payload.measurement.posts)){showToast('Для завершения замера укажите адрес, фактические ширину/высоту и состояние столбов.',true);return}
       if(payload.stage==='lost'&&!payload.lossReason.trim()){showToast('Укажите причину отказа.',true);return}
@@ -230,8 +238,8 @@
     document.getElementById('teamForm').addEventListener('submit',async event=>{event.preventDefault();const form=event.target;const button=form.querySelector('button');button.disabled=true;try{await api('/api/admin/manager-team',{method:'POST',body:JSON.stringify(Object.fromEntries(new FormData(form)))});form.reset();await loadTeam();render();showToast('Сотрудник создан')}catch(error){showToast(error.message,true)}finally{button.disabled=false}});
     document.getElementById('teamList').addEventListener('click',async event=>{const b=event.target.closest('[data-disable-user]');if(!b||!window.confirm('Отключить сотрудника и завершить его сессии?'))return;try{await api('/api/admin/manager-team',{method:'DELETE',body:JSON.stringify({id:Number(b.dataset.disableUser)})});await loadTeam();render()}catch(error){showToast(error.message,true)}});
     leadList.addEventListener('change',async event=>{
-      if(!event.target.matches('[data-photo]'))return;const card=event.target.closest('.lead-card');capture(card);const id=card.dataset.leadId;
-      try{for(const file of event.target.files){if(drafts[id].measurement.photos.length>=4)throw new Error('Можно добавить не более четырёх фотографий');if(!file.type.startsWith('image/')||file.size>15*1024*1024)throw new Error('Выберите изображение размером до 15 МБ');const bitmap=await createImageBitmap(file);const canvas=document.createElement('canvas');const scale=Math.min(1,1024/Math.max(bitmap.width,bitmap.height));canvas.width=Math.round(bitmap.width*scale);canvas.height=Math.round(bitmap.height*scale);canvas.getContext('2d').drawImage(bitmap,0,0,canvas.width,canvas.height);bitmap.close();const photo=canvas.toDataURL('image/jpeg',0.65);if(photo.length>400000)throw new Error('Фото слишком большое после сжатия');drafts[id].measurement.photos.push(photo)}await saveCache();render()}catch(error){showToast(error.message,true)}
+      if(!event.target.matches('[data-photo]')||photoProcessing)return;photoProcessing=true;const card=event.target.closest('.lead-card');capture(card);const id=card.dataset.leadId;
+      try{for(const file of event.target.files){if(drafts[id].measurement.photos.length>=4)throw new Error('Можно добавить не более четырёх фотографий');if(!file.type.startsWith('image/')||file.size>15*1024*1024)throw new Error('Выберите изображение размером до 15 МБ');const bitmap=await createImageBitmap(file);const canvas=document.createElement('canvas');const scale=Math.min(1,1024/Math.max(bitmap.width,bitmap.height));canvas.width=Math.round(bitmap.width*scale);canvas.height=Math.round(bitmap.height*scale);canvas.getContext('2d').drawImage(bitmap,0,0,canvas.width,canvas.height);bitmap.close();const photo=canvas.toDataURL('image/jpeg',0.65);if(photo.length>400000)throw new Error('Фото слишком большое после сжатия');drafts[id].measurement.photos.push(photo)}await saveCache();render()}catch(error){showToast(error.message,true)}finally{photoProcessing=false}
     });
 
     function b64ToUint8(value){const pad='='.repeat((4-value.length%4)%4);const base64=(value+pad).replace(/-/g,'+').replace(/_/g,'/');const raw=atob(base64);return Uint8Array.from([...raw].map(ch=>ch.charCodeAt(0)))}

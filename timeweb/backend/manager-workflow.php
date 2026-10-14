@@ -40,7 +40,8 @@ function kd_manager_lead_access(int $leadId, bool $lock = false): array
 function kd_manager_workflow_value(array $r): array
 {
     $stage=$r['stage']?:($r['status']==='done'?'completed':($r['status']==='archived'?'lost':($r['status']==='contacted'?'contacted':'new')));
-    return ['stage'=>$stage,'note'=>(string)($r['admin_note']??''),'nextActionAt'=>(string)($r['next_action_at']??''),'lossReason'=>(string)($r['loss_reason']??''),'updatedAt'=>(string)($r['updated_at']??''),'revision'=>(int)($r['revision']??0),'actionType'=>(string)($r['action_type']??'measurement'),'timeZone'=>(string)($r['time_zone']??'Asia/Yekaterinburg'),'address'=>(string)($r['address']??''),'assignedTo'=>isset($r['assigned_to'])?(int)$r['assigned_to']:null,'measurement'=>json_decode((string)($r['measurement_json']??'null'),true),'color'=>(string)($r['color']??'')];
+    $timestamp=null;try{if(!empty($r['next_action_at']))$timestamp=(new DateTimeImmutable($r['next_action_at'],new DateTimeZone($r['time_zone']??'Asia/Yekaterinburg')))->getTimestamp();}catch(Throwable){}
+    return ['stage'=>$stage,'note'=>(string)($r['admin_note']??''),'nextActionAt'=>(string)($r['next_action_at']??''),'nextActionTimestamp'=>$timestamp,'lossReason'=>(string)($r['loss_reason']??''),'updatedAt'=>(string)($r['updated_at']??''),'revision'=>(int)($r['revision']??0),'actionType'=>(string)($r['action_type']??'measurement'),'timeZone'=>(string)($r['time_zone']??'Asia/Yekaterinburg'),'address'=>(string)($r['address']??''),'assignedTo'=>isset($r['assigned_to'])?(int)$r['assigned_to']:null,'measurement'=>json_decode((string)($r['measurement_json']??'null'),true),'color'=>(string)($r['color']??'')];
 }
 
 function kd_manager_workflow_validate(array $value): ?string
@@ -98,7 +99,7 @@ function kd_manager_workflow_save(string $id): never
             $value['measurement']=$clean;
         }
         if($error=kd_manager_workflow_validate($value)){$db->rollBack();kd_json(['error'=>$error],400);}
-        if($value['stage']==='measurement_scheduled' && ($previous['stage']!=='measurement_scheduled'||$value['nextActionAt']!==$previous['nextActionAt']||$value['timeZone']!==$previous['timeZone'])){
+        if($value['stage']==='measurement_scheduled' && ($previous['stage']!=='measurement_scheduled'||$value['nextActionAt']!==$previous['nextActionAt']||$value['timeZone']!==$previous['timeZone']||$value['assignedTo']!==$previous['assignedTo'])){
             $appointment=new DateTimeImmutable($value['nextActionAt'],new DateTimeZone($value['timeZone']));
             if($appointment->getTimestamp()<time()){$db->rollBack();kd_json(['error'=>'Нельзя назначить новый замер в прошлом'],400);}
             if($value['assignedTo']){
@@ -113,13 +114,18 @@ function kd_manager_workflow_save(string $id): never
             $measurement=$value['measurement']??[];
             if($value['address']===''||empty($measurement['width'])||empty($measurement['height'])||trim((string)($measurement['posts']??''))===''){$db->rollBack();kd_json(['error'=>'Заполните адрес, фактические размеры и состояние столбов'],400);}
         }
+        $value['nextActionTimestamp']=$value['nextActionAt']!==''?(new DateTimeImmutable($value['nextActionAt'],new DateTimeZone($value['timeZone'])))->getTimestamp():null;
         $revision=$value['revision']+1;
         $stmt=$db->prepare('INSERT INTO lead_workflow (lead_id,stage,admin_note,next_action_at,loss_reason,action_type,time_zone,address,assigned_to,measurement_json,revision,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,UTC_TIMESTAMP()) ON DUPLICATE KEY UPDATE stage=VALUES(stage),admin_note=VALUES(admin_note),next_action_at=VALUES(next_action_at),loss_reason=VALUES(loss_reason),action_type=VALUES(action_type),time_zone=VALUES(time_zone),address=VALUES(address),assigned_to=VALUES(assigned_to),measurement_json=VALUES(measurement_json),revision=VALUES(revision),updated_at=UTC_TIMESTAMP()');
         $stmt->execute([$leadId,$value['stage'],$value['note'],$value['nextActionAt'],$value['lossReason'],$value['actionType'],$value['timeZone'],$value['address'],$value['assignedTo'],json_encode($value['measurement'],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),$revision]);
         $coarse=$value['stage']==='new'?'new':(in_array($value['stage'],['completed','lost'],true)?'done':'contacted');$db->prepare("UPDATE site_leads SET status=IF(status='archived',status,?),updated_at=UTC_TIMESTAMP() WHERE id=?")->execute([$coarse,$leadId]);
         $value['revision']=$revision;$value['updatedAt']=gmdate('Y-m-d H:i:s');
         $db->prepare('INSERT INTO lead_workflow_history (lead_id,admin_id,revision,value_json) VALUES (?,?,?,?)')->execute([$leadId,$session['admin_id'],$revision,json_encode($value,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)]);
-        $db->commit();kd_json(['ok'=>true,'id'=>$leadId]+$value);
+        $db->commit();
+        if($value['assignedTo']!==$previous['assignedTo']&&$value['assignedTo']&&function_exists('kd_manager_push_queue_event')){
+            try{kd_manager_push_queue_event($leadId,'assignment:'.$leadId.':'.$revision,['type'=>'lead','leadId'=>$leadId,'title'=>'Назначен исполнитель','body'=>'Заявка №'.$leadId.' обновлена.','url'=>'/manager?lead='.$leadId,'tag'=>'kuzdvor-assignment-'.$leadId]);}catch(Throwable $e){error_log('Manager assignment push: '.$e->getMessage());}
+        }
+        kd_json(['ok'=>true,'id'=>$leadId]+$value);
     }catch(Throwable $e){if($db->inTransaction())$db->rollBack();throw $e;}
 }
 

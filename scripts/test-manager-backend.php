@@ -44,6 +44,30 @@ $pdo->exec('DROP TRIGGER fail_status');
 $when='2030-01-01T10:00';save(['stage'=>'measurement_scheduled','nextActionAt'=>$when,'assignedTo'=>2,'expectedRevision'=>4]);
 save(['stage'=>'measurement_scheduled','nextActionAt'=>$when,'assignedTo'=>2,'expectedRevision'=>0],409,'2');
 check((int)$pdo->query('SELECT COUNT(*) FROM lead_workflow_history')->fetchColumn()===5,'only committed changes enter history');
+
+// Exercise queue targeting and retry transitions without making any network
+// request or contacting a real push provider.
+function kd_manager_push_ensure_table(): void{}
+function kd_setting_get(string $key,mixed $default=null): mixed{return time();}
+function kd_manager_vapid_keys(): array{return [];}
+function kd_manager_push_record_result(string $hash,int $status): void{}
+$transportStatus=201;$delivered=[];
+function kd_manager_push_http(string $endpoint,array $keys,array $subscription,array $payload): int{$GLOBALS['delivered'][]=['adminId'=>(int)$subscription['admin_id'],'payload'=>$payload];return $GLOBALS['transportStatus'];}
+require __DIR__.'/../timeweb/backend/manager-push-queue.php';
+$stmt=$pdo->prepare("INSERT INTO manager_push_subscriptions (endpoint_hash,admin_id,endpoint,p256dh,auth_token) VALUES (?,?,?,'','')");
+for($i=1;$i<=3;$i++){$endpoint='https://fcm.googleapis.com/fcm/send/fixture-'.$i;$stmt->execute([hash('sha256',$endpoint),$i,$endpoint]);}
+kd_manager_push_queue_event(1,'fixture-lead',['type'=>'lead','leadId'=>1]);
+kd_manager_push_queue_event(1,'fixture-lead',['type'=>'lead','leadId'=>1]);
+check((int)$pdo->query('SELECT COUNT(*) FROM manager_push_jobs')->fetchColumn()===2,'queue targets administrator and assigned surveyor without duplicates');
+$result=kd_manager_push_process();check($result['sent']===2,'queue sends all eligible subscriptions');
+$transportStatus=503;kd_manager_push_queue_event(1,'fixture-retry',['type'=>'lead','leadId'=>1]);kd_manager_push_process();
+check((int)$pdo->query("SELECT COUNT(*) FROM manager_push_jobs WHERE completed_at IS NULL AND attempts=1 AND available_at>UTC_TIMESTAMP() AND locked_at IS NULL")->fetchColumn()===2,'temporary failure schedules retry and releases lock');
+$transportStatus=201;$delivered=[];kd_manager_push_queue_event(1,'fixture-revoked',['type'=>'lead','leadId'=>1]);$pdo->exec('UPDATE lead_workflow SET assigned_to=3 WHERE lead_id=1');kd_manager_push_process();
+check(count($delivered)===1&&$delivered[0]['adminId']===1,'revoked surveyor is excluded at delivery time');
+$stmt=$pdo->prepare("UPDATE lead_workflow SET next_action_at=?,time_zone='UTC',stage='measurement_scheduled' WHERE lead_id=1");$stmt->execute([gmdate('Y-m-d\TH:i',time()+1800)]);kd_manager_push_reminders();
+$reminders=(int)$pdo->query("SELECT COUNT(*) FROM manager_push_jobs WHERE event_key LIKE 'reminder:%'")->fetchColumn();kd_manager_push_reminders();check($reminders===2&&(int)$pdo->query("SELECT COUNT(*) FROM manager_push_jobs WHERE event_key LIKE 'reminder:%'")->fetchColumn()===2,'reminder scheduling is idempotent');
+$pdo->exec("UPDATE lead_workflow SET stage='completed' WHERE lead_id=1");$delivered=[];kd_manager_push_process();check(count($delivered)===0,'cancelled appointment reminder is not delivered');
+
 check(kd_push_endpoint_valid('https://fcm.googleapis.com/fcm/send/fixture'),'trusted push host accepted');
 foreach(['https://127.0.0.1/','https://fcm.googleapis.com.attacker.test/','https://user@fcm.googleapis.com/','https://fcm.googleapis.com:8443/','http://fcm.googleapis.com/'] as $url)check(!kd_push_endpoint_valid($url),'untrusted push address rejected');
 
