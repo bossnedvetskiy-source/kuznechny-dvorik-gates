@@ -159,15 +159,12 @@ test('surveyor can create a mixed survey and reopen it offline', async ({page, c
   await expect(page.locator('#planLegacyList')).toBeHidden();
   // New linear constructor: edit dimensions without opening the old modal.
   await expect(page.locator('#planCanvas .plan-part-shape svg')).toHaveCount(5);
-  // Every + belongs to a dedicated row above illustrations, never over labels.
-  const insertionButtonsClearArtwork = await page.locator('#planCanvas [data-plan-insert-canvas]').evaluateAll(buttons =>
-    buttons.every(button => {
-      const wrap=button.closest('.plan-part-wrap');
-      const artwork=wrap.querySelector('.plan-part-shape');
-      return button.getBoundingClientRect().bottom <= artwork.getBoundingClientRect().top + 2;
-    })
-  );
-  expect(insertionButtonsClearArtwork).toBe(true);
+  // Product diagrams are clean: no floating + over the labels.
+  await expect(page.locator('#planCanvas [data-plan-insert-canvas]')).toHaveCount(0);
+  // A typical mixed facade is visible without horizontal clipping on 390px phones.
+  expect(await page.locator('#planCanvas').evaluate(
+    el => el.scrollWidth <= el.clientWidth + 8
+  )).toBe(true);
   await page.locator('#planCanvas .plan-part.gate').first().click();
   await expect(page.locator('#planQuickElementActions')).toBeVisible();
   await expect(page.locator('#planEditor')).toBeHidden();
@@ -179,19 +176,20 @@ test('surveyor can create a mixed survey and reopen it offline', async ({page, c
   // Quick palette adds an element next to the selected position; undo restores the sketch.
   await page.locator('[data-plan-quick-add="post"]').click();
   await expect(page.locator('#planItemsCount')).toHaveText('6');
+  expect(await page.locator('#planCanvas').evaluate(
+    el => el.scrollWidth <= el.clientWidth + 8
+  )).toBe(true);
   await page.locator('#undoPlanPostBtn').click();
   await expect(page.locator('#planItemsCount')).toHaveText('5');
-  // Tap + directly on the visual scheme to insert a span at the correct position.
-  await expect(page.locator('#planCanvas [data-plan-insert-canvas]')).toHaveCount(5);
-  await page.locator('#planCanvas [data-plan-insert-canvas="3"]').click();
-  await expect(page.locator('#insertPanel')).toBeVisible();
-  await expect(page.locator('#planSheetBackdrop')).toBeVisible();
-  await page.locator('[data-add-plan-item="fence"]').click();
-  await expect(page.locator('#planEditor')).toBeVisible();
-  await page.locator('[data-plan-field="width"]').fill('1.7');
-  await page.locator('[data-plan-field="width"]').blur();
-  await page.locator('[data-plan-field="material"]').selectOption('euro_vertical');
-  await page.locator('#closePlanEditorBtn').click();
+  // To insert inside a facade, select the preceding item and tap its product
+  // in the quick-add palette. No floating buttons cover the diagram.
+  await page.locator('#planCanvas .plan-part').nth(2).click();
+  await page.locator('[data-plan-quick-add="fence"]').click();
+  await expect(page.locator('#planQuickElementActions')).toBeVisible();
+  await page.locator('[data-plan-inline-field="width"]').fill('1.7');
+  await page.locator('[data-plan-inline-field="width"]').press('Tab');
+  await page.locator('[data-plan-inline-field="material"]').selectOption('euro_vertical');
+  await page.locator('[data-plan-inline-dismiss]').click();
   await page.locator('#planCanvas .plan-part.fence').first().click();
   await expect(page.locator('#planQuickElementActions')).toBeVisible();
   await expect(page.locator('[data-plan-inline-split]')).toBeVisible();
