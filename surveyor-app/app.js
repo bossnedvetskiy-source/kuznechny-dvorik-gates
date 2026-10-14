@@ -852,21 +852,19 @@ function renderPlanCanvas(line) {
   const items=line.items || [];
   const canvas=$('#planCanvas');
   const savedScroll=canvas.scrollLeft;
-  const minimumWidth=Math.max(320,items.reduce((sum,item)=>sum+(item.type==='post'?42:94),0));
+  // Keep ordinary facades fully visible on a phone; only genuinely long lines scroll.
+  const minimumWidth=Math.max(260,items.reduce((sum,item)=>sum+(item.type==='post'?24:55),0)+16);
   canvas.innerHTML=`<div class="plan-track plan-visual-track" style="min-width:${minimumWidth}px">${items.map((item,index)=>{
     const grow=item.type==='post' ? .22 : Math.max(.65,Number(item.width)||1);
     const selected=item.id===activePlanItemId?' selected':'';
     const state=item.type==='post'?(item.state==='existing'?'existing':'new'):'';
     const label=item.type==='post'?(item.state==='existing'?'Есть':'Новый'):(trimNumber(item.width)+' м');
-    const canSplit=item.type==='fence' && Number(item.width)>=.4 && Number(item.width)<=2.5;
-    const oversized=item.type==='fence' && Number(item.width)>2.5;
     return `<div class="plan-part-wrap ${item.type} ${state}" style="--part:${grow}">
       <button type="button" class="plan-part ${item.type}${selected}" data-select-plan-item="${escapeHtml(item.id)}" title="${escapeHtml(itemDescription(item))}" aria-label="${item.type==='post'?'Столб, '+(item.state==='existing'?'уже стоит':'новый')+'. Нажмите для действий':escapeHtml(PLAN_ITEM_TYPES[item.type]?.label||item.type)+', '+escapeHtml(label)}">
-        <span class="plan-part-shape">${planItemArtwork(item)}</span><b>${escapeHtml(PLAN_ITEM_TYPES[item.type]?.short||item.type)}</b><small>${escapeHtml(label)}</small>
+        <span class="plan-part-shape">${planItemArtwork(item)}</span><b>${escapeHtml(item.type==='post'?'Ст.':PLAN_ITEM_TYPES[item.type]?.short||item.type)}</b><small>${escapeHtml(label)}</small>
       </button>
 
-      <button type="button" class="plan-canvas-insert" data-plan-insert-canvas="${index+1}" aria-label="Вставить элемент после ${escapeHtml(PLAN_ITEM_TYPES[item.type]?.label||item.type)}" title="Вставить элемент сюда">＋</button>
-    </div>`;
+     </div>`;
   }).join('')}</div>`;
   canvas.scrollLeft=savedScroll;
   const hint=$('#planSwipeHint');
