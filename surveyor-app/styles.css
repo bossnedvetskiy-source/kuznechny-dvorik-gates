@@ -535,3 +535,36 @@
   #surveysScreen .order-number{font-size:21px}
   #surveysScreen .status-pill{font-size:10px}
 }
+
+/* KD CLIENTS — compact black-and-gold screen, scoped to the clients tab. */
+.main-view:has(#clientsScreen.active){background:#121315;color:#f7f1e7}
+.main-view:has(#clientsScreen.active) .topbar{background:rgba(19,19,21,.97);border-bottom:1px solid #403828}
+.main-view:has(#clientsScreen.active) .topbar-title{color:#fff5e7;font-family:Georgia,'Times New Roman',serif;font-weight:500}
+.main-view:has(#clientsScreen.active) .network-badge{background:#262728;border-color:#4d4232;color:#e7ddcb}
+.main-view:has(#clientsScreen.active) .avatar-btn{background:#292726;border:1px solid #6f5933;color:#e7c36f}
+.main-view:has(#clientsScreen.active) .bottom-nav{background:rgba(25,25,27,.97);border-top:1px solid #4e4435}
+.main-view:has(#clientsScreen.active) .nav-btn{color:#a9a39a}
+.main-view:has(#clientsScreen.active) .nav-btn.active{background:#3a3223;color:#e5bc69}
+#clientsScreen>.section-head{margin:5px 0 16px;align-items:center;gap:12px}
+#clientsScreen>.section-head h2{font:500 clamp(25px,6vw,31px)/1.15 Georgia,'Times New Roman',serif;color:#fff4e5}
+#clientsScreen>.section-head p{font-size:12px;color:#aaa397;line-height:1.4}
+#clientsScreen #newClientBtn{min-height:46px;background:linear-gradient(115deg,#b88529,#dfb452);border:1px solid #e3ba64;border-radius:13px;color:#21170d;font-weight:850;white-space:nowrap;padding:10px 15px}
+#clientsScreen>.searchbox{background:#232326;border:1px solid #514739;color:#d9ad5a;border-radius:15px;min-height:49px;margin:0 0 14px}
+#clientsScreen>.searchbox input{background:transparent;color:#f5efe6;min-height:47px;font-size:14px}
+#clientsScreen>.searchbox input::placeholder{color:#9a9388;opacity:1}
+#clientsScreen>.searchbox:focus-within{border-color:#c49a4c;box-shadow:0 0 0 2px #c49a4c33}
+#clientsScreen #clientList{gap:10px}
+#clientsScreen .client-card{padding:15px;min-height:77px;background:linear-gradient(115deg,#242428,#1d1e21 75%,#28231e);border:1px solid #514536;border-radius:18px;box-shadow:0 6px 17px #00000024;flex-wrap:wrap}
+#clientsScreen .client-main{flex:1 1 170px;min-width:0}
+#clientsScreen .client-name{font:500 19px/1.22 Georgia,'Times New Roman',serif;color:#f6ecd9;overflow-wrap:anywhere}
+#clientsScreen .client-meta{color:#aaa399;font-size:12px;overflow-wrap:anywhere;margin-top:6px}
+#clientsScreen .client-phone{color:#e8c37d;border:1px solid #705a36;background:#352e24;border-radius:11px;padding:11px 13px;font-size:12px;text-decoration:none;min-height:44px;display:inline-flex;align-items:center;justify-content:center;overflow-wrap:anywhere}
+#clientsScreen .client-phone:focus-visible,#clientsScreen #newClientBtn:focus-visible{outline:3px solid #e6c172;outline-offset:3px}
+#clientsScreen .empty-state{background:#222225;border:1px dashed #685736;color:#b2a89a}
+#clientsScreen .empty-state h3{color:#f6efdf}
+@media(max-width:390px){
+  #clientsScreen>.section-head h2{font-size:25px}
+  #clientsScreen #newClientBtn{padding:9px 11px;font-size:13px}
+  #clientsScreen .client-card{padding:12px}
+  #clientsScreen .client-name{font-size:17px}
+}
