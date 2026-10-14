@@ -193,7 +193,8 @@ test('surveyor can create a mixed survey and reopen it offline', async ({page, c
   await page.locator('#planCanvas .plan-part.fence').first().click();
   await expect(page.locator('#planQuickElementActions')).toBeVisible();
   await expect(page.locator('[data-plan-inline-split]')).toBeVisible();
-  await expect(page.locator('#planSwipeHint')).toBeVisible();
+  // Short facades must fit the phone, so the scroll hint stays hidden.
+  await expect(page.locator('#planSwipeHint')).toBeHidden();
   // The save button must be after the whole editor, never overlay editable fields.
   const footerDoesNotCoverInputs = await page.evaluate(() => {
     const editor=document.querySelector('#planQuickElementActions').getBoundingClientRect();
