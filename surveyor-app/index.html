@@ -254,8 +254,20 @@
           <div><span>Линий</span><b id="planLinesCount">1</b></div>
         </div>
         <div class="plan-mode-switch" role="group" aria-label="Режим работы со схемой"><button id="planVisualModeBtn" class="active" type="button" aria-pressed="true">◈ Наглядная схема</button><button id="planListModeBtn" type="button" aria-pressed="false">☷ Список элементов</button></div>
-        <p class="plan-canvas-hint">Нажмите на ворота, забор или столб для настройки. <b>＋</b> между ними — добавить элемент.</p>
+        <div class="plan-view-context"><span>ВИД СО СТОРОНЫ УЛИЦЫ</span><span>Нажмите на изделие для настройки</span></div>
+        <p class="plan-canvas-hint">Выберите изделие на схеме. Кнопка <b>＋</b> между элементами вставляет новое в нужное место.</p>
         <div id="planCanvas" class="plan-canvas" aria-label="Схема линии"></div>
+        <div class="plan-fast-add" aria-label="Быстрое добавление элементов">
+          <div class="plan-fast-add-title"><b>Добавить на линию</b><small id="planFastAddPosition">В конец линии</small></div>
+          <div class="plan-fast-add-items">
+            <button type="button" data-plan-quick-add="post"><span aria-hidden="true">▮</span><b>Столб</b></button>
+            <button type="button" data-plan-quick-add="fence"><span aria-hidden="true">▥</span><b>Забор</b></button>
+            <button type="button" data-plan-quick-add="gate"><span aria-hidden="true">▣</span><b>Ворота</b></button>
+            <button type="button" data-plan-quick-add="wicket"><span aria-hidden="true">▯</span><b>Калитка</b></button>
+            <button type="button" data-plan-quick-add="opening"><span aria-hidden="true">↔</span><b>Проём</b></button>
+          </div>
+        </div>
+        <section id="planQuickElementActions" class="plan-inline-editor" hidden aria-label="Параметры выбранного элемента"></section>
         <div id="planGeometryAudit" class="plan-geometry-audit" role="status" aria-live="polite"></div>
         <div id="planQuickPostActions" class="plan-quick-post" hidden aria-live="polite"></div>
         <button id="undoPlanPostBtn" class="plan-undo-btn" type="button" hidden>↶ Отменить последнее действие</button>
