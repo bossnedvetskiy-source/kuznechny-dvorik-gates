@@ -1,4 +1,4 @@
-import {PLAN_ITEM_TYPES,MATERIAL_LABELS,ensureSitePlan,newItem,newLine,lineWidth,itemDescription,trimNumber,planFromCalculations,planDifferences,updateLinkedPlanSizes,splitFenceWithPost,removePostFromLine,postMoveRange,movePlanPost} from './line-builder.js';
+import {PLAN_ITEM_TYPES,MATERIAL_LABELS,ensureSitePlan,newItem,newLine,lineWidth,itemDescription,trimNumber,planFromCalculations,planDifferences,updateLinkedPlanSizes,splitFenceWithPost,removePostFromLine,postMoveRange,movePlanPost,inspectPlanLine} from './line-builder.js';
 
 const APP_VERSION = '0.4.0-v3-stage1';
 const DB_NAME = 'kd-surveyor-stage1';
@@ -820,6 +820,14 @@ function renderPlanEditor() {
   if (!line) return;
   $('#planLineName').value=line.name || '';
   $('#planLineWidth').textContent=trimNumber(lineWidth(line))+' м';
+  const audit=inspectPlanLine(line);
+  const auditPanel=$('#planGeometryAudit');
+  if(auditPanel){
+    auditPanel.classList.toggle('has-issues',audit.issues.length>0);
+    auditPanel.innerHTML=audit.issues.length
+      ? '<b>⚠ Проверьте схему</b><ul>'+audit.issues.map(issue=>'<li>'+escapeHtml(issue)+'</li>').join('')+'</ul><small>Размеры не менялись автоматически. Нажмите на элемент, чтобы исправить.</small>'
+      : '<span>✓ Размеры проверены · '+audit.posts+' '+plural(audit.posts,['столб','столба','столбов'])+' (из них '+audit.existingPosts+' уже стоят)</span>';
+  }
   $('#planItemsCount').textContent=String((line.items || []).length);
   renderPlanCanvas(line);
   renderPlanItems(line);
