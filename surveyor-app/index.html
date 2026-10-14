@@ -253,7 +253,8 @@
           <div><span>Элементов</span><b id="planItemsCount">0</b></div>
           <div><span>Линий</span><b id="planLinesCount">1</b></div>
         </div>
-        <p class="plan-canvas-hint">Нажмите столб для действий · <b>+</b> на заборе — поставить столб</p>
+        <div class="plan-mode-switch" role="group" aria-label="Режим работы со схемой"><button id="planVisualModeBtn" class="active" type="button" aria-pressed="true">◈ Наглядная схема</button><button id="planListModeBtn" type="button" aria-pressed="false">☷ Список элементов</button></div>
+        <p class="plan-canvas-hint">Нажмите на ворота, забор или столб для настройки. <b>＋</b> между ними — добавить элемент.</p>
         <div id="planCanvas" class="plan-canvas" aria-label="Схема линии"></div>
         <div id="planQuickPostActions" class="plan-quick-post" hidden aria-live="polite"></div>
         <button id="undoPlanPostBtn" class="plan-undo-btn" type="button" hidden>↶ Отменить последнее действие</button>
@@ -267,10 +268,12 @@
         </div>
       </details>
 
+      <div id="planLegacyList" class="plan-legacy-list" hidden>
       <div class="section-head compact plan-elements-head">
         <div><h3>Элементы линии</h3><p class="muted">Нажмите строку, чтобы изменить элемент.</p></div>
       </div>
       <div id="planItems" class="plan-items plan-items-compact"></div>
+      </div>
 
       <div id="planSheetBackdrop" class="plan-sheet-backdrop" hidden></div>
 
