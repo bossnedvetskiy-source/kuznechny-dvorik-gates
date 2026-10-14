@@ -719,3 +719,119 @@
 .plan-auto-divide{position:absolute;z-index:6;top:0;left:50%;transform:translateX(-50%);min-height:32px;min-width:113px;border:1px solid #aa771e;border-radius:9px;padding:6px 7px;font-size:10px;font-weight:900;white-space:nowrap;background:#fff1ce;color:#6d4910;box-shadow:0 2px 8px #00000020;touch-action:manipulation}
 .plan-auto-divide:focus-visible{outline:3px solid #be8c35;outline-offset:2px}
 .plan-part-wrap:has(.plan-auto-divide) .plan-part-shape{margin-top:7px}
+
+/* KD LINEAR CONSTRUCTOR V1 — touch-first, dark gold, visually scoped to plan dialog. */
+.plan-dialog,.plan-dialog .plan-sheet{color:#f5efe4}
+.plan-dialog .plan-sheet{background:#151618!important;border:1px solid #574630!important;box-shadow:0 15px 80px #0008}
+.plan-dialog .sheet-head{border-bottom:1px solid #4b3c28;padding-bottom:13px}
+.plan-dialog .sheet-head h2{color:#fff1dc;font:500 clamp(23px,5.7vw,29px)/1.2 Georgia,'Times New Roman',serif}
+.plan-dialog .eyebrow{color:#caa55b!important}
+.plan-dialog .sheet-handle,.plan-dialog .plan-bottom-handle{background:#65563f}
+.plan-dialog .icon-btn{background:#2b2b2d;color:#edd8ad;border:1px solid #615237;min-width:40px;min-height:40px}
+.plan-dialog .plan-toolbar{margin:13px 0 10px;gap:7px}
+.plan-dialog .plan-line-tab{background:#252526;border:1px solid #574833;color:#d9cfbd;min-height:40px}
+.plan-dialog .plan-line-tab.active{background:#59401d;color:#f6d08c;border-color:#b68b45}
+.plan-dialog #addPlanLineBtn{border:1px solid #715733;background:#312b23;color:#edc777;border-radius:12px;min-height:40px}
+.plan-dialog .plan-visual-sticky{position:relative;top:auto;background:transparent;box-shadow:none;padding:0;margin:0;z-index:3}
+.plan-dialog .plan-summary{gap:7px;margin:0 0 10px}
+.plan-dialog .plan-summary>div{background:#252526;border:1px solid #4d4335;border-radius:11px;min-width:0;padding:8px}
+.plan-dialog .plan-summary span{color:#ada392;font-size:9px}
+.plan-dialog .plan-summary b{color:#eed09b;font-size:16px}
+.plan-dialog .plan-mode-switch{background:#242427;border:1px solid #4c4335;margin:7px 0 10px}
+.plan-dialog .plan-mode-switch button{color:#b6ac9a}
+.plan-dialog .plan-mode-switch button.active{background:#8b672a;color:#fff1ce;box-shadow:inset 0 0 0 1px #d5ac60}
+.plan-dialog .plan-view-context{display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;align-items:center;margin:12px 1px 3px}
+.plan-dialog .plan-view-context span:first-child{color:#e4bd76;font-size:10px;font-weight:900;letter-spacing:.1em}
+.plan-dialog .plan-view-context span:last-child{color:#9e978a;font-size:10px}
+.plan-dialog .plan-canvas-hint{color:#b9b0a1;font-size:11px;margin:4px 1px 8px}
+.plan-dialog .plan-canvas-hint b{color:#edc67b}
+.plan-dialog .plan-canvas{background:linear-gradient(180deg,#202629 0%,#252627 70%,#18191a 100%);border:1px solid #80633a;box-shadow:inset 0 0 28px #0004;border-radius:17px;padding:22px 12px 12px;min-height:178px;overflow-x:auto;overflow-y:hidden}
+.plan-dialog .plan-track.plan-visual-track{border-bottom:2px solid #b19b6e;min-height:125px;padding:0 17px 6px 0;align-items:end}
+.plan-dialog .plan-part-wrap{height:115px;min-width:91px;align-items:end}
+.plan-dialog .plan-part-wrap.post{height:115px;min-width:43px;flex:0 0 43px}
+.plan-dialog .plan-part-wrap .plan-part{height:105px;display:grid;grid-template-rows:70px 17px 17px;gap:0;padding:1px 2px;color:#f2e7d6;border-radius:11px}
+.plan-dialog .plan-part-wrap .plan-part.selected{background:#6c553044;outline:2px solid #deb66b;outline-offset:-2px}
+.plan-dialog .plan-part-wrap .plan-part-shape,
+.plan-dialog .plan-part-wrap.post .plan-part-shape,
+.plan-dialog .plan-part-wrap.opening .plan-part-shape{background:none!important;border:0!important;width:100%!important;height:69px!important;margin:0!important;border-radius:0!important;overflow:visible!important;display:grid;place-items:end}
+.plan-dialog .plan-part-shape svg{display:block;height:66px;width:100%;color:#d6ae65;filter:drop-shadow(0 2px 2px #0005)}
+.plan-dialog .plan-part-wrap.post .plan-part-shape svg{max-width:40px}
+.plan-dialog .plan-part-wrap .plan-part b{font-size:10px;line-height:1.2;color:#f0d6a5}
+.plan-dialog .plan-part-wrap .plan-part small{font-size:10px;line-height:1.15;color:#d6b97a}
+.plan-dialog .plan-part-wrap.existing .plan-part small{color:#89d0a2}
+.plan-dialog .plan-canvas-insert{width:32px;height:32px;right:-16px;bottom:12px;border:2px solid #d6aa61;background:#322a20;color:#f4cd87;font-size:20px;box-shadow:0 3px 9px #0008}
+.plan-dialog .plan-insert-post-dot{width:31px;height:31px;top:11px;background:#2a281e;color:#f4c982;border:2px solid #bb9859;font-size:20px}
+.plan-dialog .plan-auto-divide{top:0;border-color:#c59b51;background:#4e391b;color:#ffe4a4;font-size:10px}
+.plan-dialog .plan-part-wrap:has(.plan-auto-divide){min-width:132px}
+.plan-dialog .plan-part-wrap:has(.plan-auto-divide) .plan-part-shape{padding-top:12px}
+.plan-dialog .plan-fast-add{margin:12px 0 10px;background:linear-gradient(135deg,#252527,#1d1e20);border:1px solid #504534;border-radius:15px;padding:11px}
+.plan-dialog .plan-fast-add-title{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:9px}
+.plan-dialog .plan-fast-add-title b{font-size:13px;color:#f5ead8}
+.plan-dialog .plan-fast-add-title small{font-size:10px;color:#c6a46b;text-align:right}
+.plan-dialog .plan-fast-add-items{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px}
+.plan-dialog .plan-fast-add-items button{min-height:63px;display:grid;grid-template-rows:28px auto;justify-items:center;align-items:center;gap:4px;border-radius:11px;padding:6px 2px;background:#303031;border:1px solid #574b39;color:#e9dfd2;touch-action:manipulation}
+.plan-dialog .plan-fast-add-items button span{font-size:22px;line-height:1;color:#dbb871}
+.plan-dialog .plan-fast-add-items button b{font-size:10px;line-height:1.15}
+.plan-dialog .plan-fast-add-items button:active{background:#725626}
+.plan-dialog .plan-fast-add-items button:focus-visible,.plan-dialog .plan-part:focus-visible,.plan-dialog .plan-canvas-insert:focus-visible{outline:3px solid #e2b95c;outline-offset:2px}
+.plan-dialog .plan-inline-editor{background:linear-gradient(130deg,#29282a,#242324);border:1px solid #856b42;border-radius:16px;padding:13px;margin:10px 0;color:#f4e6d0}
+.plan-dialog .plan-inline-editor[hidden],.plan-dialog .plan-fast-add[hidden]{display:none!important}
+.plan-dialog .plan-inline-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:13px}
+.plan-dialog .plan-inline-head>div{display:grid;gap:3px}
+.plan-dialog .plan-inline-head small{font-size:9px;color:#c2a46e;letter-spacing:.12em}
+.plan-dialog .plan-inline-head b{font:500 19px/1.2 Georgia,'Times New Roman',serif;color:#fff1d8}
+.plan-dialog .plan-inline-head button{width:35px;height:35px;background:#3f3930;border:1px solid #725d3c;border-radius:9px;color:#f3d69d}
+.plan-dialog .plan-inline-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.plan-dialog .plan-inline-measure{display:grid;gap:7px;min-width:0}
+.plan-dialog .plan-inline-measure>span,.plan-dialog .plan-inline-material>span{font-size:11px;color:#c8bdad;font-weight:700}
+.plan-dialog .plan-inline-measure>div{display:grid;grid-template-columns:32px minmax(0,1fr) 32px;gap:3px;min-width:0}
+.plan-dialog .plan-inline-measure button{border:1px solid #665338;border-radius:8px;background:#3f362a;color:#efd09a;font-size:19px;min-height:41px}
+.plan-dialog .plan-inline-measure input{width:100%;min-width:0;text-align:center;background:#151719;border:1px solid #846c45;border-radius:8px;min-height:41px;padding:5px 2px;color:#fff4e1;font-size:15px;font-weight:850}
+.plan-dialog .plan-inline-measure input::-webkit-outer-spin-button,.plan-dialog .plan-inline-measure input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.plan-dialog .plan-inline-material{margin-top:11px;display:grid;gap:6px}
+.plan-dialog .plan-inline-material select{min-height:43px;width:100%;color:#f5ebda;background:#34302c;border:1px solid #756241;border-radius:9px;padding:8px}
+.plan-dialog .plan-inline-actions{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:12px}
+.plan-dialog .plan-inline-actions button{min-height:42px;border-radius:10px;background:#383431;border:1px solid #655238;color:#ecd7b6;font-size:11px;font-weight:800;padding:7px 4px}
+.plan-dialog .plan-inline-actions button:last-child{background:#432e2e;border-color:#765454;color:#f0b0a8}
+.plan-dialog .plan-inline-actions button:disabled{opacity:.36}
+.plan-dialog .plan-geometry-audit{margin-top:8px;background:#233329;border:1px solid #4b7151;color:#b0e5bb}
+.plan-dialog .plan-geometry-audit.has-issues{background:#3b2d1e;border-color:#80603b;color:#f4cb87}
+.plan-dialog .plan-quick-post{background:#292824;border:1px solid #79603a;border-radius:14px;color:#f1e2cc}
+.plan-dialog .plan-quick-head b{color:#f5ddb2}
+.plan-dialog .plan-quick-head small{color:#c5b49c}
+.plan-dialog .plan-quick-head button,.plan-dialog .plan-quick-buttons button{background:#3a332a;border:1px solid #76603e;color:#e9d5b4}
+.plan-dialog .plan-quick-buttons [data-plan-post-remove]{background:#432b2b;color:#f3afa8;border-color:#80504a}
+.plan-dialog .plan-quick-distance{background:#1f2021;color:#ead8b9;border-color:#655137}
+.plan-dialog .plan-quick-distance small{color:#aea493}
+.plan-dialog .plan-quick-distance input{background:#33302c;border-color:#8a724b;color:#fff0d4}
+.plan-dialog .plan-undo-btn{background:#2c291f;border:1px dashed #866b42;color:#e9c683;min-height:42px}
+.plan-dialog .plan-line-settings{background:#232325;border:1px solid #554532;margin:16px 0}
+.plan-dialog .plan-line-settings>summary{color:#d7bf97;padding:12px}
+.plan-dialog .plan-line-settings-body .field span{color:#ded1b6}
+.plan-dialog .plan-line-settings-body input{background:#373330;color:#fff0d4;border:1px solid #766145}
+.plan-dialog .plan-legacy-list{margin:10px 0 0}
+.plan-dialog .plan-elements-head h3{color:#f3e5c8}
+.plan-dialog .plan-elements-head p{color:#b4a997}
+.plan-dialog .plan-item-row{background:#262729;border:1px solid #514436;color:#efe4cf}
+.plan-dialog .plan-item-row.selected{border-color:#cbaa6b}
+.plan-dialog .plan-item-main span{color:#b5a99a}
+.plan-dialog .plan-insert-slot:before{background:#6d5835}
+.plan-dialog .plan-insert-slot button{background:#332b20;color:#f4cc7d;border-color:#806440}
+.plan-dialog .plan-bottom-sheet{background:#252527!important;color:#f4e6d1;border-color:#7d613c!important;box-shadow:0 -18px 55px #0009}
+.plan-dialog .plan-bottom-sheet input,.plan-dialog .plan-bottom-sheet select{background:#383532!important;color:#ffeed0!important;border:1px solid #87704c!important}
+.plan-dialog .plan-bottom-sheet .field>span{color:#f0d2a0}
+.plan-dialog .plan-bottom-sheet .insert-grid button{background:#34302a;border:1px solid #7a6344;color:#f1dfc1;min-height:71px}
+.plan-dialog .plan-bottom-sheet .insert-grid span{color:#f0c880}
+.plan-dialog .plan-bottom-sheet h3,.plan-dialog .plan-bottom-sheet b{color:#f9e6c5}
+.plan-dialog .plan-footer{background:linear-gradient(180deg,transparent,#151618 24%);padding:17px 0 calc(6px + env(safe-area-inset-bottom))}
+.plan-dialog #savePlanBtn{border:1px solid #f4c878;background:linear-gradient(110deg,#c18a2e,#ebc36b);color:#271a0d;border-radius:14px;min-height:52px;box-shadow:0 6px 21px #0004}
+.plan-dialog .plan-list-mode .plan-fast-add,.plan-dialog .plan-list-mode .plan-inline-editor{display:none!important}
+@media(max-width:420px){
+ .plan-dialog .plan-summary b{font-size:14px}
+ .plan-dialog .plan-canvas{padding:17px 9px 10px;min-height:164px}
+ .plan-dialog .plan-part-wrap{min-width:84px}
+ .plan-dialog .plan-part-wrap.post{min-width:41px;flex-basis:41px}
+ .plan-dialog .plan-fast-add-items button{min-height:60px}
+ .plan-dialog .plan-fast-add-items button b{font-size:9px}
+ .plan-dialog .plan-inline-editor{padding:11px}
+}
