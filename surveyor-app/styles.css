@@ -474,3 +474,64 @@
   .v3-details-dialog .v3-product-label b{font-size:17px!important}
   .v3-details-dialog .v3-product-label small{font-size:10px!important}
 }
+
+/* KD SURVEY LIST — DARK GOLD V2. Only the list screen changes. */
+.main-view:has(#surveysScreen.active){background:#121315;color:#f7f1e7}
+.main-view:has(#surveysScreen.active) .topbar{background:rgba(19,19,21,.97);border-bottom:1px solid #403828}
+.main-view:has(#surveysScreen.active) .topbar-title{color:#fff5e7;font-family:Georgia,'Times New Roman',serif;font-weight:500}
+.main-view:has(#surveysScreen.active) .network-badge{background:#262728;border-color:#4d4232;color:#e7ddcb}
+.main-view:has(#surveysScreen.active) .avatar-btn{background:#292726;border:1px solid #6f5933;color:#e7c36f}
+.main-view:has(#surveysScreen.active) .bottom-nav{background:rgba(25,25,27,.97);border-top:1px solid #4e4435}
+.main-view:has(#surveysScreen.active) .nav-btn{color:#a9a39a}
+.main-view:has(#surveysScreen.active) .nav-btn.active{background:#3a3223;color:#e5bc69}
+#surveysScreen .v3-hero{padding:18px 19px;gap:12px;background:linear-gradient(115deg,#242326 0%,#1c1b1e 65%,#312819 100%);border:1px solid #715937;border-radius:20px;box-shadow:0 9px 24px rgba(0,0,0,.16)}
+#surveysScreen .v3-hero:after{width:125px;height:125px;right:-42px;top:-60px;border-color:#8d73413b;pointer-events:none}
+#surveysScreen .v3-hero .eyebrow{color:#d0ac61;font-size:10px;letter-spacing:.13em}
+#surveysScreen .v3-hero h2{font:500 clamp(23px,5.6vw,29px)/1.12 Georgia,'Times New Roman',serif;margin:5px 0;color:#fff7eb}
+#surveysScreen .v3-hero p{color:#aaa397;font-size:12px;line-height:1.4}
+#surveysScreen #newSurveyBtn{background:linear-gradient(115deg,#b88529,#dfb452);border:1px solid #e3ba64;color:#21170d;border-radius:14px;min-height:51px;box-shadow:0 9px 20px rgba(155,108,31,.22);font-size:15px;font-weight:900}
+#surveysScreen .v3-survey-search{background:#232326;border:1px solid #514739;border-radius:15px;box-shadow:none;min-height:48px;margin:15px 0 0;color:#d9ad5a}
+#surveysScreen .v3-survey-search input{background:transparent;color:#f5efe6;min-height:46px;font-size:14px}
+#surveysScreen .v3-survey-search input::placeholder{color:#9a9388;opacity:1}
+#surveysScreen .v3-survey-search:focus-within{border-color:#c49a4c;box-shadow:0 0 0 2px #c49a4c33}
+#surveysScreen>.section-head{display:grid;gap:10px;margin:21px 0 12px;align-items:initial}
+#surveysScreen>.section-head h3{font:500 24px/1.12 Georgia,'Times New Roman',serif;color:#fff3df}
+#surveysScreen #surveysCounter{color:#b0a598;font-size:12px}
+#surveysScreen .segmented{background:#262629;border:1px solid #443e34;padding:4px;border-radius:13px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));min-width:0}
+#surveysScreen .segmented-btn{min-height:37px;font-size:12px;color:#b8ad9b;white-space:nowrap;border-radius:10px}
+#surveysScreen .segmented-btn.active{background:#4c3a20;color:#f4d38d;box-shadow:inset 0 0 0 1px #947342}
+#surveysScreen .card-list{gap:10px}
+#surveysScreen .survey-card{padding:14px 15px;gap:10px;background:linear-gradient(115deg,#242428,#1d1e21 75%,#28231e);border:1px solid #514536;border-radius:19px;box-shadow:0 6px 17px #00000024;min-width:0;color:#f2ecdf}
+#surveysScreen .survey-card:active{background:#34302b;border-color:#9e7b46}
+#surveysScreen .card-top{align-items:flex-start;gap:9px}
+#surveysScreen .card-top>div{min-width:0}
+#surveysScreen .order-number{font:500 23px/1.1 Georgia,'Times New Roman',serif;color:#e9c37d}
+#surveysScreen .card-name{font-size:14px;color:#f6f1e8;line-height:1.3;overflow-wrap:anywhere}
+#surveysScreen .card-address{color:#aaa399;font-size:12px;overflow-wrap:anywhere}
+#surveysScreen .status-pill{flex-shrink:0;font-size:11px;border:1px solid #796138;padding:7px 10px;border-radius:99px}
+#surveysScreen .status-pill.draft{background:#332b20;color:#e7c17b}
+#surveysScreen .status-pill.ready{background:#19392d;color:#9cdeaf;border-color:#3b7153}
+#surveysScreen .badge-row{gap:5px}
+#surveysScreen .type-badge{border:1px solid #5c503a;background:#2f2b25;color:#cbb48b;font-size:10px;padding:5px 9px}
+#surveysScreen .type-badge.gates,#surveysScreen .type-badge.fence,#surveysScreen .type-badge.canopy{background:#302a20;color:#e1be7a;border-color:#685432}
+#surveysScreen .survey-card-total{background:#292620;border:1px solid #5d4c31;border-radius:11px;padding:8px 11px}
+#surveysScreen .survey-card-total span{color:#a99d89}
+#surveysScreen .survey-card-total b{color:#ebc775}
+#surveysScreen .survey-card-variants{background:#292620;border:1px solid #574731;padding:8px 11px}
+#surveysScreen .survey-card-variants b{color:#ebc775}
+#surveysScreen .survey-card-variants span{color:#a99d89}
+#surveysScreen .survey-card-actions{margin-top:0}
+#surveysScreen .v3-open-survey{border:1px solid #715b39;background:#352e24;color:#ebc781;min-height:43px;border-radius:12px;padding:8px 13px;font-size:12px;font-weight:850}
+#surveysScreen .sync-row{border-top:1px solid #453e34;color:#b0a89c;padding-top:9px;gap:10px;flex-wrap:wrap;line-height:1.3}
+#surveysScreen .sync-row .sync-ok{color:#96d8ad}
+#surveysScreen .sync-row .sync-conflict{color:#ffad9b}
+#surveysScreen .empty-state{background:#222225;border:1px dashed #685736;color:#b2a89a}
+#surveysScreen .empty-state h3{color:#f6efdf}
+@media(max-width:430px){
+  #surveysScreen .v3-hero{padding:15px 16px;gap:10px}
+  #surveysScreen .v3-hero h2{font-size:23px}
+  #surveysScreen>.section-head{margin-top:18px}
+  #surveysScreen .survey-card{padding:12px 13px;gap:9px}
+  #surveysScreen .order-number{font-size:21px}
+  #surveysScreen .status-pill{font-size:10px}
+}
