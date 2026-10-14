@@ -53,6 +53,7 @@ const server = http.createServer(async (req, res) => {
       );
       return send(res, 200, html, mime['.html']);
     }
+    if(url.pathname==='/manager'||url.pathname==='/manager/')return send(res,200,await readFile(join(root,'manager.html')),mime['.html']);
     const relative = normalize(decodeURIComponent(url.pathname)).replace(/^[/\\]+/, '');
     const path = join(root, relative);
     if (!path.startsWith(root)) return send(res, 403, 'Forbidden');

@@ -1,5 +1,6 @@
 <?php
 declare(strict_types=1);
+require_once __DIR__ . '/web-push-payload.php';
 
 function kd_manager_push_ensure_table(): void
 {
@@ -169,12 +170,13 @@ function kd_manager_push_subscription_save(int $adminId): never
     $body = kd_json_body(16384);
     $subscription = is_array($body['subscription'] ?? null) ? $body['subscription'] : [];
     $endpoint = trim((string)($subscription['endpoint'] ?? ''));
-    if ($endpoint === '' || !str_starts_with($endpoint, 'https://') || strlen($endpoint) > 4000) {
+    if ($endpoint === '' || !kd_push_endpoint_valid($endpoint) || strlen($endpoint) > 4000) {
         kd_json(['error' => 'Некорректная push-подписка'], 400);
     }
     $keys = is_array($subscription['keys'] ?? null) ? $subscription['keys'] : [];
     $p256dh = mb_substr((string)($keys['p256dh'] ?? ''), 0, 255);
     $auth = mb_substr((string)($keys['auth'] ?? ''), 0, 255);
+    if(strlen(kd_push_decode($p256dh))!==65||strlen(kd_push_decode($auth))!==16)kd_json(['error'=>'Некорректные ключи push-подписки'],400);
     $ua = mb_substr(trim((string)($body['userAgent'] ?? '')), 0, 500);
     $hash = hash('sha256', $endpoint);
 
@@ -250,21 +252,25 @@ function kd_manager_push_status(int $adminId): never
     ]);
 }
 
-function kd_manager_push_http(string $endpoint, array $keys): int
+function kd_manager_push_http(string $endpoint, array $keys, array $subscription, array $payload): int
 {
     if (!function_exists('curl_init')) throw new RuntimeException('cURL недоступен для Web Push');
+    if(!kd_push_endpoint_valid($endpoint))throw new RuntimeException('Недопустимый адрес push');
     $jwt = kd_manager_vapid_jwt($endpoint, $keys);
+    $body=kd_push_encrypt($subscription,$payload);
     $headers = [
         'TTL: 86400',
         'Urgency: high',
         'Authorization: vapid t=' . $jwt . ', k=' . $keys['publicKey'],
         'Crypto-Key: p256ecdsa=' . $keys['publicKey'],
-        'Content-Length: 0',
+        'Content-Type: application/octet-stream',
+        'Content-Encoding: aes128gcm',
+        'Content-Length: '.strlen($body),
     ];
     $ch = curl_init($endpoint);
     curl_setopt_array($ch, [
         CURLOPT_POST => true,
-        CURLOPT_POSTFIELDS => '',
+        CURLOPT_POSTFIELDS => $body,
         CURLOPT_HTTPHEADER => $headers,
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_HEADER => false,
@@ -284,44 +290,23 @@ function kd_manager_push_http(string $endpoint, array $keys): int
 
 function kd_send_manager_push_notifications(int $leadId): void
 {
-    try {
-        kd_manager_push_ensure_table();
-        $rows = kd_db()->query('SELECT endpoint_hash,endpoint FROM manager_push_subscriptions ORDER BY updated_at DESC LIMIT 20')->fetchAll();
-        if (!$rows) return;
-        $keys = kd_manager_vapid_keys();
-        foreach ($rows as $row) {
-            $endpoint = (string)($row['endpoint'] ?? '');
-            if ($endpoint === '') continue;
-            try {
-                $status = kd_manager_push_http($endpoint, $keys);
-                kd_manager_push_record_result((string)$row['endpoint_hash'], $status);
-                if ($status === 404 || $status === 410) {
-                    kd_db()->prepare('DELETE FROM manager_push_subscriptions WHERE endpoint_hash=?')->execute([(string)$row['endpoint_hash']]);
-                } elseif ($status < 200 || $status >= 300) {
-                    error_log('Kuzdvor manager push HTTP ' . $status . ' for lead ' . $leadId);
-                }
-            } catch (Throwable $e) {
-                kd_manager_push_record_result((string)$row['endpoint_hash'], 0);
-                error_log('Kuzdvor manager push: ' . $e->getMessage());
-            }
-        }
-    } catch (Throwable $e) {
-        error_log('Kuzdvor manager push setup: ' . $e->getMessage());
-    }
+    try { kd_manager_push_queue_lead($leadId); }
+    catch(Throwable $e){error_log('Kuzdvor push queue: '.$e->getMessage());}
 }
-
 
 function kd_manager_push_test(int $adminId): never
 {
     kd_manager_push_ensure_table();
+    $body=kd_json_body(4096);$endpoint=(string)($body['endpoint']??'');$testId=(string)($body['testId']??'');
+    if(!kd_push_endpoint_valid($endpoint)||!preg_match('/^[A-Za-z0-9-]{16,80}$/D',$testId))kd_json(['error'=>'Укажите текущую подписку и идентификатор теста'],400);
     $stmt = kd_db()->prepare('
-      SELECT endpoint_hash,endpoint
+      SELECT endpoint_hash,endpoint,p256dh,auth_token
       FROM manager_push_subscriptions
-      WHERE admin_id=?
+      WHERE admin_id=? AND endpoint_hash=?
       ORDER BY updated_at DESC
       LIMIT 10
     ');
-    $stmt->execute([$adminId]);
+    $stmt->execute([$adminId,hash('sha256',$endpoint)]);
     $rows = $stmt->fetchAll();
     if (!$rows) {
         kd_json(['error' => 'Push-подписка не найдена. Нажмите «Включить уведомления» ещё раз.'], 409);
@@ -334,7 +319,7 @@ function kd_manager_push_test(int $adminId): never
         $endpoint = (string)($row['endpoint'] ?? '');
         if ($endpoint === '') continue;
         try {
-            $status = kd_manager_push_http($endpoint, $keys);
+            $status = kd_manager_push_http($endpoint,$keys,$row,['type'=>'test','testId'=>$testId,'title'=>'Проверка уведомлений','body'=>'Тест КД Менеджер дошёл до этого устройства.','url'=>'/manager','tag'=>'kuzdvor-test-'.$testId]);
             kd_manager_push_record_result((string)$row['endpoint_hash'], $status);
             if ($status >= 200 && $status < 300) {
                 $accepted++;
@@ -368,3 +353,6 @@ function kd_manager_push_test(int $adminId): never
         'failed' => count($failed),
     ]);
 }
+
+
+require_once __DIR__ . '/manager-push-queue.php';

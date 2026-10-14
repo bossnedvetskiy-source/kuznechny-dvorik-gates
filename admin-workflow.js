@@ -19,7 +19,7 @@
       const data=await api(`/api/admin/lead-workflows?ids=${encodeURIComponent(ids.join(','))}`);
       for(const card of cards){
         const id=Number(card.dataset.leadId),item=data.workflows?.[id];if(!item)continue;
-        card.dataset.workflowStage=item.stage;
+        card.dataset.workflowStage=item.stage;card.dataset.workflowRevision=String(item.revision??0);
         const box=document.createElement('div');box.className='lead-workflow-panel';box.dataset.workflowFor=String(id);
         const options=STAGES.map(([value,label])=>`<option value="${value}" ${item.stage===value?'selected':''}>${label}</option>`).join('');
         box.innerHTML=`<div class="lead-workflow-head"><b>Работа с заявкой</b><span class="lead-stage-pill">${labels.get(item.stage)||item.stage}</span></div><div class="lead-workflow-grid"><label>Этап<select data-field="stage">${options}</select></label><label>Следующее действие<input data-field="nextActionAt" type="datetime-local" value="${String(item.nextActionAt||'').replace(/"/g,'&quot;')}"></label><label class="lead-workflow-note">Внутренняя заметка<textarea data-field="note" maxlength="1200" placeholder="Например: созвониться после 18:00"></textarea></label><label class="lead-loss-reason" ${item.stage==='lost'?'':'hidden'}>Причина отказа<input data-field="lossReason" maxlength="400" placeholder="Цена, отложил, выбрал другого…"></label></div>${item.color?`<div class="lead-workflow-color">Предпочитаемый цвет: <b>${String(item.color).replace(/[<>&]/g,'')}</b></div>`:''}<button class="lead-workflow-save" type="button">Сохранить этап и заметку</button>`;
@@ -35,9 +35,10 @@
   async function save(card,box){
     const id=Number(card.dataset.leadId),button=box.querySelector('.lead-workflow-save'),value=name=>box.querySelector(`[data-field="${name}"]`)?.value||'';
     button.disabled=true;button.textContent='Сохраняем…';
-    try{const data=await api(`/api/admin/lead-workflows/${id}`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({stage:value('stage'),nextActionAt:value('nextActionAt'),note:value('note'),lossReason:value('lossReason')})});card.dataset.workflowStage=data.stage;box.querySelector('.lead-stage-pill').textContent=labels.get(data.stage)||data.stage;showToast('Этап и заметка сохранены');}catch(error){showToast(error.message,true);}finally{button.disabled=false;button.textContent='Сохранить этап и заметку';}
+    try{const data=await api(`/api/admin/lead-workflows/${id}`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({expectedRevision:Number(card.dataset.workflowRevision)||0,stage:value('stage'),nextActionAt:value('nextActionAt'),note:value('note'),lossReason:value('lossReason')})});card.dataset.workflowStage=data.stage;card.dataset.workflowRevision=String(data.revision??0);box.querySelector('.lead-stage-pill').textContent=labels.get(data.stage)||data.stage;showToast('Этап и заметка сохранены');}catch(error){showToast(error.message,true);}finally{button.disabled=false;button.textContent='Сохранить этап и заметку';}
   }
   new MutationObserver(()=>{clearTimeout(timer);timer=setTimeout(enhance,40);}).observe(list,{childList:true});
   document.querySelector('.admin-tabs')?.addEventListener('click',event=>{if(event.target.closest('[data-admin-tab="leads"]'))setTimeout(enhance,120);});
   enhance();
 })();
+

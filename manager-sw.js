@@ -1,9 +1,8 @@
-const CACHE='kuzdvor-manager-v4';
-const SHELL=['/manager','/manager.html','/manager-manifest.webmanifest','/manager-icon.svg'];
-
+const CACHE='kuzdvor-manager-v5';
+const SHELL=['/manager','/manager.html','/manager-app.js','/manager-manifest.webmanifest','/manager-icon.svg'];
+const isManager=url=>['/manager','/manager.html'].includes(new URL(url).pathname);
 self.addEventListener('install',event=>{
-  event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(SHELL)).catch(()=>{}));
-  self.skipWaiting();
+  event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(SHELL)).then(()=>self.skipWaiting()));
 });
 self.addEventListener('activate',event=>{
   event.waitUntil((async()=>{
@@ -14,32 +13,36 @@ self.addEventListener('activate',event=>{
 });
 self.addEventListener('fetch',event=>{
   const url=new URL(event.request.url);
-  if(event.request.method!=='GET'||url.pathname.startsWith('/api/'))return;
-  if(url.origin!==location.origin)return;
-  if(url.pathname==='/manager'||url.pathname==='/manager.html'||url.pathname.startsWith('/manager-')){
-    event.respondWith(fetch(event.request).then(response=>{const copy=response.clone();caches.open(CACHE).then(cache=>cache.put(event.request,copy));return response}).catch(()=>caches.match(event.request).then(hit=>hit||caches.match('/manager.html'))));
-  }
+  if(event.request.method!=='GET'||url.origin!==location.origin||!SHELL.includes(url.pathname))return;
+  event.respondWith((async()=>{
+    try{
+      const response=await fetch(event.request);
+      if(!response.ok)throw new Error('Manager shell unavailable');
+      const cache=await caches.open(CACHE);await cache.put(event.request,response.clone());return response;
+    }catch{
+      const cached=await caches.match(event.request);
+      if(cached)return cached;
+      if(event.request.mode==='navigate')return (await caches.match('/manager.html'))||Response.error();
+      return Response.error();
+    }
+  })());
 });
 self.addEventListener('push',event=>{
-  // Show immediately. A background push must not depend on the manager login
-  // cookie or an extra API request, otherwise Android may terminate the event
-  // before a notification becomes visible.
   event.waitUntil((async()=>{
+    let payload={};try{payload=event.data?.json()||{}}catch{}
     const receivedAt=Date.now();
-    await self.registration.showNotification('Новая заявка с сайта',{
-      body:'Откройте КД Менеджер, чтобы посмотреть клиента и расчёт.',
-      tag:'kuzdvor-new-lead',
-      data:{url:'/manager'},
-      renotify:true,
-      requireInteraction:true,
-      silent:false,
-      icon:'/manager-icon.svg',
-      badge:'/manager-icon.svg',
-      vibrate:[220,90,220,90,260],
-      timestamp:receivedAt
+    const type=['test','lead','reminder'].includes(payload.type)?payload.type:'lead';
+    const target=new URL(payload.url||'/manager',location.origin);
+    const url=target.origin===location.origin&&isManager(target.href)?target.pathname+target.search:'/manager';
+    await self.registration.showNotification(payload.title||'Новая заявка с сайта',{
+      body:payload.body||'Откройте КД Менеджер, чтобы посмотреть заявку.',
+      tag:payload.tag||'kuzdvor-lead-'+receivedAt,
+      data:{url,type,testId:payload.testId,leadId:payload.leadId},
+      icon:'/manager-icon.svg',badge:'/manager-icon.svg',timestamp:receivedAt,
+      vibrate:[220,90,220],
     });
     const windows=await self.clients.matchAll({type:'window',includeUncontrolled:true});
-    windows.forEach(client=>client.postMessage({type:'MANAGER_PUSH_RECEIVED',receivedAt}));
+    windows.filter(client=>isManager(client.url)).forEach(client=>client.postMessage({type:'MANAGER_PUSH_RECEIVED',eventType:type,testId:payload.testId,leadId:payload.leadId,receivedAt}));
   })());
 });
 self.addEventListener('notificationclick',event=>{
@@ -47,7 +50,8 @@ self.addEventListener('notificationclick',event=>{
   event.waitUntil((async()=>{
     const url=event.notification.data?.url||'/manager';
     const windows=await clients.matchAll({type:'window',includeUncontrolled:true});
-    for(const client of windows){if('focus'in client){client.navigate?.(url);return client.focus()}}
-    return clients.openWindow?clients.openWindow(url):undefined;
+    const existing=windows.find(client=>isManager(client.url));
+    if(existing){await existing.navigate(url);return existing.focus()}
+    return clients.openWindow(url);
   })());
 });

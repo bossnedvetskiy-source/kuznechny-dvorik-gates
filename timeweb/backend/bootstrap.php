@@ -1,11 +1,15 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/manager-workflow.php';
+
 const KD_SESSION_COOKIE = 'kd_admin_session';
 const KD_SESSION_SECONDS = 604800;
 
 function kd_account_home(): string
 {
+    $accountDir=trim((string)getenv('KD_ACCOUNT_DIR'));
+    if($accountDir!==''&&is_dir($accountDir))return rtrim($accountDir,'/');
     $home = trim((string)getenv('HOME'));
     if ($home !== '' && is_dir($home)) return rtrim($home, '/');
     return dirname(__DIR__, 3);
@@ -353,7 +357,8 @@ function kd_admin_session(): ?array
     $token = (string)($_COOKIE[KD_SESSION_COOKIE] ?? '');
     if (!preg_match('/^[A-Za-z0-9_-]{40,120}$/', $token)) return null;
     $hash = hash('sha256', $token);
-    $stmt = kd_db()->prepare('SELECT id,admin_id,expires_at FROM admin_sessions WHERE token_hash = ? AND expires_at > UTC_TIMESTAMP() LIMIT 1');
+    kd_manager_schema();
+    $stmt = kd_db()->prepare('SELECT s.id,s.admin_id,s.expires_at,a.username,a.role FROM admin_sessions s JOIN admin_auth a ON a.id=s.admin_id WHERE s.token_hash = ? AND s.expires_at > UTC_TIMESTAMP() AND a.disabled=0 LIMIT 1');
     $stmt->execute([$hash]);
     $row = $stmt->fetch();
     return is_array($row) ? $row : null;
@@ -392,3 +397,4 @@ function kd_normalize_name(string $value): string
     $value = str_replace('ё', 'е', $value);
     return preg_replace('/[^а-яa-z0-9]/u', '', $value) ?? '';
 }
+
