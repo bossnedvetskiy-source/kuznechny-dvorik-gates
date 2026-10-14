@@ -132,6 +132,10 @@ test('surveyor can create a mixed survey and reopen it offline', async ({page, c
   await page.locator('.v3-extra summary').click();
   await page.locator('[data-edit-plan]').click();
   await expect(page.locator('#planDialog')).toBeVisible();
+  // Keep the editor near the top on mobile, rather than a bouncing half-height
+  // sheet whose top changes when the selected item's controls appear.
+  const initialPlanTop = await page.locator('#planDialog').evaluate(el => el.getBoundingClientRect().top);
+  expect(initialPlanTop).toBeLessThanOrEqual(22);
   await expect(page.locator('#planCanvas .plan-part')).toHaveCount(5);
   await expect(page.locator('#planItemsCount')).toHaveText('5');
   await expect(page.locator('#planGeometryAudit')).toContainText('Размеры проверены');
@@ -170,6 +174,8 @@ test('surveyor can create a mixed survey and reopen it offline', async ({page, c
     el => el.scrollWidth <= el.clientWidth + 8
   )).toBe(true);
   await page.locator('#planCanvas .plan-part.gate').first().click();
+  const editedPlanTop = await page.locator('#planDialog').evaluate(el => el.getBoundingClientRect().top);
+  expect(Math.abs(editedPlanTop-initialPlanTop)).toBeLessThanOrEqual(2);
   await expect(page.locator('#planQuickElementActions')).toBeVisible();
   await expect(page.locator('#planEditor')).toBeHidden();
   await page.locator('[data-plan-inline-field="width"]').fill('3.6');
