@@ -706,3 +706,11 @@
  .plan-part-wrap.post{min-width:41px;flex-basis:41px}
  .plan-mode-switch button{font-size:11px}
 }
+
+/* DEV site plan geometry checks; visual only, no stored schema changes. */
+.plan-geometry-audit{margin:9px 0 0;padding:10px 12px;background:#e9f3e8;border:1px solid #c5ddc1;border-radius:12px;font-size:12px;line-height:1.45;color:#306039}
+.plan-geometry-audit.has-issues{background:#fff2d8;border-color:#e7c484;color:#73521d}
+.plan-geometry-audit b{display:block;font-size:13px;margin-bottom:5px}
+.plan-geometry-audit ul{padding-left:19px;margin:6px 0}
+.plan-geometry-audit li+li{margin-top:5px}
+.plan-geometry-audit small{display:block;line-height:1.4;margin-top:7px}
