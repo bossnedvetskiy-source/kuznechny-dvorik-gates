@@ -34,6 +34,9 @@
     .toast{position:fixed;z-index:60;left:14px;right:14px;bottom:calc(14px + env(safe-area-inset-bottom));max-width:520px;margin:auto;padding:11px 13px;border-radius:12px;background:#171819;color:#fff;font-size:11px;font-weight:800;box-shadow:0 10px 30px rgba(0,0,0,.25)}.toast.error{background:#8f3833}
     .install-card{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;padding:10px 11px;border:1px dashed #d2ba89;border-radius:12px;background:#fff9ec;color:#675331;font-size:10px;line-height:1.4}.install-card button{flex:0 0 auto;min-height:36px;padding:0 10px;border:0;border-radius:9px;background:#c9953b;color:#17120a;font-size:10px;font-weight:900}
     @media(max-width:440px){.main{padding:11px}.summary h1{font-size:22px}.lead-info{grid-template-columns:1fr 1fr}.workflow-grid{grid-template-columns:1fr}.save-row{grid-template-columns:1fr}.save-button{width:100%}}
+    .lead-details{padding:0 14px 12px;font-size:13px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}.lead-details p{margin:6px 0}.lead-details summary{cursor:pointer;font-weight:700}.lead-total small{display:block;max-width:130px;white-space:normal;font-size:11px;color:var(--muted)}
+    .field textarea{width:100%;min-height:80px;padding:10px;border:1px solid var(--line);border-radius:12px;font-size:16px}.info span,.field span{font-size:12px;color:#625a4f}.info b{font-size:14px;overflow:visible;overflow-wrap:anywhere}.push-state{font-size:12px!important}.summary p,.lead-title span{font-size:12px}.contact-row span{padding:10px}.workflow [data-draft-state]{font-size:12px;color:#70521e}.offline{width:max-content;max-width:calc(100% - 24px);text-align:center}.tab:focus-visible,button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}#offlineForm{margin-top:18px;border-top:1px solid var(--line);padding-top:16px}#offlineButton{margin-bottom:12px}
+    .measurement-details{margin:14px 0;font-size:13px}.measurement-details summary{cursor:pointer;font-weight:800}.photo-list{display:flex;flex-wrap:wrap;gap:8px}.photo-list img{display:block;width:140px;height:100px;object-fit:cover}.conflict{padding:12px;border:1px solid var(--danger);border-radius:10px;font-size:13px}#teamPanel{padding:12px;margin-bottom:14px;border:1px solid var(--line);border-radius:12px}#teamPanel summary{margin-bottom:12px;font-weight:800}
   </style>
 </head>
 <body>
@@ -49,13 +52,14 @@
     <main class="main">
       <section class="login-card" id="loginView">
         <h1>Вход для менеджера</h1>
-        <p>Используйте учётную запись админки. После входа приложение покажет заявки с сайта и сможет получать уведомления.</p>
+        <p>Используйте свою учётную запись. После входа приложение покажет заявки с сайта и сможет получать уведомления.</p>
         <form id="loginForm">
           <label class="field"><span>Логин</span><input id="username" autocomplete="username" required></label>
           <label class="field"><span>Пароль</span><input id="password" type="password" autocomplete="current-password" required></label>
           <button class="primary" id="loginButton" type="submit">Войти</button>
           <p class="error" id="loginError" hidden></p>
         </form>
+        <form id="offlineForm" hidden><p>Открыть сохранённые данные на этом устройстве</p><label class="field"><span>Пароль офлайн-доступа</span><input id="offlinePin" type="password" autocomplete="off" required></label><button class="primary" type="submit">Открыть без сети</button></form>
       </section>
 
       <section id="appView" hidden>
@@ -68,323 +72,20 @@
           <button class="tab active" data-filter="new" type="button">Новые <b id="countNew">0</b></button>
           <button class="tab" data-filter="work" type="button">В работе <b id="countWork">0</b></button>
           <button class="tab" data-filter="measurement" type="button">Замеры <b id="countMeasurement">0</b></button>
+          <button class="tab" data-filter="closed" type="button">Закрытые и отказы</button>
           <button class="tab" data-filter="all" type="button">Все</button>
         </nav>
+        <p id="roleText"></p><details id="teamPanel" hidden><summary>Сотрудники и доступ</summary><form id="teamForm"><label class="field"><span>Логин сотрудника</span><input name="username" autocomplete="off" required pattern="[A-Za-z0-9_.-]{3,120}"></label><label class="field"><span>Пароль (от 12 символов)</span><input name="password" type="password" autocomplete="new-password" required minlength="12"></label><label class="field"><span>Роль</span><select name="role"><option value="surveyor">Замерщик — только назначенные заявки</option><option value="manager">Менеджер — все заявки, без изменения цен</option></select></label><button class="primary" type="submit">Создать сотрудника</button></form><div id="teamList"></div></details><button class="push-button" id="offlineButton" type="button">Защитить данные для работы без сети</button>
+        <label class="field"><span>Поиск клиента, телефона или объекта</span><input id="search" type="search" autocomplete="off"></label>
+        <label class="field"><select id="dayFilter" aria-label="Дата замера" hidden><option value="">Все даты</option><option value="today">Сегодня</option><option value="tomorrow">Завтра</option><option value="overdue">Просроченные</option></select></label>
         <div class="lead-list" id="leadList"></div>
         <div class="empty" id="emptyView" hidden>Заявок в этом разделе пока нет.</div>
       </section>
     </main>
   </div>
   <div class="offline" id="offlineBadge" hidden>Нет сети · показываем последние данные</div>
-  <div class="toast" id="toast" hidden></div>
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
-  <script>
-  (() => {
-    const loginView=document.getElementById('loginView');
-    const appView=document.getElementById('appView');
-    const loginForm=document.getElementById('loginForm');
-    const loginButton=document.getElementById('loginButton');
-    const loginError=document.getElementById('loginError');
-    const logoutButton=document.getElementById('logoutButton');
-    const refreshButton=document.getElementById('refreshButton');
-    const pushButton=document.getElementById('pushButton');
-    const pushStatusText=document.getElementById('pushStatusText');
-    const leadList=document.getElementById('leadList');
-    const emptyView=document.getElementById('emptyView');
-    const syncText=document.getElementById('syncText');
-    const offlineBadge=document.getElementById('offlineBadge');
-    const toast=document.getElementById('toast');
-    const installCard=document.getElementById('installCard');
-    const installButton=document.getElementById('installButton');
-    const tabs=[...document.querySelectorAll('.tab[data-filter]')];
-    const CACHE_KEY='kuzdvor-manager-leads-v1';
-    let leads=[];
-    let workflows={};
-    let activeFilter='new';
-    let latestId=0;
-    let pollTimer=0;
-    let installPrompt=null;
-    let awaitingPushReceipt=false;
-    let pushReceiptTimer=0;
-
-    const escape=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
-    const money=value=>new Intl.NumberFormat('ru-RU').format(Number(value)||0)+' ₽';
-    const phoneDigits=value=>String(value||'').replace(/\D/g,'');
-    const fmt=value=>{const d=new Date(String(value||'').replace(' ','T')+'Z');return Number.isNaN(d.getTime())?String(value||''):d.toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})};
-    const stageOf=lead=>String(workflows[String(lead.id)]?.stage || (lead.status==='done'?'completed':lead.status==='contacted'?'contacted':'new'));
-    const stageLabel=stage=>({new:'Новая',contacted:'В работе',measurement_scheduled:'Замер назначен',measurement_done:'Замер выполнен',contract:'Договор',production:'Производство',installation:'Монтаж',completed:'Закрыта',lost:'Отказ'})[stage]||stage;
-    const categoryLabel=value=>({gates:'Ворота с калиткой',canopy:'Навес','forged-fence':'Кованый забор','profsheet-fence':'Забор из профнастила','picket-fence':'Евроштакетник'})[value]||'Изделие';
-
-    function showToast(message,error=false){toast.textContent=message;toast.className='toast'+(error?' error':'');toast.hidden=false;clearTimeout(showToast.t);showToast.t=setTimeout(()=>toast.hidden=true,2800)}
-    async function api(url,options={}){const response=await fetch(url,{credentials:'same-origin',cache:'no-store',...options,headers:{accept:'application/json',...(options.body?{'content-type':'application/json'}:{}),...(options.headers||{})}});const data=await response.json().catch(()=>({}));if(response.status===401){showLogin();throw Object.assign(new Error('Требуется вход'),{auth:true})}if(!response.ok){const message=[data.error,data.detail].filter(Boolean).join(': ');throw new Error(message||'Ошибка сервера')}return data}
-    function showLogin(){loginView.hidden=false;appView.hidden=true;logoutButton.hidden=true;clearInterval(pollTimer)}
-    function showApp(){loginView.hidden=true;appView.hidden=false;logoutButton.hidden=false;startPolling()}
-
-    function saveCache(){try{localStorage.setItem(CACHE_KEY,JSON.stringify({leads,workflows,savedAt:Date.now()}))}catch{}}
-    function loadCache(){try{const v=JSON.parse(localStorage.getItem(CACHE_KEY)||'null');if(v&&Array.isArray(v.leads)){leads=v.leads;workflows=v.workflows||{};latestId=Math.max(0,...leads.map(x=>Number(x.id)||0));render();syncText.textContent='Последние сохранённые данные';return true}}catch{}return false}
-
-    function matches(lead){
-      const stage=stageOf(lead);
-      if(activeFilter==='new') return stage==='new';
-      if(activeFilter==='work') return ['contacted','measurement_done','contract','production','installation'].includes(stage);
-      if(activeFilter==='measurement') return stage==='measurement_scheduled';
-      return true;
-    }
-
-    function updateCounts(){
-      const stages=leads.map(stageOf);
-      document.getElementById('countNew').textContent=stages.filter(x=>x==='new').length;
-      document.getElementById('countWork').textContent=stages.filter(x=>['contacted','measurement_done','contract','production','installation'].includes(x)).length;
-      document.getElementById('countMeasurement').textContent=stages.filter(x=>x==='measurement_scheduled').length;
-    }
-
-    function render(){
-      updateCounts();
-      const items=leads.filter(matches);
-      emptyView.hidden=items.length>0;
-      leadList.innerHTML=items.map(lead=>{
-        const wf=workflows[String(lead.id)]||{};
-        const stage=stageOf(lead);
-        const digits=phoneDigits(lead.phone);
-        const wa=digits?('https://wa.me/'+(digits.startsWith('8')?'7'+digits.slice(1):digits)):'#';
-        const title=[categoryLabel(lead.category),lead.article].filter(Boolean).join(' · ');
-        const size=lead.width&&lead.height?lead.width+'×'+lead.height+' м':'—';
-        const wicket=lead.wicket_width?lead.wicket_width+' м':'—';
-        const when=String(wf.nextActionAt||'').slice(0,16);
-        return `<article class="lead-card ${stage==='new'?'is-new':''}" data-lead-id="${lead.id}">
-          <div class="lead-head"><div class="lead-title"><b>${escape(lead.name||'Клиент')} · ${escape(lead.city||'')}</b><span>№${lead.id} · ${escape(fmt(lead.created_at))} · ${escape(title)}</span></div><div class="lead-total">${money(lead.client_total||lead.total)}</div></div>
-          <div class="lead-info">
-            <div class="info"><span>Телефон</span><b>${escape(lead.phone||'—')}</b></div>
-            <div class="info"><span>Размер ворот</span><b>${escape(size)}</b></div>
-            <div class="info"><span>Калитка</span><b>${escape(wicket)}</b></div>
-            <div class="info"><span>Столбы</span><b>${lead.posts?'Нужны новые':'Свои'}</b></div>
-          </div>
-          <div class="contact-row"><a href="tel:+${digits}">☎ Позвонить</a><a href="${wa}" target="_blank" rel="noopener">WhatsApp</a></div>
-          <div class="workflow">
-            <div class="workflow-grid">
-              <label class="field"><span>Статус</span><select data-stage>
-                ${['new','contacted','measurement_scheduled','measurement_done','contract','completed','lost'].map(value=>`<option value="${value}" ${value===stage?'selected':''}>${stageLabel(value)}</option>`).join('')}
-              </select></label>
-              <label class="field"><span>Дата и время замера</span><input data-measurement type="datetime-local" value="${escape(when)}"></label>
-            </div>
-            <div class="save-row"><button class="measurement-button" data-schedule type="button">📅 Назначить замер</button><button class="save-button" data-save type="button">Сохранить</button></div>
-          </div>
-        </article>`;
-      }).join('');
-    }
-
-    async function loadLeads({silent=false}={}){
-      if(!navigator.onLine){offlineBadge.hidden=false;loadCache();return}
-      offlineBadge.hidden=true;
-      if(!silent) syncText.textContent='Обновляем заявки…';
-      try{
-        const data=await api('/api/admin/leads?limit=100');
-        const next=Array.isArray(data.leads)?data.leads:[];
-        const ids=next.map(x=>Number(x.id)).filter(Boolean);
-        const wfData=ids.length?await api('/api/admin/lead-workflows?ids='+encodeURIComponent(ids.join(','))):{workflows:{}};
-        const oldLatest=latestId;
-        leads=next;
-        workflows=wfData.workflows||{};
-        latestId=Math.max(0,...leads.map(x=>Number(x.id)||0));
-        saveCache();render();
-        syncText.textContent='Обновлено · '+new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
-        if(oldLatest&&latestId>oldLatest&&document.visibilityState==='visible'){
-          const newest=leads.find(x=>Number(x.id)===latestId);
-          showToast('Новая заявка · '+(newest?.city||''));
-          if(Notification.permission==='granted'&&newest){try{new Notification('Новая заявка с сайта',{body:(newest.city||'')+' · '+money(newest.client_total||newest.total),tag:'lead-'+newest.id})}catch{}}
-        }
-      }catch(error){if(!error.auth){offlineBadge.hidden=false;loadCache();if(!silent)showToast(error.message,true)}}
-    }
-
-    async function saveWorkflow(card){
-      const id=Number(card.dataset.leadId);
-      const stage=card.querySelector('[data-stage]').value;
-      const nextActionAt=card.querySelector('[data-measurement]').value;
-      const button=card.querySelector('[data-save]');
-      button.disabled=true;button.textContent='Сохраняем…';
-      try{
-        await api('/api/admin/lead-workflows/'+id,{method:'POST',body:JSON.stringify({stage,note:'',nextActionAt,lossReason:''})});
-        workflows[String(id)]={...(workflows[String(id)]||{}),stage,nextActionAt};
-        saveCache();render();showToast('Сохранено');
-      }catch(error){if(!error.auth)showToast(error.message,true)}
-      finally{button.disabled=false}
-    }
-
-    leadList.addEventListener('click',event=>{
-      const card=event.target.closest('.lead-card');if(!card)return;
-      if(event.target.closest('[data-save]')){saveWorkflow(card);return}
-      if(event.target.closest('[data-schedule]')){
-        card.querySelector('[data-stage]').value='measurement_scheduled';
-        const input=card.querySelector('[data-measurement]');
-        input.focus();
-        if(!input.value){const d=new Date(Date.now()+24*60*60*1000);d.setMinutes(Math.ceil(d.getMinutes()/15)*15,0,0);input.value=new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16)}
-      }
-    });
-
-    tabs.forEach(tab=>tab.addEventListener('click',()=>{tabs.forEach(x=>x.classList.toggle('active',x===tab));activeFilter=tab.dataset.filter;render()}));
-
-    loginForm.addEventListener('submit',async event=>{
-      event.preventDefault();loginError.hidden=true;loginButton.disabled=true;loginButton.textContent='Входим…';
-      try{
-        await api('/api/admin/login',{method:'POST',body:JSON.stringify({username:document.getElementById('username').value.trim(),password:document.getElementById('password').value})});
-        showApp();await loadLeads();await syncPushButton();
-      }catch(error){if(!error.auth){loginError.textContent=error.message;loginError.hidden=false}}
-      finally{loginButton.disabled=false;loginButton.textContent='Войти'}
-    });
-
-    logoutButton.addEventListener('click',async()=>{try{await api('/api/admin/logout',{method:'POST',body:'{}'})}catch{}showLogin()});
-    refreshButton.addEventListener('click',()=>loadLeads());
-    window.addEventListener('online',()=>{offlineBadge.hidden=true;loadLeads()});
-    window.addEventListener('offline',()=>{offlineBadge.hidden=false});
-
-    function startPolling(){clearInterval(pollTimer);pollTimer=setInterval(()=>{if(document.visibilityState==='visible')loadLeads({silent:true})},15000)}
-    document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&!loginView.hidden){}else if(document.visibilityState==='visible'&&!appView.hidden)loadLeads({silent:true})});
-
-    function b64ToUint8(value){const pad='='.repeat((4-value.length%4)%4);const base64=(value+pad).replace(/-/g,'+').replace(/_/g,'/');const raw=atob(base64);return Uint8Array.from([...raw].map(ch=>ch.charCodeAt(0)))}
-    async function waitForManagerWorker(reg){
-      if(reg.active)return reg;
-      await new Promise((resolve,reject)=>{
-        const worker=reg.installing||reg.waiting;
-        if(!worker){resolve();return}
-        const timer=setTimeout(()=>reject(new Error('Не удалось запустить службу уведомлений')),12000);
-        const done=()=>{if(worker.state==='activated'||reg.active){clearTimeout(timer);resolve()}};
-        worker.addEventListener('statechange',done);
-        done();
-      });
-      return reg;
-    }
-    async function getRegistration(){
-      if(!('serviceWorker'in navigator))throw new Error('Этот браузер не поддерживает фоновые уведомления');
-      const reg=await navigator.serviceWorker.register('/manager-sw.js',{scope:'/manager',updateViaCache:'none'});
-      await reg.update().catch(()=>{});
-      return waitForManagerWorker(reg);
-    }
-    async function currentSubscription(){const reg=await getRegistration();return reg.pushManager.getSubscription()}
-    async function saveSubscriptionOnServer(sub){
-      if(!sub)return false;
-      await api('/api/admin/manager-push-subscriptions',{method:'POST',body:JSON.stringify({subscription:sub.toJSON(),userAgent:navigator.userAgent})});
-      return true;
-    }
-    async function createFreshSubscription(){
-      const reg=await getRegistration();
-      const existing=await reg.pushManager.getSubscription();
-      if(existing){try{await existing.unsubscribe()}catch{}}
-      const key=await api('/api/admin/manager-push-key');
-      const sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64ToUint8(key.publicKey)});
-      await saveSubscriptionOnServer(sub);
-      return sub;
-    }
-    function setPushState(text,kind=''){
-      pushStatusText.textContent=text;
-      pushStatusText.className='push-state'+(kind?' '+kind:'');
-    }
-    async function serverPushStatus(sub){
-      if(!sub)return {registered:false};
-      return api('/api/admin/manager-push-status',{method:'POST',body:JSON.stringify({endpoint:sub.endpoint})});
-    }
-    async function syncPushButton({repairServer=true}={}){
-      if(!('Notification'in window)||!('PushManager'in window)){
-        pushButton.hidden=true;
-        setPushState('Этот браузер не поддерживает фоновые push-уведомления','bad');
-        return null;
-      }
-      if(Notification.permission==='denied'){
-        pushButton.classList.remove('is-on');
-        pushButton.textContent='🔔 Исправить уведомления';
-        setPushState('Уведомления запрещены в настройках телефона','bad');
-        return null;
-      }
-      try{
-        const sub=await currentSubscription();
-        if(!sub){
-          pushButton.classList.remove('is-on');
-          pushButton.textContent='🔔 Включить уведомления';
-          setPushState('Push-подписки на этом телефоне нет','warn');
-          return null;
-        }
-        if(repairServer) await saveSubscriptionOnServer(sub);
-        const status=await serverPushStatus(sub);
-        const on=Notification.permission==='granted'&&status?.registered===true;
-        pushButton.classList.toggle('is-on',on);
-        pushButton.textContent=on?'🔔 Уведомления включены · проверить':'🔔 Исправить уведомления';
-        if(on){
-          const last=Number(status?.lastStatus);
-          if(last>=200&&last<300) setPushState('Телефон зарегистрирован · последняя отправка принята push-сервисом','ok');
-          else setPushState('Телефон зарегистрирован на сервере · нажмите «проверить»','ok');
-        }else{
-          setPushState('Телефон не зарегистрирован на сервере','bad');
-        }
-        return sub;
-      }catch(error){
-        pushButton.classList.remove('is-on');
-        pushButton.textContent='🔔 Исправить уведомления';
-        setPushState('Не удалось проверить push: '+(error?.message||'ошибка'),'bad');
-        return null;
-      }
-    }
-
-    navigator.serviceWorker?.addEventListener('message',event=>{
-      if(event.data?.type!=='MANAGER_PUSH_RECEIVED')return;
-      if(awaitingPushReceipt){
-        awaitingPushReceipt=false;
-        clearTimeout(pushReceiptTimer);
-        setPushState('Тест дошёл до телефона ✓','ok');
-        showToast('Тестовое уведомление дошло до телефона ✓');
-      }
-    });
-
-    pushButton.addEventListener('click',async()=>{
-      pushButton.disabled=true;
-      pushButton.textContent='🔔 Проверяем…';
-      setPushState('Создаём свежую push-подписку…');
-      try{
-        const permission=await Notification.requestPermission();
-        if(permission!=='granted')throw new Error('Разрешите уведомления для КД Менеджер в настройках телефона');
-
-        // Always recreate the subscription during a manual check. This repairs
-        // stale Android/Chrome endpoints and any old VAPID-key binding in one step.
-        const sub=await createFreshSubscription();
-        const status=await serverPushStatus(sub);
-        if(!status?.registered)throw new Error('Сервер не сохранил push-подписку');
-
-        awaitingPushReceipt=true;
-        clearTimeout(pushReceiptTimer);
-        pushReceiptTimer=setTimeout(()=>{
-          if(!awaitingPushReceipt)return;
-          awaitingPushReceipt=false;
-          setPushState('Push-сервис принял тест, но телефон не подтвердил получение. Проверьте системные уведомления Chrome/КД Менеджер.','warn');
-        },8000);
-
-        const test=await api('/api/admin/manager-push-test',{method:'POST',body:'{}'});
-        if(!(test?.sent>0))throw new Error('Push-сервис не принял тест');
-
-        await syncPushButton({repairServer:false});
-        showToast('Тест отправлен · ждём уведомление');
-      }catch(error){
-        awaitingPushReceipt=false;
-        clearTimeout(pushReceiptTimer);
-        const detail=error?.message||'Не удалось проверить уведомления';
-        showToast(detail,true);
-        pushButton.classList.remove('is-on');
-        pushButton.textContent='🔔 Исправить уведомления';
-        setPushState(detail,'bad');
-      }finally{
-        pushButton.disabled=false;
-        if(pushButton.textContent==='🔔 Проверяем…')pushButton.textContent='🔔 Включить уведомления';
-      }
-    });
-
-    window.addEventListener('beforeinstallprompt',event=>{event.preventDefault();installPrompt=event;installCard.hidden=false});
-    installButton.addEventListener('click',async()=>{if(!installPrompt)return;installPrompt.prompt();await installPrompt.userChoice;installPrompt=null;installCard.hidden=true});
-    window.addEventListener('appinstalled',()=>installCard.hidden=true);
-
-    async function boot(){
-      if('serviceWorker'in navigator){navigator.serviceWorker.register('/manager-sw.js',{scope:'/manager',updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{})}
-      loadCache();
-      try{await api('/api/admin/leads?limit=1');showApp();await loadLeads();await syncPushButton({repairServer:true})}catch(error){if(!error.auth)showLogin()}
-    }
-    boot();
-  })();
-  </script>
+  <script src="/manager-app.js"></script>
 </body>
 </html>

@@ -90,7 +90,9 @@ try {
 
     if (str_starts_with($route, 'admin/')) {
         if ($method !== 'GET') kd_require_same_origin();
-        kd_require_admin();
+        $session=kd_require_admin();
+        $managerRoutes=['admin/leads','admin/lead-workflows','admin/manager-team'];
+        if($session['role']!=='admin' && !in_array($route,$managerRoutes,true) && !preg_match('#^admin/lead-workflows/[0-9]+$#D',$route))kd_json(['error'=>'Недостаточно прав'],403);
         kd_handle_admin($route, $method);
     }
 
@@ -102,7 +104,7 @@ try {
     kd_json(['error' => 'Маршрут не найден'], 404);
 } catch (Throwable $e) {
     error_log('Kuzdvor Timeweb API: ' . $e->getMessage());
-    kd_json(['error' => 'Ошибка серверной части сайта', 'detail' => $e->getMessage()], 500);
+    kd_json(['error' => 'Ошибка серверной части сайта. Повторите попытку позже.'], 500);
 }
 
 function kd_offline_version(): array
@@ -133,6 +135,7 @@ function kd_offline_version(): array
 
 function kd_admin_login(): never
 {
+    kd_manager_schema();
     kd_body_limit(4096);
     $ip = kd_client_ip();
     $limit = kd_db()->prepare('SELECT attempt_count,reset_at FROM login_rate_limits WHERE ip_key = ? LIMIT 1');
@@ -145,7 +148,7 @@ function kd_admin_login(): never
     $body = kd_json_body(4096);
     $username = trim((string)($body['username'] ?? ''));
     $password = (string)($body['password'] ?? '');
-    $stmt = kd_db()->prepare('SELECT id,username,password_hash FROM admin_auth WHERE username = ? LIMIT 1');
+    $stmt = kd_db()->prepare('SELECT id,username,password_hash,role FROM admin_auth WHERE username = ? AND disabled=0 LIMIT 1');
     $stmt->execute([$username]);
     $admin = $stmt->fetch();
     if (!$admin || !password_verify($password, (string)$admin['password_hash'])) {
@@ -159,7 +162,7 @@ function kd_admin_login(): never
         kd_db()->prepare('UPDATE admin_auth SET password_hash = ?,updated_at=UTC_TIMESTAMP() WHERE id = ?')->execute([password_hash($password, PASSWORD_DEFAULT), (int)$admin['id']]);
     }
     kd_create_admin_session((int)$admin['id']);
-    kd_json(['ok' => true]);
+    kd_json(['ok' => true, 'user'=>['id'=>(int)$admin['id'],'username'=>$admin['username'],'role'=>$admin['role']]]);
 }
 
 function kd_delivery_quote(string $place): array
@@ -283,9 +286,7 @@ function kd_create_lead(): never
         mb_substr(trim((string)($body['policyVersion'] ?? '')),0,64), mb_substr(trim((string)($body['comment'] ?? '')),0,1000), mb_substr($message,0,8000)
     ]);
     $leadId = (int)kd_db()->lastInsertId();
-    register_shutdown_function(static function() use ($leadId): void {
-        kd_send_manager_push_notifications($leadId);
-    });
+    kd_send_manager_push_notifications($leadId);
     kd_json(['ok' => true, 'id' => $leadId, 'quote' => ['total' => $clientTotal, 'verified' => false, 'deliveryPending' => $deliveryPending]], 201);
 }
 
@@ -403,11 +404,12 @@ function kd_handle_admin(string $route, string $method): never
         kd_catalog_color_delete(substr($route, strlen('admin/catalog-color-slot/')));
     }
 
+    if ($route === 'admin/manager-team' && in_array($method,['GET','POST','DELETE'],true)) kd_manager_team();
     if ($route === 'admin/leads' && $method === 'GET') kd_admin_leads();
     if (str_starts_with($route, 'admin/leads/') && $method === 'POST') kd_admin_lead_status(substr($route, strlen('admin/leads/')));
 
-    if ($route === 'admin/lead-workflows' && $method === 'GET') kd_admin_workflows();
-    if (str_starts_with($route, 'admin/lead-workflows/') && $method === 'POST') kd_admin_workflow_save(substr($route, strlen('admin/lead-workflows/')));
+    if ($route === 'admin/lead-workflows' && $method === 'GET') kd_manager_workflows();
+    if (str_starts_with($route, 'admin/lead-workflows/') && $method === 'POST') kd_manager_workflow_save(substr($route, strlen('admin/lead-workflows/')));
 
     if ($route === 'admin/history' && $method === 'GET') kd_admin_history();
     if ($route === 'admin/history/restore' && $method === 'POST') kd_admin_history_restore();
@@ -560,11 +562,11 @@ function kd_serve_media(string $key, bool $head): never
 function kd_admin_leads(): never
 {
     $limit=max(1,min(200,(int)($_GET['limit']??50)));$before=(int)($_GET['before_id']??0);$status=trim((string)($_GET['status']??''));$q=trim((string)($_GET['q']??''));$source=trim((string)($_GET['source']??''));$from=(string)($_GET['from']??'');$to=(string)($_GET['to']??'');
-    $where=[];$args=[];if($before>0){$where[]='id < ?';$args[]=$before;}if(in_array($status,['new','contacted','done','archived'],true)){$where[]='status=?';$args[]=$status;}if($source!==''){$where[]='source=?';$args[]=$source;}if(preg_match('/^\d{4}-\d{2}-\d{2}$/',$from)){$where[]='created_at>=?';$args[]=$from.' 00:00:00';}if(preg_match('/^\d{4}-\d{2}-\d{2}$/',$to)){$where[]='created_at<DATE_ADD(?,INTERVAL 1 DAY)';$args[]=$to.' 00:00:00';}
+    $session=kd_require_admin();$where=[];$args=[];if($session['role']==='surveyor'){$where[]='id IN (SELECT lead_id FROM lead_workflow WHERE assigned_to=?)';$args[]=(int)$session['admin_id'];}if($before>0){$where[]='id < ?';$args[]=$before;}if(in_array($status,['new','contacted','done','archived'],true)){$where[]='status=?';$args[]=$status;}if($source!==''){$where[]='source=?';$args[]=$source;}if(preg_match('/^\d{4}-\d{2}-\d{2}$/',$from)){$where[]='created_at>=?';$args[]=$from.' 00:00:00';}if(preg_match('/^\d{4}-\d{2}-\d{2}$/',$to)){$where[]='created_at<DATE_ADD(?,INTERVAL 1 DAY)';$args[]=$to.' 00:00:00';}
     if($q!==''){$where[]='(name LIKE ? OR city LIKE ? OR article LIKE ? OR source LIKE ? OR product_title LIKE ? OR phone LIKE ?)';$like='%'.$q.'%';array_push($args,$like,$like,$like,$like,$like,$like);}
     $sqlWhere=$where?' WHERE '.implode(' AND ',$where):'';$stmt=kd_db()->prepare('SELECT * FROM site_leads'.$sqlWhere.' ORDER BY id DESC LIMIT '.($limit+1));$stmt->execute($args);$rows=$stmt->fetchAll();$hasMore=count($rows)>$limit;if($hasMore)$rows=array_slice($rows,0,$limit);
-    $leads=array_map('kd_lead_row',$rows);$counts=['new'=>0,'contacted'=>0,'done'=>0,'archived'=>0];foreach(kd_db()->query('SELECT status,COUNT(*) c FROM site_leads GROUP BY status')->fetchAll() as $r)if(isset($counts[$r['status']]))$counts[$r['status']]=(int)$r['c'];$sources=[];foreach(kd_db()->query("SELECT source,COUNT(*) c FROM site_leads WHERE TRIM(source)<>'' GROUP BY source ORDER BY c DESC,source ASC LIMIT 100")->fetchAll() as $r)$sources[]=['value'=>$r['source'],'count'=>(int)$r['c']];
-    kd_json(['leads'=>$leads,'counts'=>$counts,'sources'=>$sources,'limited'=>false,'page'=>['limit'=>$limit,'beforeId'=>$before?:null,'nextBeforeId'=>$hasMore&&$leads?(int)end($leads)['id']:null,'hasMore'=>$hasMore,'status'=>$status?:'all','q'=>$q,'source'=>$source,'from'=>$from,'to'=>$to],'totalCount'=>array_sum($counts),'filteredTotal'=>count($leads)]);
+    $leads=array_map('kd_lead_row',$rows);$counts=['new'=>0,'contacted'=>0,'done'=>0,'archived'=>0];foreach(kd_db()->query('SELECT status,COUNT(*) c FROM site_leads'.($session['role']==='surveyor'?' WHERE id IN (SELECT lead_id FROM lead_workflow WHERE assigned_to='.(int)$session['admin_id'].')':'').' GROUP BY status')->fetchAll() as $r)if(isset($counts[$r['status']]))$counts[$r['status']]=(int)$r['c'];$sources=[];foreach(kd_db()->query("SELECT source,COUNT(*) c FROM site_leads WHERE TRIM(source)<>''".($session['role']==='surveyor'?' AND id IN (SELECT lead_id FROM lead_workflow WHERE assigned_to='.(int)$session['admin_id'].')':'')." GROUP BY source ORDER BY c DESC,source ASC LIMIT 100")->fetchAll() as $r)$sources[]=['value'=>$r['source'],'count'=>(int)$r['c']];
+    kd_json(['user'=>kd_manager_user($session),'leads'=>$leads,'counts'=>$counts,'sources'=>$sources,'limited'=>false,'page'=>['limit'=>$limit,'beforeId'=>$before?:null,'nextBeforeId'=>$hasMore&&$leads?(int)end($leads)['id']:null,'hasMore'=>$hasMore,'status'=>$status?:'all','q'=>$q,'source'=>$source,'from'=>$from,'to'=>$to],'totalCount'=>array_sum($counts),'filteredTotal'=>count($leads)]);
 }
 
 function kd_lead_row(array $r): array
@@ -575,16 +577,6 @@ function kd_lead_row(array $r): array
 function kd_admin_lead_status(string $id): never
 {
     $leadId=(int)$id;if($leadId<=0)kd_json(['error'=>'Заявка не найдена'],404);$body=kd_json_body(8192);$status=(string)($body['status']??'');if(!in_array($status,['new','contacted','done','archived'],true))kd_json(['error'=>'Некорректный статус'],400);$stmt=kd_db()->prepare('UPDATE site_leads SET status=?,updated_at=UTC_TIMESTAMP() WHERE id=?');$stmt->execute([$status,$leadId]);if(!$stmt->rowCount())kd_json(['error'=>'Заявка не найдена'],404);kd_json(['ok'=>true,'id'=>$leadId,'status'=>$status]);
-}
-
-function kd_admin_workflows(): never
-{
-    $ids=array_values(array_filter(array_map('intval',explode(',',(string)($_GET['ids']??''))),fn($v)=>$v>0));$ids=array_slice($ids,0,200);if(!$ids)kd_json(['workflows'=>[]]);$marks=implode(',',array_fill(0,count($ids),'?'));$stmt=kd_db()->prepare("SELECT l.id,l.status,l.color,w.stage,w.admin_note,w.next_action_at,w.loss_reason,w.updated_at FROM site_leads l LEFT JOIN lead_workflow w ON w.lead_id=l.id WHERE l.id IN ($marks)");$stmt->execute($ids);$out=[];foreach($stmt->fetchAll() as $r){$stage=$r['stage']?:($r['status']==='done'?'completed':($r['status']==='archived'?'lost':($r['status']==='contacted'?'contacted':'new')));$out[(string)$r['id']]=['stage'=>$stage,'note'=>(string)($r['admin_note']??''),'nextActionAt'=>(string)($r['next_action_at']??''),'lossReason'=>(string)($r['loss_reason']??''),'updatedAt'=>(string)($r['updated_at']??''),'color'=>(string)($r['color']??'')];}kd_json(['workflows'=>$out]);
-}
-
-function kd_admin_workflow_save(string $id): never
-{
-    $leadId=(int)$id;$body=kd_json_body(16384);$stage=(string)($body['stage']??'');$allowed=['new','contacted','measurement_scheduled','measurement_done','contract','production','installation','completed','lost'];if($leadId<=0||!in_array($stage,$allowed,true))kd_json(['error'=>'Некорректные данные'],400);$note=mb_substr(trim((string)($body['note']??'')),0,1200);$next=mb_substr(trim((string)($body['nextActionAt']??'')),0,40);$loss=mb_substr(trim((string)($body['lossReason']??'')),0,400);$stmt=kd_db()->prepare('INSERT INTO lead_workflow (lead_id,stage,admin_note,next_action_at,loss_reason,updated_at) VALUES (?,?,?,?,?,UTC_TIMESTAMP()) ON DUPLICATE KEY UPDATE stage=VALUES(stage),admin_note=VALUES(admin_note),next_action_at=VALUES(next_action_at),loss_reason=VALUES(loss_reason),updated_at=UTC_TIMESTAMP()');$stmt->execute([$leadId,$stage,$note,$next,$loss]);$coarse=$stage==='new'?'new':(($stage==='completed'||$stage==='lost')?'done':'contacted');kd_db()->prepare("UPDATE site_leads SET status=IF(status='archived',status,?),updated_at=UTC_TIMESTAMP() WHERE id=?")->execute([$coarse,$leadId]);kd_json(['ok'=>true,'id'=>$leadId,'stage'=>$stage,'note'=>$note,'nextActionAt'=>$next,'lossReason'=>$loss]);
 }
 
 function kd_admin_history(): never
@@ -616,3 +608,4 @@ function kd_admin_media_cleanup(): never
 {
     $galleries=kd_all_galleries(true);$keep=[];foreach($galleries as $g){foreach(array_merge($g['photos']??[],array_values($g['colorPhotos']??[])) as $url){$key=kd_media_key_from_url((string)$url);if($key)$keep[$key]=true;}}$root=kd_storage_dir().'/catalog';$removed=0;$keys=[];if(is_dir($root)){$it=new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root,FilesystemIterator::SKIP_DOTS));foreach($it as $file){if(!$file->isFile()||time()-$file->getMTime()<86400)continue;$full=$file->getPathname();$key='catalog/'.str_replace(DIRECTORY_SEPARATOR,'/',substr($full,strlen($root)+1));if(isset($keep[$key]))continue;if(@unlink($full)){$removed++;if(count($keys)<100)$keys[]=$key;}}}kd_json(['ok'=>true,'removed'=>$removed,'removedKeys'=>$keys,'referenced'=>count($keep)]);
 }
+

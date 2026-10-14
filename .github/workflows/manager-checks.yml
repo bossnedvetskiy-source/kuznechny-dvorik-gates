@@ -1,0 +1,57 @@
+name: Manager application checks
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+    paths: ['manager*', 'admin-workflow.js', 'timeweb/**', 'scripts/test-manager*', 'tests/manager*', '.github/workflows/manager-checks.yml']
+permissions:
+  contents: read
+jobs:
+  manager:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: manager_test_password
+          MYSQL_DATABASE: manager_test
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -pmanager_test_password"
+          --health-interval=10s --health-timeout=5s --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check manager logic
+        run: node scripts/test-manager-logic.mjs
+      - name: PHP syntax and database regressions
+        env:
+          KD_TEST_DB_DSN: mysql:host=127.0.0.1;port=3306;dbname=manager_test;charset=utf8mb4
+          KD_TEST_DB_USER: root
+          KD_TEST_DB_PASSWORD: manager_test_password
+        run: |
+          find timeweb/backend -name '*.php' -print0 | xargs -0 -n1 php -l
+          php -l timeweb/local-api.php
+          php scripts/test-manager-backend.php
+      - name: Install browser tests
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+      - name: Build production Timeweb package
+        run: |
+          npm run build
+          node scripts/build-timeweb.mjs
+          test -s timeweb-dist/manager-app.js
+          test -s timeweb-dist/backend/manager-workflow.php
+      - name: Check manager in Chromium
+        run: npx playwright test tests/manager-app.spec.js
+      - name: Upload browser failure details
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: manager-test-results
+          path: test-results/

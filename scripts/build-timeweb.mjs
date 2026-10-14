@@ -171,7 +171,7 @@ await writeFile(path.join(output, 'index.html'), indexHtml, 'utf8');
 const adminHtml = noindex(await render('/admin'));
 await writeFile(path.join(output, 'admin.html'), adminHtml, 'utf8');
 
-for (const managerFile of ['manager.html','manager-sw.js','manager-manifest.webmanifest','manager-icon.svg']) {
+for (const managerFile of ['manager.html','manager-app.js','manager-sw.js','manager-manifest.webmanifest','manager-icon.svg']) {
   await cp(path.join(root, managerFile), path.join(output, managerFile));
 }
 
