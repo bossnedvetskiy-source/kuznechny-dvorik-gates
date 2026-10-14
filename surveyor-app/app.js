@@ -818,7 +818,7 @@ function renderPlanEditor() {
 function renderPlanCanvas(line) {
   const items=line.items || [];
   const minimumWidth=Math.max(320,items.reduce((sum,item)=>sum+(item.type==='post'?40:72),0));
-  $('#planCanvas').innerHTML=`<div class="plan-track plan-visual-track" style="min-width:${minimumWidth}px">${items.map(item=>{
+  $('#planCanvas').innerHTML=`<div class="plan-track plan-visual-track" style="min-width:${minimumWidth}px">${items.map((item,index)=>{
     const grow=item.type==='post' ? .2 : Math.max(.5,Number(item.width)||1);
     const selected=item.id===activePlanItemId?' selected':'';
     const state=item.type==='post'?(item.state==='existing'?'existing':'new'):'';
@@ -829,6 +829,7 @@ function renderPlanCanvas(line) {
         <span class="plan-part-shape"></span><b>${escapeHtml(PLAN_ITEM_TYPES[item.type]?.short||item.type)}</b><small>${escapeHtml(label)}</small>
       </button>
       ${canSplit ? `<button type="button" class="plan-insert-post-dot" data-split-fence="${escapeHtml(item.id)}" aria-label="Добавить столб внутри пролёта ${escapeHtml(label)}" title="Поставить столб посередине пролёта">+</button>` : ''}
+      <button type="button" class="plan-canvas-insert" data-plan-insert-canvas="${index+1}" aria-label="Вставить элемент после ${escapeHtml(PLAN_ITEM_TYPES[item.type]?.label||item.type)}" title="Вставить элемент сюда">＋</button>
     </div>`;
   }).join('')}</div>`;
 }
@@ -2060,6 +2061,8 @@ function bindEvents() {
     if(row) selectPlanItem(row.dataset.selectPlanItem);
   });
   $('#planCanvas').addEventListener('click', e => {
+    const insert=e.target.closest('[data-plan-insert-canvas]');
+    if(insert) return showInsertPanel(Number(insert.dataset.planInsertCanvas));
     const plus=e.target.closest('[data-split-fence]');
     if(plus) return splitFenceOnCanvas(plus.dataset.splitFence);
     const part=e.target.closest('[data-select-plan-item]');
