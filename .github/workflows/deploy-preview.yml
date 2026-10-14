@@ -10,9 +10,11 @@ permissions:
   pages: write
   id-token: write
 
+# Let an active Pages deploy finish. Cancelling an in-flight Pages deploy can
+# strand GitHub's Pages backend in an "in progress deployment" state.
 concurrency:
   group: dev-pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build:
