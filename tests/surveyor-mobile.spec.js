@@ -150,8 +150,9 @@ test('surveyor can create a mixed survey and reopen it offline', async ({page, c
   await expect(page.locator('#planEditor')).toBeHidden();
   await expect(page.locator('#planSheetBackdrop')).toBeHidden();
 
-  // Insert a fence span between the middle post and wicket.
-  await page.locator('[data-plan-insert="3"]').click();
+  // Tap + directly on the visual scheme to insert a span at the correct position.
+  await expect(page.locator('#planCanvas [data-plan-insert-canvas]')).toHaveCount(5);
+  await page.locator('#planCanvas [data-plan-insert-canvas="3"]').click();
   await expect(page.locator('#insertPanel')).toBeVisible();
   await expect(page.locator('#planSheetBackdrop')).toBeVisible();
   await page.locator('[data-add-plan-item="fence"]').click();
