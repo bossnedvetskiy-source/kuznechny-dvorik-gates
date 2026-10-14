@@ -1,4 +1,4 @@
-import {PLAN_ITEM_TYPES,MATERIAL_LABELS,ensureSitePlan,newItem,newLine,lineWidth,itemDescription,trimNumber,planFromCalculations,planDifferences,updateLinkedPlanSizes,splitFenceWithPost,removePostFromLine,postMoveRange,movePlanPost,inspectPlanLine} from './line-builder.js';
+import {PLAN_ITEM_TYPES,MATERIAL_LABELS,ensureSitePlan,newItem,newLine,lineWidth,itemDescription,trimNumber,planFromCalculations,planDifferences,updateLinkedPlanSizes,splitFenceWithPost,removePostFromLine,postMoveRange,movePlanPost,inspectPlanLine,divideFenceIntoSpans} from './line-builder.js';
 
 const APP_VERSION = '0.4.0-v3-stage1';
 const DB_NAME = 'kd-surveyor-stage1';
@@ -844,11 +844,13 @@ function renderPlanCanvas(line) {
     const state=item.type==='post'?(item.state==='existing'?'existing':'new'):'';
     const label=item.type==='post'?(item.state==='existing'?'есть':'новый'):(trimNumber(item.width)+' м');
     const canSplit=item.type==='fence' && Number(item.width)>=.4;
+    const oversized=item.type==='fence' && Number(item.width)>2.5;
     return `<div class="plan-part-wrap ${item.type} ${state}" style="--part:${grow}">
       <button type="button" class="plan-part ${item.type}${selected}" data-select-plan-item="${escapeHtml(item.id)}" title="${escapeHtml(itemDescription(item))}" aria-label="${item.type==='post'?'Столб, '+(item.state==='existing'?'уже стоит':'новый')+'. Нажмите для действий':escapeHtml(PLAN_ITEM_TYPES[item.type]?.label||item.type)+', '+escapeHtml(label)}">
         <span class="plan-part-shape"></span><b>${escapeHtml(PLAN_ITEM_TYPES[item.type]?.short||item.type)}</b><small>${escapeHtml(label)}</small>
       </button>
       ${canSplit ? `<button type="button" class="plan-insert-post-dot" data-split-fence="${escapeHtml(item.id)}" aria-label="Добавить столб внутри пролёта ${escapeHtml(label)}" title="Поставить столб посередине пролёта">+</button>` : ''}
+      ${oversized ? `<button type="button" class="plan-auto-divide" data-divide-fence="${escapeHtml(item.id)}" aria-label="Разделить пролёт ${escapeHtml(label)} на секции до 2,5 м">Разделить ≤ 2,5 м</button>` : ''}
       <button type="button" class="plan-canvas-insert" data-plan-insert-canvas="${index+1}" aria-label="Вставить элемент после ${escapeHtml(PLAN_ITEM_TYPES[item.type]?.label||item.type)}" title="Вставить элемент сюда">＋</button>
     </div>`;
   }).join('')}</div>`;
@@ -898,6 +900,19 @@ function splitFenceOnCanvas(fenceId) {
   renderPlanEditor();
   syncPlanSheetBackdrop();
   showToast('Столб добавлен. Размеры пролёта разделены пополам.');
+}
+function autoDivideFence(fenceId) {
+  const line=currentPlanLine();
+  if(!line) return;
+  const result=divideFenceIntoSpans(line.items,fenceId);
+  if(!result.ok) return showToast(result.reason);
+  keepPostUndo(line);
+  line.items=result.items;
+  activePlanItemId='';
+  activePlanQuickPost=false;
+  renderPlanEditor();
+  syncPlanSheetBackdrop();
+  showToast('Разделено на '+result.spans+' секции. Добавлено столбов: '+result.addedPosts);
 }
 function changeQuickPostState() {
   const line=currentPlanLine(),item=currentPlanItem();
@@ -2085,6 +2100,8 @@ function bindEvents() {
   $('#planCanvas').addEventListener('click', e => {
     const insert=e.target.closest('[data-plan-insert-canvas]');
     if(insert) return showInsertPanel(Number(insert.dataset.planInsertCanvas));
+    const divide=e.target.closest('[data-divide-fence]');
+    if(divide) return autoDivideFence(divide.dataset.divideFence);
     const plus=e.target.closest('[data-split-fence]');
     if(plus) return splitFenceOnCanvas(plus.dataset.splitFence);
     const part=e.target.closest('[data-select-plan-item]');
