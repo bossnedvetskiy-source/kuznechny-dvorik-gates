@@ -134,6 +134,7 @@ test('surveyor can create a mixed survey and reopen it offline', async ({page, c
   await expect(page.locator('#planDialog')).toBeVisible();
   await expect(page.locator('#planCanvas .plan-part')).toHaveCount(5);
   await expect(page.locator('#planItemsCount')).toHaveText('5');
+  await expect(page.locator('#planGeometryAudit')).toContainText('Размеры проверены');
 
   await expect(page.locator('#planLegacyList')).toBeHidden();
   await expect(page.locator('#planVisualModeBtn')).toHaveAttribute('aria-pressed','true');
