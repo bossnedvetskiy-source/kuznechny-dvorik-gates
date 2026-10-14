@@ -157,6 +157,21 @@ test('surveyor can create a mixed survey and reopen it offline', async ({page, c
 
   await page.locator('#planVisualModeBtn').click();
   await expect(page.locator('#planLegacyList')).toBeHidden();
+  // New linear constructor: edit dimensions without opening the old modal.
+  await expect(page.locator('#planCanvas .plan-part-shape svg')).toHaveCount(5);
+  await page.locator('#planCanvas .plan-part.gate').first().click();
+  await expect(page.locator('#planQuickElementActions')).toBeVisible();
+  await expect(page.locator('#planEditor')).toBeHidden();
+  await page.locator('[data-plan-inline-field="width"]').fill('3.6');
+  await page.locator('[data-plan-inline-field="width"]').press('Tab');
+  await expect(page.locator('#planLineWidth')).toHaveText('4,6 м');
+  await page.locator('#undoPlanPostBtn').click();
+  await expect(page.locator('#planLineWidth')).toHaveText('4,4 м');
+  // Quick palette adds an element next to the selected position; undo restores the sketch.
+  await page.locator('[data-plan-quick-add="post"]').click();
+  await expect(page.locator('#planItemsCount')).toHaveText('6');
+  await page.locator('#undoPlanPostBtn').click();
+  await expect(page.locator('#planItemsCount')).toHaveText('5');
   // Tap + directly on the visual scheme to insert a span at the correct position.
   await expect(page.locator('#planCanvas [data-plan-insert-canvas]')).toHaveCount(5);
   await page.locator('#planCanvas [data-plan-insert-canvas="3"]').click();
