@@ -677,3 +677,32 @@
   .plan-canvas-insert{width:30px;height:30px;bottom:2px}
   .plan-visual-track{padding-bottom:14px}
 }
+
+/* Visual-first site plan — legacy list remains available via explicit switch. */
+.plan-mode-switch{display:grid;grid-template-columns:1fr 1fr;gap:5px;padding:4px;margin:9px 0 11px;background:#e8e1d4;border:1px solid #d8c6a3;border-radius:13px}
+.plan-mode-switch button{border:0;border-radius:10px;min-height:44px;padding:9px 5px;font-size:12px;font-weight:850;color:#68583d;background:transparent;white-space:normal}
+.plan-mode-switch button.active{background:#302922;color:#f3d58e;box-shadow:0 2px 7px #0000001e}
+.plan-mode-switch button:focus-visible{outline:3px solid #c99b42;outline-offset:2px}
+.plan-legacy-list[hidden]{display:none!important}
+.plan-canvas-hint{color:#6b5a40;font-size:12px;line-height:1.4}
+.plan-canvas{border:1px solid #d0af6d;background:linear-gradient(180deg,#f8f4e9,#fff 75%);border-radius:17px;min-height:130px;padding:17px 11px 12px}
+.plan-track.plan-visual-track{min-height:104px}
+.plan-part-wrap{height:90px;min-width:80px}
+.plan-part-wrap.post{min-width:43px;flex-basis:43px}
+.plan-part-wrap .plan-part{height:86px;grid-template-rows:51px 17px 17px}
+.plan-part-wrap .plan-part-shape{height:44px}
+.plan-part-wrap.post .plan-part-shape{height:63px}
+.plan-part-wrap .plan-part b{font-size:10px}
+.plan-part-wrap .plan-part small{font-size:10px;color:#776446}
+.plan-part-wrap .plan-part.selected{background:#eed9aa;border-radius:9px}
+.plan-canvas-insert{width:36px;height:36px;right:-17px;bottom:8px;font-size:22px}
+.plan-insert-post-dot{width:35px;height:35px;top:8px}
+.plan-quick-post{border:1px solid #c8a25e;background:#f4ebda}
+.plan-quick-buttons button,.plan-quick-head button{min-height:44px}
+.plan-legacy-list{margin-top:11px}
+@media(max-width:420px){
+ .plan-canvas{padding:13px 9px 10px}
+ .plan-part-wrap{min-width:73px}
+ .plan-part-wrap.post{min-width:41px;flex-basis:41px}
+ .plan-mode-switch button{font-size:11px}
+}
