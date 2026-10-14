@@ -902,3 +902,56 @@
   .plan-dialog .plan-part-wrap.post{min-width:41px;flex-basis:41px}
   .plan-dialog .plan-canvas-insert{right:-10px;top:3px}
 }
+
+/* KD visual site plan V1.2: one clean façade, no crowded gap actions.
+   Existing storage, measurements and legacy-list mode are untouched. */
+.plan-dialog .sheet-head{margin-bottom:6px;padding-bottom:9px}
+.plan-dialog .sheet-head h2{font-size:clamp(21px,5.3vw,26px);line-height:1.12}
+.plan-dialog .plan-toolbar{margin:7px 0 8px}
+.plan-dialog .plan-summary{gap:5px;margin-bottom:6px}
+.plan-dialog .plan-summary>div{
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  flex-wrap:wrap;min-height:38px;padding:6px 5px;border-radius:10px;
+}
+.plan-dialog .plan-summary span{font-size:9px;letter-spacing:.04em}
+.plan-dialog .plan-summary b{font-size:13px}
+.plan-dialog .plan-mode-switch{margin:6px 0 6px;padding:3px}
+.plan-dialog .plan-mode-switch button{min-height:40px;padding:7px 5px;font-size:12px}
+.plan-dialog .plan-view-context{margin:8px 0 2px}
+.plan-dialog .plan-view-context span:last-child{display:none}
+.plan-dialog .plan-canvas-hint{font-size:11px;margin:2px 1px 8px;line-height:1.4}
+.plan-dialog .plan-canvas{min-height:141px;padding:9px 7px 11px}
+.plan-dialog .plan-track.plan-visual-track{
+  min-height:114px;padding:0 2px 2px 0;gap:1px;overflow:visible;
+}
+.plan-dialog .plan-part-wrap{flex:var(--part) 1 0;min-width:48px;height:111px}
+.plan-dialog .plan-part-wrap.post{flex:0 0 25px;min-width:25px;height:111px}
+.plan-dialog .plan-part-wrap .plan-part{
+  width:100%;height:103px;
+  grid-template-rows:72px 15px 15px;padding:0 1px;
+  touch-action:manipulation;
+}
+.plan-dialog .plan-part-wrap .plan-part-shape,
+.plan-dialog .plan-part-wrap.post .plan-part-shape,
+.plan-dialog .plan-part-wrap.opening .plan-part-shape{height:70px!important}
+.plan-dialog .plan-part-shape svg{height:69px;max-height:69px}
+.plan-dialog .plan-part-wrap.post .plan-part-shape svg{max-width:25px}
+.plan-dialog .plan-part-wrap .plan-part b,
+.plan-dialog .plan-part-wrap .plan-part small{
+  max-width:100%;font-size:10px;line-height:1.15;
+  overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
+}
+.plan-dialog .plan-part-wrap.post .plan-part b,
+.plan-dialog .plan-part-wrap.post .plan-part small{font-size:9px;letter-spacing:-.03em}
+.plan-dialog .plan-fast-add{margin:10px 0 8px}
+.plan-dialog .plan-fast-add-title small{color:#e3bb73}
+.plan-dialog .plan-fast-add-items button{min-height:53px}
+.plan-dialog .plan-geometry-audit{margin-top:8px}
+@media(max-width:420px){
+  .plan-dialog .sheet-head h2{font-size:23px}
+  .plan-dialog .plan-part-wrap{min-width:47px;height:111px}
+  .plan-dialog .plan-part-wrap.post{flex:0 0 24px;min-width:24px;height:111px}
+  .plan-dialog .plan-track.plan-visual-track{gap:1px}
+  .plan-dialog .plan-canvas{min-height:141px}
+  .plan-dialog .plan-mode-switch button{font-size:11px}
+}
