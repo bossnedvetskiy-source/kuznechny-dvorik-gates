@@ -835,3 +835,70 @@
  .plan-dialog .plan-fast-add-items button b{font-size:9px}
  .plan-dialog .plan-inline-editor{padding:11px}
 }
+
+/* KD Linear Constructor V1.1 — correct mobile screenshot: no overlaid +/labels/footer. */
+.plan-dialog .plan-canvas{padding:10px 10px 12px;min-height:154px;position:relative}
+.plan-dialog .plan-track.plan-visual-track{min-height:132px;align-items:flex-end;padding:0 14px 3px 0}
+.plan-dialog .plan-part-wrap,.plan-dialog .plan-part-wrap.post{
+  height:127px;align-items:flex-end;min-height:0;
+}
+.plan-dialog .plan-part-wrap{min-width:82px}
+.plan-dialog .plan-part-wrap.post{min-width:43px;flex:0 0 43px}
+.plan-dialog .plan-part-wrap .plan-part{
+  height:94px;grid-template-rows:63px 15px 15px;align-items:end;
+}
+.plan-dialog .plan-part-wrap .plan-part-shape,
+.plan-dialog .plan-part-wrap.post .plan-part-shape,
+.plan-dialog .plan-part-wrap.opening .plan-part-shape{
+  height:61px!important;
+}
+.plan-dialog .plan-part-shape svg{height:59px;max-height:59px;filter:drop-shadow(0 1px 2px #0004)}
+.plan-dialog .plan-part-wrap.post .plan-part-shape svg{max-width:37px}
+.plan-dialog .plan-part-wrap .plan-part b,
+.plan-dialog .plan-part-wrap .plan-part small{
+  font-size:10px;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.plan-dialog .plan-part-wrap.post .plan-part b{font-size:9px}
+.plan-dialog .plan-canvas-insert{
+  top:3px;bottom:auto;right:-10px;
+  width:27px;height:27px;border-width:1.5px;
+  font-size:18px;line-height:1;z-index:5;
+  box-shadow:0 2px 6px #0007;
+}
+.plan-dialog .plan-canvas-insert:active{background:#946d31;color:#171513}
+.plan-dialog .plan-swipe-hint{
+  display:block;text-align:center;color:#dbb56e;
+  background:#2a2823;border:1px solid #55452e;
+  border-radius:10px;margin:6px 0 0;padding:6px 9px;
+  font-size:10px;font-weight:800;letter-spacing:.01em;
+}
+.plan-dialog .plan-swipe-hint[hidden]{display:none!important}
+.plan-dialog .plan-fast-add{margin:9px 0 8px;padding:9px 10px}
+.plan-dialog .plan-fast-add-items button{
+  min-height:52px;grid-template-rows:23px auto;gap:1px;
+  padding:5px 1px;
+}
+.plan-dialog .plan-fast-add-items button span{font-size:19px}
+.plan-dialog .plan-fast-add-items button b{font-size:9px}
+.plan-dialog .plan-inline-fence-tools{margin:10px 0 4px}
+.plan-dialog .plan-inline-fence-tools button{
+  width:100%;min-height:44px;padding:9px 11px;
+  border:1px solid #a1834f;border-radius:11px;
+  background:#433622;color:#f4d59a;font-size:12px;font-weight:850;
+}
+.plan-dialog .plan-inline-editor{margin:8px 0 16px}
+.plan-dialog .plan-footer{
+  position:static!important;bottom:auto!important;z-index:auto!important;
+  margin:12px 0 0!important;padding:4px 0 calc(18px + env(safe-area-inset-bottom))!important;
+  background:#151618!important;
+}
+.plan-dialog .plan-sheet{
+  overflow-y:auto;overflow-x:hidden;overscroll-behavior-y:contain;
+  padding-bottom:calc(16px + env(safe-area-inset-bottom))!important;
+}
+@media(max-width:420px){
+  .plan-dialog .plan-canvas{padding:10px 8px 12px;min-height:154px}
+  .plan-dialog .plan-part-wrap{min-width:76px}
+  .plan-dialog .plan-part-wrap.post{min-width:41px;flex-basis:41px}
+  .plan-dialog .plan-canvas-insert{right:-10px;top:3px}
+}
