@@ -253,14 +253,19 @@
           <div><span>Элементов</span><b id="planItemsCount">0</b></div>
           <div><span>Линий</span><b id="planLinesCount">1</b></div>
         </div>
-        <div class="plan-mode-switch" role="group" aria-label="Режим работы со схемой"><button id="planVisualModeBtn" class="active" type="button" aria-pressed="true">◈ Наглядная схема</button><button id="planListModeBtn" type="button" aria-pressed="false">☷ Список элементов</button></div>
+        <div class="plan-mode-switch" role="group" aria-label="Режим работы со схемой"><button id="planVisualModeBtn" class="active" type="button" aria-pressed="true">◈ Схема</button><button id="planListModeBtn" type="button" aria-pressed="false">☷ Список</button></div>
         <div class="plan-view-context"><span>ВИД СО СТОРОНЫ УЛИЦЫ</span><span>Нажмите на изделие для настройки</span></div>
-        <p class="plan-canvas-hint">Нажмите на элемент, чтобы изменить его или добавить новый сразу после него.</p>
         <div id="planCanvas" class="plan-canvas" aria-label="Схема линии"></div>
         <p id="planSwipeHint" class="plan-swipe-hint" hidden>← Листайте схему вправо и влево →</p>
+        <section id="planQuickElementActions" class="plan-inline-editor" hidden aria-label="Параметры выбранного элемента"></section>
+        <div id="planQuickPostActions" class="plan-quick-post" hidden aria-live="polite"></div>
         <div class="plan-fast-add" aria-label="Быстрое добавление элементов">
-          <div class="plan-fast-add-title"><b>Добавить элемент</b><small id="planFastAddPosition">В конец линии</small></div>
-          <div class="plan-fast-add-items">
+          <button id="planAddToggleBtn" type="button" class="plan-fast-add-toggle" aria-expanded="false" aria-controls="planAddChoices">
+            <span class="plan-fast-add-plus" aria-hidden="true">＋</span>
+            <span class="plan-fast-add-caption"><b>Добавить элемент</b><small id="planFastAddPosition">В конец линии</small></span>
+            <span class="plan-fast-add-chevron" aria-hidden="true">⌄</span>
+          </button>
+          <div id="planAddChoices" class="plan-fast-add-items" hidden>
             <button type="button" data-plan-quick-add="post"><span aria-hidden="true">▮</span><b>Столб</b></button>
             <button type="button" data-plan-quick-add="fence"><span aria-hidden="true">▥</span><b>Забор</b></button>
             <button type="button" data-plan-quick-add="gate"><span aria-hidden="true">▣</span><b>Ворота</b></button>
@@ -268,9 +273,7 @@
             <button type="button" data-plan-quick-add="opening"><span aria-hidden="true">↔</span><b>Проём</b></button>
           </div>
         </div>
-        <section id="planQuickElementActions" class="plan-inline-editor" hidden aria-label="Параметры выбранного элемента"></section>
         <div id="planGeometryAudit" class="plan-geometry-audit" role="status" aria-live="polite"></div>
-        <div id="planQuickPostActions" class="plan-quick-post" hidden aria-live="polite"></div>
         <button id="undoPlanPostBtn" class="plan-undo-btn" type="button" hidden>↶ Отменить последнее действие</button>
       </div>
 
