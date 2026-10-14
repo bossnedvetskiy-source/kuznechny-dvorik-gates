@@ -658,3 +658,22 @@
   .v3-details-dialog .calculation-card>img,
   .v3-details-dialog .calculation-card>.calculation-card-icon{width:66px!important;height:66px!important}
 }
+
+/* Touch-first insert handles inside the measured line (DEV only). */
+.plan-part-wrap{position:relative}
+.plan-visual-track{padding-right:18px;padding-bottom:11px}
+.plan-canvas-insert{
+  position:absolute;z-index:5;right:-13px;bottom:5px;
+  width:30px;height:30px;padding:0;border-radius:50%;
+  border:2px solid #d0a151;background:#282521;color:#f4cf82;
+  display:grid;place-items:center;font-size:20px;font-weight:850;
+  box-shadow:0 2px 7px #15120c55;touch-action:manipulation;
+}
+.plan-canvas-insert:active{background:#a7792c;color:#15120e}
+.plan-canvas-insert:focus-visible{outline:3px solid #e9be69;outline-offset:2px}
+.plan-part-wrap:has(.plan-canvas-insert){isolation:auto}
+.plan-part-wrap .plan-part{padding-bottom:4px}
+@media(max-width:460px){
+  .plan-canvas-insert{width:30px;height:30px;bottom:2px}
+  .plan-visual-track{padding-bottom:14px}
+}
