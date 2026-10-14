@@ -864,12 +864,13 @@ function renderPlanCanvas(line) {
       <button type="button" class="plan-part ${item.type}${selected}" data-select-plan-item="${escapeHtml(item.id)}" title="${escapeHtml(itemDescription(item))}" aria-label="${item.type==='post'?'Столб, '+(item.state==='existing'?'уже стоит':'новый')+'. Нажмите для действий':escapeHtml(PLAN_ITEM_TYPES[item.type]?.label||item.type)+', '+escapeHtml(label)}">
         <span class="plan-part-shape">${planItemArtwork(item)}</span><b>${escapeHtml(PLAN_ITEM_TYPES[item.type]?.short||item.type)}</b><small>${escapeHtml(label)}</small>
       </button>
-      ${canSplit ? `<button type="button" class="plan-insert-post-dot" data-split-fence="${escapeHtml(item.id)}" aria-label="Добавить столб внутри пролёта ${escapeHtml(label)}" title="Поставить столб посередине пролёта">+</button>` : ''}
-      ${oversized ? `<button type="button" class="plan-auto-divide" data-divide-fence="${escapeHtml(item.id)}" aria-label="Разделить пролёт ${escapeHtml(label)} на секции до 2,5 м">Разделить ≤ 2,5 м</button>` : ''}
+
       <button type="button" class="plan-canvas-insert" data-plan-insert-canvas="${index+1}" aria-label="Вставить элемент после ${escapeHtml(PLAN_ITEM_TYPES[item.type]?.label||item.type)}" title="Вставить элемент сюда">＋</button>
     </div>`;
   }).join('')}</div>`;
   canvas.scrollLeft=savedScroll;
+  const hint=$('#planSwipeHint');
+  if(hint) hint.hidden=canvas.scrollWidth<=canvas.clientWidth+8;
 }
 
 function renderQuickElementActions(line) {
@@ -893,6 +894,10 @@ function renderQuickElementActions(line) {
           <button type="button" data-plan-inline-step="height:0.1" aria-label="Увеличить высоту на 10 см">+</button></div></label>`:''}
       </div>
       ${item.type!=='opening'?`<label class="plan-inline-material"><span>Заполнение</span><select data-plan-inline-field="material">${materialOptions(item.material,item.type)}</select></label>`:''}
+      ${item.type==='fence' ? `<div class="plan-inline-fence-tools">
+        ${width>2.5 ? `<button type="button" data-plan-inline-auto-divide>↔ Разделить на секции до 2,5 м</button>`
+          : width>=.4 ? `<button type="button" data-plan-inline-split>＋ Добавить столб внутри пролёта</button>` : ''}
+      </div>` : ''}
       <div class="plan-inline-actions">
         <button type="button" data-plan-inline-move="-1" ${index<=0?'disabled':''}>← Левее</button>
         <button type="button" data-plan-inline-move="1" ${index>=line.items.length-1?'disabled':''}>Правее →</button>
@@ -1087,7 +1092,7 @@ function selectPlanItem(id,quick=false) {
   activePlanQuickElement=quick && currentPlanItem()?.type!=='post';
   activeInsertIndex=null;
   $('#insertPanel').hidden=true;
-  renderPlanEditor();
+  renderPlanEditor(); // Refresh the drawing and inline editor, not just the legacy sheet.
   syncPlanSheetBackdrop();
 }
 
@@ -1100,7 +1105,7 @@ function showInsertPanel(index) {
   $('#insertPanel').hidden=false;
   syncPlanSheetBackdrop();
   const line=currentPlanLine();
-  if(line){ renderPlanCanvas(line); renderPlanItems(line); }
+  if(line){ renderPlanCanvas(line); renderPlanItems(line); renderQuickElementActions(line); renderQuickPostActions(line); }
 }
 
 function addPlanItem(type) {
@@ -2203,6 +2208,8 @@ function bindEvents() {
     if(button) quickAddPlanItem(button.dataset.planQuickAdd);
   });
   $('#planQuickElementActions').addEventListener('click', e => {
+    if(e.target.closest('[data-plan-inline-auto-divide]'))return autoDivideFence(activePlanItemId);
+    if(e.target.closest('[data-plan-inline-split]'))return splitFenceOnCanvas(activePlanItemId);
     if(e.target.closest('[data-plan-inline-dismiss]'))return closePlanSheets();
     if(e.target.closest('[data-plan-inline-delete]'))return deletePlanItem();
     const move=e.target.closest('[data-plan-inline-move]');
