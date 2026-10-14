@@ -714,3 +714,8 @@
 .plan-geometry-audit ul{padding-left:19px;margin:6px 0}
 .plan-geometry-audit li+li{margin-top:5px}
 .plan-geometry-audit small{display:block;line-height:1.4;margin-top:7px}
+
+.plan-part-wrap:has(.plan-auto-divide){min-width:122px}
+.plan-auto-divide{position:absolute;z-index:6;top:0;left:50%;transform:translateX(-50%);min-height:32px;min-width:113px;border:1px solid #aa771e;border-radius:9px;padding:6px 7px;font-size:10px;font-weight:900;white-space:nowrap;background:#fff1ce;color:#6d4910;box-shadow:0 2px 8px #00000020;touch-action:manipulation}
+.plan-auto-divide:focus-visible{outline:3px solid #be8c35;outline-offset:2px}
+.plan-part-wrap:has(.plan-auto-divide) .plan-part-shape{margin-top:7px}
