@@ -1,0 +1,33 @@
+name: Recover stuck DEV Pages deployment
+
+on:
+  push:
+    branches: [dev]
+    paths:
+      - .github/workflows/recover-dev-pages.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+
+jobs:
+  recover:
+    if: github.ref == 'refs/heads/dev'
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Release only the known stuck DEV Pages build
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # The exact DEV build SHA is named in the failed deploy-preview logs.
+          stuck_sha="6bacfa1cdbc5d3234e6a7e68bceea9b11320da4b"
+          endpoint="repos/${GITHUB_REPOSITORY}/pages/deployments/${stuck_sha}"
+          echo "Checking stale DEV Pages deployment ${stuck_sha}"
+          gh api "${endpoint}" --jq '.status' || true
+          echo "Cancelling only that Pages deployment; repository and site stay intact."
+          gh api --method POST "${endpoint}/cancel"
+          echo "Pages cancellation accepted by GitHub."
