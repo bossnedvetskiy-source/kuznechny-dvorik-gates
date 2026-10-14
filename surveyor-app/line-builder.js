@@ -332,3 +332,24 @@ export function movePlanPost(items,postId,widthLeft) {
   copy[index+1].width=Math.round((range.length-value)*1000)/1000;
   return {ok:true,items:copy};
 }
+
+/** Advisory diagnostics only. Do not mutate geometry or double-count shared posts. */
+export function inspectPlanLine(line, maxFenceSpan=2.5) {
+  const items=Array.isArray(line?.items)?line.items:[];
+  const issues=[];
+  const fenceOversized=[];
+  items.forEach((item,index)=>{
+    if(item.type==='fence' && Number(item.width)>maxFenceSpan+0.001){
+      fenceOversized.push({id:item.id,index,width:Number(item.width)});
+      issues.push('Пролёт '+(index+1)+': '+trimNumber(item.width)+' м — больше '+trimNumber(maxFenceSpan)+' м. Добавьте промежуточный столб.');
+    }
+    if(['gate','wicket'].includes(item.type)){
+      if(items[index-1]?.type!=='post' || items[index+1]?.type!=='post'){
+        issues.push((item.type==='gate'?'Ворота':'Калитка')+' (элемент '+(index+1)+'): проверьте опорные столбы с обеих сторон.');
+      }
+    }
+  });
+  const posts=items.filter(item=>item.type==='post');
+  return {width:lineWidth(line),posts:posts.length,existingPosts:posts.filter(x=>x.state==='existing').length,
+    oversizedFenceSpans:fenceOversized,issues};
+}
