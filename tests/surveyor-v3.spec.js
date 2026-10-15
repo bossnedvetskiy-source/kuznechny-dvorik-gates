@@ -20,7 +20,7 @@ test('V3: begin survey, show 3 direct calculators, gate saves back to same surve
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
   await startNewSurvey(page);
-  await expect(page.locator('.v3-product-tile')).toHaveCount(3);
+  await expect(page.locator('.v3-product-tile')).toHaveCount(4);
   await expect(page.locator('.v3-product-tile').nth(0)).toContainText('Ворота и калитки');
   await expect(page.locator('.v3-product-tile').nth(1)).toContainText('Забор');
   await expect(page.locator('.v3-product-tile').nth(2)).toContainText('Навес');
@@ -119,7 +119,7 @@ test('empty phone and address: two independent numbered surveys, open and edit l
     await expect(page.locator('#detailsNumber')).toHaveText('ЗМ-'+String(n).padStart(4,'0'));
     await expect(page.locator('#surveyDetailsContent')).toContainText('Адрес пока не указан');
     await expect(page.locator('#surveyDetailsContent')).toContainText('Телефон пока не указан');
-    await expect(page.locator('.v3-product-tile')).toHaveCount(3);
+    await expect(page.locator('.v3-product-tile')).toHaveCount(4);
     await page.locator('#closeDetailsBtn').click();
   }
   const result=await savedRows(page);
