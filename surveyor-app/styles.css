@@ -1068,9 +1068,24 @@
     overscroll-behavior-y:contain;
   }
   #planDialog .plan-visual-sticky{flex:0 0 auto}
+  /* Keep the editor's top in a fixed place while allowing the sheet to
+     shrink to its actual content. Do not leave a 150px blank spacer above Save. */
+  #planDialog.sheet-dialog{
+    top:12px!important;
+    bottom:auto!important;
+    height:auto!important;
+    min-height:0!important;
+    max-height:calc(100dvh - 12px)!important;
+    margin:0 auto!important;
+  }
+  #planDialog .plan-sheet{
+    height:auto!important;
+    min-height:0!important;
+    max-height:calc(100dvh - 12px)!important;
+  }
   #planDialog .plan-footer{
     flex-shrink:0;
-    margin-top:auto!important;
-    padding-top:12px!important;
+    margin-top:7px!important;
+    padding-top:6px!important;
   }
 }
