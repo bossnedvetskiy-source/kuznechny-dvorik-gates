@@ -16,6 +16,7 @@ on:
       - feature/surveyor-plan-from-estimate-v1
       - feature/surveyor-visual-post-controls
       - feature/kd-surveyor-offline-first-android
+      - feature/sliding-gates-surveyor-dev-20261015
   workflow_dispatch:
 
 permissions:
@@ -60,3 +61,6 @@ jobs:
       - name: Verify offline controls and real cross-calculator navigation
         if: github.ref == 'refs/heads/feature/kd-surveyor-offline-first-android'
         run: npx playwright test tests/dev-pwa.spec.js tests/surveyor-offline-readiness.spec.js --workers=1
+      - name: Verify sliding-gates survey quote integration
+        if: github.ref == 'refs/heads/feature/sliding-gates-surveyor-dev-20261015'
+        run: npx playwright test tests/surveyor-sliding-gates.spec.js --workers=1
