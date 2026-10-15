@@ -12,7 +12,7 @@ test('compact survey card shows all product choices and gold vector icons on mob
   // A first measurement may have neither a phone number nor an address.
   await page.locator('#saveSurveyBtn').click();
   await expect(page.locator('#surveyDetailsDialog')).toBeVisible();
-  await expect(page.locator('.v3-product-tile')).toHaveCount(3);
+  await expect(page.locator('.v3-product-tile')).toHaveCount(4);
   await expect(page.locator('.v3-product-heading')).toContainText('Что хотите рассчитать?');
   await expect(page.locator('.v3-address')).toContainText('Адрес не указан');
   await expect(page.locator('.v3-survey-meta')).toContainText('Контакты не заполнены');
@@ -30,7 +30,7 @@ test('compact survey card shows all product choices and gold vector icons on mob
       .map(el=>({width:el.getBoundingClientRect().width,height:el.getBoundingClientRect().height}));
     const icons=[...document.querySelectorAll('.v3-product-tile .v3-category-icon svg')];
     return {bounds:bounds.map(x=>x&&({top:x.top,bottom:x.bottom})),cards,
-      vectorIcons:icons.length===3 && icons.every(svg=>svg.querySelector('path,rect')),
+      vectorIcons:icons.length===4 && icons.every(svg=>svg.querySelector('path,rect')),
       tilesHaveNoPhotos:document.querySelectorAll('.v3-product-tile img').length===0,
       viewport:innerWidth};
   });
@@ -59,7 +59,7 @@ test('surveyor can create a mixed survey and reopen it offline', async ({page, c
   await page.locator('#saveSurveyBtn').click();
 
   await expect(page.locator('#surveyDetailsDialog')).toBeVisible();
-  await expect(page.locator('.v3-product-tile')).toHaveCount(3);
+  await expect(page.locator('.v3-product-tile')).toHaveCount(4);
   const card = page.locator('.survey-card').first();
   await expect(card).toContainText('ЗМ-0001');
   await expect(card).toContainText('+7 937');
