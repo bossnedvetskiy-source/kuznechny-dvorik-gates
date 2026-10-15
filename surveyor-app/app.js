@@ -1271,6 +1271,8 @@ function deliveryPart(item) {
     if (!Number.isFinite(value)) {
       value = config.delivery?.manual ? Number(config.delivery.manualPrice) : Number(config.delivery?.price);
     }
+  } else if (item.type === 'sliding') {
+    value = Number(config.deliveryCost);
   } else if (item.type === 'canopy') {
     value = Number(config.canopy?.input?.delivery);
   }
@@ -1299,14 +1301,14 @@ function unifiedEstimate(survey) {
 function surveyCalculationsTotal(survey) { return unifiedEstimate(survey).total; }
 function calculationWorkTypes(survey) {
   const allowed = new Set(['gates','fence','canopy']);
-  return [...new Set(surveyCalculations(survey).map(item => item?.type).filter(type => allowed.has(type)))];
+  return [...new Set(surveyCalculations(survey).map(item => item?.type === 'sliding' ? 'gates' : item?.type).filter(type => allowed.has(type)))];
 }
 function syncSurveyWorkTypes(survey) {
   survey.workTypes = calculationWorkTypes(survey);
   return survey.workTypes;
 }
 function calculationTypeLabel(type) {
-  return type === 'gates' ? 'Ворота' : type === 'fence' ? 'Забор' : type === 'canopy' ? 'Навес' : 'Расчёт';
+  return type === 'sliding' ? 'Откатные ворота' : type === 'gates' ? 'Ворота' : type === 'fence' ? 'Забор' : type === 'canopy' ? 'Навес' : 'Расчёт';
 }
 function calcNumber(value) {
   const number = Number(value);
@@ -1365,6 +1367,11 @@ function calculationCardDetails(item) {
       lines: lines.length ? lines : fallback.lines,
       tags
     };
+  }
+
+  if (item.type === 'sliding') {
+    const frameNames = {prof:'Профнастил',vertical:'Вертикальный евроштакетник',horizontal:'Горизонтальный евроштакетник',jalousie:'Жалюзи'};
+    return {title:'Откатные ворота',lines:[`Проём ${calcNumber(config.width)} × ${calcNumber(config.height)} м`,config.tail==='triangle'?'Треугольный хвостовик':'Квадратный хвостовик'],tags:[frameNames[config.frame]||'',config.fill===false?'Без заполнения':'С заполнением',config.auto?'Автоматика':'Без автоматики',Number(config.deliveryCost)>0?`Доставка ${formatMoney(config.deliveryCost)}`:''].filter(Boolean)};
   }
 
   if (item.type === 'fence') {
@@ -1471,7 +1478,7 @@ function calculationsHtml(survey) {
         const included = estimateRole(item,rows) === 'included';
         return `<article class="calculation-card calculation-card-${escapeHtml(item.type)} ${included?'estimate-included':'estimate-alternative'}"
           data-edit-calculation="${escapeHtml(item.id)}" role="group" aria-label="${escapeHtml(details.title)}">
-          ${calculationImage(item) ? `<img class="${item.type==='canopy'?'canopy-farm-photo':''}" src="${escapeHtml(calculationImage(item))}" alt="" loading="lazy">` : `<div class="calculation-card-icon ${escapeHtml(item.type)}">${item.type==='gates'?'▰':item.type==='fence'?'▥':'⌒'}</div>`}
+          ${calculationImage(item) ? `<img class="${item.type==='canopy'?'canopy-farm-photo':''}" src="${escapeHtml(calculationImage(item))}" alt="" loading="lazy">` : `<div class="calculation-card-icon ${escapeHtml(item.type)}">${item.type==='gates'?'▰':item.type==='sliding'?'⇥':item.type==='fence'?'▥':'⌒'}</div>`}
           <div class="calculation-card-copy">
             <small>${escapeHtml(calculationTypeLabel(item.type))}</small>
             <b>${escapeHtml(details.title)}</b>
@@ -1521,7 +1528,8 @@ function launchCalculation(type, options = {}) {
   if (!surveyId) return;
   const root = new URL('../', location.href);
   let url;
-  if (type === 'fence') url = new URL('evroshtaketnik/', root);
+  if (type === 'sliding') url = new URL('sliding-gates/index.html', location.href);
+  else if (type === 'fence') url = new URL('evroshtaketnik/', root);
   else if (type === 'canopy') url = new URL('naves/', root);
   else if (IS_PREVIEW) url = new URL('surveyor-gates/', root);
   else url = new URL(root.href);
@@ -1721,6 +1729,10 @@ function v3ProductTools(survey) {
       <button type="button" class="v3-product-tile" data-v3-calc="canopy">
         ${icon('canopy')}
         <span class="v3-product-label"><b>Автомобильный навес</b><small>Фермы, покрытие, визуал и цена</small></span><span class="v3-product-arrow">→</span>
+      </button>
+      <button type="button" class="v3-product-tile" data-v3-calc="sliding">
+        ${icon('gates')}
+        <span class="v3-product-label"><b>Откатные ворота</b><small>4 вида каркаса · автоматика · цена</small></span><span class="v3-product-arrow">→</span>
       </button>
     </div>
   </section>`;
