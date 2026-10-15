@@ -1722,6 +1722,10 @@ function v3ProductTools(survey) {
         ${icon('gates')}
         <span class="v3-product-label"><b>Ворота с калиткой</b><small>Каталог Арт. · фото и цены</small></span><span class="v3-product-arrow">→</span>
       </button>
+      <button type="button" class="v3-product-tile" data-v3-calc="sliding">
+        ${icon('gates')}
+        <span class="v3-product-label"><b>Откатные ворота</b><small>4 вида каркаса · автоматика · цена</small></span><span class="v3-product-arrow">→</span>
+      </button>
       <button type="button" class="v3-product-tile" data-v3-calc="fence">
         ${icon('fence')}
         <span class="v3-product-label"><b>Забор из евроштакетника</b><small>Варианты, размеры, схема и цена</small></span><span class="v3-product-arrow">→</span>
