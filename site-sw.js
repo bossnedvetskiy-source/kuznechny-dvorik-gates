@@ -1,4 +1,4 @@
-const VERSION='kuzdvor-offline-2026-10-15-sliding-v11';
+const VERSION='kuzdvor-offline-2026-10-15-sliding-cards-v12';
 const SHELL_CACHE=VERSION+'-shell';
 const MEDIA_CACHE=VERSION+'-media';
 const API_CACHE=VERSION+'-api';
