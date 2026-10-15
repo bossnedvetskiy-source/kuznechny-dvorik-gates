@@ -142,6 +142,9 @@ jobs:
           DEV_SURVEYOR_API_URL: ${{ vars.DEV_SURVEYOR_API_URL }}
         run: node scripts/build-dev-preview.mjs
 
+      - name: Test standalone 3D calculator in surveyor DEV
+        run: npx playwright test tests/surveyor-3d.spec.js
+
       - name: Test surveyor test PWA installability
         run: npx playwright test tests/surveyor-test-pwa.spec.js
 
