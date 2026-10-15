@@ -1528,7 +1528,7 @@ function launchCalculation(type, options = {}) {
   if (!surveyId) return;
   const root = new URL('../', location.href);
   let url;
-  if (type === 'sliding') url = new URL('sliding-gates/', location.href);
+  if (type === 'sliding') url = new URL('sliding-gates/index.html', location.href);
   else if (type === 'fence') url = new URL('evroshtaketnik/', root);
   else if (type === 'canopy') url = new URL('naves/', root);
   else if (IS_PREVIEW) url = new URL('surveyor-gates/', root);
