@@ -50,6 +50,7 @@ if(editSource)state={...def,...editSource.payload.configuration};
 function escape(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 const frameNames={prof:"Профнастил",vertical:"Евроштакетник вертикальный",horizontal:"Евроштакетник горизонтальный",jalousie:"Жалюзи (без ламелей)"};
 function selectedFill(){return state.frame==="jalousie"?"jalousie":state.fill?state.frame:"none";}
+function selectedFillLabel(){return selectedFill()==="none"?"Каркас без заполнения":frameNames[state.frame];}
 function nominalMaterialSpec(){
  // Confirmed reference for 4 x 2 m, square tail. Not a cutting list.
  if(state.tail!=="square"||Math.abs(Number(state.width)-4)>1e-7||Math.abs(Number(state.height)-2)>1e-7)return null;
@@ -136,7 +137,7 @@ function render(){
  $("breakdown").innerHTML=rowsHtml(q.rows||[]);$("clientRows").innerHTML=$("breakdown").innerHTML;
  $("warning").innerHTML=(q.errors||[]).map(x=>'<div class="alert">'+escape(x)+"</div>").join("");
  $("clientTotal").textContent=money(q.total);
- $("clientDescription").textContent=frameNames[state.frame]+" · "+state.width+" × "+state.height+" м · "+(state.tail==="square"?"квадратный":"треугольный")+" хвостовик · "+(state.centerPost?"с центральной стойкой":"без центральной стойки")+" · "+(state.fill?"с заполнением":"без заполнения")+(state.paint?" · окрашен":" · без покраски");
+ $("clientDescription").textContent=selectedFillLabel()+" · "+state.width+" × "+state.height+" м · "+(state.tail==="square"?"квадратный":"треугольный")+" хвостовик · "+(state.centerPost?"с центральной стойкой":"без центральной стойки")+" · "+(state.fill?"с заполнением":"без заполнения")+(state.paint?" · окрашен":" · без покраски");
  $("saveBtn").disabled=!(surveyId&&q.total!==null&&q.total>0);
  $("clientBtn").disabled=$("footerClient").disabled=q.total===null;
  try{localStorage.setItem(storeKey,JSON.stringify(state));$("saveNote").textContent=surveyId?"Можно добавить в текущий замер. Черновик сохранён на телефоне.":"Откройте из карточки замера, чтобы сохранить в заказ.";}catch{$("saveNote").textContent="Не удалось сохранить черновик: память устройства недоступна.";}
@@ -154,7 +155,7 @@ $("saveBtn").addEventListener("click",()=>{
  const config={};for(const k of keys)config[k]=state[k];
  config.deliveryCost=Math.max(0,Number(state.distance)||0)*90;
  const id=editSource?.id||"sliding_"+Date.now().toString(36)+"_"+Math.random().toString(36).slice(2,8);
- const item={id,type:"sliding",title:"Откатные ворота",total:current.total,summary:frameNames[state.frame]+" · "+state.width+" × "+state.height+" м · "+(state.tail==="square"?"квадратный":"треугольный")+" хвостовик",updatedAt:new Date().toISOString(),
+ const item={id,type:"sliding",title:"Откатные ворота",total:current.total,summary:selectedFillLabel()+" · "+state.width+" × "+state.height+" м · "+(state.tail==="square"?"квадратный":"треугольный")+" хвостовик",updatedAt:new Date().toISOString(),
    payload:{category:"sliding-gates",productTitle:"Откатные ворота",total:current.total,deliveryPending:false,configuration:config}};
  // Only customer-facing figures and geometry are stored. No cost, wage, margin or rate table.
  try{localStorage.setItem("kd-surveyor-transfer-v1",JSON.stringify({version:1,surveyId,calculation:item}));}catch{alert("Не удалось сохранить расчёт — проверьте память браузера.");return;}
