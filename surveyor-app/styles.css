@@ -1082,6 +1082,8 @@
     height:auto!important;
     min-height:0!important;
     max-height:calc(100dvh - 12px)!important;
+    border-radius:23px!important;
+    box-shadow:0 22px 58px rgba(0,0,0,.42);
   }
   #planDialog .plan-footer{
     flex-shrink:0;
