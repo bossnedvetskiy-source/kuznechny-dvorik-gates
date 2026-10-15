@@ -32,7 +32,7 @@ for (const marker of [
 for (const marker of ['syncNowBtn','syncStatusText','КД Замерщик','planDialog','planCanvas','data-add-plan-item','customerPreviewDialog']) {
   if (!html.includes(marker)) throw new Error('Surveyor HTML missing: '+marker);
 }
-if (!sw.includes('kd-surveyor-v3-sliding-v1') || !sw.includes('./line-builder.js') || !sw.includes('./sliding-gates/index.html')) throw new Error('Surveyor service worker cache missing sliding calculator');
+if (!sw.includes('kd-surveyor-v3-sliding-cards-v2') || !sw.includes('./line-builder.js') || !sw.includes('./sliding-gates/index.html')) throw new Error('Surveyor service worker cache missing sliding calculator');
 for (const marker of ['ensureSitePlan','newItem','newLine','lineWidth','PLAN_ITEM_TYPES']) {
   if (!lineBuilder.includes(marker)) throw new Error('Line builder missing: '+marker);
 }
