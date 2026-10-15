@@ -9,6 +9,7 @@
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="3d-calculator.css" />
   <title>КД Замерщик</title>
 </head>
 <body>
@@ -62,6 +63,8 @@
             <button id="newSurveyBtn" class="btn btn-primary btn-lg" type="button">+ Начать замер</button>
           </div>
 
+          <button id="open3DCalcBtn" class="kd3d-launch" type="button" aria-label="3D расчёт — открыть конструктор участка"><span class="kd3d-launch-icon" aria-hidden="true">⬡</span><span><strong>3D расчёт</strong><small>Конструктор забора и ворот · отдельный раздел DEV</small></span><span class="kd3d-launch-arrow" aria-hidden="true">›</span></button>
+
           <label class="searchbox v3-survey-search">
             <span aria-hidden="true">⌕</span>
             <input id="surveySearch" type="search" placeholder="Номер, телефон или адрес объекта" autocomplete="off" aria-label="Поиск по замерам" />
@@ -83,6 +86,11 @@
             <h3>Замеров пока нет</h3>
             <p>Создайте первый замер — он сохранится на телефоне даже без интернета.</p>
           </div>
+        </section>
+
+        <section id="threeDScreen" class="screen" aria-label="3D расчёт">
+          <button id="close3DCalcBtn" type="button" class="kd3d-back">← Назад к замерам</button>
+          <div id="kd3dRoot" class="kd3d-root" aria-live="off"><p>Загрузка 3D-конструктора…</p></div>
         </section>
 
         <section id="clientsScreen" class="screen">
