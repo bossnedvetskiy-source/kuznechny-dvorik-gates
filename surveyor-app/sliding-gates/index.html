@@ -70,7 +70,7 @@ function calculate(){
  if(!(w>=.5&&w<=5))errors.push("Ширина проёма: от 0,5 до 5 м.");
  if(!(h>=.5&&h<=3.5))errors.push("Высота: от 0,5 до 3,5 м.");
  if(errors.length)return {errors,total:null};
- if(state.centerPost || (state.tail==="square" && Math.abs(w-4)<1e-7 && Math.abs(h-2)<1e-7))errors.push("Для этой конструкции клиентская цена ожидает новый расчёт по подтверждённой спецификации. Не используйте старую цену.");
+ if(state.centerPost || state.frame==="jalousie" || (state.tail==="square" && Math.abs(w-4)<1e-7 && Math.abs(h-2)<1e-7))errors.push("Для этой конструкции клиентская цена ожидает новый расчёт по подтверждённой спецификации. Не используйте старую цену.");
  const hf=h-.06,beam=w>=4.5?7:6,tail=Math.min(w/2,beam-w),full=w+tail,cv=Math.max(0,hf-.08),station=Math.ceil(w),post=station-1;
  let a=full+w+cv*2,b=0;
  if(state.tail==="square"){a+=tail+cv+2*Math.hypot(tail,hf);}
