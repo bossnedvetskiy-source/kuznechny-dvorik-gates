@@ -17,6 +17,7 @@ on:
       - feature/surveyor-visual-post-controls
       - feature/kd-surveyor-offline-first-android
       - feature/sliding-gates-surveyor-dev-20261015
+      - feature/sliding-frame-card-schematics-20261015
   workflow_dispatch:
 
 permissions:
@@ -56,11 +57,11 @@ jobs:
           node scripts/build-dev-preview.mjs
       - run: npx playwright install --with-deps chromium
       - name: Verify calculated dimensions flow into the scheme without double counting
-        if: github.ref != 'refs/heads/feature/kd-surveyor-offline-first-android' && github.ref != 'refs/heads/feature/sliding-gates-surveyor-dev-20261015'
+        if: github.ref != 'refs/heads/feature/kd-surveyor-offline-first-android' && github.ref != 'refs/heads/feature/sliding-gates-surveyor-dev-20261015' && github.ref != 'refs/heads/feature/sliding-frame-card-schematics-20261015'
         run: npx playwright test tests/surveyor-plan-from-estimate.spec.js tests/surveyor-mobile.spec.js --workers=1
       - name: Verify offline controls and real cross-calculator navigation
         if: github.ref == 'refs/heads/feature/kd-surveyor-offline-first-android'
         run: npx playwright test tests/dev-pwa.spec.js tests/surveyor-offline-readiness.spec.js --workers=1
       - name: Verify sliding-gates survey quote integration
-        if: github.ref == 'refs/heads/feature/sliding-gates-surveyor-dev-20261015'
+        if: github.ref == 'refs/heads/feature/sliding-gates-surveyor-dev-20261015' || github.ref == 'refs/heads/feature/sliding-frame-card-schematics-20261015'
         run: npx playwright test tests/surveyor-sliding-gates.spec.js --workers=1
