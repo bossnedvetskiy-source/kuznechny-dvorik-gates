@@ -136,6 +136,15 @@ test('surveyor can create a mixed survey and reopen it offline', async ({page, c
   // sheet whose top changes when the selected item's controls appear.
   const initialPlanTop = await page.locator('#planDialog').evaluate(el => el.getBoundingClientRect().top);
   expect(initialPlanTop).toBeLessThanOrEqual(22);
+  // Compact mobile sheet: no artificial empty space between line settings
+  // and Save; opening the inline editor can increase sheet height but not shift its top.
+  const planFooterGap = await page.locator('#planDialog').evaluate(dialog => {
+    const settings=dialog.querySelector('.plan-line-settings').getBoundingClientRect();
+    const footer=dialog.querySelector('.plan-footer').getBoundingClientRect();
+    return Math.round(footer.top-settings.bottom);
+  });
+  expect(planFooterGap).toBeGreaterThanOrEqual(0);
+  expect(planFooterGap).toBeLessThanOrEqual(28);
   await expect(page.locator('#planCanvas .plan-part')).toHaveCount(5);
   await expect(page.locator('#planItemsCount')).toHaveText('5');
   await expect(page.locator('#planGeometryAudit')).toContainText('Размеры проверены');
