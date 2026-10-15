@@ -572,8 +572,23 @@ function applyRoleUi() {
   if (!isOwner && $('#teamScreen')?.classList.contains('active')) switchScreen('surveys');
   $('#profileBtn').textContent = (currentUser?.name || 'КД').split(/\s+/).slice(0,2).map(x => x[0]).join('').toUpperCase();
 }
+let threeDImport = null;
+async function open3DCalculator() {
+  if (!currentUser) return;
+  switchScreen('threeD');
+  try {
+    if (!threeDImport) threeDImport = import('./3d-calculator.js');
+    const module = await threeDImport;
+    if (document.querySelector('#threeDScreen')?.classList.contains('active')) module.mount3DCalculator(document.querySelector('#kd3dRoot'));
+  } catch (error) {
+    threeDImport = null;
+    console.error('3D calculator load failed', error);
+    const host = document.querySelector('#kd3dRoot');
+    if (host) host.textContent = 'Не удалось загрузить 3D. Проверьте подключение или обновите DEV.';
+  }
+}
 function switchScreen(name) {
-  const titles = { surveys: 'Замеры', clients: 'Клиенты', team: 'Сотрудники', settings: 'Ещё' };
+  const titles = { surveys: 'Замеры', threeD: '3D расчёт', clients: 'Клиенты', team: 'Сотрудники', settings: 'Ещё' };
   $$('.screen').forEach(el => el.classList.remove('active'));
   $(`#${name}Screen`)?.classList.add('active');
   $$('.nav-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.screen === name));
@@ -2139,6 +2154,8 @@ function bindEvents() {
   $('#syncNowBtn')?.addEventListener('click', () => syncNow({ silent:false }));
   $('#openTeamBtn')?.addEventListener('click', () => switchScreen('team'));
   $('#newSurveyBtn').addEventListener('click', () => { resetSurveyWizard(); $('#surveyDialog').showModal(); });
+  $('#open3DCalcBtn')?.addEventListener('click', open3DCalculator);
+  $('#close3DCalcBtn')?.addEventListener('click', () => switchScreen('surveys'));
   $('#surveySearch')?.addEventListener('input', () => renderSurveys());
   $('#saveSurveyBtn').addEventListener('click', async () => {
     const phone = $('#surveyClientPhone').value;
