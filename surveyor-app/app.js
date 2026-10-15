@@ -1370,7 +1370,7 @@ function calculationCardDetails(item) {
   }
 
   if (item.type === 'sliding') {
-    const frameNames = {prof:'Профнастил',vertical:'Вертикальный евроштакетник',horizontal:'Горизонтальный евроштакетник',jalousie:'Жалюзи'};
+    const frameNames = {prof:'Профнастил',vertical:'Вертикальный евроштакетник',horizontal:'Горизонтальный евроштакетник',jalousie:'Каркас под жалюзи'};
     return {title:'Откатные ворота',lines:[`Проём ${calcNumber(config.width)} × ${calcNumber(config.height)} м`,config.tail==='triangle'?'Треугольный хвостовик':'Квадратный хвостовик'],tags:[frameNames[config.frame]||'',config.fill===false?'Без заполнения':'С заполнением',config.auto?'Автоматика':'Без автоматики',Number(config.deliveryCost)>0?`Доставка ${formatMoney(config.deliveryCost)}`:''].filter(Boolean)};
   }
 

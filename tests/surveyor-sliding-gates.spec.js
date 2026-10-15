@@ -51,17 +51,28 @@ test('sliding gates: mobile quote, customer view, survey transfer, edit without 
   await expect(page.locator('.calculation-card')).toHaveCount(1);
 });
 
-test('sliding gates: limits, rail selection and unpriced jalousie do not create fake price',async ({page})=>{
+test('sliding gates: rail sizes, empty 60×40 frame with one central post and 5m limit',async ({page})=>{
   await newQuote(page);
   await page.locator('#width').fill('4.49');
   await expect(page.locator('#facts')).toContainText('Балка 6 м');
   await page.locator('#width').fill('4.5');
   await expect(page.locator('#facts')).toContainText('Балка 7 м');
   await page.locator('[data-frame="jalousie"]').click();
-  await expect(page.locator('#saveBtn')).toBeDisabled();
-  await expect(page.locator('#warning')).toContainText('пока не рассчитывается');
-  await page.locator('#fill').uncheck();
+  await expect(page.locator('#fill')).not.toBeChecked();
+  await expect(page.locator('#fill')).toBeDisabled();
+  await expect(page.locator('#fillToggle')).toBeHidden();
+  await expect(page.locator('#frameNote')).toContainText('одна центральная стойка');
+  await expect(page.locator('#facts')).toContainText('Стоек 1');
+  await expect(page.locator('#price')).not.toHaveText('Цена не готова');
+  await expect(page.locator('#warning')).toBeEmpty();
+  await expect(page.locator('#breakdown')).not.toContainText('Заполнение');
   await expect(page.locator('#saveBtn')).toBeEnabled();
+  await page.locator('#clientBtn').click();
+  await expect(page.locator('#clientDescription')).toContainText('Каркас под жалюзи');
+  await expect(page.locator('#clientDescription')).toContainText('без заполнения');
+  await page.locator('#closeClient').click();
+  await page.locator('#width').fill('5');
+  await expect(page.locator('#facts')).toContainText('Стоек 1');
   await page.locator('#width').fill('5.5');
   await expect(page.locator('#saveBtn')).toBeDisabled();
   await expect(page.locator('#warning')).toContainText('от 0,5 до 5');
@@ -76,7 +87,7 @@ test('four compact technical frame drawings are distinct and selectable at phone
   await expect(drawings.nth(0)).toContainText('Сплошная зашивка');
   await expect(drawings.nth(1)).toContainText('Планки с зазорами');
   await expect(drawings.nth(2)).toContainText('Рамки слева и справа');
-  await expect(drawings.nth(3)).toContainText('Наклонные ламели');
+  await expect(drawings.nth(3)).toContainText('1 стойка 60×40 по центру');
   const shapes=await page.evaluate(()=>{
     const cards=[...document.querySelectorAll('#frames .card')];
     return cards.map(b=>{
@@ -89,6 +100,8 @@ test('four compact technical frame drawings are distinct and selectable at phone
   expect(new Set(shapes.map(x=>x.graphics)).size).toBe(4);
   expect(shapes.every(x=>x.viewBox==='0 0 240 90'&&x.width>135&&x.height<=145&&x.height>=95)).toBeTruthy();
   expect(shapes.every(x=>x.graphics.includes('M9 18L81 75 M9 75L81 18'))).toBeTruthy();
+  expect(shapes[3].graphics).not.toMatch(/#bba06c|#9e8558/);
+  expect(shapes[3].graphics).toContain('M154.5 19V74');
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBeTruthy();
   await page.locator('[data-frame="vertical"]').click();
   await expect(page.locator('[data-frame="vertical"]')).toHaveAttribute('aria-pressed','true');
@@ -96,5 +109,25 @@ test('four compact technical frame drawings are distinct and selectable at phone
   await page.locator('[data-frame="horizontal"]').click();
   await expect(page.locator('#frameNote')).toContainText('обеих сторон');
   await page.locator('[data-frame="jalousie"]').click();
-  await expect(page.locator('#frameNote')).toContainText('60×40');
+  await expect(page.locator('#frameNote')).toContainText('одна центральная стойка');
+  await expect(page.locator('#facts')).toContainText('Стоек 1');
+});
+
+
+test('saved old jalousie draft with fill=true is migrated to frame-only without 20×20 or lamellas', async ({page})=>{
+  await page.addInitScript(()=>{
+    localStorage.setItem('kd-sliding-surveyor-draft-standalone',JSON.stringify({
+      width:5,height:2,frame:'jalousie',tail:'square',fill:true,paint:true,
+      auto:false,install:true,stand:true,bolts:true,picket:'double',distance:0,discount:0
+    }));
+  });
+  await page.goto('/kuznechny-dvorik-gates/dev-tools/sliding-gates/index.html');
+  await expect(page.locator('[data-frame="jalousie"]')).toHaveAttribute('aria-pressed','true');
+  await expect(page.locator('#fill')).not.toBeChecked();
+  await expect(page.locator('#fillToggle')).toBeHidden();
+  await expect(page.locator('#facts')).toContainText('Стоек 1');
+  await expect(page.locator('#diagram')).not.toHaveText('Заполнение');
+  expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('kd-sliding-surveyor-draft-standalone')).fill)).toBe(false);
+  const fills=await page.locator('#diagram svg .fill, #diagram svg .inner').count();
+  expect(fills).toBe(0);
 });
