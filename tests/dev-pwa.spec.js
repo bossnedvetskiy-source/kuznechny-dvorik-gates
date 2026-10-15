@@ -33,7 +33,7 @@ test('single DEV work PWA starts in surveyor shell with card-based calculators',
   await page.locator('#saveSurveyBtn').click();
 
   await expect(page.locator('#surveyDetailsDialog')).toBeVisible();
-  await expect(page.locator('.v3-product-tile')).toHaveCount(3);
+  await expect(page.locator('.v3-product-tile')).toHaveCount(4);
   await expect(page.locator('[data-v3-calc="gates"]')).toContainText('Ворота');
   await expect(page.locator('[data-v3-calc="fence"]')).toContainText('Забор');
   await expect(page.locator('[data-v3-calc="canopy"]')).toContainText('Автомобильный навес');
