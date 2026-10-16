@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {createDefaultSides,normalizeSides,getSiteLayout,verticalPicketPlan,verticalPicketLayout,normalizePostMode,isHorizontalFill,normalizeSwingGate} from '../surveyor-app/3d-layout.js';
+import {createDefaultSides,normalizeSides,getSiteLayout,verticalPicketPlan,verticalPicketLayout,normalizePostMode,isHorizontalFill,normalizeSwingGate,getClearDimensionPlan} from '../surveyor-app/3d-layout.js';
 
 const sides=createDefaultSides({length:12,height:1.8,step:2.5,fill:'picket-double',ral:'8017'});
 let layout=getSiteLayout(sides);
@@ -87,6 +87,32 @@ assert.equal(getSiteLayout(gateSides,gateDraft).gate,null,'disabled A never pain
 assert(getSiteLayout(gateSides,gateDraft).warnings.some(w=>w.includes('включите сторону А')),
   'show explicit warning when gate is requested on disabled facade');
 console.log('Swing gate layout: aperture subtraction, boundary pillars, end/corner cases OK');
+
+// DIMENSIONS MUST BE MEASURED FROM THE INSIDE FACES, NOT POST AXES.
+const dimensionsBase=getClearDimensionPlan(getSiteLayout(createDefaultSides({length:20,step:3})),80);
+assert.equal(dimensionsBase[0].spans.length,7,'20 m side at max 3 m yields seven bays');
+assert.equal(dimensionsBase[0].spans[0].clearMm,2777,
+  '2857 mm centre spacing minus 80 mm post = 2777 mm clear');
+assert.equal(dimensionsBase[0].length,20);
+assert(Math.abs(dimensionsBase[0].spans[0].from-.04)<1e-9);
+assert.equal(getClearDimensionPlan(getSiteLayout(createDefaultSides({length:20,step:3})),100)[0].spans[0].clearMm,2757,
+  'changing to 100x100 steel posts changes each clear opening by 20 mm');
+const dimensionGate=getClearDimensionPlan(getSiteLayout(createDefaultSides({length:12,step:2.5}),{
+  enabled:true,width:3.4,offset:2
+}),80)[0];
+assert.equal(dimensionGate.spans.filter(p=>p.kind==='gate').length,1);
+assert.equal(dimensionGate.spans.find(p=>p.kind==='gate').clearMm,3320,
+  'the 3400 mm gate centreline aperture has 3320 mm clear between 80 mm posts');
+assert(Math.abs(dimensionGate.spans.find(p=>p.kind==='gate').from-2.04)<1e-9);
+for(const item of dimensionGate.spans){
+  assert(item.from>=.04-1e-8 && item.to<=12-.04+1e-8,
+    'dimension guides must always start/end inside the steel post faces');
+}
+const sideNone=createDefaultSides({length:12});
+sideNone.A.enabled=false;
+assert.equal(getClearDimensionPlan(getSiteLayout(sideNone),80).length,0,
+  'disabled sides must not emit dimension labels');
+console.log('3D face-to-face dimensions: normal bays, 80/100 mm posts, gate clear aperture OK');
 
 const legacy=normalizeSides(null,{length:15,height:2,step:2.5,fill:'horizontal-double',ral:'7024'});
 assert.equal(legacy.A.length,15);
