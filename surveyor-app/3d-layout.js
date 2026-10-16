@@ -8,22 +8,40 @@ export const POST_MODES=['visible','behind'];
 export const isHorizontalFill=fill=>fill==='horizontal'||fill==='horizontal-double';
 export const normalizePostMode=(fill,mode)=>
   isHorizontalFill(fill)?'visible':mode==='behind'?'behind':'visible';
-// The first and last pickets must touch the faces of the adjacent posts.
-// Trim edge pickets (not empty end margins) to preserve the selected gap.
+// Full-width vertical steel pickets only: NEVER trim terminal pickets.
+// Without fitting, a visible end-margin warns that the selected gap is not exact.
+// A one-click fit reduces the gap while keeping every 120 mm plank whole.
+// Values are metres; independent sides can have different true fitted gaps.
+export function verticalPicketPlan(spanWidth, requestedGap, fit=false, plank=.12){
+  const width=Math.max(0,Number(spanWidth)||0);
+  const gap=Math.max(0,Number(requestedGap)||0);
+  const empty={strips:[],count:0,edgeMargin:width/2,gapUsed:gap,recommendedGap:null,
+    canFit:false,adjusted:false,fullWidth:plank,width};
+  if(width+1e-9<plank)return empty;
+  const normalCount=Math.max(1,Math.floor((width+gap+1e-9)/(plank+gap)));
+  const normalOccupied=normalCount*plank+(normalCount-1)*gap;
+  const remainder=Math.max(0,width-normalOccupied);
+  const maxWholeCount=Math.floor((width+1e-9)/plank);
+  // Need one more full plank to reduce the gap and use up the empty end margins.
+  // If no extra plank can fit, a gap reduction alone is not possible.
+  const needFit=remainder>.0001;
+  const fitCount=needFit?normalCount+1:normalCount;
+  const canFit=!needFit || (fitCount<=maxWholeCount && fitCount>=2);
+  const recommendedGap=!needFit?gap:
+    canFit?(width-fitCount*plank)/(fitCount-1):null;
+  const adjusted=Boolean(fit && needFit && canFit);
+  const count=adjusted?fitCount:normalCount;
+  const gapUsed=adjusted?Math.max(0,recommendedGap):gap;
+  const occupied=count*plank+(count-1)*gapUsed;
+  const edgeMargin=Math.max(0,(width-occupied)/2);
+  const strips=[];
+  for(let i=0;i<count;i++){
+    strips.push({x:-width/2+edgeMargin+plank/2+i*(plank+gapUsed),width:plank});
+  }
+  return {strips,count,edgeMargin,gapUsed,recommendedGap,canFit,adjusted,fullWidth:plank,width};
+}
 export function verticalPicketLayout(spanWidth,gap,plank=.12){
-  const span=Math.max(0,Number(spanWidth)||0);
-  const separation=Math.max(.001,Number(gap)||.05);
-  if(span<=.0001)return [];
-  if(span<=plank)return [{x:0,width:span}];
-  const count=Math.max(2,Math.ceil((span+separation)/(plank+separation)-1e-9));
-  const edgeWidth=Math.max(.00001,(span-(count-1)*separation-(count-2)*plank)/2);
-  const widths=Array.from({length:count},(_,i)=>i===0||i===count-1?edgeWidth:plank);
-  let cursor=-span/2;
-  return widths.map((width,i)=>{
-    const x=cursor+width/2;
-    cursor+=width+(i<count-1?separation:0);
-    return {x,width};
-  });
+  return verticalPicketPlan(spanWidth,gap,false,plank).strips;
 }
 export const RAL_IDS=['9003','8017','7016','7019','7024','9005','6005','3005','5005'];
 const clamp=(n,min,max,fallback)=>{
