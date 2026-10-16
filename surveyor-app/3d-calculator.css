@@ -151,3 +151,12 @@
   #threeDScreen .kd3d-form{border-radius:15px}
   #threeDScreen .kd3d-section-inner{padding-left:13px;padding-right:13px}
 }
+
+/* Fence paint scope: default applies to all sides; individual override stays explicit. */
+#threeDScreen .kd3d-color-scope{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+#threeDScreen .kd3d-color-scope button{min-width:0;padding:11px 7px;font-size:12px;font-weight:800;
+  color:#595b5d;border:1px solid #dedbd4;border-radius:11px;background:#fff;box-shadow:none}
+#threeDScreen .kd3d-color-scope button.active{border-color:#cf9a35;background:#fff6de;color:#946418}
+#threeDScreen .kd3d-color-status{font-size:11px;color:#75746e;line-height:1.4;margin:-6px 0 0}
+#threeDScreen .kd3d-color-status.is-warning{padding:10px;border-radius:10px;background:#fff2dd;color:#955412}
+#threeDScreen .kd3d-gap-row input[type=range]{touch-action:pan-y;cursor:pointer}
