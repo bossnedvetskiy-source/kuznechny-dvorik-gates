@@ -1,6 +1,6 @@
 import * as THREE from '../naves/vendor/three.module.js';
 import { OrbitControls } from '../naves/vendor/OrbitControls.js';
-import { SIDE_IDS, SIDE_NAMES, FILL_IDS, createDefaultSides, normalizeSides, getSiteLayout, normalizePostMode, verticalPicketPlan, isHorizontalFill, normalizeSwingGate } from './3d-layout.js';
+import { SIDE_IDS, SIDE_NAMES, FILL_IDS, createDefaultSides, normalizeSides, getSiteLayout, normalizePostMode, verticalPicketPlan, isHorizontalFill, normalizeSwingGate, getClearDimensionPlan } from './3d-layout.js';
 
 // Standalone DEV prototype. This is visual geometry only, not a retail price quote.
 const DRAFT_KEY = 'kd-surveyor-3d-draft-v1';
@@ -43,6 +43,7 @@ function loadDraft() {
     colorScope:o.colorScope==='side'?'side':'all',
     gap:numeric(o.gap,0,0.12,DEFAULT.gap),
     gapFit:o.gapFit===true,
+    showDimensions:o.showDimensions===true,
     gate:normalizeSwingGate(o.gate,sides.A.length),
     postSize:[60,80,100].includes(Number(o.postSize))?Number(o.postSize):DEFAULT.postSize,
     sides,
@@ -192,6 +193,7 @@ export function mount3DCalculator(root) {
     '<div class="kd3d-subheading">Размеры участка</div><p class="kd3d-mini-note">Для замкнутого участка включи все четыре стороны. Сторона А — фасад.</p>',
     '<div class="kd3d-preset-heading">Быстрый выбор площади</div>',
     '<div class="kd3d-presets" data-presets>'+AREA_PRESETS.map(p=>'<button type="button" data-preset="'+p.x+'x'+p.z+'" aria-pressed="false"><strong>'+p.name+'</strong><small>'+p.x+'×'+p.z+' м</small></button>').join('')+'</div>',
+    '<label class="kd3d-dim-switch" data-dim-switch><input type="checkbox" data-show-dimensions><span><strong>Отображать размеры</strong><small>Чистые расстояния между внутренними гранями столбов, мм</small></span></label>',
     '<div class="kd3d-sides-head"><strong>Стороны участка</strong><span class="kd3d-sides-count" data-active-side-count>1 из 4</span></div>',
     '<div class="kd3d-sides kd3d-side-list" data-sides role="group" aria-label="Стороны участка">'+SIDE_IDS.map(id=>
       '<div class="kd3d-side-entry" data-side-entry="'+id+'"><div class="kd3d-side-line"><label class="kd3d-side-checkbox"><input type="checkbox" data-side-toggle="'+id+'" aria-label="Включить сторону '+SIDE_NAMES[id]+'"><span aria-hidden="true"></span></label><button type="button" data-side="'+id+'" aria-pressed="false"><b>Сторона '+SIDE_NAMES[id]+' <small>('+SIDE_SUBTITLES[id]+')</small></b><span data-side-material="'+id+'">Штакетник</span></button></div>'+
@@ -248,6 +250,7 @@ export function mount3DCalculator(root) {
     syncPicketSettings();
     syncPostMode();
     syncGateInputs();
+    find('[data-show-dimensions]').checked=config.showDimensions;
     syncColorScope();
     syncSwatches();
   }
@@ -367,6 +370,7 @@ export function mount3DCalculator(root) {
   let renderer, camera, scene, controls, fence, grid, base;
   let previousMaterials = [];
   let previousLineGeometries = [];
+  let previousDimensionTextures = [];
   let webglOk = false;
   try {
     renderer = new THREE.WebGLRenderer({ antialias:true, alpha:false, powerPreference:'low-power' });
@@ -461,6 +465,7 @@ export function mount3DCalculator(root) {
     syncGapWarning(gapPlans);
     const format=value=>value.toFixed(1).replace('.',',');
     const format2=value=>value.toFixed(2).replace('.',',');
+    const dimensions=getClearDimensionPlan(layout,config.postSize);
     const warning=find('[data-site-warning]');
     warning.hidden=!layout.warnings.length;
     warning.textContent=layout.warnings.join(' ');
@@ -483,6 +488,15 @@ export function mount3DCalculator(root) {
       description+='<p><b>Распашные ворота на стороне А:</b> проём '+format(layout.gate.width)+
         ' м, отступ слева '+format(layout.gate.start)+' м. Две створки в 3D. Ворота без стоимости и подробной фурнитуры.</p>';
     }
+    if(config.showDimensions){
+      description+='<p><b>Размеры в свету (между гранями столбов):</b></p>';
+      for(const dimension of dimensions){
+        const measures=dimension.spans.map(piece=>
+          (piece.kind==='gate'?'Ворота: ':'Пролёт '+piece.index+': ')+piece.clearMm+' мм'
+        );
+        description+='<p>Сторона '+SIDE_NAMES[dimension.id]+': '+(measures.length?measures.join(' · '):'пролётов нет')+'</p>';
+      }
+    }
     description+='<p>Периметр активных сторон: <b>'+format(layout.perimeter)+' м</b>. '+
       'Пролётов: <b>'+layout.totalSpans+'</b>; металлических столбов: <b>'+
       layout.posts.length+'</b> ('+config.postSize+'×'+config.postSize+' мм). Угловые столбы не дублируются.</p>';
@@ -498,8 +512,83 @@ export function mount3DCalculator(root) {
     fence.clear();
     previousMaterials.forEach(m => m.dispose());
     previousLineGeometries.forEach(g => g.dispose());
+    previousDimensionTextures.forEach(texture=>texture.dispose());
+    previousDimensionTextures=[];
     previousMaterials = [];
     previousLineGeometries = [];
+  }
+  // Dimension graphics stay at ground level and offset from the fence.
+  // Labels are billboarded so they remain readable from any camera angle.
+  // All measurements originate from the face-to-face planner (not axes).
+  function drawDimensionGuides(group,dimension,length,id){
+    if(!dimension)return;
+    const baselineZ=(id==='A'?1:-1)*.75;
+    const sign=Math.sign(baselineZ);
+    const y=.055;
+    const coords=[];
+    function segment(x1,z1,x2,z2){
+      coords.push(x1,y,z1,x2,y,z2);
+    }
+    function label(text,x,z,width=1.12){
+      const canvas=document.createElement('canvas');
+      canvas.width=512;canvas.height=128;
+      const ctx=canvas.getContext('2d');
+      if(!ctx)return;
+      ctx.fillStyle='rgba(255,255,255,.93)';
+      ctx.beginPath();
+      ctx.roundRect(8,8,496,112,18);
+      ctx.fill();
+      ctx.strokeStyle='rgba(65,75,85,.36)';
+      ctx.lineWidth=3;ctx.stroke();
+      ctx.fillStyle='#202932';
+      ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.font='bold 48px Arial,sans-serif';
+      ctx.fillText(text,256,66,480);
+      const texture=new THREE.CanvasTexture(canvas);
+      texture.colorSpace=THREE.SRGBColorSpace;
+      texture.minFilter=THREE.LinearFilter;
+      previousDimensionTextures.push(texture);
+      const material=new THREE.SpriteMaterial({map:texture,depthTest:false,transparent:true});
+      previousMaterials.push(material);
+      const sprite=new THREE.Sprite(material);
+      sprite.position.set(x,.16,z);
+      sprite.scale.set(width,width/4,1);
+      sprite.renderOrder=20;
+      sprite.userData.kdDimensionLabel=text;
+      group.add(sprite);
+    }
+    for(const piece of dimension.spans){
+      const left=-length/2+piece.from;
+      const right=-length/2+piece.to;
+      if(right-left<=.0005)continue;
+      segment(left,baselineZ,right,baselineZ);
+      for(const x of [left,right]){
+        // Projection from the inner post face plus an architectural tick mark.
+        segment(x,sign*.12,x,baselineZ+sign*.13);
+        segment(x-.047,baselineZ-.047,x+.047,baselineZ+.047);
+      }
+      label(piece.clearMm+' мм',(left+right)/2,baselineZ+sign*.36,
+        Math.max(.58,Math.min(1.38,(right-left)*.78)));
+    }
+    // Complete side length is distinct from the clear openings.
+    const sideZ=baselineZ+sign*1.33;
+    segment(-length/2,sideZ,length/2,sideZ);
+    for(const x of [-length/2,length/2]){
+      segment(x,sideZ-.11,x,sideZ+.11);
+    }
+    label(SIDE_NAMES[id]+': '+Number(length.toFixed(2)).toString().replace('.',',')+' м',
+      0,sideZ+sign*.36,2.1);
+    if(coords.length){
+      const geo=new THREE.BufferGeometry();
+      geo.setAttribute('position',new THREE.Float32BufferAttribute(coords,3));
+      previousLineGeometries.push(geo);
+      const mat=new THREE.LineBasicMaterial({color:0x33404a,transparent:true,opacity:.83,
+        depthTest:false});
+      previousMaterials.push(mat);
+      const lines=new THREE.LineSegments(geo,mat);
+      lines.renderOrder=19;
+      group.add(lines);
+    }
   }
   function updateModel() {
     SIDE_IDS.forEach(id=>{
@@ -514,6 +603,7 @@ export function mount3DCalculator(root) {
     if(!webglOk)return;
     clearGeometry();
     const postWidth=config.postSize/1000;
+    const clearDimensions=getClearDimensionPlan(layout,config.postSize);
     const postMats=new Map();
     const postMaterialFor=id=>{
       const code=config.sides[id]?.ral||config.sides.A.ral;
@@ -687,11 +777,19 @@ export function mount3DCalculator(root) {
           frameGeometry(leaf,base,leafWidth-.09,.028,.026,0,yCenter,gateFillZ-.063,postMat);
         }
       }
+      if(config.showDimensions){
+        const dimension=clearDimensions.find(d=>d.id===edge.id);
+        drawDimensionGuides(group,dimension,edge.side.length,edge.id);
+      }
       renderedMaxEdgeClearance=Math.max(renderedMaxEdgeClearance,renderedEdgeClearance);
       renderedPostModes[edge.id]=side.postMode;
     }
     let renderedPlanks=0;
     fence.traverse(object=>{if(object.isInstancedMesh)renderedPlanks+=object.count;});
+    root.dataset.sceneDimensionCount=String(config.showDimensions?
+      clearDimensions.reduce((n,d)=>n+d.spans.length,0):0);
+    root.dataset.sceneDimensionValues=config.showDimensions?
+      clearDimensions.flatMap(d=>d.spans.map(p=>d.id+':'+p.kind+':'+p.clearMm)).join(';'):'';
     root.dataset.scenePickets=String(renderedPlanks);
     let actualLeaves=0;
     fence.traverse(object=>{if(object.userData.kdGateLeaf)actualLeaves++;});
@@ -749,6 +847,10 @@ export function mount3DCalculator(root) {
       syncGateInputs();updateModel();
     });
   }
+  find('[data-show-dimensions]').addEventListener('change',event=>{
+    config.showDimensions=event.target.checked;
+    updateModel();
+  });
   root.querySelectorAll('[data-post-mode]').forEach(button=>button.addEventListener('click',()=>{
     const side=activeSettings();
     const next=normalizePostMode(side.fill,button.dataset.postMode);
@@ -870,6 +972,7 @@ export function mount3DCalculator(root) {
     Object.assign(config,DEFAULT);
     config.gate=normalizeSwingGate(null,DEFAULT.length);
     config.gapFit=false;
+    config.showDimensions=false;
     config.sides=createDefaultSides(DEFAULT);
     config.activeSide='A';
     syncSideInputs();
