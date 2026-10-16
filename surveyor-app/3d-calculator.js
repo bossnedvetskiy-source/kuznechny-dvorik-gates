@@ -1,6 +1,6 @@
 import * as THREE from '../naves/vendor/three.module.js';
 import { OrbitControls } from '../naves/vendor/OrbitControls.js';
-import { SIDE_IDS, SIDE_NAMES, FILL_IDS, createDefaultSides, normalizeSides, getSiteLayout, normalizePostMode, verticalPicketPlan, isHorizontalFill } from './3d-layout.js';
+import { SIDE_IDS, SIDE_NAMES, FILL_IDS, createDefaultSides, normalizeSides, getSiteLayout, normalizePostMode, verticalPicketPlan, isHorizontalFill, normalizeSwingGate } from './3d-layout.js';
 
 // Standalone DEV prototype. This is visual geometry only, not a retail price quote.
 const DRAFT_KEY = 'kd-surveyor-3d-draft-v1';
@@ -43,6 +43,7 @@ function loadDraft() {
     colorScope:o.colorScope==='side'?'side':'all',
     gap:numeric(o.gap,0,0.12,DEFAULT.gap),
     gapFit:o.gapFit===true,
+    gate:normalizeSwingGate(o.gate,sides.A.length),
     postSize:[60,80,100].includes(Number(o.postSize))?Number(o.postSize):DEFAULT.postSize,
     sides,
     activeSide
@@ -200,6 +201,9 @@ export function mount3DCalculator(root) {
     '<label>Шаг столбов, м<input data-field="step" inputmode="decimal" type="number" min="1" max="3" step="0.1"></label></div>',
     '<label class="kd3d-select-label">Столбы · профильная труба<select data-field="postSize"><option value="60">60×60 мм</option><option value="80">80×80 мм</option><option value="100">100×100 мм</option></select></label>',
     '<div class="kd3d-post-layout" data-post-layout><div class="kd3d-subheading">Расположение столбов</div><div class="kd3d-post-options" role="group" aria-label="Расположение столбов"><button type="button" data-post-mode="visible" aria-pressed="true"><strong>Столбы видны</strong><small>Заполнение между столбами, без боковых щелей</small></button><button type="button" data-post-mode="behind" aria-pressed="false"><strong>Столбы сзади</strong><small>Сплошная линия забора перед столбами</small></button></div><p class="kd3d-post-note" data-post-note>Для выбранной стороны участка</p></div>',
+    '<div class="kd3d-gate-editor" data-gate-editor><label class="kd3d-gate-toggle"><input type="checkbox" data-gate-enabled><span><strong>Распашные ворота на стороне А</strong><small>Добавить проём и две створки в 3D</small></span></label>',
+    '<div class="kd3d-gate-fields" data-gate-fields hidden><label>Ширина ворот, м<input type="number" data-gate-width inputmode="decimal" min="2" max="6" step="0.1"></label><label>Отступ слева, м<input type="number" data-gate-offset inputmode="decimal" min="0" max="60" step="0.1"></label></div>',
+    '<p class="kd3d-gate-note" data-gate-note>Проём расположен на фасадной стороне А. Калитку добавим следующим этапом.</p></div>',
     '<p class="kd3d-side-warning" data-site-warning hidden></p></div></details>',
     '<details class="kd3d-section" data-section="fill" open><summary><span>Заполнение и цвет</span></summary><div class="kd3d-section-inner">',
     '<div class="kd3d-subheading">Цвет забора · RAL</div>',
@@ -243,6 +247,7 @@ export function mount3DCalculator(root) {
     find('[data-field="gap"]').value=Number((config.gap*100).toFixed(1));
     syncPicketSettings();
     syncPostMode();
+    syncGateInputs();
     syncColorScope();
     syncSwatches();
   }
@@ -273,6 +278,21 @@ export function mount3DCalculator(root) {
       find('[data-preset="'+preset.x+'x'+preset.z+'"]').setAttribute('aria-pressed',String(match));
     }
     syncPicketSettings();
+  }
+  function syncGateInputs(){
+    const gate=normalizeSwingGate(config.gate,config.sides.A.length);
+    config.gate=gate;
+    find('[data-gate-enabled]').checked=gate.enabled;
+    find('[data-gate-fields]').hidden=!gate.enabled;
+    find('[data-gate-width]').value=gate.width;
+    find('[data-gate-offset]').value=gate.offset;
+    find('[data-gate-offset]').max=Math.max(0,config.sides.A.length-gate.width);
+    const note=find('[data-gate-note]');
+    note.textContent=!config.sides.A.enabled && gate.enabled
+      ?'Сторона А выключена: включите её, чтобы увидеть ворота.'
+      :gate.enabled
+        ?'Отступ измеряется от начала стороны А до первого воротного столба. Калитку добавим позже.'
+        :'Включите ворота, затем задайте ширину и положение на стороне А.';
   }
   function syncPostMode(){
     const side=activeSettings();
@@ -395,16 +415,16 @@ export function mount3DCalculator(root) {
   const formatGapCm=metres=>(metres*100).toFixed(2).replace(/0$/,'').replace('.',',');
   function getVerticalGapPlans(layout){
     return layout.edges.filter(edge=>edge.side.fill==='picket'||edge.side.fill==='picket-double')
-      .map(edge=>{
+      .flatMap(edge=>edge.sections.map(section=>{
         const behind=edge.side.postMode==='behind';
-        const width=Math.max(.025,edge.span-(behind?0:config.postSize/1000));
+        const width=Math.max(.025,section.span-(behind?0:config.postSize/1000));
         return {id:edge.id,
           requested:verticalPicketPlan(width,config.gap,false),
           // The 3D preview must never leave avoidable post-side voids.
           // Render the no-cut fit immediately, even before user confirmation.
           plan:verticalPicketPlan(width,config.gap,true)
         };
-      });
+      }));
   }
   function syncGapWarning(plans){
     const alert=find('[data-gap-alert]');
@@ -436,7 +456,7 @@ export function mount3DCalculator(root) {
     }
   }
   function summary() {
-    const layout=getSiteLayout(config.sides);
+    const layout=getSiteLayout(config.sides,config.gate);
     const gapPlans=getVerticalGapPlans(layout);
     syncGapWarning(gapPlans);
     const format=value=>value.toFixed(1).replace('.',',');
@@ -445,26 +465,30 @@ export function mount3DCalculator(root) {
     warning.hidden=!layout.warnings.length;
     warning.textContent=layout.warnings.join(' ');
     stats.innerHTML=
-      '<div><small>Забор, м</small><b>'+format(layout.perimeter)+'</b></div>'+
+      '<div><small>Забор, м</small><b>'+format(layout.fenceLength)+'</b></div>'+
       '<div><small>Пролётов</small><b>'+layout.totalSpans+'</b></div>'+
       '<div><small>Столбов</small><b>'+layout.posts.length+'</b></div>';
     let description='<h3>Комплектация · геометрия участка</h3>';
     if(!layout.edges.length) description+='<p>Включите хотя бы одну сторону участка.</p>';
     for(const edge of layout.edges){
       description+='<p><b>Сторона '+SIDE_NAMES[edge.id]+': '+format(edge.side.length)+' м</b> · высота '+
-        format(edge.side.height)+' м · пролётов '+edge.count+' (по '+format2(edge.span)+' м).<br>'+
+        format(edge.side.height)+' м · пролётов '+edge.count+(edge.gate?' (проём '+format(edge.gate.width)+' м)':' (по '+format2(edge.span)+' м)')+'.<br>'+
         FILL_NAMES[edge.side.fill]+' · RAL '+edge.side.ral+' · '+(edge.side.postMode==='behind'?'столбы сзади':'столбы видны')+
         (edge.side.fill==='sheet'?'':(edge.side.fill==='picket'||edge.side.fill==='picket-double')
           ?' · фактический зазор '+formatGapCm(gapPlans.find(x=>x.id===edge.id)?.plan.gapUsed??config.gap)+' см'+
             (gapPlans.find(x=>x.id===edge.id)?.plan.adjusted?(config.gapFit?' (подогнан без подрезки)':' (предпросмотр подгонки)'):' (без подрезки)'):
           ' · зазор '+format(config.gap*100)+' см')+'.</p>';
     }
+    if(layout.gate){
+      description+='<p><b>Распашные ворота на стороне А:</b> проём '+format(layout.gate.width)+
+        ' м, отступ слева '+format(layout.gate.start)+' м. Две створки в 3D. Ворота без стоимости и подробной фурнитуры.</p>';
+    }
     description+='<p>Периметр активных сторон: <b>'+format(layout.perimeter)+' м</b>. '+
       'Пролётов: <b>'+layout.totalSpans+'</b>; металлических столбов: <b>'+
       layout.posts.length+'</b> ('+config.postSize+'×'+config.postSize+' мм). Угловые столбы не дублируются.</p>';
     if(layout.warnings.length) description+='<p class="kd3d-unpriced">'+layout.warnings.join(' ')+'</p>';
     description+='<p class="kd3d-unpriced">Схема и количество столбов предварительные. '+
-      'Без проёмов, производственного раскроя, прочностной проверки и расчёта стоимости.</p>';
+      'Без калитки, производственного раскроя, прочностной проверки и расчёта стоимости.</p>';
     parts.innerHTML=description;
     syncSideButtons();
     return layout;
@@ -508,7 +532,7 @@ export function mount3DCalculator(root) {
       const postMat=postMaterialFor(p.sides[0]);
       // Rear-only posts finish below the top of the infill: no caps stick out
       // above the continuous front elevation. Mixed corners retain visible caps.
-      const rearOnly=p.sides.length>0 && p.sides.every(id=>
+      const rearOnly=!p.gateSupport && p.sides.length>0 && p.sides.every(id=>
         config.sides[id]?.postMode==='behind');
       const h=rearOnly?Math.max(.6,p.height-.12):p.height+.10;
       frameGeometry(fence,base,postWidth,h,postWidth,p.x,h/2,p.z,postMat);
@@ -533,11 +557,10 @@ export function mount3DCalculator(root) {
       group.rotation.y=-Math.atan2(dz,dx);
       group.position.set((edge.start.x+edge.end.x)/2,0,(edge.start.z+edge.end.z)/2);
       fence.add(group);
-      const start=-side.length/2,actualSpan=edge.span,count=edge.count;
+      const start=-side.length/2;
       const behind=side.postMode==='behind'&&!isHorizontalFill(side.fill);
       // Visible posts: run right up to the two post faces.
       // Rear posts: the infill passes across the post centres in front of the steel.
-      const infillWidth=Math.max(.025,actualSpan-(behind?0:postWidth));
       const frontZ=behind?.115:.005;
       const rearZ=behind?-.015:-.09;
       const supportZ=behind?.073:-.008;
@@ -545,8 +568,11 @@ export function mount3DCalculator(root) {
         [.33,Math.max(.52,side.height-.33)];
       const frontPickets=[],rearPickets=[],horizontalPickets=[],rearHorizontalPickets=[];
       let renderedEdgeClearance=0;
-      for(let i=0;i<count;i++){
-        const mid=start+(i+.5)*actualSpan;
+      for(const section of edge.sections){
+      const actualSpan=section.span;
+      const infillWidth=Math.max(.025,actualSpan-(behind?0:postWidth));
+      for(let i=0;i<section.count;i++){
+        const mid=start+section.from+(i+.5)*actualSpan;
         const width=infillWidth;
         if(side.fill==='sheet'){
           const geometry=buildC10Geometry(width,side.height-.12);
@@ -596,6 +622,7 @@ export function mount3DCalculator(root) {
           }
         }
       }
+      }
       if(frontPickets.length||rearPickets.length){
         const geo=buildPicketGeometry(side.height-.13);
         previousLineGeometries.push(geo);
@@ -603,7 +630,7 @@ export function mount3DCalculator(root) {
         instancePickets(group,geo,fillMat,rearPickets,Math.PI);
       }
       if(horizontalPickets.length||rearHorizontalPickets.length){
-        const geo=buildPicketGeometry(infillWidth,true);
+        const geo=buildPicketGeometry(edge.sections[0]?.span-(behind?0:postWidth)||.2,true);
         previousLineGeometries.push(geo);
         instancePickets(group,geo,fillMat,horizontalPickets,0);
         instancePickets(group,geo,fillMat,rearHorizontalPickets,Math.PI);
@@ -614,6 +641,8 @@ export function mount3DCalculator(root) {
     let renderedPlanks=0;
     fence.traverse(object=>{if(object.isInstancedMesh)renderedPlanks+=object.count;});
     root.dataset.scenePickets=String(renderedPlanks);
+    root.dataset.sceneGateLeaves=String(layout.gate?2:0);
+    root.dataset.sceneGateOpening=layout.gate?JSON.stringify({start:layout.gate.start,end:layout.gate.end}):'';
     root.dataset.scenePostModes=JSON.stringify(renderedPostModes);
     root.dataset.sceneEdgeClearance=String(renderedMaxEdgeClearance);
     root.dataset.sceneRequestedGap=String(config.gap);
@@ -624,7 +653,7 @@ export function mount3DCalculator(root) {
   }
   function fit() {
     if(!webglOk)return;
-    const layout=getSiteLayout(config.sides);
+    const layout=getSiteLayout(config.sides,config.gate);
     const b=layout.bounds;
     const aspect=Math.max(.45,camera.aspect||1);
     const halfFov=Math.tan(THREE.MathUtils.degToRad(camera.fov/2));
@@ -652,6 +681,19 @@ export function mount3DCalculator(root) {
     camera.updateProjectionMatrix();
     renderer.setSize(width,height,false);
     renderer.render(scene,camera);
+  }
+  find('[data-gate-enabled]').addEventListener('change',event=>{
+    config.gate={...config.gate,enabled:event.target.checked};
+    syncGateInputs();updateModel();
+  });
+  for(const [selector,key,min,max] of [
+    ['[data-gate-width]','width',2,6],['[data-gate-offset]','offset',0,60]
+  ]){
+    find(selector).addEventListener('change',event=>{
+      config.gate={...config.gate,[key]:numeric(event.target.value,min,max,config.gate[key])};
+      config.gate=normalizeSwingGate(config.gate,config.sides.A.length);
+      syncGateInputs();updateModel();
+    });
   }
   root.querySelectorAll('[data-post-mode]').forEach(button=>button.addEventListener('click',()=>{
     const side=activeSettings();
@@ -726,7 +768,7 @@ export function mount3DCalculator(root) {
     syncSideInputs();updateModel();
   });
   find('[data-auto-gap]').addEventListener('click',()=>{
-    const plans=getVerticalGapPlans(getSiteLayout(config.sides));
+    const plans=getVerticalGapPlans(getSiteLayout(config.sides,config.gate));
     if(!plans.length||plans.some(x=>x.plan.edgeMargin>.0001))return;
     config.gapFit=true;
     updateModel();
@@ -772,6 +814,7 @@ export function mount3DCalculator(root) {
   root.querySelector('[data-fit]').addEventListener('click',fit);
   root.querySelector('[data-reset]').addEventListener('click',()=>{
     Object.assign(config,DEFAULT);
+    config.gate=normalizeSwingGate(null,DEFAULT.length);
     config.gapFit=false;
     config.sides=createDefaultSides(DEFAULT);
     config.activeSide='A';
