@@ -14,28 +14,25 @@ test('3D расчёт opens independently in DEV and edits geometry without chan
   await expect(page.locator('#threeDScreen')).toBeVisible();
   await expect(page.locator('#kd3dRoot [data-stats]')).toContainText('Пролётов',{timeout:12000});
   await expect(page.locator('#screenTitle')).toHaveText('3D расчёт');
-  // Regression: mobile A/B/V/G cards must never fall back to unstyled system buttons.
+  // The mobile editor follows the clean reference: accordions and stacked sides.
+  await expect(page.locator('#kd3dRoot [data-section="sizes"]')).toHaveAttribute('open','');
   await expect(page.locator('#kd3dRoot .kd3d-side-entry')).toHaveCount(4);
+  await expect(page.locator('#kd3dRoot [data-preset]')).toHaveCount(4);
   await expect(page.locator('#kd3dRoot [data-active-side-count]')).toHaveText('1 из 4');
   await expect(page.locator('#kd3dRoot [data-current-side-label]')).toHaveText('Настройка стороны А');
   const sideUi=await page.locator('#kd3dRoot .kd3d-sides').evaluate(el=>{
-    const grid=getComputedStyle(el);
-    const entry=getComputedStyle(el.querySelector('.kd3d-side-entry'));
-    const selected=getComputedStyle(el.querySelector('.selected'));
+    const grid=getComputedStyle(el),entry=getComputedStyle(el.querySelector('.kd3d-side-entry'));
     return {grid:grid.display,columns:grid.gridTemplateColumns.split(' ').length,
-      entry:entry.display,radius:parseFloat(entry.borderTopLeftRadius),
-      selectedColor:selected.backgroundColor};
+      entry:entry.display,padding:parseFloat(entry.paddingTop)};
   });
   expect(sideUi.grid).toBe('grid');
-  expect(sideUi.columns).toBe(2);
+  expect(sideUi.columns).toBe(1);
   expect(sideUi.entry).toBe('grid');
-  expect(sideUi.radius).toBeGreaterThanOrEqual(12);
-  expect(sideUi.selectedColor).toBe('rgb(36, 33, 30)');
-
-
-  await page.locator('#kd3dRoot [data-field="length"]').fill('10');
-  await page.locator('#kd3dRoot [data-field="length"]').press('Tab');
+  expect(sideUi.padding).toBeGreaterThanOrEqual(10);
+  await page.locator('#kd3dRoot [data-side-length-input="A"]').fill('10');
+  await page.locator('#kd3dRoot [data-side-length-input="A"]').press('Tab');
   await expect(page.locator('#kd3dRoot [data-parts]')).toContainText('10,0 м');
+  await page.locator('#kd3dRoot [data-section="type"]>summary').click();
   const postSize=page.locator('#kd3dRoot [data-field="postSize"]');
   await expect(postSize).toHaveValue('80');
   await postSize.selectOption('100');
@@ -75,8 +72,8 @@ test('3D расчёт opens independently in DEV and edits geometry without chan
   await expect(page.locator('#kd3dRoot [data-current-side-label]')).toHaveText('Настройка стороны Б');
   await expect(page.locator('#kd3dRoot [data-length-label]')).toContainText('Длина стороны Б, м');
 
-  await page.locator('#kd3dRoot [data-field="length"]').fill('9');
-  await page.locator('#kd3dRoot [data-field="length"]').press('Tab');
+  await page.locator('#kd3dRoot [data-side-length-input="B"]').fill('9');
+  await page.locator('#kd3dRoot [data-side-length-input="B"]').press('Tab');
   await page.locator('#kd3dRoot [data-field="height"]').fill('2.2');
   await page.locator('#kd3dRoot [data-field="height"]').press('Tab');
   await type.selectOption('sheet');
@@ -84,12 +81,12 @@ test('3D расчёт opens independently in DEV and edits geometry without chan
   await expect(page.locator('#kd3dRoot [data-parts]')).toContainText('Сторона Б: 9,0 м');
   await page.locator('#kd3dRoot [data-side-toggle="V"]').click();
   await page.locator('#kd3dRoot [data-side="V"]').click();
-  await page.locator('#kd3dRoot [data-field="length"]').fill('10');
-  await page.locator('#kd3dRoot [data-field="length"]').press('Tab');
+  await page.locator('#kd3dRoot [data-side-length-input="V"]').fill('10');
+  await page.locator('#kd3dRoot [data-side-length-input="V"]').press('Tab');
   await page.locator('#kd3dRoot [data-side-toggle="G"]').click();
   await page.locator('#kd3dRoot [data-side="G"]').click();
-  await page.locator('#kd3dRoot [data-field="length"]').fill('9');
-  await page.locator('#kd3dRoot [data-field="length"]').press('Tab');
+  await page.locator('#kd3dRoot [data-side-length-input="G"]').fill('9');
+  await page.locator('#kd3dRoot [data-side-length-input="G"]').press('Tab');
   await expect(page.locator('#kd3dRoot [data-site-warning]')).toBeHidden();
   await expect(page.locator('#kd3dRoot [data-stats]')).toContainText('16');
   const sides=await page.evaluate(()=>JSON.parse(localStorage.getItem('kd-surveyor-3d-draft-v1')).sides);
@@ -99,11 +96,30 @@ test('3D расчёт opens independently in DEV and edits geometry without chan
   expect(sides.B.fill).toBe('sheet');
   expect(sides.B.ral).toBe('6005');
   expect(sides.G.length).toBe(9);
-  await page.locator('#kd3dRoot [data-field="length"]').fill('8');
-  await page.locator('#kd3dRoot [data-field="length"]').press('Tab');
+  await page.locator('#kd3dRoot [data-side-length-input="G"]').fill('8');
+  await page.locator('#kd3dRoot [data-side-length-input="G"]').press('Tab');
   await expect(page.locator('#kd3dRoot [data-site-warning]')).toBeVisible();
-  await page.locator('#kd3dRoot [data-field="length"]').fill('9');
-  await page.locator('#kd3dRoot [data-field="length"]').press('Tab');
+  await page.locator('#kd3dRoot [data-side-length-input="G"]').fill('9');
+  await page.locator('#kd3dRoot [data-side-length-input="G"]').press('Tab');
+
+  // Presets change real geometry and keep all four sides active.
+  await page.locator('#kd3dRoot [data-preset="20x30"]').click();
+  const site=await page.evaluate(()=>JSON.parse(localStorage.getItem('kd-surveyor-3d-draft-v1')).sides);
+  expect(site.A.length).toBe(20);expect(site.V.length).toBe(20);
+  expect(site.B.length).toBe(30);expect(site.G.length).toBe(30);
+  expect(Object.values(site).every(side=>side.enabled)).toBe(true);
+  await expect(page.locator('#kd3dRoot [data-preset="20x30"]')).toHaveAttribute('aria-pressed','true');
+  // Orientation and checkerboard both update the actual 3D fill setting.
+  await page.locator('#kd3dRoot [data-section="fill"]>summary').evaluate(el=>el.closest('details').open=true);
+  await page.locator('#kd3dRoot [data-orientation="horizontal"]').click();
+  await page.locator('#kd3dRoot [data-double-row]').check();
+  await expect(page.locator('#kd3dRoot [data-parts]')).toContainText('горизонтальный, шахматка');
+  await page.locator('#kd3dRoot [data-gap-slider]').fill('7');
+  await expect(page.locator('#kd3dRoot [data-parts]')).toContainText('7,0 см');
+  await page.locator('#kd3dRoot [data-collapse-params]').click();
+  await expect(page.locator('#kd3dRoot [data-editor-content]')).toBeHidden();
+  await page.locator('#kd3dRoot [data-collapse-params]').click();
+  await expect(page.locator('#kd3dRoot [data-editor-content]')).toBeVisible();
 
   await page.locator('#close3DCalcBtn').click();
   await expect(page.locator('#surveysScreen')).toBeVisible();
