@@ -50,6 +50,20 @@ test('3D расчёт opens independently in DEV and edits geometry without chan
   expect(sideUi.columns).toBe(1);
   expect(sideUi.entry).toBe('grid');
   expect(sideUi.padding).toBeGreaterThanOrEqual(10);
+  // Standard 120 mm metal pickets are NEVER cut: warn first, then fit by reducing spacing.
+  const gapAlert=page.locator('#kd3dRoot [data-gap-alert]');
+  await expect(gapAlert).toBeVisible();
+  await expect(gapAlert).toContainText('Штакетник 120 мм не подрезаем');
+  await page.locator('#kd3dRoot [data-auto-gap]').click();
+  await expect(gapAlert).toContainText('Без подрезки');
+  await expect(page.locator('#kd3dRoot [data-parts]')).toContainText('подогнан без подрезки');
+  const afterGapFit=await page.evaluate(()=>JSON.parse(localStorage.getItem('kd-surveyor-3d-draft-v1')));
+  expect(afterGapFit.gapFit).toBe(true);
+  if(hasReal3D){
+    const clearance=Number(await page.locator('#kd3dRoot').getAttribute('data-scene-edge-clearance'));
+    expect(clearance).toBeLessThan(0.000001);
+  }
+
   await page.locator('#kd3dRoot [data-side-length-input="A"]').fill('10');
   await page.locator('#kd3dRoot [data-side-length-input="A"]').press('Tab');
   await expect(page.locator('#kd3dRoot [data-parts]')).toContainText('10,0 м');
@@ -77,6 +91,8 @@ test('3D расчёт opens independently in DEV and edits geometry without chan
   await expect(page.locator('#kd3dRoot [data-picket-settings]')).toBeVisible();
   await page.locator('#kd3dRoot [data-field="gap"]').fill('6');
   await page.locator('#kd3dRoot [data-field="gap"]').press('Tab');
+  expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('kd-surveyor-3d-draft-v1')).gapFit)).toBe(false);
+  await expect(page.locator('#kd3dRoot [data-gap-alert]')).toContainText('не подрезаем');
   await expect(page.locator('#kd3dRoot [data-parts]')).toContainText('6,0 см');
   await postRear.click();
   await expect(postRear).toHaveAttribute('aria-pressed','true');
