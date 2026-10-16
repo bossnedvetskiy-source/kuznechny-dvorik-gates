@@ -456,7 +456,11 @@ export function mount3DCalculator(root) {
     previousLineGeometries.push(capGeometry);
     for(const p of layout.posts){
       const postMat=postMaterialFor(p.sides[0]);
-      const h=p.height+.10;
+      // Rear-only posts finish below the top of the infill: no caps stick out
+      // above the continuous front elevation. Mixed corners retain visible caps.
+      const rearOnly=p.sides.length>0 && p.sides.every(id=>
+        config.sides[id]?.postMode==='behind');
+      const h=rearOnly?Math.max(.6,p.height-.12):p.height+.10;
       frameGeometry(fence,base,postWidth,h,postWidth,p.x,h/2,p.z,postMat);
       frameGeometry(fence,base,postWidth+.013,.012,postWidth+.013,p.x,h+.006,p.z,postMat);
       const cap=new THREE.Mesh(capGeometry,postMat);
