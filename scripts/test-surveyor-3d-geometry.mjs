@@ -54,7 +54,7 @@ for(const gap of [.02,.05,.12]){
   assert(result.front[0]>=.06,'first row must stay inside the span');
   assert(result.front.at(-1)<=1.5-.06,'last row must stay inside the span');
 }
-assert.equal(Object.keys(RAL).length,5,'RAL choices should remain available');
+assert.equal(Object.keys(RAL).length,9,'all reference RAL swatches should be available');
 assert(RAL['9003']!==RAL['9005'],'white and black must have independent tones');
 // Verify that the two staggered picket rows face in opposite directions.
 const instanceGeometry=buildPicketGeometry(1.8);
