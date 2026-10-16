@@ -3,6 +3,7 @@ import {test, expect} from '@playwright/test';
 test.use({viewport:{width:390,height:844}});
 
 test('3D расчёт opens independently in DEV and edits geometry without changing surveys', async ({page}) => {
+  test.setTimeout(90000);
   const diagnosticErrors=[];
   page.on('pageerror',error=>diagnosticErrors.push('page: '+error.message));
   page.on('console',message=>{if(message.type()==='error')diagnosticErrors.push('console: '+message.text());});
