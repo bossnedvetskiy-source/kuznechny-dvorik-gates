@@ -51,6 +51,20 @@ test('3D расчёт opens independently in DEV and edits geometry without chan
   expect(sideUi.columns).toBe(1);
   expect(sideUi.entry).toBe('grid');
   expect(sideUi.padding).toBeGreaterThanOrEqual(10);
+  // Optional dimensions must report clear widths between POST FACES.
+  const showDimensions=page.locator('#kd3dRoot [data-show-dimensions]');
+  await expect(showDimensions).not.toBeChecked();
+  await showDimensions.check();
+  await expect(showDimensions).toBeChecked();
+  await expect(page.locator('#kd3dRoot [data-parts]')).toContainText('Размеры в свету');
+  await expect(page.locator('#kd3dRoot [data-parts]')).toContainText('Пролёт 1: 2320 мм');
+  if(hasReal3D){
+    await expect(page.locator('#kd3dRoot')).toHaveAttribute('data-scene-dimension-count','5');
+    await expect(page.locator('#kd3dRoot')).toHaveAttribute('data-scene-dimension-values',/A:span:2320/);
+  }
+  expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('kd-surveyor-3d-draft-v1')).showDimensions)).toBe(true);
+  await showDimensions.uncheck();
+  if(hasReal3D)await expect(page.locator('#kd3dRoot')).toHaveAttribute('data-scene-dimension-count','0');
   // Standard 120 mm metal pickets are NEVER cut: warn first, then fit by reducing spacing.
   const gapAlert=page.locator('#kd3dRoot [data-gap-alert]');
   await expect(gapAlert).toBeVisible();
@@ -238,6 +252,11 @@ test('3D расчёт opens independently in DEV and edits geometry without chan
   expect(withGate.enabled).toBe(true);
   expect(withGate.width).toBe(4);
   expect(withGate.offset).toBe(2);
+  await showDimensions.check();
+  await expect(page.locator('#kd3dRoot [data-parts]')).toContainText('Ворота: 3900 мм');
+  if(hasReal3D){
+    await expect(page.locator('#kd3dRoot')).toHaveAttribute('data-scene-dimension-values',/A:gate:3900/);
+  }
   if(hasReal3D){
     await expect(page.locator('#kd3dRoot')).toHaveAttribute('data-scene-gate-leaves','2');
     await expect(page.locator('#kd3dRoot')).toHaveAttribute('data-scene-gate-opening',/"start":2/);
