@@ -62,6 +62,8 @@ jobs:
           node --check admin-canopy.js
           node --check site-sw.js
           node --check surveyor-app/app.js
+          node --check surveyor-app/3d-calculator.js
+          node scripts/test-surveyor-3d-geometry.mjs
           node --check surveyor-app/sw.js
           node --check worker/site-settings-d1.js
           php -l timeweb/local-api.php
