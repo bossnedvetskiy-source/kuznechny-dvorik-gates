@@ -29,6 +29,17 @@ test('3D расчёт opens independently in DEV and edits geometry without chan
   await expect(page.locator('#kd3dRoot [data-parts]')).toContainText('6,0 см');
   await type.selectOption('horizontal');
   await expect(page.locator('#kd3dRoot [data-parts]')).toContainText('горизонтальный');
+  await type.selectOption('horizontal-double');
+  await expect(page.locator('#kd3dRoot [data-parts]')).toContainText('горизонтальный, шахматка');
+  await expect(page.locator('#kd3dRoot [data-picket-settings]')).toBeVisible();
+  await page.locator('#kd3dRoot [data-ral-swatch="8017"]').click();
+  await expect(page.locator('#kd3dRoot [data-ral-swatch="8017"]')).toHaveAttribute('aria-pressed','true');
+  await expect(page.locator('#kd3dRoot [data-field="ral"]')).toHaveValue('8017');
+  await page.locator('#kd3dRoot [data-field="ral"]').selectOption('9003');
+  await expect(page.locator('#kd3dRoot [data-ral-swatch="9003"]')).toHaveAttribute('aria-pressed','true');
+  const draft=await page.evaluate(()=>JSON.parse(localStorage.getItem('kd-surveyor-3d-draft-v1')));
+  expect(draft.fill).toBe('horizontal-double');
+  expect(draft.ral).toBe('9003');
   await page.locator('#kd3dRoot [data-mode="parts"]').click();
   await expect(page.locator('#kd3dRoot [data-parts]')).toBeVisible();
   await page.locator('#kd3dRoot [data-mode="scene"]').click();
