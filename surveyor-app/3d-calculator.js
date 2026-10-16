@@ -171,7 +171,7 @@ function buildPostCapGeometry(size) {
     const j=(i+1)%4;
     triangle(bottom[i],bottom[j],top[i]);
     triangle(bottom[j],top[j],top[i]);
-    triangle(top[0],top[(i+1)%4],top[(i+2)%4]); // top cover
+    if(i<2) triangle(top[0],top[i+1],top[i+2]); // two triangles cover the cap
   }
   const geometry=new THREE.BufferGeometry();
   geometry.setAttribute('position',new THREE.Float32BufferAttribute(triangles,3));
@@ -405,8 +405,12 @@ export function mount3DCalculator(root) {
   }
   function fit() {
     if (!webglOk) return;
-    const dist = Math.max(9,config.length*1.15);
-    camera.position.set(dist*0.34,Math.max(4,config.height*2.8),dist*0.95);
+    // Fit the entire long fence in a portrait mobile viewport without clipping.
+    const aspect=Math.max(0.65,Math.min(1.4,camera.aspect||1));
+    const halfFov=Math.tan(THREE.MathUtils.degToRad(camera.fov/2));
+    const needed=config.length/(2*halfFov*aspect);
+    const dist=Math.max(7,needed*1.45);
+    camera.position.set(dist*0.14,Math.max(3.3,config.height*2.1),dist);
     controls.target.set(0,config.height*0.5,0);
     controls.update();
   }
