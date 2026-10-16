@@ -1,4 +1,4 @@
-const CACHE = 'kd-surveyor-v3-horizontal-checker-v3';
+const CACHE = 'kd-surveyor-v3-frame-face-v4';
 const CORE = ['./index.html','./styles.css','./app.js','./line-builder.js','./calculator-bridge.js','./3d-calculator.js','./3d-calculator.css','./manifest.webmanifest','./icon.svg','./sliding-gates/index.html'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(CORE)).then(() => self.skipWaiting()));
