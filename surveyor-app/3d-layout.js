@@ -107,7 +107,7 @@ export function normalizeOpenings(sides,saved=null,legacyGate=null){
 function resolveSideOpenings(id,side,config,warnings){
   if(!side.enabled){
     if(config.gate.enabled||config.wicket.enabled)
-      warnings.push('Сторона '+SIDE_NAMES[id]+' выключена: включите её, чтобы увидеть ворота или калитку.');
+      warnings.push('Чтобы добавить ворота или калитку, включите сторону '+SIDE_NAMES[id]+'.');
     return [];
   }
   const result=[];
