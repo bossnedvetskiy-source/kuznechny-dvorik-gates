@@ -1,5 +1,5 @@
-const CACHE = 'kd-surveyor-v3-clear-dimensions-v14';
-const CORE = ['./index.html','./styles.css','./app.js','./line-builder.js','./calculator-bridge.js','./3d-calculator.js','./3d-layout.js','./3d-calculator.css?v=clear-dimensions-20261016','./manifest.webmanifest','./icon.svg','./sliding-gates/index.html'];
+const CACHE = 'kd-surveyor-v3-all-side-openings-v15';
+const CORE = ['./index.html','./styles.css','./app.js','./line-builder.js','./calculator-bridge.js','./3d-calculator.js','./3d-layout.js','./3d-calculator.css?v=all-side-openings-20261016','./manifest.webmanifest','./icon.svg','./sliding-gates/index.html'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(CORE)).then(() => self.skipWaiting()));
 });
