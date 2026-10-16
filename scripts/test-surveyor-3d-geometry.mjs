@@ -1,12 +1,14 @@
 import { readFile } from 'node:fs/promises';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
+import {GATE_FRAME_VISUAL,getGateFramePlan} from '../surveyor-app/3d-gate-frame.js';
+import {verticalPicketPlan} from '../surveyor-app/3d-layout.js';
 
 const source = await readFile('surveyor-app/3d-calculator.js','utf8');
 // Exercise the same geometry functions used by the browser without instantiating WebGL.
 const expression = source.replace(/^import .*;\s*$/gm,'').replace(/^export /gm,'');
-const factory = new Function('THREE', expression + '\nreturn {buildC10Geometry,buildPicketGeometry,horizontalPicketRows,buildPostCapGeometry,instancePickets,guideOffsets,RAL};');
-const {buildC10Geometry,buildPicketGeometry,horizontalPicketRows,buildPostCapGeometry,instancePickets,guideOffsets,RAL} = factory(THREE);
+const factory = new Function('THREE', expression + '\nreturn {frameGeometry,buildC10Geometry,buildPicketGeometry,horizontalPicketRows,buildPostCapGeometry,instancePickets,guideOffsets,RAL};');
+const {frameGeometry,buildC10Geometry,buildPicketGeometry,horizontalPicketRows,buildPostCapGeometry,instancePickets,guideOffsets,RAL} = factory(THREE);
 const bounds = geometry => {
   geometry.computeBoundingBox();
   const b=geometry.boundingBox;
@@ -108,4 +110,76 @@ assert(source.includes('instancePickets(group,geo,fillMat,rearPickets,Math.PI)')
  'vertical double-row pickets must turn backwards');
 assert(source.includes('instancePickets(group,geo,fillMat,rearHorizontalPickets,Math.PI)'),
  'horizontal double-row pickets must turn backwards');
+
+const renderSource=await readFile('surveyor-app/3d-gate-render.js','utf8');
+const renderFactory=new Function('THREE','GATE_FRAME_VISUAL','getGateFramePlan',
+  renderSource.replace(/^import .*$/gm,'').replace(/^export /gm,'')+
+  '\nreturn renderGateFrame;');
+const renderGateFrame=renderFactory(THREE,GATE_FRAME_VISUAL,getGateFramePlan);
+for(const postWidth of [.06,.08,.10]){
+  for(const kind of ['gate','wicket']){
+    const width=kind==='gate'?3.4:1;
+    const plan=getGateFramePlan({kind,width},postWidth,1.8);
+    const outer=plan.leaves;
+    assert.equal(outer.length,kind==='gate'?2:1);
+    assert.equal(plan.totalHinges,outer.length*2);
+    assert(Math.abs(plan.clearWidth-(width-postWidth))<1e-8);
+    assert(Math.abs(outer[0].left-postWidth/2-.015)<1e-8,
+      'left frame must be 15mm from inner post face');
+    assert(Math.abs(width-postWidth/2-outer.at(-1).right-.015)<1e-8,
+      'right frame must be 15mm from inner post face');
+    assert(Math.abs(plan.bottomClearance-.07)<1e-8);
+    assert(Math.abs(plan.topClearance-.05)<1e-8);
+    assert(Math.abs(plan.leafHeight-1.68)<1e-8);
+    if(kind==='gate'){
+      assert(Math.abs(outer[1].left-outer[0].right-.02)<1e-8,
+        'central swing gate gap MUST remain 20mm');
+      assert.equal(outer[0].hingeSide,'left');
+      assert.equal(outer[1].hingeSide,'right');
+    } else assert.equal(outer[0].hingeSide,'left');
+  }
+}
+const sample=getGateFramePlan({kind:'gate',width:3.4},.08,1.8);
+assert(Math.abs(sample.leaves[0].width-1.635)<1e-8);
+assert.equal(Math.round(getGateFramePlan({kind:'wicket',width:1},.08,1.8)
+  .leaves[0].width*1000),890);
+for(const fill of ['picket','picket-double','horizontal','horizontal-double','sheet','jalousie']){
+  for(const kind of ['gate','wicket']){
+    const group=new THREE.Group(),cube=new THREE.BoxGeometry(1,1,1);
+    const metal=new THREE.MeshStandardMaterial(),infill=new THREE.MeshStandardMaterial();
+    const ownedGeometries=[],ownedMaterials=[];
+    const opening={kind,width:kind==='gate'?3.4:1,start:0};
+    const plan=renderGateFrame({
+      group,base:cube,opening,openingStart:2,postWidth:.08,
+      side:{fill,height:1.8},behind:false,gap:.05,
+      postMat:metal,fillMat:infill,frameGeometry,buildC10Geometry,
+      buildPicketGeometry,instancePickets,horizontalPicketRows,verticalPicketPlan,
+      ownedGeometries,ownedMaterials
+    });
+    let leaves=0,hinges=0,braces=0;
+    group.traverse(mesh=>{
+      if(mesh.userData.kdGateLeaf||mesh.userData.kdWicketLeaf){
+        leaves++;
+        assert(Math.abs(mesh.userData.kdFrameWidth-plan.leaves[leaves-1].width)<1e-8);
+      }
+      if(mesh.userData.kdHinge){
+        hinges++;
+        assert(Math.abs(mesh.position.x-(
+          2+plan.leaves.find(p=>p.hingeHeights.some(y=>
+            Math.abs(mesh.position.y-y)<1e-8) &&
+            Math.abs(mesh.position.x-2-p.hingeAxis)<1e-8))?.hingeAxis
+          ))<1e-7,'hinge axis must attach in post-to-leaf gap');
+      }
+      if(mesh.userData.kdDiagonalBrace)braces++;
+    });
+    assert.equal(leaves,plan.leafCount,'independent steel leaves must render');
+    assert.equal(hinges,plan.totalHinges,'each leaf has 2 visible cylindrical hinges');
+    assert.equal(braces,plan.leafCount,'each leaf has a rear reinforcing diagonal');
+    ownedGeometries.forEach(g=>g.dispose());
+    ownedMaterials.forEach(m=>m.dispose());
+    cube.dispose();metal.dispose();infill.dispose();
+  }
+}
+console.log('Gate 3D: full-width frames, 15/20mm clearances, latch, diagonals and 2 hinges/leaf OK');
+
 console.log('Surveyor 3D: caps, guides, rotated double pickets and previous geometry OK');
