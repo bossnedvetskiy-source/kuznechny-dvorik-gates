@@ -83,7 +83,8 @@ test('3D расчёт opens independently in DEV and edits geometry without chan
   await page.locator('#kd3dRoot [data-side="B"]').click();
   await expect(page.locator('#kd3dRoot [data-active-side-count]')).toHaveText('2 из 4');
   await expect(page.locator('#kd3dRoot [data-current-side-label]')).toHaveText('Настройка стороны Б');
-  await expect(page.locator('#kd3dRoot [data-length-label]')).toContainText('Длина стороны Б, м');
+  await expect(page.locator('#kd3dRoot [data-height-label]')).toContainText('Высота стороны Б, м');
+  await expect(page.locator('#kd3dRoot [data-side-length-input="B"]')).toHaveValue('10');
 
   await page.locator('#kd3dRoot [data-side-length-input="B"]').fill('9');
   await page.locator('#kd3dRoot [data-side-length-input="B"]').press('Tab');
