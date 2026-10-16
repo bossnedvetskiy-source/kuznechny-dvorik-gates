@@ -54,6 +54,14 @@ test('3D расчёт opens independently in DEV and edits geometry without chan
   const gapAlert=page.locator('#kd3dRoot [data-gap-alert]');
   await expect(gapAlert).toBeVisible();
   await expect(gapAlert).toContainText('Штакетник 120 мм не подрезаем');
+  await expect(gapAlert).toContainText('3D уже показывает целые планки вплотную к столбам');
+  // Regression: BEFORE clicking auto-fit, the drawn 3D model already touches
+  // both post faces. A UI notice alone must not leave the original visual gap.
+  if(hasReal3D){
+    await expect.poll(async()=>Number(await page.locator('#kd3dRoot')
+      .getAttribute('data-scene-edge-clearance'))).toBeLessThan(0.000001);
+    expect(await page.locator('#kd3dRoot').getAttribute('data-scene-actual-gaps')).toContain('A:');
+  }
   await page.locator('#kd3dRoot [data-auto-gap]').click();
   await expect(gapAlert).toContainText('Без подрезки');
   await expect(page.locator('#kd3dRoot [data-parts]')).toContainText('подогнан без подрезки');
@@ -93,7 +101,13 @@ test('3D расчёт opens independently in DEV and edits geometry without chan
   await page.locator('#kd3dRoot [data-field="gap"]').press('Tab');
   expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('kd-surveyor-3d-draft-v1')).gapFit)).toBe(false);
   await expect(page.locator('#kd3dRoot [data-gap-alert]')).toContainText('не подрезаем');
-  await expect(page.locator('#kd3dRoot [data-parts]')).toContainText('6,0 см');
+  await expect(page.locator('#kd3dRoot [data-parts]')).toContainText('фактический зазор 5,0 см');
+  // Requested gap remains 6 cm, actual geometry is fitted to 5 cm.
+  if(hasReal3D){
+    expect(Number(await page.locator('#kd3dRoot').getAttribute('data-scene-requested-gap'))).toBeCloseTo(.06);
+    await expect.poll(async()=>Number(await page.locator('#kd3dRoot')
+      .getAttribute('data-scene-edge-clearance'))).toBeLessThan(0.000001);
+  }
   await postRear.click();
   await expect(postRear).toHaveAttribute('aria-pressed','true');
   await type.selectOption('horizontal');
