@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {createDefaultSides,normalizeSides,getSiteLayout,verticalPicketPlan,verticalPicketLayout,normalizePostMode,isHorizontalFill,normalizeSwingGate,getClearDimensionPlan} from '../surveyor-app/3d-layout.js';
+import {createDefaultSides,normalizeSides,getSiteLayout,verticalPicketPlan,verticalPicketLayout,normalizePostMode,isHorizontalFill,normalizeSwingGate,normalizeOpenings,getClearDimensionPlan} from '../surveyor-app/3d-layout.js';
 
 const sides=createDefaultSides({length:12,height:1.8,step:2.5,fill:'picket-double',ral:'8017'});
 let layout=getSiteLayout(sides);
@@ -87,6 +87,62 @@ assert.equal(getSiteLayout(gateSides,gateDraft).gate,null,'disabled A never pain
 assert(getSiteLayout(gateSides,gateDraft).warnings.some(w=>w.includes('включите сторону А')),
   'show explicit warning when gate is requested on disabled facade');
 console.log('Swing gate layout: aperture subtraction, boundary pillars, end/corner cases OK');
+
+// Four-sided entrance combinations: gate only, wicket only, and both on EACH side.
+for(const target of ['A','B','V','G']){
+  for(const combination of ['gate','wicket','both','touch','overlap']){
+    const all=createDefaultSides({length:12,height:1.8,step:2.5,fill:'picket'});
+    all.B.enabled=true;all.V.enabled=true;all.G.enabled=true;
+    all.B.length=10;all.G.length=10;
+    const openings=Object.fromEntries(['A','B','V','G'].map(id=>[id,{
+      gate:{enabled:id===target&&combination!=='wicket',width:3.4,offset:2},
+      wicket:{enabled:id===target&&combination!=='gate',width:1,
+        offset:combination==='touch'?5.4:combination==='overlap'?2:6}
+    }]));
+    const result=getSiteLayout(all,openings);
+    const edge=result.edges.find(e=>e.id===target);
+    const sum=edge.openings.reduce((v,o)=>v+o.width,0);
+    assert(Math.abs(edge.fenceLength+sum-edge.side.length)<1e-7,
+      'fence length excludes exact gate and wicket openings on '+target);
+    assert.equal(edge.openings.length,combination==='gate'||combination==='wicket'?1:2);
+    assert(edge.openings.every((o,i)=>!edge.openings.slice(i+1)
+      .some(p=>o.end>p.start+1e-9)),
+      'gate and wicket must never overlap on '+target);
+    if(combination==='touch'){
+      const joint=edge.openings[0].end;
+      const dx=edge.end.x-edge.start.x,dz=edge.end.z-edge.start.z;
+      const f=joint/edge.side.length;
+      const px=edge.start.x+dx*f,pz=edge.start.z+dz*f;
+      assert.equal(result.posts.filter(p=>Math.abs(p.x-px)<1e-8 &&
+        Math.abs(p.z-pz)<1e-8).length,1,'two adjacent openings share one post');
+    }
+    for(const opening of edge.openings){
+      const matched=getClearDimensionPlan(result,80).find(d=>d.id===target).spans
+        .find(d=>d.kind===opening.kind);
+      assert.equal(matched.clearMm,Math.round((opening.width-.08)*1000),
+        'all gate/wicket labels measure between post faces');
+      const dx=edge.end.x-edge.start.x,dz=edge.end.z-edge.start.z;
+      for(const pos of [opening.start,opening.end]){
+        const f=pos/edge.side.length;
+        assert(result.posts.some(p=>p.gateSupport &&
+          Math.abs(p.x-edge.start.x-dx*f)<1e-8 &&
+          Math.abs(p.z-edge.start.z-dz*f)<1e-8),'hinge posts on any direction');
+      }
+    }
+  }
+}
+const tooShort=createDefaultSides({length:4});
+const noOverlap=getSiteLayout(tooShort,{A:{
+  gate:{enabled:true,width:3.4,offset:0},
+  wicket:{enabled:true,width:1,offset:2}
+}});
+assert.equal(noOverlap.openings.length,1,'impossible second opening must not overlap first');
+assert(noOverlap.warnings.some(x=>x.includes('не хватает места')));
+const migrated=normalizeOpenings(createDefaultSides({length:12}),null,
+  {enabled:true,width:3.4,offset:2});
+assert.equal(migrated.A.gate.enabled,true,'legacy A gate draft must migrate');
+assert.equal(migrated.B.gate.enabled,false,'migration must not create gates on other sides');
+console.log('Four-side gate/wicket combinations, shared posts and collisions OK');
 
 // DIMENSIONS MUST BE MEASURED FROM THE INSIDE FACES, NOT POST AXES.
 const dimensionsBase=getClearDimensionPlan(getSiteLayout(createDefaultSides({length:20,step:3})),80);
