@@ -81,66 +81,130 @@ export function normalizeSides(saved,legacy={}) {
     }];
   }));
 }
-// Stage 4.1: one driveway opening on side A only (client price is not calculated).
-// offset is measured from the left-hand beginning of A along its positive X axis.
-export function normalizeSwingGate(saved, sideLength=12){
+// Both entrances are individually configurable on any of the four sides.
+// Offsets are measured from the start of THAT side, following its local axis.
+export function normalizeSwingGate(saved,sideLength=12){
   const input=saved&&typeof saved==='object'?saved:{};
   const width=clamp(input.width,2,6,3.4);
-  const offset=clamp(input.offset,0,Math.max(0,sideLength-width),1);
-  return {enabled:input.enabled===true,type:'swing',width,offset};
+  return {enabled:input.enabled===true,type:'swing',width,
+    offset:clamp(input.offset,0,Math.max(0,sideLength-width),1)};
 }
-export function getSiteLayout(sides, gateConfig=null) {
-  const {A,B,V,G}=normalizeSides(sides);
-  const requestedGate=normalizeSwingGate(gateConfig,A.length);
-  const gateValid=requestedGate.enabled && A.enabled && A.length>=requestedGate.width;
-  const gate=gateValid?{...requestedGate,sideId:'A',
-    start:requestedGate.offset,end:requestedGate.offset+requestedGate.width}:null;
+export function normalizeWicket(saved,sideLength=12){
+  const input=saved&&typeof saved==='object'?saved:{};
+  const width=clamp(input.width,.7,1.5,1);
+  return {enabled:input.enabled===true,type:'wicket',width,
+    offset:clamp(input.offset,0,Math.max(0,sideLength-width),5)};
+}
+export function normalizeOpenings(sides,saved=null,legacyGate=null){
+  const raw=saved&&typeof saved==='object'?saved:{};
+  return Object.fromEntries(SIDE_IDS.map(id=>{
+    const cfg=raw[id]&&typeof raw[id]==='object'?raw[id]:{};
+    const side=sides[id];
+    return [id,{gate:normalizeSwingGate(cfg.gate||(id==='A'?legacyGate:null),side.length),
+      wicket:normalizeWicket(cfg.wicket,side.length)}];
+  }));
+}
+function resolveSideOpenings(id,side,config,warnings){
+  if(!side.enabled){
+    if(config.gate.enabled||config.wicket.enabled)
+      warnings.push('Сторона '+SIDE_NAMES[id]+' выключена: включите её, чтобы увидеть ворота или калитку.');
+    return [];
+  }
+  const result=[];
+  for(const kind of ['gate','wicket']){
+    const item=config[kind];
+    if(!item.enabled)continue;
+    if(item.width>side.length+1e-8){
+      warnings.push((kind==='gate'?'Ворота':'Калитка')+' на стороне '+SIDE_NAMES[id]+
+        ' шире стороны. Измените длину стороны или ширину проёма.');
+      continue;
+    }
+    let offset=Math.max(0,Math.min(side.length-item.width,item.offset));
+    const overlaps=x=>result.some(p=>x<p.end-1e-8&&x+item.width>p.start+1e-8);
+    if(overlaps(offset)){
+      // Gate has priority. Find the closest free placement for the wicket,
+      // keeping the support post at a shared border if openings touch.
+      const candidates=[0,side.length-item.width,...result.flatMap(p=>
+        [p.end,p.start-item.width])].filter(x=>x>=-1e-8&&x+item.width<=side.length+1e-8&&!overlaps(x));
+      if(candidates.length){
+        candidates.sort((a,b)=>Math.abs(a-offset)-Math.abs(b-offset));
+        offset=Math.max(0,candidates[0]);
+      }else{
+        warnings.push('На стороне '+SIDE_NAMES[id]+' не хватает места для '+(kind==='gate'?'ворот':'калитки')+
+          ' без пересечения. Измените размеры или положение проёмов.');
+        continue;
+      }
+    }
+    result.push({kind,type:item.type,sideId:id,width:item.width,
+      start:offset,end:offset+item.width,offset});
+  }
+  return result.sort((a,b)=>a.start-b.start);
+}
+export function getSiteLayout(sides,openingsOrLegacyGate=null){
+  const normalized=normalizeSides(sides);
+  const {A,B,V,G}=normalized;
+  // Compatibility with all previously saved A-side gate drafts / geometry tests.
+  const isMulti=SIDE_IDS.some(id=>openingsOrLegacyGate?.[id]);
+  const configured=normalizeOpenings(normalized,isMulti?openingsOrLegacyGate:null,
+    isMulti?null:openingsOrLegacyGate);
   const candidates=[
     {id:'A',side:A,start:{x:0,z:0},end:{x:A.length,z:0}},
     {id:'B',side:B,start:{x:A.length,z:0},end:{x:A.length,z:B.length}},
     {id:'V',side:V,start:{x:A.length,z:B.length},end:{x:A.length-V.length,z:B.length}},
     {id:'G',side:G,start:{x:0,z:G.length},end:{x:0,z:0}}
   ];
+  const warnings=[];
   const edges=candidates.filter(e=>e.side.enabled).map(e=>{
-    const lengths=(e.id==='A' && gate)?
-      [[0,gate.start],[gate.end,e.side.length]]:
-      [[0,e.side.length]];
-    const sections=lengths.filter(([from,to])=>to-from>.00001).map(([from,to])=>{
+    const openings=resolveSideOpenings(e.id,e.side,configured[e.id],warnings);
+    const sections=[];
+    let cursor=0;
+    for(const opening of openings){
+      if(opening.start>cursor+.00001)sections.push([cursor,opening.start]);
+      cursor=opening.end;
+    }
+    if(e.side.length>cursor+.00001)sections.push([cursor,e.side.length]);
+    const fenceSections=sections.map(([from,to])=>{
       const length=to-from;
       const count=Math.max(1,Math.ceil(length/e.side.step));
       return {from,to,length,count,span:length/count};
     });
-    const count=sections.reduce((sum,section)=>sum+section.count,0);
-    return {...e,sections,count,span:sections[0]?.span||0,
-      fenceLength:sections.reduce((sum,section)=>sum+section.length,0),
-      gate:e.id==='A'?gate:null};
+    return {...e,sections:fenceSections,
+      count:fenceSections.reduce((sum,section)=>sum+section.count,0),
+      span:fenceSections[0]?.span||0,
+      fenceLength:fenceSections.reduce((sum,section)=>sum+section.length,0),
+      openings,gate:openings.find(o=>o.kind==='gate')||null,
+      wicket:openings.find(o=>o.kind==='wicket')||null};
   });
+  for(const id of SIDE_IDS){
+    if(!normalized[id].enabled)
+      resolveSideOpenings(id,normalized[id],configured[id],warnings);
+  }
   const byCoordinate=new Map();
-  const includePost=(x,z,height,id,gateSupport=false)=>{
+  const includePost=(x,z,height,id,hingeSupport=false)=>{
     const key=Math.round(x*10000)+'|'+Math.round(z*10000);
     const entry=byCoordinate.get(key);
     if(entry){
       entry.height=Math.max(entry.height,height);
       if(!entry.sides.includes(id))entry.sides.push(id);
-      if(gateSupport)entry.gateSupport=true;
-    }else byCoordinate.set(key,{x,z,height,sides:[id],gateSupport});
+      if(hingeSupport)entry.gateSupport=true;
+    }else byCoordinate.set(key,{x,z,height,sides:[id],gateSupport:hingeSupport});
   };
   for(const edge of edges){
+    const coord=distance=>{
+      const f=distance/edge.side.length;
+      return {x:edge.start.x+(edge.end.x-edge.start.x)*f,
+        z:edge.start.z+(edge.end.z-edge.start.z)*f};
+    };
     for(const section of edge.sections){
       for(let i=0;i<=section.count;i++){
-        const fraction=(section.from+section.length*i/section.count)/edge.side.length;
-        includePost(
-          edge.start.x+(edge.end.x-edge.start.x)*fraction,
-          edge.start.z+(edge.end.z-edge.start.z)*fraction,
-          edge.side.height,edge.id
-        );
+        const p=coord(section.from+section.length*i/section.count);
+        includePost(p.x,p.z,edge.side.height,edge.id);
       }
     }
-    if(edge.gate){
-      for(const localX of [edge.gate.start,edge.gate.end]){
-        const f=localX/edge.side.length;
-        includePost(edge.start.x+(edge.end.x-edge.start.x)*f,
-          edge.start.z+(edge.end.z-edge.start.z)*f,edge.side.height,edge.id,true);
+    for(const opening of edge.openings){
+      for(const position of [opening.start,opening.end]){
+        const p=coord(position);
+        includePost(p.x,p.z,edge.side.height,edge.id,true);
       }
     }
   }
@@ -153,22 +217,18 @@ export function getSiteLayout(sides, gateConfig=null) {
   const maxX=Math.max(0,...allVertices.map(p=>p.x));
   const minZ=Math.min(0,...allVertices.map(p=>p.z));
   const maxZ=Math.max(0,...allVertices.map(p=>p.z));
-  const warnings=[];
   if(A.enabled && B.enabled && V.enabled && G.enabled &&
     (Math.abs(A.length-V.length)>.001 || Math.abs(B.length-G.length)>.001)){
     warnings.push('Контур не замкнут: для прямоугольника длины А и В, Б и Г должны совпадать.');
   }
-  if(requestedGate.enabled && !A.enabled)
-    warnings.push('Чтобы добавить ворота, включите сторону А.');
-  if(requestedGate.enabled && A.enabled && !gateValid)
-    warnings.push('Проём ворот шире стороны А. Увеличьте сторону или уменьшите ширину ворот.');
-  return {
-    edges,posts,gate,gateSettings:requestedGate,perimeter,fenceLength,totalSpans,warnings,
+  const allOpenings=edges.flatMap(e=>e.openings);
+  return {edges,posts,openings:allOpenings,
+    gate:edges.find(e=>e.id==='A')?.gate||null,
+    gateSettings:configured.A.gate,perimeter,fenceLength,totalSpans,warnings,
     bounds:{minX,maxX,minZ,maxZ,centerX:(minX+maxX)/2,centerZ:(minZ+maxZ)/2,
       width:maxX-minX,depth:maxZ-minZ}
   };
 }
-
 
 // Dimensions measured between INSIDE FACES of adjacent metal posts, not post axes.
 // Every segment is local to its edge (0 = edge start). The planning output is
@@ -187,9 +247,9 @@ export function getClearDimensionPlan(layout,postSizeMm=80){
           clearMm:Math.max(0,Math.round((to-from)*1000))});
       }
     }
-    if(edge.gate){
-      const from=edge.gate.start+half,to=edge.gate.end-half;
-      spans.push({kind:'gate',index:1,from,to,
+    for(const opening of edge.openings){
+      const from=opening.start+half,to=opening.end-half;
+      spans.push({kind:opening.kind,index:1,from,to,
         clearMm:Math.max(0,Math.round((to-from)*1000))});
     }
     return {id:edge.id,length:edge.side.length,postWidth,spans};
