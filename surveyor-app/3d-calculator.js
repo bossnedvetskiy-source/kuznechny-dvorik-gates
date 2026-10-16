@@ -169,9 +169,10 @@ function buildPostCapGeometry(size) {
   const triangle=(a,b,c)=>triangles.push(...a,...b,...c);
   for(let i=0;i<4;i++){
     const j=(i+1)%4;
-    triangle(bottom[i],bottom[j],top[i]);
-    triangle(bottom[j],top[j],top[i]);
-    if(i<2) triangle(top[0],top[i+1],top[i+2]); // two triangles cover the cap
+    // Wind side faces outward and top faces upward for correct metal lighting.
+    triangle(bottom[i],top[i],bottom[j]);
+    triangle(bottom[j],top[i],top[j]);
+    if(i<2) triangle(top[0],top[i+2],top[i+1]); // two upward-facing triangles
   }
   const geometry=new THREE.BufferGeometry();
   geometry.setAttribute('position',new THREE.Float32BufferAttribute(triangles,3));
