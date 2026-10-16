@@ -610,13 +610,33 @@ export function mount3DCalculator(root) {
     syncSideInputs();updateModel();
   });
   const gapSlider=find('[data-gap-slider]');
-  gapSlider.addEventListener('input',()=>{
-    find('[data-gap-value]').textContent=String(gapSlider.value).replace('.',',')+' см';
-    find('[data-field="gap"]').value=gapSlider.value;
-  });
+  const gapInput=find('[data-field="gap"]');
+  let gapPreviewTimer=null;
+  function commitGapPreview(){
+    if(gapPreviewTimer!==null){
+      window.clearTimeout(gapPreviewTimer);
+      gapPreviewTimer=null;
+    }
+    updateModel();
+  }
+  function previewGap(value,fromSlider){
+    const cm=numeric(value,2,12,config.gap*100);
+    config.gap=cm/100;
+    find('[data-gap-value]').textContent=String(cm).replace('.',',')+' см';
+    if(fromSlider)gapInput.value=cm;
+    else gapSlider.value=cm;
+    // Render while dragging, throttled to avoid rebuilding hundreds of 3D objects
+    // on every pointer movement. Release always forces the final exact geometry.
+    if(gapPreviewTimer===null)
+      gapPreviewTimer=window.setTimeout(()=>{gapPreviewTimer=null;updateModel();},110);
+  }
+  gapSlider.addEventListener('input',()=>previewGap(gapSlider.value,true));
   gapSlider.addEventListener('change',()=>{
     config.gap=numeric(gapSlider.value,2,12,config.gap*100)/100;
-    syncSideInputs();updateModel();
+    commitGapPreview();
+  });
+  gapInput.addEventListener('input',()=>{
+    if(gapInput.value.trim()!=='')previewGap(gapInput.value,false);
   });
   const collapse=find('[data-collapse-params]');
   collapse.addEventListener('click',()=>{
