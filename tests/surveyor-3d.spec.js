@@ -78,7 +78,13 @@ test('3D расчёт opens independently in DEV and edits geometry without chan
   await page.locator('#kd3dRoot [data-field="gap"]').fill('6');
   await page.locator('#kd3dRoot [data-field="gap"]').press('Tab');
   await expect(page.locator('#kd3dRoot [data-parts]')).toContainText('6,0 см');
+  await postRear.click();
+  await expect(postRear).toHaveAttribute('aria-pressed','true');
   await type.selectOption('horizontal');
+  await expect(postVisible).toHaveAttribute('aria-pressed','true');
+  await expect(postRear).toBeDisabled();
+  expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('kd-surveyor-3d-draft-v1')).sides.A.postMode)).toBe('visible');
+  if(hasReal3D) await expect(page.locator('#kd3dRoot')).toHaveAttribute('data-scene-post-modes',/visible/);
   await expect(page.locator('#kd3dRoot [data-parts]')).toContainText('горизонтальный');
   await type.selectOption('horizontal-double');
   await expect(page.locator('#kd3dRoot [data-parts]')).toContainText('горизонтальный, шахматка');
