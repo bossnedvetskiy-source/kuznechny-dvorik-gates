@@ -5,6 +5,7 @@ const html = await readFile('surveyor-app/index.html','utf8');
 const sw = await readFile('surveyor-app/sw.js','utf8');
 const lineBuilder = await readFile('surveyor-app/line-builder.js','utf8');
 const threeD = await readFile('surveyor-app/3d-calculator.js','utf8');
+const layout = await readFile('surveyor-app/3d-layout.js','utf8');
 const threeDCss = await readFile('surveyor-app/3d-calculator.css','utf8');
 const api = await readFile('timeweb/backend/surveyor.php','utf8');
 const router = await readFile('timeweb/local-api.php','utf8');
@@ -34,11 +35,15 @@ for (const marker of [
 for (const marker of ['syncNowBtn','syncStatusText','КД Замерщик','planDialog','planCanvas','data-add-plan-item','customerPreviewDialog','open3DCalcBtn','threeDScreen','kd3dRoot','3d-calculator.css']) {
   if (!html.includes(marker)) throw new Error('Surveyor HTML missing: '+marker);
 }
-if (!sw.includes('kd-surveyor-v3-clear-3d-scene-v5') || !sw.includes('./line-builder.js') || !sw.includes('./sliding-gates/index.html') || !sw.includes('./3d-calculator.js')) throw new Error('Surveyor service worker cache missing 3D/sliding calculator');
+if (!sw.includes('kd-surveyor-v3-4-sides-v6') || !sw.includes('./line-builder.js') || !sw.includes('./sliding-gates/index.html') || !sw.includes('./3d-calculator.js')) throw new Error('Surveyor service worker cache missing 3D/sliding calculator');
 for (const marker of ['function open3DCalculator','import(\'./3d-calculator.js\')','threeD: \'3D расчёт\'']) if (!app.includes(marker)) throw new Error('3D route missing: '+marker);
 for (const marker of ['OrbitControls','WebGLRenderer','mount3DCalculator','updateModel','fit()','render','DRAFT_KEY']) if (!threeD.includes(marker)) throw new Error('3D module missing: '+marker);
 if (!threeDCss.includes('.kd3d-viewport') || !threeDCss.includes('.kd3d-launch')) throw new Error('3D styles missing');
 if (threeD.includes('dimensionLabel(') || threeD.includes('new THREE.Sprite(')) throw new Error('Floating dimension label must not cover the 3D fence');
+if (!sw.includes('./3d-layout.js') || !layout.includes('function getSiteLayout') || !threeD.includes("from './3d-layout.js'"))
+  throw new Error('Multi-side 3D geometry module missing from PWA');
+if (!threeD.includes('data-side-toggle') || !threeD.includes("function syncSideButtons"))
+  throw new Error('Four-side editor UI is missing');
 if (!threeD.includes('data-field="length"')) throw new Error('Fence length must remain editable in settings');
 for (const marker of ['ensureSitePlan','newItem','newLine','lineWidth','PLAN_ITEM_TYPES']) {
   if (!lineBuilder.includes(marker)) throw new Error('Line builder missing: '+marker);
