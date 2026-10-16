@@ -4,7 +4,7 @@
 export const SIDE_IDS=['A','B','V','G'];
 export const SIDE_NAMES={A:'А',B:'Б',V:'В',G:'Г'};
 export const FILL_IDS=['picket','picket-double','horizontal','horizontal-double','sheet','jalousie'];
-export const RAL_IDS=['7024','8017','6005','9005','9003'];
+export const RAL_IDS=['9003','8017','7016','7019','7024','9005','6005','3005','5005'];
 const clamp=(n,min,max,fallback)=>{
   const value=Number(String(n).replace(',','.'));
   return Number.isFinite(value)?Math.min(max,Math.max(min,value)):fallback;
