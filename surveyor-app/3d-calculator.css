@@ -204,3 +204,17 @@
 #threeDScreen .kd3d-gate-fields input{min-width:0;width:100%;border:1px solid #dcd4c8;
   border-radius:10px;background:#fff;padding:10px;font-size:15px;font-weight:750;color:#25211b}
 #threeDScreen .kd3d-gate-note{margin:0;font-size:11px;line-height:1.5;color:#86662f}
+
+
+/* Dimension overlay controls. The 3D guides themselves stay on the ground,
+   away from the fence instead of covering its pickets or posts. */
+#threeDScreen .kd3d-dim-switch{display:flex;gap:11px;align-items:center;
+  border:1px solid #e2ded6;border-radius:13px;padding:12px 13px;background:#fff;
+  cursor:pointer;color:#333d45}
+#threeDScreen .kd3d-dim-switch:has(input:checked){border-color:#d6a14a;background:#fff9ec}
+#threeDScreen .kd3d-dim-switch input{width:20px;height:20px;flex:0 0 20px;
+  margin:0;accent-color:#c38b25}
+#threeDScreen .kd3d-dim-switch span{display:grid;gap:4px}
+#threeDScreen .kd3d-dim-switch strong{font-size:13px;line-height:1.35}
+#threeDScreen .kd3d-dim-switch small{font-size:11px;color:#7c8288;
+  line-height:1.35}
