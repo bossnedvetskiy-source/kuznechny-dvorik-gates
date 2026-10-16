@@ -262,6 +262,9 @@ test('3D расчёт opens independently in DEV and edits geometry without chan
     await expect(page.locator('#kd3dRoot')).toHaveAttribute('data-scene-dimension-values',/A:gate:3900/);
   }
   if(hasReal3D){
+    await expect(page.locator('#kd3dRoot')).toHaveAttribute('data-scene-hinges','4');
+    await expect(page.locator('#kd3dRoot')).toHaveAttribute('data-scene-braces','2');
+    await expect(page.locator('#kd3dRoot')).toHaveAttribute('data-scene-leaf-widths','1925,1925');
     await expect(page.locator('#kd3dRoot')).toHaveAttribute('data-scene-gate-leaves','2');
     await expect(page.locator('#kd3dRoot')).toHaveAttribute('data-scene-gate-opening',/"start":2/);
   }
@@ -288,6 +291,8 @@ test('3D расчёт opens independently in DEV and edits geometry without chan
   if(hasReal3D){
     await expect(page.locator('#kd3dRoot')).toHaveAttribute('data-scene-gate-leaves','2');
     await expect(page.locator('#kd3dRoot')).toHaveAttribute('data-scene-wicket-leaves','1');
+    await expect(page.locator('#kd3dRoot')).toHaveAttribute('data-scene-hinges','6');
+    await expect(page.locator('#kd3dRoot')).toHaveAttribute('data-scene-braces','3');
     await expect(page.locator('#kd3dRoot')).toHaveAttribute('data-scene-openings',/B:gate:/);
     await expect(page.locator('#kd3dRoot')).toHaveAttribute('data-scene-dimension-values',/B:wicket:900/);
   }
@@ -300,6 +305,8 @@ test('3D расчёт opens independently in DEV and edits geometry without chan
   expect(finalOpenings.B.wicket.enabled).toBe(true);
   if(hasReal3D) await expect(page.locator('#kd3dRoot'))
     .toHaveAttribute('data-scene-wicket-leaves','2');
+  if(hasReal3D) await expect(page.locator('#kd3dRoot'))
+    .toHaveAttribute('data-scene-hinges','8');
 
   await page.locator('#kd3dRoot [data-collapse-params]').click();
   await expect(page.locator('#kd3dRoot [data-editor-content]')).toBeHidden();
