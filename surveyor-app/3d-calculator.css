@@ -188,3 +188,19 @@
 #threeDScreen .kd3d-gap-alert button[hidden]{display:none!important}
 #threeDScreen .kd3d-gap-alert.is-fitted{border-color:#bcd6c3;background:#f0f8f0;color:#355b40}
 #threeDScreen .kd3d-gap-row input[type=range]{min-width:0}
+
+
+/* Stage 4.1 — driveway opening and two swing leaves on facade side A. */
+#threeDScreen .kd3d-gate-editor{display:grid;gap:11px;border:1px solid #e2d8c7;
+  border-radius:14px;background:#fffcf6;padding:12px}
+#threeDScreen .kd3d-gate-toggle{display:flex;align-items:center;gap:11px;cursor:pointer}
+#threeDScreen .kd3d-gate-toggle input{width:21px;height:21px;flex-shrink:0;accent-color:#ba872c}
+#threeDScreen .kd3d-gate-toggle span{display:grid;gap:4px}
+#threeDScreen .kd3d-gate-toggle strong{font-size:13px;color:#3d3930}
+#threeDScreen .kd3d-gate-toggle small{font-size:11px;font-weight:500;color:#898276}
+#threeDScreen .kd3d-gate-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+#threeDScreen .kd3d-gate-fields[hidden]{display:none!important}
+#threeDScreen .kd3d-gate-fields label{display:grid;gap:6px;min-width:0;font-size:11px;font-weight:750;color:#5e5548}
+#threeDScreen .kd3d-gate-fields input{min-width:0;width:100%;border:1px solid #dcd4c8;
+  border-radius:10px;background:#fff;padding:10px;font-size:15px;font-weight:750;color:#25211b}
+#threeDScreen .kd3d-gate-note{margin:0;font-size:11px;line-height:1.5;color:#86662f}
