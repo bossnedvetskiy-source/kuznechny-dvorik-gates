@@ -164,11 +164,10 @@ for(const fill of ['picket','picket-double','horizontal','horizontal-double','sh
       }
       if(mesh.userData.kdHinge){
         hinges++;
-        assert(Math.abs(mesh.position.x-(
-          2+plan.leaves.find(p=>p.hingeHeights.some(y=>
-            Math.abs(mesh.position.y-y)<1e-8) &&
-            Math.abs(mesh.position.x-2-p.hingeAxis)<1e-8))?.hingeAxis
-          ))<1e-7,'hinge axis must attach in post-to-leaf gap');
+        assert(plan.leaves.some(p=>
+          Math.abs(mesh.position.x-(2+p.hingeAxis))<1e-8 &&
+          p.hingeHeights.some(y=>Math.abs(mesh.position.y-y)<1e-8)
+        ),'hinges must align with their matching frame and post gap');
       }
       if(mesh.userData.kdDiagonalBrace)braces++;
     });
