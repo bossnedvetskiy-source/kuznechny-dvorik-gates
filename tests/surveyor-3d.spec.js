@@ -3,6 +3,9 @@ import {test, expect} from '@playwright/test';
 test.use({viewport:{width:390,height:844}});
 
 test('3D расчёт opens independently in DEV and edits geometry without changing surveys', async ({page}) => {
+  const diagnosticErrors=[];
+  page.on('pageerror',error=>diagnosticErrors.push('page: '+error.message));
+  page.on('console',message=>{if(message.type()==='error')diagnosticErrors.push('console: '+message.text());});
   await page.goto('/kuznechny-dvorik-gates/zamer-app-v2/');
   await page.locator('#loginInput').fill('zamer');
   await page.locator('#passwordInput').fill('1234');
@@ -12,7 +15,17 @@ test('3D расчёт opens independently in DEV and edits geometry without chan
   await expect(page.locator('#open3DCalcBtn')).toContainText('3D расчёт');
   await page.locator('#open3DCalcBtn').click();
   await expect(page.locator('#threeDScreen')).toBeVisible();
+  try {
   await expect(page.locator('#kd3dRoot [data-stats]')).toContainText('Пролётов',{timeout:12000});
+  } catch(error) {
+    const host=await page.locator('#kd3dRoot').innerText().catch(()=>'<missing>');
+    const loaded=await page.evaluate(()=>performance.getEntriesByType('resource')
+      .filter(r=>/3d-calculator|3d-layout|three\.module|OrbitControls/.test(r.name))
+      .map(r=>({url:r.name,bytes:r.transferSize,duration:r.duration})));
+    throw new Error('3D module did not mount. host='+JSON.stringify(host)+
+      ' errors='+JSON.stringify(diagnosticErrors)+' resources='+JSON.stringify(loaded)+
+      ' assertion='+String(error.message).slice(0,450));
+  }
   await expect(page.locator('#screenTitle')).toHaveText('3D расчёт');
   // The mobile editor follows the clean reference: accordions and stacked sides.
   await expect(page.locator('#kd3dRoot [data-section="sizes"]')).toHaveAttribute('open','');
