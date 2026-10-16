@@ -279,7 +279,7 @@ test('3D расчёт opens independently in DEV and edits geometry without chan
   await page.locator('#kd3dRoot [data-wicket-offset]').press('Tab');
   await expect(page.locator('#kd3dRoot [data-parts]')).toContainText('Распашные ворота на стороне Б');
   await expect(page.locator('#kd3dRoot [data-parts]')).toContainText('Калитка на стороне Б');
-  await expect(page.locator('#kd3dRoot [data-parts]')).toContainText('Калитка: 920 мм');
+  await expect(page.locator('#kd3dRoot [data-parts]')).toContainText('Калитка: 900 мм');
   const savedOpenings=await page.evaluate(()=>
     JSON.parse(localStorage.getItem('kd-surveyor-3d-draft-v1')).openings);
   expect(savedOpenings.B.gate.enabled).toBe(true);
@@ -289,7 +289,7 @@ test('3D расчёт opens independently in DEV and edits geometry without chan
     await expect(page.locator('#kd3dRoot')).toHaveAttribute('data-scene-gate-leaves','2');
     await expect(page.locator('#kd3dRoot')).toHaveAttribute('data-scene-wicket-leaves','1');
     await expect(page.locator('#kd3dRoot')).toHaveAttribute('data-scene-openings',/B:gate:/);
-    await expect(page.locator('#kd3dRoot')).toHaveAttribute('data-scene-dimension-values',/B:wicket:920/);
+    await expect(page.locator('#kd3dRoot')).toHaveAttribute('data-scene-dimension-values',/B:wicket:900/);
   }
   // A wicket alone on another side, with no automatic second gate.
   await page.locator('#kd3dRoot [data-opening-side="G"][data-opening-kind="wicket"]').click();
