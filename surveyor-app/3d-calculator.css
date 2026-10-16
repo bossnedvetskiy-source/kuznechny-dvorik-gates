@@ -218,3 +218,28 @@
 #threeDScreen .kd3d-dim-switch strong{font-size:13px;line-height:1.35}
 #threeDScreen .kd3d-dim-switch small{font-size:11px;color:#7c8288;
   line-height:1.35}
+
+/* Side-local gate + wicket pictograms, compact like the visual reference. */
+#threeDScreen .kd3d-opening-actions{
+  display:flex;align-items:center;gap:8px;margin:1px 0 3px 34px;flex-wrap:wrap
+}
+#threeDScreen .kd3d-opening-actions button{
+  display:flex;align-items:center;gap:6px;min-height:38px;
+  background:#fff;border:1px solid #e1dfdb;border-radius:11px;
+  padding:5px 9px;color:#7c858e;box-shadow:none;cursor:pointer
+}
+#threeDScreen .kd3d-opening-actions button svg{
+  display:block;width:26px;height:23px;fill:none;
+  stroke:currentColor;stroke-width:1.6;stroke-linejoin:round;
+  stroke-linecap:round;flex:0 0 26px
+}
+#threeDScreen .kd3d-opening-actions button small{font-size:11px;font-weight:800}
+#threeDScreen .kd3d-opening-actions button[aria-pressed="true"]{
+  color:#975e13;border-color:#cd9a35;background:#fff3d6
+}
+#threeDScreen .kd3d-opening-actions button:focus-visible{
+  outline:3px solid #c99743;outline-offset:2px
+}
+#threeDScreen .kd3d-gate-editor .kd3d-gate-toggle + .kd3d-gate-toggle{
+  border-top:1px solid #e7dfd1;padding-top:10px
+}
