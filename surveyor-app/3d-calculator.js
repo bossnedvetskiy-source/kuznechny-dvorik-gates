@@ -51,28 +51,6 @@ function frameGeometry(group, base, w, h, d, x, y, z, material) {
   group.add(mesh);
   return mesh;
 }
-function dimensionLabel(text) {
-  const canvas = document.createElement('canvas');
-  canvas.width = 512;
-  canvas.height = 128;
-  const ctx = canvas.getContext('2d');
-  ctx.clearRect(0, 0, 512, 128);
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(80, 24, 352, 76);
-  ctx.strokeStyle = '#b1b8ba';
-  ctx.strokeRect(80, 24, 352, 76);
-  ctx.fillStyle = '#253037';
-  ctx.font = 'bold 43px Arial, sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText(text, 256, 77);
-  const texture = new THREE.CanvasTexture(canvas);
-  const material = new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: false });
-  const sprite = new THREE.Sprite(material);
-  sprite.scale.set(2.25, 0.56, 1);
-  sprite.renderOrder = 2;
-  return { sprite, material, texture };
-}
-
 // Low-poly, physically shaped steel sheets. All dimensions are in metres.
 // С10: approximate 100 mm pitch, 10 mm trapezoid relief, 0.6 mm sheet thickness.
 // This is a visual profile, not a manufacturing cutting specification.
@@ -236,7 +214,6 @@ export function mount3DCalculator(root) {
   let renderer, camera, scene, controls, fence, grid, base;
   let previousMaterials = [];
   let previousLineGeometries = [];
-  let labelObjects = [];
   let webglOk = false;
   try {
     renderer = new THREE.WebGLRenderer({ antialias:true, alpha:false, powerPreference:'low-power' });
@@ -289,10 +266,8 @@ export function mount3DCalculator(root) {
     fence.clear();
     previousMaterials.forEach(m => m.dispose());
     previousLineGeometries.forEach(g => g.dispose());
-    labelObjects.forEach(x => { x.material.dispose(); x.texture.dispose(); });
     previousMaterials = [];
     previousLineGeometries = [];
-    labelObjects = [];
   }
   function updateModel() {
     const { count, actualSpan } = summary();
@@ -389,20 +364,7 @@ export function mount3DCalculator(root) {
       instancePickets(fence,geo,fillMat,horizontalPickets,0);
       instancePickets(fence,geo,fillMat,rearHorizontalPickets,Math.PI);
     }
-    const dimMaterial = new THREE.LineBasicMaterial({color:0x536477});
-    previousMaterials.push(dimMaterial);
-    const z = 0.85;
-    const y=0.015;
-    const segments = [[start,z,start+config.length,z],[start,z-0.17,start,z+0.17],[start+config.length,z-0.17,start+config.length,z+0.17]];
-    segments.forEach(s=>{
-      const geom=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(s[0],y,s[1]),new THREE.Vector3(s[2],y,s[3])]);
-      previousLineGeometries.push(geom);
-      fence.add(new THREE.Line(geom,dimMaterial));
-    });
-    const label = dimensionLabel(config.length.toFixed(1).replace('.', ',') + ' м');
-    label.sprite.position.set(0,0.38,z+0.06);
-    labelObjects.push(label);
-    fence.add(label.sprite);
+    // Length is shown in the settings and specification, not over the fence.
   }
   function fit() {
     if (!webglOk) return;
