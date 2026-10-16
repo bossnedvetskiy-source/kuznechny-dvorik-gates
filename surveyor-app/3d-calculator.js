@@ -353,7 +353,7 @@ export function mount3DCalculator(root) {
         });
         // Transverse ties connect the guides; positioned behind the visible slats.
         railY.forEach(y=>frameGeometry(fence,base,width,0.04,0.02,mid,y,
-          doubleRow?-0.046:-0.038,postMat));
+          doubleRow?-0.078:-0.008,postMat));
         const rows=horizontalPicketRows(config.height,config.gap,doubleRow);
         rows.front.forEach(y=>horizontalPickets.push({x:mid,y,z:0.005}));
         rows.rear.forEach(y=>rearHorizontalPickets.push({x:mid,y,z:-0.09}));
