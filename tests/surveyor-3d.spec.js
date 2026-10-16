@@ -18,6 +18,10 @@ test('3D расчёт opens independently in DEV and edits geometry without chan
   await page.locator('#kd3dRoot [data-field="length"]').fill('10');
   await page.locator('#kd3dRoot [data-field="length"]').press('Tab');
   await expect(page.locator('#kd3dRoot [data-parts]')).toContainText('10,0 м');
+  const postSize=page.locator('#kd3dRoot [data-field="postSize"]');
+  await expect(postSize).toHaveValue('80');
+  await postSize.selectOption('100');
+  await expect(page.locator('#kd3dRoot [data-parts]')).toContainText('100×100 мм');
   const type = page.locator('#kd3dRoot [data-field="fill"]');
   await type.selectOption('sheet');
   await expect(page.locator('#kd3dRoot [data-picket-settings]')).toBeHidden();
@@ -40,6 +44,7 @@ test('3D расчёт opens independently in DEV and edits geometry without chan
   const draft=await page.evaluate(()=>JSON.parse(localStorage.getItem('kd-surveyor-3d-draft-v1')));
   expect(draft.fill).toBe('horizontal-double');
   expect(draft.ral).toBe('9003');
+  expect(draft.postSize).toBe(100);
   await page.locator('#kd3dRoot [data-mode="parts"]').click();
   await expect(page.locator('#kd3dRoot [data-parts]')).toBeVisible();
   await page.locator('#kd3dRoot [data-mode="scene"]').click();
