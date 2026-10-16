@@ -3,7 +3,7 @@ import { OrbitControls } from '../naves/vendor/OrbitControls.js';
 
 // Standalone DEV prototype. This is visual geometry only, not a retail price quote.
 const DRAFT_KEY = 'kd-surveyor-3d-draft-v1';
-const DEFAULT = { length: 12, height: 1.8, step: 2.5, fill: 'picket', gap: 0.05, ral: '7024' };
+const DEFAULT = { length: 12, height: 1.8, step: 2.5, postSize: 80, fill: 'picket', gap: 0.05, ral: '7024' };
 // Approximate screen representations of powder-coated RAL metal, not calibrated paint samples.
 const RAL = { '7024': '#46494f', '8017': '#49312c', '6005': '#114436', '9005': '#151719', '9003': '#eeefea' };
 const RAL_LABELS = { '7024':'Графит', '8017':'Шоколад', '6005':'Зелёный', '9005':'Чёрный', '9003':'Белый' };
@@ -32,6 +32,7 @@ function loadDraft() {
       length: numeric(o.length, 1, 60, DEFAULT.length),
       gap: numeric(o.gap, 0.02, 0.12, DEFAULT.gap),
       height: numeric(o.height, 0.8, 3, DEFAULT.height),
+      postSize: [60, 80, 100].includes(Number(o.postSize)) ? Number(o.postSize) : DEFAULT.postSize,
       step: numeric(o.step, 1, 3, DEFAULT.step),
       fill: ['picket', 'picket-double', 'horizontal', 'horizontal-double', 'sheet', 'jalousie'].includes(o.fill) ? o.fill : DEFAULT.fill,
       ral: Object.hasOwn(RAL, o.ral) ? o.ral : DEFAULT.ral
@@ -138,18 +139,44 @@ function buildPicketGeometry(length, horizontal=false) {
   return geometry;
 }
 
-function instancePickets(group, geometry, material, positions) {
+// Reversing the rear row's bulged face, without negative scaling or inverted normals.
+function instancePickets(group, geometry, material, positions, rotationY=0) {
   if(!positions.length)return;
   const mesh=new THREE.InstancedMesh(geometry,material,positions.length);
   const dummy=new THREE.Object3D();
   positions.forEach((p,i)=>{
     dummy.position.set(p.x,p.y,p.z);
+    dummy.rotation.set(0,rotationY,0);
     dummy.updateMatrix();
     mesh.setMatrixAt(i,dummy.matrix);
   });
   mesh.instanceMatrix.needsUpdate=true;
   mesh.frustumCulled=false;
   group.add(mesh);
+}
+// Two supports for a short section; three vertical guides for regular horizontal pickets.
+function guideOffsets(spanWidth) {
+  if(spanWidth < 1.25) return [-spanWidth*0.27,spanWidth*0.27];
+  return [-spanWidth/2+0.16,0,spanWidth/2-0.16];
+}
+function buildPostCapGeometry(size) {
+  // Four-sided low-profile pitched cap; its square base is 8 mm wider than the post.
+  const half=size/2+0.004, topHalf=size/2-0.007;
+  const h=0.032;
+  const bottom=[[-half,0,-half],[half,0,-half],[half,0,half],[-half,0,half]];
+  const top=[[-topHalf,h,-topHalf],[topHalf,h,-topHalf],[topHalf,h,topHalf],[-topHalf,h,topHalf]];
+  const triangles=[];
+  const triangle=(a,b,c)=>triangles.push(...a,...b,...c);
+  for(let i=0;i<4;i++){
+    const j=(i+1)%4;
+    triangle(bottom[i],bottom[j],top[i]);
+    triangle(bottom[j],top[j],top[i]);
+    triangle(top[0],top[(i+1)%4],top[(i+2)%4]); // top cover
+  }
+  const geometry=new THREE.BufferGeometry();
+  geometry.setAttribute('position',new THREE.Float32BufferAttribute(triangles,3));
+  geometry.computeVertexNormals();
+  return geometry;
 }
 
 export function mount3DCalculator(root) {
@@ -169,6 +196,7 @@ export function mount3DCalculator(root) {
     '<div class="kd3d-fields"><label>Длина стороны А, м<input data-field="length" inputmode="decimal" type="number" min="1" max="60" step="0.1"></label>',
     '<label>Высота, м<input data-field="height" inputmode="decimal" type="number" min="0.8" max="3" step="0.1"></label>',
     '<label>Макс. шаг столбов, м<input data-field="step" inputmode="decimal" type="number" min="1" max="3" step="0.1"></label></div>',
+    '<label class="kd3d-select-label">Столбы · профильная труба<select data-field="postSize"><option value="60">60×60 мм</option><option value="80">80×80 мм</option><option value="100">100×100 мм</option></select></label>',
     '<label class="kd3d-select-label">Заполнение<select data-field="fill"><option value="picket">Штакетник · вертикальный односторонний</option><option value="picket-double">Штакетник · вертикальный шахматка</option><option value="horizontal">Штакетник · горизонтальный односторонний</option><option value="horizontal-double">Штакетник · горизонтальный шахматка</option><option value="sheet">Профнастил С10 · объёмный</option><option value="jalousie">Жалюзи · схематично</option></select></label>',
     '<div class="kd3d-picket-settings" data-picket-settings><div><strong>Штакетник 120 мм</strong><span>Объёмный профиль с продольным ребром и загнутыми краями</span></div><label>Зазор между планками, см<input data-field="gap" inputmode="decimal" type="number" min="2" max="12" step="0.5"></label></div>',
     '<label class="kd3d-select-label">Порошковая окраска · RAL<select data-field="ral"><option value="7024">7024 · графит</option><option value="8017">8017 · шоколад</option><option value="6005">6005 · зелёный</option><option value="9005">9005 · чёрный</option><option value="9003">9003 · белый</option></select></label>',
@@ -179,7 +207,7 @@ export function mount3DCalculator(root) {
     '<button type="button" data-reset class="kd3d-reset">↶ Сбросить тестовые параметры</button></div>'
   ].join('');
   const find = selector => root.querySelector(selector);
-  for (const key of ['length','height','step','fill','ral']) find('[data-field="' + key + '"]').value = config[key];
+  for (const key of ['length','height','step','postSize','fill','ral']) find('[data-field="' + key + '"]').value = config[key];
   find('[data-field="gap"]').value = Number((config.gap*100).toFixed(1));
   const swatches=find('[data-ral-swatches]');
   swatches.innerHTML=Object.entries(RAL).map(([code,hex])=>
@@ -251,7 +279,7 @@ export function mount3DCalculator(root) {
     const actualSpan = config.length / count;
     stats.innerHTML = '<div><small>Пролётов</small><b>' + count + '</b></div><div><small>Столбов</small><b>' + (count + 1) + '</b></div><div><small>Длина пролёта</small><b>' + actualSpan.toFixed(2).replace('.', ',') + ' м</b></div>';
     const names={picket:'Евроштакетник вертикальный, один ряд', 'picket-double':'Евроштакетник вертикальный, шахматка', horizontal:'Евроштакетник горизонтальный, один ряд', 'horizontal-double':'Евроштакетник горизонтальный, шахматка',sheet:'Профнастил С10',jalousie:'Жалюзи (схематично)'};
-    parts.innerHTML = '<h3>Комплектация · предварительная геометрия</h3><p>Сторона А: ' + config.length.toFixed(1).replace('.', ',') + ' м · высота ' + config.height.toFixed(1).replace('.', ',') + ' м</p><p>Пролётов: <b>' + count + '</b>; металлических столбов: <b>' + (count+1) + '</b>.</p><p>Средний пролёт: <b>' + actualSpan.toFixed(2).replace('.', ',') + ' м</b>.</p><p>Заполнение: <b>'+names[config.fill]+'</b>'+(config.fill==='sheet'?' · приблизительный профиль 10 мм':' · планка 120 мм, зазор '+(config.gap*100).toFixed(1).replace('.',',')+' см')+'.</p><p class="kd3d-unpriced">Только визуализация! Это не раскрой материала и не расчёт стоимости. Действующие калькуляторы не затронуты.</p>';
+    parts.innerHTML = '<h3>Комплектация · предварительная геометрия</h3><p>Сторона А: ' + config.length.toFixed(1).replace('.', ',') + ' м · высота ' + config.height.toFixed(1).replace('.', ',') + ' м</p><p>Пролётов: <b>' + count + '</b>; металлических столбов: <b>' + (count+1) + '</b> ('+config.postSize+'×'+config.postSize+' мм).</p><p>Каркас: <b>лаги 40×20 мм</b>, для горизонтального штакетника — вертикальные направляющие (2–3 шт. на пролёт).</p><p>Средний пролёт: <b>' + actualSpan.toFixed(2).replace('.', ',') + ' м</b>.</p><p>Заполнение: <b>'+names[config.fill]+'</b>'+(config.fill==='sheet'?' · приблизительный профиль 10 мм':' · планка 120 мм, зазор '+(config.gap*100).toFixed(1).replace('.',',')+' см')+'.</p><p class="kd3d-unpriced">Только визуализация! Это не раскрой материала и не расчёт стоимости. Действующие калькуляторы не затронуты.</p>';
     find('[data-picket-settings]').hidden = !['picket','picket-double','horizontal','horizontal-double'].includes(config.fill);
     return { count, actualSpan };
   }
@@ -276,17 +304,27 @@ export function mount3DCalculator(root) {
     const fillMat = new THREE.MeshStandardMaterial({color:RAL[config.ral],metalness:0.22,roughness:0.43,side:THREE.DoubleSide});
     previousMaterials.push(postMat, fillMat);
     const start = -config.length / 2;
-    const railY = [0.38, Math.max(0.56, config.height - 0.38)];
+    const postWidth=config.postSize/1000;
+    const postHeight=config.height+0.10;
+    const railY=config.height>2.15 ? [0.32,config.height/2,config.height-0.32] :
+      [0.33,Math.max(0.52,config.height-0.33)];
+    const capGeometry=buildPostCapGeometry(postWidth);
+    previousLineGeometries.push(capGeometry);
     for (let i=0; i<=count; i++) {
-      const x = start + i * actualSpan;
-      frameGeometry(fence, base, 0.085, config.height + 0.16, 0.085, x, (config.height+0.16)/2, 0, postMat);
-      frameGeometry(fence, base, 0.105, 0.035, 0.105, x, config.height+0.16, 0, postMat);
+      const x=start+i*actualSpan;
+      // True 60, 80 or 100 mm square post; small flat seat and sloped metal cap.
+      frameGeometry(fence,base,postWidth,postHeight,postWidth,x,postHeight/2,0,postMat);
+      frameGeometry(fence,base,postWidth+0.013,0.012,postWidth+0.013,
+        x,postHeight+0.006,0,postMat);
+      const cap=new THREE.Mesh(capGeometry,postMat);
+      cap.position.set(x,postHeight+0.012,0);
+      fence.add(cap);
     }
     const frontPickets=[], rearPickets=[], horizontalPickets=[], rearHorizontalPickets=[];
     const isPicket=['picket','picket-double','horizontal','horizontal-double'].includes(config.fill);
     for (let i=0; i<count; i++) {
       const mid = start + (i+0.5)*actualSpan;
-      const width = Math.max(0.2, actualSpan - 0.11);
+      const width = Math.max(0.2, actualSpan - postWidth - 0.035);
       if (config.fill === 'sheet') {
         const geometry=buildC10Geometry(width,config.height-0.12);
         previousLineGeometries.push(geometry);
@@ -295,49 +333,60 @@ export function mount3DCalculator(root) {
         panel.receiveShadow=true;
         fence.add(panel);
         // The real profiled sheet is mounted over two steel horizontal rails.
-        railY.forEach(y=>frameGeometry(fence,base,width,0.04,0.035,mid,y,-0.07,postMat));
+        railY.forEach(y=>frameGeometry(fence,base,width,0.04,0.02,mid,y,-0.005,postMat));
       } else if (config.fill === 'jalousie') {
         // Temporarily schematic; dedicated louvre geometry will be a later step.
         const rows=Math.max(1,Math.floor((config.height-0.12)/0.14));
         for(let n=0;n<rows;n++)
           frameGeometry(fence,base,width,0.11,0.026,mid,0.13+n*0.14,0,fillMat);
       } else if (config.fill === 'horizontal' || config.fill === 'horizontal-double') {
-        // Two true rows in a checkerboard: back planks bridge front gaps vertically.
+        // Real 40×20 guides: two for short spans, three for ordinary spans.
+        // Their shallow (20 mm) depth follows the face of each row of pickets.
         const doubleRow=config.fill==='horizontal-double';
-        [-.28,.28].forEach(factor=>{
-          frameGeometry(fence,base,0.035,config.height-0.12,0.035,mid+width*factor,config.height/2,-0.065,postMat);
-          if(doubleRow)frameGeometry(fence,base,0.035,config.height-0.12,0.035,mid+width*factor,config.height/2,-0.18,postMat);
+        const guides=guideOffsets(width);
+        guides.forEach(offset=>{
+          frameGeometry(fence,base,0.04,config.height-0.12,0.02,
+            mid+offset,config.height/2,-0.008,postMat);
+          if(doubleRow)frameGeometry(fence,base,0.04,config.height-0.12,0.02,
+            mid+offset,config.height/2,-0.078,postMat);
         });
+        // Transverse ties connect the guides; positioned behind the visible slats.
+        railY.forEach(y=>frameGeometry(fence,base,width,0.04,0.02,mid,y,
+          doubleRow?-0.046:-0.038,postMat));
         const rows=horizontalPicketRows(config.height,config.gap,doubleRow);
-        rows.front.forEach(y=>horizontalPickets.push({x:mid,y,z:0.038}));
-        rows.rear.forEach(y=>rearHorizontalPickets.push({x:mid,y,z:-0.13}));
+        rows.front.forEach(y=>horizontalPickets.push({x:mid,y,z:0.005}));
+        rows.rear.forEach(y=>rearHorizontalPickets.push({x:mid,y,z:-0.09}));
       } else if(isPicket) {
-        railY.forEach(y=>frameGeometry(fence,base,width,0.04,0.035,mid,y,-0.065,postMat));
+        // 40×20 tube rails behind the profiled pickets (not floating 8 cm away).
+        railY.forEach(y=>frameGeometry(fence,base,width,0.04,0.02,mid,y,-0.008,postMat));
+        if(config.fill==='picket-double'){
+          railY.forEach(y=>frameGeometry(fence,base,width,0.04,0.02,mid,y,-0.078,postMat));
+        }
         const plank=0.12, gap=config.gap;
         const n=Math.max(1,Math.floor((width+gap)/(plank+gap)));
         const occupied=n*plank+(n-1)*gap;
         const firstX=mid-occupied/2+plank/2;
         for(let k=0;k<n;k++)
-          frontPickets.push({x:firstX+k*(plank+gap),y:0.065,z:0.038});
+          frontPickets.push({x:firstX+k*(plank+gap),y:0.065,z:0.005});
         if(config.fill==='picket-double') {
           // The rear layer is staggered between front strips (one fewer strip).
           for(let k=0;k<n-1;k++)
-            rearPickets.push({x:firstX+(k+0.5)*(plank+gap),y:0.065,z:-0.10});
+            rearPickets.push({x:firstX+(k+0.5)*(plank+gap),y:0.065,z:-0.09});
         }
       }
     }
     if(frontPickets.length || rearPickets.length) {
       const geo=buildPicketGeometry(config.height-0.13);
       previousLineGeometries.push(geo);
-      instancePickets(fence,geo,fillMat,frontPickets);
-      instancePickets(fence,geo,fillMat,rearPickets);
+      instancePickets(fence,geo,fillMat,frontPickets,0);
+      instancePickets(fence,geo,fillMat,rearPickets,Math.PI);
     }
     if(horizontalPickets.length || rearHorizontalPickets.length) {
       // Front/back layers share a single low-poly profile and two instanced meshes.
-      const geo=buildPicketGeometry(Math.max(0.2,actualSpan-0.11),true);
+      const geo=buildPicketGeometry(Math.max(0.2,actualSpan-postWidth-0.035),true);
       previousLineGeometries.push(geo);
-      instancePickets(fence,geo,fillMat,horizontalPickets);
-      instancePickets(fence,geo,fillMat,rearHorizontalPickets);
+      instancePickets(fence,geo,fillMat,horizontalPickets,0);
+      instancePickets(fence,geo,fillMat,rearHorizontalPickets,Math.PI);
     }
     const dimMaterial = new THREE.LineBasicMaterial({color:0x536477});
     previousMaterials.push(dimMaterial);
@@ -373,6 +422,7 @@ export function mount3DCalculator(root) {
     input.addEventListener('change',()=>{
       const field=input.dataset.field;
       if (field === 'fill') config.fill=input.value;
+      else if (field === 'postSize') config.postSize=[60,80,100].includes(Number(input.value)) ? Number(input.value) : config.postSize;
       else if (field === 'gap') config.gap=numeric(input.value,2,12,config.gap*100)/100;
       else if(field === 'ral') config.ral=input.value;
       else config[field]=numeric(input.value,field==='length'?1:field==='height'?0.8:1,field==='length'?60:3,config[field]);
@@ -384,7 +434,7 @@ export function mount3DCalculator(root) {
   root.querySelector('[data-fit]').addEventListener('click',fit);
   root.querySelector('[data-reset]').addEventListener('click',()=>{
     Object.assign(config,DEFAULT);
-    for(const key of ['length','height','step','fill','ral'])find('[data-field="'+key+'"]').value=config[key];
+    for(const key of ['length','height','step','postSize','fill','ral'])find('[data-field="'+key+'"]').value=config[key];
     find('[data-field="gap"]').value=Number((config.gap*100).toFixed(1));
     updateModel();syncSwatches();fit();
   });
