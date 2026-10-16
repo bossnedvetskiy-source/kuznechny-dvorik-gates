@@ -168,3 +168,30 @@ export function getSiteLayout(sides, gateConfig=null) {
       width:maxX-minX,depth:maxZ-minZ}
   };
 }
+
+
+// Dimensions measured between INSIDE FACES of adjacent metal posts, not post axes.
+// Every segment is local to its edge (0 = edge start). The planning output is
+// shared by 3D ground labels, the specification and unit tests.
+export function getClearDimensionPlan(layout,postSizeMm=80){
+  const postWidth=clamp(postSizeMm,60,100,80)/1000;
+  const half=postWidth/2;
+  return layout.edges.map(edge=>{
+    const spans=[];
+    for(const section of edge.sections){
+      for(let index=0;index<section.count;index++){
+        const leftAxis=section.from+index*section.span;
+        const rightAxis=leftAxis+section.span;
+        const from=leftAxis+half,to=rightAxis-half;
+        spans.push({kind:'span',index:spans.length+1,from,to,
+          clearMm:Math.max(0,Math.round((to-from)*1000))});
+      }
+    }
+    if(edge.gate){
+      const from=edge.gate.start+half,to=edge.gate.end-half;
+      spans.push({kind:'gate',index:1,from,to,
+        clearMm:Math.max(0,Math.round((to-from)*1000))});
+    }
+    return {id:edge.id,length:edge.side.length,postWidth,spans};
+  });
+}
