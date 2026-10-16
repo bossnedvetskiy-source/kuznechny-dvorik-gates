@@ -14,6 +14,24 @@ test('3D расчёт opens independently in DEV and edits geometry without chan
   await expect(page.locator('#threeDScreen')).toBeVisible();
   await expect(page.locator('#kd3dRoot [data-stats]')).toContainText('Пролётов',{timeout:12000});
   await expect(page.locator('#screenTitle')).toHaveText('3D расчёт');
+  // Regression: mobile A/B/V/G cards must never fall back to unstyled system buttons.
+  await expect(page.locator('#kd3dRoot .kd3d-side-entry')).toHaveCount(4);
+  await expect(page.locator('#kd3dRoot [data-active-side-count]')).toHaveText('1 из 4');
+  await expect(page.locator('#kd3dRoot [data-current-side-label]')).toHaveText('Настройка стороны А');
+  const sideUi=await page.locator('#kd3dRoot .kd3d-sides').evaluate(el=>{
+    const grid=getComputedStyle(el);
+    const entry=getComputedStyle(el.querySelector('.kd3d-side-entry'));
+    const selected=getComputedStyle(el.querySelector('.selected'));
+    return {grid:grid.display,columns:grid.gridTemplateColumns.split(' ').length,
+      entry:entry.display,radius:parseFloat(entry.borderTopLeftRadius),
+      selectedColor:selected.backgroundColor};
+  });
+  expect(sideUi.grid).toBe('grid');
+  expect(sideUi.columns).toBe(2);
+  expect(sideUi.entry).toBe('grid');
+  expect(sideUi.radius).toBeGreaterThanOrEqual(12);
+  expect(sideUi.selectedColor).toBe('rgb(36, 33, 30)');
+
 
   await page.locator('#kd3dRoot [data-field="length"]').fill('10');
   await page.locator('#kd3dRoot [data-field="length"]').press('Tab');
@@ -53,6 +71,10 @@ test('3D расчёт opens independently in DEV and edits geometry without chan
   // Each side is editable independently; all four corners share a single physical post.
   await page.locator('#kd3dRoot [data-side-toggle="B"]').click();
   await page.locator('#kd3dRoot [data-side="B"]').click();
+  await expect(page.locator('#kd3dRoot [data-active-side-count]')).toHaveText('2 из 4');
+  await expect(page.locator('#kd3dRoot [data-current-side-label]')).toHaveText('Настройка стороны Б');
+  await expect(page.locator('#kd3dRoot [data-length-label]')).toContainText('Длина стороны Б, м');
+
   await page.locator('#kd3dRoot [data-field="length"]').fill('9');
   await page.locator('#kd3dRoot [data-field="length"]').press('Tab');
   await page.locator('#kd3dRoot [data-field="height"]').fill('2.2');
