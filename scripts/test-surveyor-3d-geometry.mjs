@@ -73,6 +73,16 @@ assert(frontNormal.z>0.999 && rearNormal.z<-.999,
  'rear pickets must face away from front pickets for both layouts');
 assert(Math.abs(matrixB.elements[14]+.09)<1e-7,
  'rear pickets must retain their depth and not mirror their positions');
+// Trimmed pickets must have physically narrower instance transforms at the posts.
+const stripGroup=new THREE.Group();
+instancePickets(stripGroup,instanceGeometry,testMaterial,[{x:0,y:0,z:.115,width:.045}],0);
+const stripMatrix=new THREE.Matrix4();
+stripGroup.children[0].getMatrixAt(0,stripMatrix);
+const stripScale=new THREE.Vector3();
+stripMatrix.decompose(new THREE.Vector3(),new THREE.Quaternion(),stripScale);
+assert(Math.abs(stripScale.x-.045/.12)<1e-7,'terminal picket must trim to the post face');
+assert(Math.abs(stripScale.y-1)<1e-7,'trimming width cannot reduce picket height');
+stripGroup.children.forEach(mesh=>mesh.dispose());
 group.children.forEach(mesh=>mesh.dispose());
 instanceGeometry.dispose();
 testMaterial.dispose();
