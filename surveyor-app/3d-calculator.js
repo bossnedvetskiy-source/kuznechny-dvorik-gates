@@ -566,11 +566,12 @@ export function mount3DCalculator(root) {
       const supportZ=behind?.073:-.008;
       const railY=side.height>2.15?[.32,side.height/2,side.height-.32]:
         [.33,Math.max(.52,side.height-.33)];
-      const frontPickets=[],rearPickets=[],horizontalPickets=[],rearHorizontalPickets=[];
+      const frontPickets=[],rearPickets=[];
       let renderedEdgeClearance=0;
       for(const section of edge.sections){
       const actualSpan=section.span;
       const infillWidth=Math.max(.025,actualSpan-(behind?0:postWidth));
+      const horizontalPickets=[],rearHorizontalPickets=[];
       for(let i=0;i<section.count;i++){
         const mid=start+section.from+(i+.5)*actualSpan;
         const width=infillWidth;
@@ -622,6 +623,14 @@ export function mount3DCalculator(root) {
           }
         }
       }
+      // Each section may have a different span width after opening a gateway.
+      // Build horizontal slats separately to preserve their true 3D lengths.
+      if(horizontalPickets.length||rearHorizontalPickets.length){
+        const geo=buildPicketGeometry(infillWidth,true);
+        previousLineGeometries.push(geo);
+        instancePickets(group,geo,fillMat,horizontalPickets,0);
+        instancePickets(group,geo,fillMat,rearHorizontalPickets,Math.PI);
+      }
       }
       if(frontPickets.length||rearPickets.length){
         const geo=buildPicketGeometry(side.height-.13);
@@ -629,11 +638,54 @@ export function mount3DCalculator(root) {
         instancePickets(group,geo,fillMat,frontPickets,0);
         instancePickets(group,geo,fillMat,rearPickets,Math.PI);
       }
-      if(horizontalPickets.length||rearHorizontalPickets.length){
-        const geo=buildPicketGeometry(edge.sections[0]?.span-(behind?0:postWidth)||.2,true);
-        previousLineGeometries.push(geo);
-        instancePickets(group,geo,fillMat,horizontalPickets,0);
-        instancePickets(group,geo,fillMat,rearHorizontalPickets,Math.PI);
+      if(edge.gate){
+        const opening=edge.gate;
+        const leafGap=.024;
+        const leafWidth=(opening.width-leafGap)/2;
+        const gateHeight=Math.max(.8,side.height-.13);
+        const yCenter=.075+gateHeight/2;
+        const gateStart=start+opening.start;
+        const gateFillZ=behind?.12:.036;
+        for(let j=0;j<2;j++){
+          const leaf=new THREE.Group();
+          leaf.userData.kdGateLeaf=true;
+          leaf.position.x=gateStart+(j===0?leafWidth/2:leafWidth+leafGap+leafWidth/2);
+          group.add(leaf);
+          // Uprights, top and bottom rails form real independent swing leaves.
+          for(const x of [-leafWidth/2+.026,leafWidth/2-.026])
+            frameGeometry(leaf,base,.052,gateHeight,.04,x,yCenter,gateFillZ-.036,postMat);
+          for(const y of [.075+.029,.075+gateHeight-.029])
+            frameGeometry(leaf,base,leafWidth,.052,.04,0,y,gateFillZ-.036,postMat);
+          const insideWidth=Math.max(.16,leafWidth-.12);
+          if(side.fill==='sheet'){
+            const geo=buildC10Geometry(insideWidth,gateHeight-.14);
+            previousLineGeometries.push(geo);
+            const panel=new THREE.Mesh(geo,fillMat);
+            panel.position.set(0,.145,gateFillZ);
+            leaf.add(panel);
+          }else if(isHorizontalFill(side.fill)||side.fill==='jalousie'){
+            const count=Math.max(2,Math.floor((gateHeight-.14)/(.12+config.gap)));
+            const gap=(gateHeight-.14-count*.12)/Math.max(1,count-1);
+            for(let k=0;k<count;k++)
+              frameGeometry(leaf,base,insideWidth,.12,.022,0,.15+k*(.12+Math.max(0,gap)),gateFillZ,fillMat);
+          }else{
+            const plan=verticalPicketPlan(insideWidth,config.gap,true);
+            const geo=buildPicketGeometry(gateHeight-.17);
+            previousLineGeometries.push(geo);
+            instancePickets(leaf,geo,fillMat,plan.strips.map(p=>({
+              x:p.x,y:.15,z:gateFillZ,width:p.width
+            })),0);
+            if(side.fill==='picket-double'){
+              const rear=[];
+              for(let k=0;k<plan.strips.length-1;k++){
+                const first=plan.strips[k],last=plan.strips[k+1];
+                rear.push({x:(first.x+last.x)/2,y:.15,z:gateFillZ-.09});
+              }
+              instancePickets(leaf,geo,fillMat,rear,Math.PI);
+            }
+          }
+          frameGeometry(leaf,base,leafWidth-.09,.028,.026,0,yCenter,gateFillZ-.063,postMat);
+        }
       }
       renderedMaxEdgeClearance=Math.max(renderedMaxEdgeClearance,renderedEdgeClearance);
       renderedPostModes[edge.id]=side.postMode;
@@ -641,7 +693,9 @@ export function mount3DCalculator(root) {
     let renderedPlanks=0;
     fence.traverse(object=>{if(object.isInstancedMesh)renderedPlanks+=object.count;});
     root.dataset.scenePickets=String(renderedPlanks);
-    root.dataset.sceneGateLeaves=String(layout.gate?2:0);
+    let actualLeaves=0;
+    fence.traverse(object=>{if(object.userData.kdGateLeaf)actualLeaves++;});
+    root.dataset.sceneGateLeaves=String(actualLeaves);
     root.dataset.sceneGateOpening=layout.gate?JSON.stringify({start:layout.gate.start,end:layout.gate.end}):'';
     root.dataset.scenePostModes=JSON.stringify(renderedPostModes);
     root.dataset.sceneEdgeClearance=String(renderedMaxEdgeClearance);
