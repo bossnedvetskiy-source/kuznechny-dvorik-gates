@@ -223,6 +223,28 @@ test('3D расчёт opens independently in DEV and edits geometry without chan
     await expect(page.locator('#kd3dRoot')).toHaveAttribute('data-scene-fill-colors',/#[0-9a-f]{6},#[0-9a-f]{6}/);
   }
 
+  // A-side swing opening is a real hole in the fence with 2 separate gate leaves.
+  await expect(page.locator('#kd3dRoot [data-gate-enabled]')).not.toBeChecked();
+  await page.locator('#kd3dRoot [data-gate-enabled]').check();
+  await expect(page.locator('#kd3dRoot [data-gate-fields]')).toBeVisible();
+  await page.locator('#kd3dRoot [data-gate-width]').fill('4');
+  await page.locator('#kd3dRoot [data-gate-width]').press('Tab');
+  await page.locator('#kd3dRoot [data-gate-offset]').fill('2');
+  await page.locator('#kd3dRoot [data-gate-offset]').press('Tab');
+  await expect(page.locator('#kd3dRoot [data-parts]')).toContainText('Распашные ворота на стороне А');
+  await expect(page.locator('#kd3dRoot [data-parts]')).toContainText('отступ слева 2,0 м');
+  const withGate=await page.evaluate(()=>JSON.parse(localStorage.getItem('kd-surveyor-3d-draft-v1')).gate);
+  expect(withGate.enabled).toBe(true);
+  expect(withGate.width).toBe(4);
+  expect(withGate.offset).toBe(2);
+  if(hasReal3D){
+    await expect(page.locator('#kd3dRoot')).toHaveAttribute('data-scene-gate-leaves','2');
+    await expect(page.locator('#kd3dRoot')).toHaveAttribute('data-scene-gate-opening',/\\\"start\\\":2/);
+  }
+  await page.locator('#kd3dRoot [data-gate-enabled]').uncheck();
+  if(hasReal3D)await expect(page.locator('#kd3dRoot')).toHaveAttribute('data-scene-gate-leaves','0');
+  await expect(page.locator('#kd3dRoot [data-parts]')).not.toContainText('Распашные ворота на стороне А:');
+
   await page.locator('#kd3dRoot [data-collapse-params]').click();
   await expect(page.locator('#kd3dRoot [data-editor-content]')).toBeHidden();
   await page.locator('#kd3dRoot [data-collapse-params]').click();
