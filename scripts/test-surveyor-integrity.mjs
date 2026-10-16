@@ -35,15 +35,16 @@ for (const marker of [
 for (const marker of ['syncNowBtn','syncStatusText','КД Замерщик','planDialog','planCanvas','data-add-plan-item','customerPreviewDialog','open3DCalcBtn','threeDScreen','kd3dRoot','3d-calculator.css']) {
   if (!html.includes(marker)) throw new Error('Surveyor HTML missing: '+marker);
 }
-if (!sw.includes('kd-surveyor-v3-post-layout-v10') || !sw.includes('./line-builder.js') || !sw.includes('./sliding-gates/index.html') || !sw.includes('./3d-calculator.js')) throw new Error('Surveyor service worker cache missing 3D/sliding calculator');
+if (!sw.includes('kd-surveyor-v3-whole-pickets-v11') || !sw.includes('./line-builder.js') || !sw.includes('./sliding-gates/index.html') || !sw.includes('./3d-calculator.js')) throw new Error('Surveyor service worker cache missing 3D/sliding calculator');
 for (const marker of ['function open3DCalculator','import(\'./3d-calculator.js\')','threeD: \'3D расчёт\'']) if (!app.includes(marker)) throw new Error('3D route missing: '+marker);
 for (const marker of ['OrbitControls','WebGLRenderer','mount3DCalculator','updateModel','fit()','render','DRAFT_KEY']) if (!threeD.includes(marker)) throw new Error('3D module missing: '+marker);
 if (!threeDCss.includes('.kd3d-viewport') || !threeDCss.includes('.kd3d-launch')) throw new Error('3D styles missing');
-if (!threeD.includes('data-preset=') || !threeD.includes('data-section="sizes"') || !html.includes('3d-calculator.css?v=post-layout-20261016')) throw new Error('Reference style editor or current stylesheet missing');
+if (!threeD.includes('data-preset=') || !threeD.includes('data-section="sizes"') || !html.includes('3d-calculator.css?v=whole-pickets-20261016')) throw new Error('Reference style editor or current stylesheet missing');
 if (threeD.includes('dimensionLabel(') || threeD.includes('new THREE.Sprite(')) throw new Error('Floating dimension label must not cover the 3D fence');
 if (!sw.includes('./3d-layout.js') || !layout.includes('function getSiteLayout') || !threeD.includes("from './3d-layout.js'"))
   throw new Error('Multi-side 3D geometry module missing from PWA');
-if (!threeD.includes('data-post-mode="behind"') || !threeD.includes('verticalPicketLayout') || !layout.includes('const normalizePostMode=')) throw new Error('Post mode or no-gap picket calculation missing');
+if (!threeD.includes('data-auto-gap') || !layout.includes('function verticalPicketPlan') || !threeDCss.includes('kd3d-gap-alert')) throw new Error('Whole-width steel picket gap warning and quick adjust missing');
+if (!threeD.includes('data-post-mode="behind"') || !threeD.includes('verticalPicketPlan') || !layout.includes('const normalizePostMode=')) throw new Error('Post mode or no-gap picket calculation missing');
 if (!threeD.includes('data-side-toggle') || !threeD.includes("function syncSideButtons"))
   throw new Error('Four-side editor UI is missing');
 if (!threeD.includes('data-side-length-input') || !threeD.includes('data-field="height"')) throw new Error('Individual side dimensions must remain editable');
