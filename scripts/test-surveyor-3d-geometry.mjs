@@ -5,8 +5,8 @@ import * as THREE from 'three';
 const source = await readFile('surveyor-app/3d-calculator.js','utf8');
 // Exercise the same geometry functions used by the browser without instantiating WebGL.
 const expression = source.replace(/^import .*;\s*$/gm,'').replace(/^export /gm,'');
-const factory = new Function('THREE', expression + '\nreturn {buildC10Geometry,buildPicketGeometry,horizontalPicketRows,RAL};');
-const {buildC10Geometry,buildPicketGeometry,horizontalPicketRows,RAL} = factory(THREE);
+const factory = new Function('THREE', expression + '\nreturn {buildC10Geometry,buildPicketGeometry,horizontalPicketRows,buildPostCapGeometry,instancePickets,guideOffsets,RAL};');
+const {buildC10Geometry,buildPicketGeometry,horizontalPicketRows,buildPostCapGeometry,instancePickets,guideOffsets,RAL} = factory(THREE);
 const bounds = geometry => {
   geometry.computeBoundingBox();
   const b=geometry.boundingBox;
@@ -56,4 +56,46 @@ for(const gap of [.02,.05,.12]){
 }
 assert.equal(Object.keys(RAL).length,5,'RAL choices should remain available');
 assert(RAL['9003']!==RAL['9005'],'white and black must have independent tones');
-console.log('Surveyor 3D: C10, profiled pickets, checkerboard and RAL OK');
+// Verify that the two staggered picket rows face in opposite directions.
+const instanceGeometry=buildPicketGeometry(1.8);
+const testMaterial=new THREE.MeshStandardMaterial({side:THREE.DoubleSide});
+const group=new THREE.Group();
+instancePickets(group,instanceGeometry,testMaterial,[{x:0,y:0,z:0}],0);
+instancePickets(group,instanceGeometry,testMaterial,[{x:0,y:0,z:-0.09}],Math.PI);
+assert.equal(group.children.length,2,'both picket rows must create separate meshes');
+const matrixA=new THREE.Matrix4(), matrixB=new THREE.Matrix4();
+group.children[0].getMatrixAt(0,matrixA);
+group.children[1].getMatrixAt(0,matrixB);
+const face=new THREE.Vector3(0,0,1);
+const frontNormal=face.clone().transformDirection(matrixA);
+const rearNormal=face.clone().transformDirection(matrixB);
+assert(frontNormal.z>0.999 && rearNormal.z<-.999,
+ 'rear pickets must face away from front pickets for both layouts');
+assert(Math.abs(matrixB.elements[14]+.09)<1e-7,
+ 'rear pickets must retain their depth and not mirror their positions');
+group.children.forEach(mesh=>mesh.dispose());
+instanceGeometry.dispose();
+testMaterial.dispose();
+
+// Match the visual posts and rails to real square/profile-tube dimensions.
+for(const side of [.06,.08,.10]){
+ const cap=buildPostCapGeometry(side);
+ const limits=bounds(cap);
+ assert(Math.abs(limits.max.x-limits.min.x-(side+.008))<1e-6,'cap must fit post size');
+ assert(Math.abs(limits.max.y-.032)<1e-6,'the cap should be 32 mm high');
+ assert([...cap.getAttribute('normal').array].every(Number.isFinite),
+  'cap normals must be valid');
+ cap.dispose();
+}
+assert.equal(guideOffsets(2.3).length,3,'standard horizontal bay needs three vertical guides');
+assert.equal(guideOffsets(1.1).length,2,'short horizontal bay needs two guides');
+const positions=guideOffsets(2.3);
+assert(Math.abs(positions[0]+positions[2])<1e-8 && positions[1]===0,
+ 'three guides must be distributed evenly across the bay');
+assert(source.includes('0.04,config.height-0.12,0.02'),
+ 'horizontal supports must use 40x20 profiles');
+assert(source.includes('instancePickets(fence,geo,fillMat,rearPickets,Math.PI)'),
+ 'vertical double-row pickets must turn backwards');
+assert(source.includes('instancePickets(fence,geo,fillMat,rearHorizontalPickets,Math.PI)'),
+ 'horizontal double-row pickets must turn backwards');
+console.log('Surveyor 3D: caps, guides, rotated double pickets and previous geometry OK');
