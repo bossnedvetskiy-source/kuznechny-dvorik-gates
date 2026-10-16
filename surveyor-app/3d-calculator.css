@@ -79,3 +79,22 @@
   background:#fff4e5;color:#854a1a;font-size:12px;line-height:1.5}
 .kd3d-side-warning[hidden]{display:none!important}
 @media(min-width:740px){.kd3d-sides{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* Four-side mobile UI v2: concise cards and independent enable switches. */
+#threeDScreen .kd3d-side-panel{display:grid;gap:12px;padding:14px;border:1px solid #e7dfd1;border-radius:17px;background:linear-gradient(180deg,#fffefb,#f9f6ef)}
+#threeDScreen .kd3d-sides-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+#threeDScreen .kd3d-sides-head strong{font-size:15px;line-height:1.2;color:#27231d}
+#threeDScreen .kd3d-sides-count{flex-shrink:0;padding:6px 9px;background:#24211d;color:#f1d084;border-radius:40px;font-size:11px;font-weight:800}
+#threeDScreen .kd3d-sides-help{margin:0;font-size:12px;line-height:1.45;color:#756f65}
+#threeDScreen .kd3d-side-entry{min-height:74px;display:grid;grid-template-columns:minmax(0,1fr) 32px;gap:4px;align-items:stretch;padding:8px;border-radius:14px}
+#threeDScreen .kd3d-side-entry [data-side]{display:flex;align-items:center;gap:7px;padding:3px 0;min-width:0}
+#threeDScreen .kd3d-side-letter{flex:0 0 30px;display:grid;place-items:center;width:30px;height:38px;border-radius:10px;font-size:21px;font-weight:900;background:#f3eee4;color:#8b631c}
+#threeDScreen .kd3d-side-copy{min-width:0;display:grid;gap:2px}
+#threeDScreen .kd3d-side-copy b{font-size:13px;font-weight:900;white-space:nowrap}
+#threeDScreen .kd3d-side-copy small{font-size:10px;white-space:nowrap}
+#threeDScreen .kd3d-side-entry.selected{background:#24211e;color:#fff5e2}
+#threeDScreen .kd3d-side-entry.selected .kd3d-side-letter{background:#c99b46;color:#211d16}
+#threeDScreen .kd3d-side-current{display:flex;align-items:center;justify-content:space-between;gap:9px;padding-top:11px;border-top:1px solid #eae2d5}
+#threeDScreen .kd3d-side-current strong{font-size:13px}
+#threeDScreen .kd3d-side-current small{font-size:11px;font-weight:800;border-radius:20px;padding:6px 9px;background:#f8edda;color:#8d6832}
+#threeDScreen .kd3d-side-current small.is-off{background:#eee;color:#777}
