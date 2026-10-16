@@ -49,6 +49,40 @@ test('3D расчёт opens independently in DEV and edits geometry without chan
   await expect(page.locator('#kd3dRoot [data-parts]')).toBeVisible();
   await page.locator('#kd3dRoot [data-mode="scene"]').click();
 
+
+  // Each side is editable independently; all four corners share a single physical post.
+  await page.locator('#kd3dRoot [data-side-toggle="B"]').click();
+  await page.locator('#kd3dRoot [data-side="B"]').click();
+  await page.locator('#kd3dRoot [data-field="length"]').fill('9');
+  await page.locator('#kd3dRoot [data-field="length"]').press('Tab');
+  await page.locator('#kd3dRoot [data-field="height"]').fill('2.2');
+  await page.locator('#kd3dRoot [data-field="height"]').press('Tab');
+  await type.selectOption('sheet');
+  await page.locator('#kd3dRoot [data-field="ral"]').selectOption('6005');
+  await expect(page.locator('#kd3dRoot [data-parts]')).toContainText('Сторона Б: 9,0 м');
+  await page.locator('#kd3dRoot [data-side-toggle="V"]').click();
+  await page.locator('#kd3dRoot [data-side="V"]').click();
+  await page.locator('#kd3dRoot [data-field="length"]').fill('10');
+  await page.locator('#kd3dRoot [data-field="length"]').press('Tab');
+  await page.locator('#kd3dRoot [data-side-toggle="G"]').click();
+  await page.locator('#kd3dRoot [data-side="G"]').click();
+  await page.locator('#kd3dRoot [data-field="length"]').fill('9');
+  await page.locator('#kd3dRoot [data-field="length"]').press('Tab');
+  await expect(page.locator('#kd3dRoot [data-site-warning]')).toBeHidden();
+  await expect(page.locator('#kd3dRoot [data-stats]')).toContainText('16');
+  const sides=await page.evaluate(()=>JSON.parse(localStorage.getItem('kd-surveyor-3d-draft-v1')).sides);
+  expect(sides.A.length).toBe(10);
+  expect(sides.A.fill).toBe('horizontal-double');
+  expect(sides.B.length).toBe(9);
+  expect(sides.B.fill).toBe('sheet');
+  expect(sides.B.ral).toBe('6005');
+  expect(sides.G.length).toBe(9);
+  await page.locator('#kd3dRoot [data-field="length"]').fill('8');
+  await page.locator('#kd3dRoot [data-field="length"]').press('Tab');
+  await expect(page.locator('#kd3dRoot [data-site-warning]')).toBeVisible();
+  await page.locator('#kd3dRoot [data-field="length"]').fill('9');
+  await page.locator('#kd3dRoot [data-field="length"]').press('Tab');
+
   await page.locator('#close3DCalcBtn').click();
   await expect(page.locator('#surveysScreen')).toBeVisible();
   await expect(page.locator('#screenTitle')).toHaveText('Замеры');
