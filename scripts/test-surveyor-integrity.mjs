@@ -34,7 +34,7 @@ for (const marker of [
 for (const marker of ['syncNowBtn','syncStatusText','КД Замерщик','planDialog','planCanvas','data-add-plan-item','customerPreviewDialog','open3DCalcBtn','threeDScreen','kd3dRoot','3d-calculator.css']) {
   if (!html.includes(marker)) throw new Error('Surveyor HTML missing: '+marker);
 }
-if (!sw.includes('kd-surveyor-v3-realistic-fill-v2') || !sw.includes('./line-builder.js') || !sw.includes('./sliding-gates/index.html') || !sw.includes('./3d-calculator.js')) throw new Error('Surveyor service worker cache missing 3D/sliding calculator');
+if (!sw.includes('kd-surveyor-v3-horizontal-checker-v3') || !sw.includes('./line-builder.js') || !sw.includes('./sliding-gates/index.html') || !sw.includes('./3d-calculator.js')) throw new Error('Surveyor service worker cache missing 3D/sliding calculator');
 for (const marker of ['function open3DCalculator','import(\'./3d-calculator.js\')','threeD: \'3D расчёт\'']) if (!app.includes(marker)) throw new Error('3D route missing: '+marker);
 for (const marker of ['OrbitControls','WebGLRenderer','mount3DCalculator','updateModel','fit()','render','DRAFT_KEY']) if (!threeD.includes(marker)) throw new Error('3D module missing: '+marker);
 if (!threeDCss.includes('.kd3d-viewport') || !threeDCss.includes('.kd3d-launch')) throw new Error('3D styles missing');
