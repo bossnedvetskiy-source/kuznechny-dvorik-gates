@@ -92,10 +92,10 @@ assert.equal(guideOffsets(1.1).length,2,'short horizontal bay needs two guides')
 const positions=guideOffsets(2.3);
 assert(Math.abs(positions[0]+positions[2])<1e-8 && positions[1]===0,
  'three guides must be distributed evenly across the bay');
-assert(source.includes('0.04,config.height-0.12,0.02'),
+assert(source.includes('frameGeometry(group,base,.04,side.height-.12,.02'),
  'horizontal supports must use 40x20 profiles');
-assert(source.includes('instancePickets(fence,geo,fillMat,rearPickets,Math.PI)'),
+assert(source.includes('instancePickets(group,geo,fillMat,rearPickets,Math.PI)'),
  'vertical double-row pickets must turn backwards');
-assert(source.includes('instancePickets(fence,geo,fillMat,rearHorizontalPickets,Math.PI)'),
+assert(source.includes('instancePickets(group,geo,fillMat,rearHorizontalPickets,Math.PI)'),
  'horizontal double-row pickets must turn backwards');
 console.log('Surveyor 3D: caps, guides, rotated double pickets and previous geometry OK');
