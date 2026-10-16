@@ -43,7 +43,7 @@ if (!threeD.includes('data-preset=') || !threeD.includes('data-section="sizes"')
 if (threeD.includes('dimensionLabel(') || threeD.includes('new THREE.Sprite(')) throw new Error('Floating dimension label must not cover the 3D fence');
 if (!sw.includes('./3d-layout.js') || !layout.includes('function getSiteLayout') || !threeD.includes("from './3d-layout.js'"))
   throw new Error('Multi-side 3D geometry module missing from PWA');
-if (!threeD.includes('data-post-mode="behind"') || !threeD.includes('verticalPicketLayout') || !layout.includes('function normalizePostMode')) throw new Error('Post mode or no-gap picket calculation missing');
+if (!threeD.includes('data-post-mode="behind"') || !threeD.includes('verticalPicketLayout') || !layout.includes('const normalizePostMode=')) throw new Error('Post mode or no-gap picket calculation missing');
 if (!threeD.includes('data-side-toggle') || !threeD.includes("function syncSideButtons"))
   throw new Error('Four-side editor UI is missing');
 if (!threeD.includes('data-side-length-input') || !threeD.includes('data-field="height"')) throw new Error('Individual side dimensions must remain editable');
