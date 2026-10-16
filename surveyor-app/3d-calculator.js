@@ -1,6 +1,6 @@
 import * as THREE from '../naves/vendor/three.module.js';
 import { OrbitControls } from '../naves/vendor/OrbitControls.js';
-import { SIDE_IDS, SIDE_NAMES, FILL_IDS, createDefaultSides, normalizeSides, getSiteLayout, normalizePostMode, verticalPicketLayout, isHorizontalFill } from './3d-layout.js';
+import { SIDE_IDS, SIDE_NAMES, FILL_IDS, createDefaultSides, normalizeSides, getSiteLayout, normalizePostMode, verticalPicketPlan, isHorizontalFill } from './3d-layout.js';
 
 // Standalone DEV prototype. This is visual geometry only, not a retail price quote.
 const DRAFT_KEY = 'kd-surveyor-3d-draft-v1';
@@ -41,7 +41,8 @@ function loadDraft() {
     ...DEFAULT,
     ...selected,
     colorScope:o.colorScope==='side'?'side':'all',
-    gap:numeric(o.gap,0.02,0.12,DEFAULT.gap),
+    gap:numeric(o.gap,0,0.12,DEFAULT.gap),
+    gapFit:o.gapFit===true,
     postSize:[60,80,100].includes(Number(o.postSize))?Number(o.postSize):DEFAULT.postSize,
     sides,
     activeSide
@@ -210,7 +211,8 @@ export function mount3DCalculator(root) {
     '<div class="kd3d-subheading">Евроштакетник 120 мм</div>',
     '<div class="kd3d-orientation" role="group" aria-label="Направление штакетника"><button type="button" data-orientation="vertical" aria-pressed="true">Вертикально</button><button type="button" data-orientation="horizontal" aria-pressed="false">Горизонтально</button></div>',
     '<label class="kd3d-gap-title">Зазор между планками <span data-gap-value>5 см</span></label>',
-    '<div class="kd3d-gap-row"><input type="range" min="2" max="12" step="0.5" data-gap-slider aria-label="Зазор между штакетинами"><input data-field="gap" inputmode="decimal" type="number" min="2" max="12" step="0.5" aria-label="Зазор, см"><span>см</span></div>',
+    '<div class="kd3d-gap-row"><input type="range" min="0" max="12" step="0.01" data-gap-slider aria-label="Зазор между штакетинами"><input data-field="gap" inputmode="decimal" type="number" min="0" max="12" step="0.01" aria-label="Зазор, см"><span>см</span></div>',
+    '<div class="kd3d-gap-alert" data-gap-alert hidden><p data-gap-message></p><button type="button" data-auto-gap>Уменьшить зазор без подрезки</button></div>',
     '<label class="kd3d-check-row"><input type="checkbox" data-double-row><span><strong>Шахматный порядок</strong><small>Штакетник с двух сторон</small></span></label>',
     '</div><p class="kd3d-color-note">Оттенки на экране приблизительные; точный цвет выбирается по образцу RAL.</p></div></details>',
     '<div class="kd3d-stats" data-stats></div>',
@@ -390,8 +392,43 @@ export function mount3DCalculator(root) {
     'horizontal-double':'Евроштакетник горизонтальный, шахматка',
     sheet:'Профнастил С10',jalousie:'Жалюзи (схематично)'
   };
+  const formatGapCm=metres=>Number((metres*100).toFixed(2)).toString().replace('.',',');
+  function getVerticalGapPlans(layout){
+    return layout.edges.filter(edge=>edge.side.fill==='picket'||edge.side.fill==='picket-double')
+      .map(edge=>{
+        const behind=edge.side.postMode==='behind';
+        const width=Math.max(.025,edge.span-(behind?0:config.postSize/1000));
+        return {id:edge.id,plan:verticalPicketPlan(width,config.gap,config.gapFit)};
+      });
+  }
+  function syncGapWarning(plans){
+    const element=find('[data-gap-alert]');
+    if(!plans.length){element.hidden=true;return;}
+    const unresolved=plans.filter(x=>x.plan.edgeMargin>.0001);
+    const message=find('[data-gap-message]');
+    const button=find('[data-auto-gap]');
+    const impossible=unresolved.filter(x=>!x.plan.canFit);
+    const targetList=plans.map(x=>SIDE_NAMES[x.id]+': '+formatGapCm(x.plan.gapUsed)+' см');
+    if(!unresolved.length && !config.gapFit){element.hidden=true;return;}
+    element.hidden=false;
+    if(config.gapFit&&!unresolved.length){
+      message.textContent='Без подрезки. Фактические зазоры между целыми планками: '+targetList.join('; ')+'. Заданный зазор — верхняя граница.';
+      button.hidden=true;
+      element.classList.add('is-fitted');
+      return;
+    }
+    element.classList.remove('is-fitted');
+    const sides=unresolved.map(x=>SIDE_NAMES[x.id]).join(', ');
+    const maxMargin=Math.max(...unresolved.map(x=>x.plan.edgeMargin));
+    message.textContent='Внимание: на стороне '+sides+' при заданном зазоре остаются пустоты у столбов до '+
+      formatGapCm(maxMargin)+' см с каждой стороны пролёта. Штакетник 120 мм не подрезаем.'+
+      (impossible.length?' Для некоторых пролётов одного уменьшения зазора недостаточно — измените шаг столбов или длину стороны.':'');
+    button.hidden=impossible.length>0;
+  }
   function summary() {
     const layout=getSiteLayout(config.sides);
+    const gapPlans=getVerticalGapPlans(layout);
+    syncGapWarning(gapPlans);
     const format=value=>value.toFixed(1).replace('.',',');
     const format2=value=>value.toFixed(2).replace('.',',');
     const warning=find('[data-site-warning]');
@@ -407,7 +444,9 @@ export function mount3DCalculator(root) {
       description+='<p><b>Сторона '+SIDE_NAMES[edge.id]+': '+format(edge.side.length)+' м</b> · высота '+
         format(edge.side.height)+' м · пролётов '+edge.count+' (по '+format2(edge.span)+' м).<br>'+
         FILL_NAMES[edge.side.fill]+' · RAL '+edge.side.ral+' · '+(edge.side.postMode==='behind'?'столбы сзади':'столбы видны')+
-        (edge.side.fill==='sheet'?'':' · зазор '+format(config.gap*100)+' см')+'.</p>';
+        (edge.side.fill==='sheet'?'':(edge.side.fill==='picket'||edge.side.fill==='picket-double')
+          ?' · зазор '+(gapPlans.find(x=>x.id===edge.id)?.plan.gapUsed*100??config.gap*100).toFixed(2).replace('.',',')+' см'+(config.gapFit?' (подогнан без подрезки)':' (заданный)'):
+          ' · зазор '+format(config.gap*100)+' см')+'.</p>';
     }
     description+='<p>Периметр активных сторон: <b>'+format(layout.perimeter)+' м</b>. '+
       'Пролётов: <b>'+layout.totalSpans+'</b>; металлических столбов: <b>'+
@@ -526,7 +565,8 @@ export function mount3DCalculator(root) {
           railY.forEach(y=>frameGeometry(group,base,width,.04,.02,mid,y,supportZ,postMat));
           if(side.fill==='picket-double')
             railY.forEach(y=>frameGeometry(group,base,width,.04,.02,mid,y,behind?-.035:-.078,postMat));
-          const strips=verticalPicketLayout(width,config.gap);
+          const stripPlan=verticalPicketPlan(width,config.gap,config.gapFit);
+          const strips=stripPlan.strips;
           strips.forEach(p=>frontPickets.push({x:mid+p.x,y:.065,z:frontZ,width:p.width}));
           if(side.fill==='picket-double'){
             for(let k=0;k<strips.length-1;k++){
@@ -612,7 +652,10 @@ export function mount3DCalculator(root) {
       const field=input.dataset.field,selected=activeSettings();
       if(field==='fill')selected.fill=FILL_IDS.includes(input.value)?input.value:selected.fill;
       else if(field==='postSize')config.postSize=[60,80,100].includes(Number(input.value))?Number(input.value):config.postSize;
-      else if(field==='gap')config.gap=numeric(input.value,2,12,config.gap*100)/100;
+      else if(field==='gap'){
+        config.gap=numeric(input.value,0,12,config.gap*100)/100;
+        config.gapFit=false;
+      }
       else if(field==='ral'){applyFenceColor(input.value);return;}
       else selected[field]=numeric(input.value,field==='height'?.8:1,3,selected[field]);
       syncSideInputs();
@@ -669,6 +712,12 @@ export function mount3DCalculator(root) {
       (event.target.checked?'picket-double':'picket');
     syncSideInputs();updateModel();
   });
+  find('[data-auto-gap]').addEventListener('click',()=>{
+    const plans=getVerticalGapPlans(getSiteLayout(config.sides));
+    if(!plans.length||plans.some(x=>x.plan.edgeMargin>.0001&&!x.plan.canFit))return;
+    config.gapFit=true;
+    updateModel();
+  });
   const gapSlider=find('[data-gap-slider]');
   const gapInput=find('[data-field="gap"]');
   let gapPreviewTimer=null;
@@ -680,8 +729,9 @@ export function mount3DCalculator(root) {
     updateModel();
   }
   function previewGap(value,fromSlider){
-    const cm=numeric(value,2,12,config.gap*100);
+    const cm=numeric(value,0,12,config.gap*100);
     config.gap=cm/100;
+    config.gapFit=false;
     find('[data-gap-value]').textContent=String(cm).replace('.',',')+' см';
     if(fromSlider)gapInput.value=cm;
     else gapSlider.value=cm;
@@ -692,7 +742,7 @@ export function mount3DCalculator(root) {
   }
   gapSlider.addEventListener('input',()=>previewGap(gapSlider.value,true));
   gapSlider.addEventListener('change',()=>{
-    config.gap=numeric(gapSlider.value,2,12,config.gap*100)/100;
+    config.gap=numeric(gapSlider.value,0,12,config.gap*100)/100;
     commitGapPreview();
   });
   gapInput.addEventListener('input',()=>{
@@ -709,6 +759,7 @@ export function mount3DCalculator(root) {
   root.querySelector('[data-fit]').addEventListener('click',fit);
   root.querySelector('[data-reset]').addEventListener('click',()=>{
     Object.assign(config,DEFAULT);
+    config.gapFit=false;
     config.sides=createDefaultSides(DEFAULT);
     config.activeSide='A';
     syncSideInputs();
