@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {createDefaultSides,normalizeSides,getSiteLayout} from '../surveyor-app/3d-layout.js';
+import {createDefaultSides,normalizeSides,getSiteLayout,verticalPicketLayout,normalizePostMode,isHorizontalFill} from '../surveyor-app/3d-layout.js';
 
 const sides=createDefaultSides({length:12,height:1.8,step:2.5,fill:'picket-double',ral:'8017'});
 let layout=getSiteLayout(sides);
@@ -57,5 +57,45 @@ assert.equal(invalid.A.length,60);
 assert.equal(invalid.A.height,.8);
 assert.equal(invalid.A.fill,'picket');
 assert.equal(invalid.A.step,1);
+
+// No empty end margins: edge pickets meet the steel post faces even when
+// the chosen gap does not divide the bay into full 120 mm pickets.
+for(const postSize of [.06,.08,.10]){
+  for(const span of [1.0,1.35,2.1,2.42,2.5,2.82]){
+    for(const gap of [.02,.05,.115,.12]){
+      const between=span-postSize;
+      for(const mode of ['visible','behind']){
+        const width=mode==='behind'?span:between;
+        const strips=verticalPicketLayout(width,gap);
+        assert(strips.length>=2,'normal bay has multiple pickets');
+        const left=strips[0],right=strips.at(-1);
+        assert(Math.abs(left.x-left.width/2+width/2)<1e-8,
+          'first picket must meet the left post face / bay end');
+        assert(Math.abs(right.x+right.width/2-width/2)<1e-8,
+          'last picket must meet the right post face / bay end');
+        for(let i=1;i<strips.length;i++){
+          const a=strips[i-1],b=strips[i];
+          const actualGap=(b.x-b.width/2)-(a.x+a.width/2);
+          assert(Math.abs(actualGap-gap)<1e-8,'chosen gap must be respected');
+          assert(b.width>0&&b.width<=.12+.00000001,'edge trim must not exceed 120 mm width');
+        }
+      }
+    }
+  }
+}
+assert.equal(normalizePostMode('picket','behind'),'behind');
+assert.equal(normalizePostMode('picket-double','behind'),'behind');
+assert.equal(normalizePostMode('sheet','behind'),'behind');
+assert.equal(normalizePostMode('horizontal','behind'),'visible');
+assert.equal(normalizePostMode('horizontal-double','behind'),'visible');
+assert(isHorizontalFill('horizontal-double'));
+const rear=createDefaultSides({fill:'picket',postMode:'behind'});
+assert.equal(rear.A.postMode,'behind');
+const restored=normalizeSides({A:{fill:'horizontal-double',postMode:'behind'}});
+assert.equal(restored.A.postMode,'visible','invalid horizontal layout must be migrated to visible posts');
+const old=normalizeSides({A:{fill:'picket',length:12}});
+assert.equal(old.A.postMode,'visible','old drafts remain visible-post by default');
+
+console.log('3D post modes and gap-free, exactly spaced end pickets OK');
 
 console.log('3D layout A/B/V/G shared corners, independent sides, warnings and legacy drafts OK');
