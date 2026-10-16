@@ -445,7 +445,7 @@ export function mount3DCalculator(root) {
         format(edge.side.height)+' м · пролётов '+edge.count+' (по '+format2(edge.span)+' м).<br>'+
         FILL_NAMES[edge.side.fill]+' · RAL '+edge.side.ral+' · '+(edge.side.postMode==='behind'?'столбы сзади':'столбы видны')+
         (edge.side.fill==='sheet'?'':(edge.side.fill==='picket'||edge.side.fill==='picket-double')
-          ?' · зазор '+(gapPlans.find(x=>x.id===edge.id)?.plan.gapUsed*100??config.gap*100).toFixed(2).replace('.',',')+' см'+(config.gapFit?' (подогнан без подрезки)':' (заданный)'):
+          ?' · зазор '+formatGapCm(gapPlans.find(x=>x.id===edge.id)?.plan.gapUsed??config.gap)+' см'+(config.gapFit?' (подогнан без подрезки)':' (заданный)'):
           ' · зазор '+format(config.gap*100)+' см')+'.</p>';
     }
     description+='<p>Периметр активных сторон: <b>'+format(layout.perimeter)+' м</b>. '+
