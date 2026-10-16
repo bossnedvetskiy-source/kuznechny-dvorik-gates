@@ -5,8 +5,8 @@ import * as THREE from 'three';
 const source = await readFile('surveyor-app/3d-calculator.js','utf8');
 // Exercise the same geometry functions used by the browser without instantiating WebGL.
 const expression = source.replace(/^import .*;\s*$/gm,'').replace(/^export /gm,'');
-const factory = new Function('THREE', expression + '\nreturn {buildC10Geometry,buildPicketGeometry};');
-const {buildC10Geometry,buildPicketGeometry} = factory(THREE);
+const factory = new Function('THREE', expression + '\nreturn {buildC10Geometry,buildPicketGeometry,horizontalPicketRows,RAL};');
+const {buildC10Geometry,buildPicketGeometry,horizontalPicketRows,RAL} = factory(THREE);
 const bounds = geometry => {
   geometry.computeBoundingBox();
   const b=geometry.boundingBox;
@@ -36,4 +36,22 @@ const h=bounds(horizontal);
 assert(Math.abs(h.max.x-h.min.x-2.25)<0.0001,'Horizontal board should span the selected section');
 assert(h.max.y-h.min.y > .115 && h.max.y-h.min.y < .125,'Horizontal board should be 120 mm wide');
 horizontal.dispose();
-console.log('Surveyor 3D: C10 and profiled picket geometry OK');
+// Horizontal checkerboard has a real second row shifted by half a pitch.
+const rows=horizontalPicketRows(1.8,.05,true);
+const single=horizontalPicketRows(1.8,.05,false);
+assert(rows.front.length>=8, 'front side must have actual horizontal boards');
+assert.equal(rows.front.length,rows.rear.length+1,'back row must have one fewer board');
+assert.equal(single.rear.length,0,'single-row variant cannot have a back row');
+for(let i=0;i<rows.rear.length;i++){
+  const middle=(rows.front[i]+rows.front[i+1])/2;
+  assert(Math.abs(rows.rear[i]-middle)<1e-8,'rear row must bridge the front gap');
+}
+for(const gap of [.02,.05,.12]){
+  const result=horizontalPicketRows(1.5,gap,true);
+  assert.equal(result.rear.length,Math.max(0,result.front.length-1));
+  assert(result.front[0]>=.06,'first row must stay inside the span');
+  assert(result.front.at(-1)<=1.5-.06,'last row must stay inside the span');
+}
+assert.equal(Object.keys(RAL).length,5,'RAL choices should remain available');
+assert(RAL['9003']!==RAL['9005'],'white and black must have independent tones');
+console.log('Surveyor 3D: C10, profiled pickets, checkerboard and RAL OK');
