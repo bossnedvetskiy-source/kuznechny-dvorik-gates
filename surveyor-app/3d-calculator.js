@@ -525,7 +525,7 @@ export function mount3DCalculator(root) {
       layout.posts.length+'</b> ('+config.postSize+'×'+config.postSize+' мм). Угловые столбы не дублируются.</p>';
     if(layout.warnings.length) description+='<p class="kd3d-unpriced">'+layout.warnings.join(' ')+'</p>';
     description+='<p class="kd3d-unpriced">Схема и количество столбов предварительные. '+
-      'Без калитки, производственного раскроя, прочностной проверки и расчёта стоимости.</p>';
+      'Без производственного раскроя, прочностной проверки и расчёта стоимости.</p>';
     parts.innerHTML=description;
     syncSideButtons();
     return layout;
