@@ -197,6 +197,7 @@ export function mount3DCalculator(root) {
     config.ral=button.dataset.ralSwatch;
     find('[data-field="ral"]').value=config.ral;
     updateModel();
+    syncSwatches();
   });
   syncSwatches();
   const sceneHost = find('[data-scene]');
