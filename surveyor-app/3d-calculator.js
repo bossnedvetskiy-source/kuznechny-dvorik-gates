@@ -160,12 +160,24 @@ function buildPostCapGeometry(size) {
   return geometry;
 }
 
+// The independent DEV screen must remain styled even if an older PWA serves stale CSS.
+const SIDE_CARD_STYLE_ID='kd3d-side-cards-style-v2';
+const SIDE_CARD_CRITICAL_CSS="\n/* Critical mobile side-card styling is inserted with the JS module as an offline CSS fallback. */\n#threeDScreen .kd3d-side-panel{display:grid!important;gap:12px!important;padding:14px!important;border:1px solid #e7dfd1!important;border-radius:17px!important;background:linear-gradient(180deg,#fffefb,#f9f6ef)!important}\n#threeDScreen .kd3d-sides-head{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:12px!important}\n#threeDScreen .kd3d-sides-head strong{font-size:15px!important;line-height:1.2!important;color:#27231d!important}\n#threeDScreen .kd3d-sides-count{flex-shrink:0;background:#24211d;color:#f1d084;font-size:11px;font-weight:800;border-radius:40px;padding:6px 9px}\n#threeDScreen .kd3d-sides-help{font-size:12px;line-height:1.45;color:#756f65;margin:0}\n#threeDScreen .kd3d-sides{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:9px!important;margin:0}\n#threeDScreen .kd3d-side-entry{min-width:0!important;min-height:74px!important;display:grid!important;grid-template-columns:minmax(0,1fr) 32px!important;gap:4px!important;align-items:stretch!important;padding:8px!important;border:1.5px solid #e4ded4!important;border-radius:14px!important;background:#fff!important;box-shadow:0 2px 5px #00000008!important}\n#threeDScreen .kd3d-side-entry.enabled{border-color:#d2b575!important;background:#fffcf6!important}\n#threeDScreen .kd3d-side-entry.selected{border-color:#c99b46!important;background:#24211e!important;box-shadow:0 0 0 1px #c99b46,0 4px 10px #00000014!important}\n#threeDScreen .kd3d-side-entry [data-side]{display:flex!important;align-items:center!important;min-width:0!important;width:100%!important;gap:7px!important;border:0!important;border-radius:0!important;background:transparent!important;color:#39342d!important;text-align:left!important;padding:3px 0!important;box-shadow:none!important}\n#threeDScreen .kd3d-side-letter{flex:0 0 30px;display:grid;place-items:center;width:30px;height:38px;border-radius:10px;font-size:21px;font-weight:900;background:#f3eee4;color:#8b631c}\n#threeDScreen .kd3d-side-copy{min-width:0;display:grid;align-content:center;gap:2px}\n#threeDScreen .kd3d-side-copy b{font-size:13px;font-weight:900;white-space:nowrap;letter-spacing:-.02em}\n#threeDScreen .kd3d-side-copy small{font-size:10px;color:#80796d;white-space:nowrap}\n#threeDScreen .kd3d-side-entry.selected .kd3d-side-letter{background:#c99b46;color:#211d16}\n#threeDScreen .kd3d-side-entry.selected .kd3d-side-copy b{color:#fff5e2}\n#threeDScreen .kd3d-side-entry.selected .kd3d-side-copy small{color:#d7be8e}\n#threeDScreen .kd3d-side-entry [data-side-toggle]{width:32px!important;height:36px!important;min-width:32px!important;align-self:center!important;display:grid!important;place-items:center!important;border:0!important;border-radius:10px!important;padding:0!important;background:#f0ede8!important;color:#777268!important;font-size:20px!important;font-weight:800!important;line-height:1!important;box-shadow:none!important}\n#threeDScreen .kd3d-side-entry.enabled [data-side-toggle]{background:#c99b46!important;color:#251e13!important}\n#threeDScreen .kd3d-side-entry [data-side-toggle]:focus-visible,#threeDScreen .kd3d-side-entry [data-side]:focus-visible{outline:3px solid #c99b46;outline-offset:2px}\n#threeDScreen .kd3d-side-current{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px 10px;padding-top:11px;border-top:1px solid #eae2d5}\n#threeDScreen .kd3d-side-current strong{font-size:13px;color:#292620}\n#threeDScreen .kd3d-side-current small{font-size:11px;font-weight:800;color:#8d6832;background:#f8edda;padding:6px 9px;border-radius:22px}\n#threeDScreen .kd3d-side-current small.is-off{background:#eee;color:#777}\n#threeDScreen .kd3d-fields label{min-width:0!important}\n#threeDScreen .kd3d-side-warning{display:block;border-radius:12px;padding:11px 12px;margin:0;background:#fff5e5;color:#83521c;font-size:12px;line-height:1.5}\n#threeDScreen .kd3d-side-warning[hidden]{display:none!important}\n@media(max-width:360px){#threeDScreen .kd3d-side-panel{padding:10px!important}#threeDScreen .kd3d-sides{gap:6px!important}#threeDScreen .kd3d-side-entry{padding:6px!important}#threeDScreen .kd3d-side-copy b{font-size:12px}}\n";
+function ensureSideCardStyles() {
+  if(document.getElementById(SIDE_CARD_STYLE_ID))return;
+  const style=document.createElement('style');
+  style.id=SIDE_CARD_STYLE_ID;
+  style.textContent=SIDE_CARD_CRITICAL_CSS;
+  document.head.appendChild(style);
+}
+
 export function mount3DCalculator(root) {
   if (instance && instance.root === root) {
     instance.resize();
     return;
   }
   if (!root) throw new Error('Не найден раздел 3D расчёта');
+  ensureSideCardStyles();
   const config = loadDraft();
   const activeSettings=()=>config.sides[config.activeSide];
   root.innerHTML = [
@@ -175,11 +187,14 @@ export function mount3DCalculator(root) {
     '<div class="kd3d-scene-controls"><button type="button" data-fit>Показать целиком</button></div>',
     '<p class="kd3d-webgl-error" data-error hidden></p></div>',
     '<div class="kd3d-form"><h3>Параметры участка</h3>',
-    '<div class="kd3d-sides-title"><strong>Стороны участка</strong><small>Выбери сторону для настройки; включение — отдельно</small></div>',
+    '<section class="kd3d-side-panel" aria-label="Выбор сторон участка">',
+    '<div class="kd3d-sides-head"><strong>Стороны участка</strong><span class="kd3d-sides-count" data-active-side-count>1 из 4</span></div>',
+    '<p class="kd3d-sides-help">Нажми на карточку для настройки. Кнопка справа включает или убирает сторону из 3D.</p>',
     '<div class="kd3d-sides" data-sides role="group" aria-label="Стороны участка">'+SIDE_IDS.map(id=>
-      '<div class="kd3d-side-entry" data-side-entry="'+id+'"><button type="button" data-side="'+id+'" aria-pressed="false"><b>'+SIDE_NAMES[id]+'</b><span data-side-length="'+id+'"></span></button><button type="button" data-side-toggle="'+id+'" aria-pressed="false" aria-label="Включить сторону '+SIDE_NAMES[id]+'"></button></div>').join('')+'</div>',
-    '<p class="kd3d-side-warning" data-site-warning hidden></p>',
-    '<div class="kd3d-fields"><label>Длина стороны А, м<input data-field="length" inputmode="decimal" type="number" min="1" max="60" step="0.1"></label>',
+      '<div class="kd3d-side-entry" data-side-entry="'+id+'"><button type="button" data-side="'+id+'" aria-pressed="false"><span class="kd3d-side-letter">'+SIDE_NAMES[id]+'</span><span class="kd3d-side-copy"><b data-side-length="'+id+'"></b><small>Настроить</small></span></button><button type="button" data-side-toggle="'+id+'" aria-pressed="false" aria-label="Включить сторону '+SIDE_NAMES[id]+'"></button></div>').join('')+'</div>',
+    '<div class="kd3d-side-current"><strong data-current-side-label>Настройка стороны А</strong><small data-current-side-status>Включена</small></div>',
+    '<p class="kd3d-side-warning" data-site-warning hidden></p></section>',
+    '<div class="kd3d-fields"><label data-length-label>Длина стороны А, м<input data-field="length" inputmode="decimal" type="number" min="1" max="60" step="0.1"></label>',
     '<label>Высота, м<input data-field="height" inputmode="decimal" type="number" min="0.8" max="3" step="0.1"></label>',
     '<label>Макс. шаг столбов, м<input data-field="step" inputmode="decimal" type="number" min="1" max="3" step="0.1"></label></div>',
     '<label class="kd3d-select-label">Столбы · профильная труба<select data-field="postSize"><option value="60">60×60 мм</option><option value="80">80×80 мм</option><option value="100">100×100 мм</option></select></label>',
@@ -209,11 +224,19 @@ export function mount3DCalculator(root) {
       const toggle=find('[data-side-toggle="'+id+'"]');
       button.setAttribute('aria-pressed',String(selected));
       toggle.setAttribute('aria-pressed',String(enabled));
-      toggle.textContent=enabled?'✓ Вкл':'＋ Выкл';
+      toggle.textContent=enabled?'✓':'＋';
+      toggle.setAttribute('aria-label',(enabled?'Выключить':'Включить')+' сторону '+SIDE_NAMES[id]);
+      button.setAttribute('aria-label','Настроить сторону '+SIDE_NAMES[id]+', '+config.sides[id].length.toFixed(1).replace('.',',')+' м');
       find('[data-side-entry="'+id+'"]').classList.toggle('selected',selected);
       find('[data-side-entry="'+id+'"]').classList.toggle('enabled',enabled);
       find('[data-side-length="'+id+'"]').textContent=config.sides[id].length.toFixed(1).replace('.',',')+' м';
     });
+    find('[data-active-side-count]').textContent=SIDE_IDS.filter(id=>config.sides[id].enabled).length+' из 4';
+    find('[data-current-side-label]').textContent='Настройка стороны '+SIDE_NAMES[config.activeSide];
+    const status=find('[data-current-side-status]');
+    status.textContent=activeSettings().enabled?'Включена в 3D':'Сторона выключена';
+    status.classList.toggle('is-off',!activeSettings().enabled);
+    find('[data-length-label]').firstChild.textContent='Длина стороны '+SIDE_NAMES[config.activeSide]+', м';
   }
   const swatches=find('[data-ral-swatches]');
   swatches.innerHTML=Object.entries(RAL).map(([code,hex])=>
