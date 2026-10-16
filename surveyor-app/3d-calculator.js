@@ -392,7 +392,7 @@ export function mount3DCalculator(root) {
     'horizontal-double':'Евроштакетник горизонтальный, шахматка',
     sheet:'Профнастил С10',jalousie:'Жалюзи (схематично)'
   };
-  const formatGapCm=metres=>Number((metres*100).toFixed(2)).toString().replace('.',',');
+  const formatGapCm=metres=>(metres*100).toFixed(2).replace(/0$/,'').replace('.',',');
   function getVerticalGapPlans(layout){
     return layout.edges.filter(edge=>edge.side.fill==='picket'||edge.side.fill==='picket-double')
       .map(edge=>{
