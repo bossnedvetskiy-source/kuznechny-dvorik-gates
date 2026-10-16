@@ -1,5 +1,6 @@
 import * as THREE from '../naves/vendor/three.module.js';
 import { OrbitControls } from '../naves/vendor/OrbitControls.js';
+import { renderGateFrame } from './3d-gate-render.js';
 import { SIDE_IDS, SIDE_NAMES, FILL_IDS, createDefaultSides, normalizeSides, getSiteLayout, normalizePostMode, verticalPicketPlan, isHorizontalFill, normalizeSwingGate, normalizeWicket, normalizeOpenings, getClearDimensionPlan } from './3d-layout.js';
 
 // Standalone DEV prototype. This is visual geometry only, not a retail price quote.
@@ -509,7 +510,10 @@ export function mount3DCalculator(root) {
         ' на стороне '+SIDE_NAMES[opening.sideId]+':</b> проём '+format(opening.width)+
         ' м, отступ слева '+format(opening.start)+' м. '+
         (opening.kind==='gate'?'Две створки':'Одна створка')+
-        ' в 3D. Без стоимости и подробной фурнитуры.</p>';
+        ' в 3D: рама 40×25, средняя перемычка 40×20, '+
+        (opening.kind==='gate'?'4':'2')+' петли; зазор до столбов 15 мм'+
+        (opening.kind==='gate'?', между створками 20 мм':'')+
+        '. Визуальная модель, без цены и прочностного расчёта.</p>';
     }
     if(config.showDimensions){
       description+='<p><b>Размеры в свету (между гранями столбов):</b></p>';
@@ -763,54 +767,13 @@ export function mount3DCalculator(root) {
         instancePickets(group,geo,fillMat,rearPickets,Math.PI);
       }
       for(const opening of edge.openings){
-        const leafCount=opening.kind==='wicket'?1:2;
-        const leafGap=leafCount===2?.024:0;
-        const leafWidth=(opening.width-leafGap)/leafCount;
-        const gateHeight=Math.max(.8,side.height-.13);
-        const yCenter=.075+gateHeight/2;
-        const gateStart=start+opening.start;
-        const gateFillZ=behind?.12:.036;
-        for(let j=0;j<leafCount;j++){
-          const leaf=new THREE.Group();
-          leaf.userData.kdGateLeaf=opening.kind==='gate';
-          leaf.userData.kdWicketLeaf=opening.kind==='wicket';
-          leaf.position.x=gateStart+leafWidth/2+j*(leafWidth+leafGap);
-          group.add(leaf);
-          // Uprights, top and bottom rails form real independent swing leaves.
-          for(const x of [-leafWidth/2+.026,leafWidth/2-.026])
-            frameGeometry(leaf,base,.052,gateHeight,.04,x,yCenter,gateFillZ-.036,postMat);
-          for(const y of [.075+.029,.075+gateHeight-.029])
-            frameGeometry(leaf,base,leafWidth,.052,.04,0,y,gateFillZ-.036,postMat);
-          const insideWidth=Math.max(.16,leafWidth-.12);
-          if(side.fill==='sheet'){
-            const geo=buildC10Geometry(insideWidth,gateHeight-.14);
-            previousLineGeometries.push(geo);
-            const panel=new THREE.Mesh(geo,fillMat);
-            panel.position.set(0,.145,gateFillZ);
-            leaf.add(panel);
-          }else if(isHorizontalFill(side.fill)||side.fill==='jalousie'){
-            const count=Math.max(2,Math.floor((gateHeight-.14)/(.12+config.gap)));
-            const gap=(gateHeight-.14-count*.12)/Math.max(1,count-1);
-            for(let k=0;k<count;k++)
-              frameGeometry(leaf,base,insideWidth,.12,.022,0,.15+k*(.12+Math.max(0,gap)),gateFillZ,fillMat);
-          }else{
-            const plan=verticalPicketPlan(insideWidth,config.gap,true);
-            const geo=buildPicketGeometry(gateHeight-.17);
-            previousLineGeometries.push(geo);
-            instancePickets(leaf,geo,fillMat,plan.strips.map(p=>({
-              x:p.x,y:.15,z:gateFillZ,width:p.width
-            })),0);
-            if(side.fill==='picket-double'){
-              const rear=[];
-              for(let k=0;k<plan.strips.length-1;k++){
-                const first=plan.strips[k],last=plan.strips[k+1];
-                rear.push({x:(first.x+last.x)/2,y:.15,z:gateFillZ-.09});
-              }
-              instancePickets(leaf,geo,fillMat,rear,Math.PI);
-            }
-          }
-          frameGeometry(leaf,base,leafWidth-.09,.028,.026,0,yCenter,gateFillZ-.063,postMat);
-        }
+        renderGateFrame({
+          group,base,opening,openingStart:start+opening.start,postWidth,
+          side,behind,gap:config.gap,postMat,fillMat,frameGeometry,
+          buildC10Geometry,buildPicketGeometry,instancePickets,horizontalPicketRows,
+          verticalPicketPlan,ownedGeometries:previousLineGeometries,
+          ownedMaterials:previousMaterials
+        });
       }
       if(config.showDimensions){
         const dimension=clearDimensions.find(d=>d.id===edge.id);
@@ -826,13 +789,21 @@ export function mount3DCalculator(root) {
     root.dataset.sceneDimensionValues=config.showDimensions?
       clearDimensions.flatMap(d=>d.spans.map(p=>d.id+':'+p.kind+':'+p.clearMm)).join(';'):'';
     root.dataset.scenePickets=String(renderedPlanks);
-    let actualLeaves=0,wicketLeaves=0;
+    let actualLeaves=0,wicketLeaves=0,visibleHinges=0,diagonalBraces=0;
+    const leafWidths=[];
     fence.traverse(object=>{
       if(object.userData.kdGateLeaf)actualLeaves++;
       if(object.userData.kdWicketLeaf)wicketLeaves++;
+      if(object.userData.kdHinge)visibleHinges++;
+      if(object.userData.kdDiagonalBrace)diagonalBraces++;
+      if(typeof object.userData.kdFrameWidth==='number')
+        leafWidths.push(object.userData.kdFrameWidth);
     });
     root.dataset.sceneGateLeaves=String(actualLeaves);
     root.dataset.sceneWicketLeaves=String(wicketLeaves);
+    root.dataset.sceneHinges=String(visibleHinges);
+    root.dataset.sceneBraces=String(diagonalBraces);
+    root.dataset.sceneLeafWidths=leafWidths.map(w=>Math.round(w*1000)).join(',');
     root.dataset.sceneOpenings=layout.openings.map(o=>o.sideId+':'+o.kind+':'+o.start.toFixed(2)).join(';');
     root.dataset.sceneGateOpening=layout.gate?JSON.stringify({start:layout.gate.start,end:layout.gate.end}):'';
     root.dataset.scenePostModes=JSON.stringify(renderedPostModes);
