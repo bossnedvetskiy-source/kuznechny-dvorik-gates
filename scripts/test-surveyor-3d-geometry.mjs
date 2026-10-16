@@ -35,7 +35,7 @@ picket.dispose();
 
 const horizontal=buildPicketGeometry(2.25,true);
 const h=bounds(horizontal);
-assert(Math.abs(h.max.x-h.min.x-2.25)<0.0001,'Horizontal board should span the selected section');
+assert(Math.abs(h.max.x-h.min.x-2.25)<0.001,'Rounded horizontal board should span the section within 1 mm');
 assert(h.max.y-h.min.y > .115 && h.max.y-h.min.y < .125,'Horizontal board should be 120 mm wide');
 horizontal.dispose();
 // Horizontal checkerboard has a real second row shifted by half a pitch.
