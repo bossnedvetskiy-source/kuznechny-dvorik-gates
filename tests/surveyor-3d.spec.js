@@ -17,6 +17,13 @@ test('3D расчёт opens independently in DEV and edits geometry without chan
   await expect(page.locator('#threeDScreen')).toBeVisible();
   try {
   await expect(page.locator('#kd3dRoot [data-stats]')).toContainText('Пролётов',{timeout:12000});
+  const hasReal3D=(await page.locator('#kd3dRoot .kd3d-scene canvas').count())>0;
+  if(hasReal3D){
+    // The diagnostics are taken from rendered Three.js materials and instanced meshes,
+    // not the form controls or localStorage model.
+    await expect(page.locator('#kd3dRoot')).toHaveAttribute('data-scene-revision',/^\\d+$/);
+    await expect(page.locator('#kd3dRoot')).toHaveAttribute('data-scene-fill-colors',/#[0-9a-f]{6}/);
+  }
   } catch(error) {
     const host=await page.locator('#kd3dRoot').innerText().catch(()=>'<missing>');
     const loaded=await page.evaluate(()=>performance.getEntriesByType('resource')
@@ -64,7 +71,12 @@ test('3D расчёт opens independently in DEV and edits geometry without chan
   await type.selectOption('horizontal-double');
   await expect(page.locator('#kd3dRoot [data-parts]')).toContainText('горизонтальный, шахматка');
   await expect(page.locator('#kd3dRoot [data-picket-settings]')).toBeVisible();
+  // A click on the swatch must recolor every side by default, not only the editor row.
+  await expect(page.locator('#kd3dRoot [data-color-scope="all"]')).toHaveAttribute('aria-pressed','true');
   await page.locator('#kd3dRoot [data-ral-swatch="8017"]').click();
+  const allPainted=await page.evaluate(()=>JSON.parse(localStorage.getItem('kd-surveyor-3d-draft-v1')).sides);
+  expect(Object.values(allPainted).every(side=>side.ral==='8017')).toBe(true);
+  if(hasReal3D)await expect(page.locator('#kd3dRoot')).toHaveAttribute('data-scene-fill-colors','#49312c');
   await expect(page.locator('#kd3dRoot [data-ral-swatch="8017"]')).toHaveAttribute('aria-pressed','true');
   await expect(page.locator('#kd3dRoot [data-field="ral"]')).toHaveValue('8017');
   await page.locator('#kd3dRoot [data-field="ral"]').selectOption('9003');
@@ -134,6 +146,35 @@ test('3D расчёт opens independently in DEV and edits geometry without chan
     el.dispatchEvent(new Event('change',{bubbles:true}));
   });
   await expect(page.locator('#kd3dRoot [data-parts]')).toContainText('7,0 см');
+  // Slider input alone, before release/change, changes the Three.js plank count.
+  await page.locator('#kd3dRoot [data-orientation="vertical"]').click();
+  if(hasReal3D){
+    const before=Number(await page.locator('#kd3dRoot').getAttribute('data-scene-pickets'));
+    const priorRev=Number(await page.locator('#kd3dRoot').getAttribute('data-scene-revision'));
+    await page.locator('#kd3dRoot [data-gap-slider]').evaluate(el=>{
+      el.value='12'; el.dispatchEvent(new Event('input',{bubbles:true}));
+    });
+    await expect.poll(async()=>Number(await page.locator('#kd3dRoot').getAttribute('data-scene-revision')))
+      .toBeGreaterThan(priorRev);
+    const after=Number(await page.locator('#kd3dRoot').getAttribute('data-scene-pickets'));
+    expect(after).toBeLessThan(before);
+    await page.locator('#kd3dRoot [data-gap-slider]').evaluate(el=>{
+      el.value='2'; el.dispatchEvent(new Event('input',{bubbles:true}));
+      el.dispatchEvent(new Event('change',{bubbles:true}));
+    });
+    await expect.poll(async()=>Number(await page.locator('#kd3dRoot').getAttribute('data-scene-pickets')))
+      .toBeGreaterThan(after);
+  }
+  // The single-side color mode must preserve colors on other enabled sides.
+  await page.locator('#kd3dRoot [data-color-scope="side"]').click();
+  await page.locator('#kd3dRoot [data-ral-swatch="3005"]').click();
+  const sideColors=await page.evaluate(()=>JSON.parse(localStorage.getItem('kd-surveyor-3d-draft-v1')).sides);
+  expect(sideColors.A.ral).toBe('3005');
+  expect(sideColors.B.ral).not.toBe('3005');
+  if(hasReal3D){
+    await expect(page.locator('#kd3dRoot')).toHaveAttribute('data-scene-fill-colors',/#[0-9a-f]{6},#[0-9a-f]{6}/);
+  }
+
   await page.locator('#kd3dRoot [data-collapse-params]').click();
   await expect(page.locator('#kd3dRoot [data-editor-content]')).toBeHidden();
   await page.locator('#kd3dRoot [data-collapse-params]').click();
