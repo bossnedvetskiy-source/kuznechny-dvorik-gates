@@ -114,7 +114,11 @@ test('3D расчёт opens independently in DEV and edits geometry without chan
   await page.locator('#kd3dRoot [data-orientation="horizontal"]').click();
   await page.locator('#kd3dRoot [data-double-row]').check();
   await expect(page.locator('#kd3dRoot [data-parts]')).toContainText('горизонтальный, шахматка');
-  await page.locator('#kd3dRoot [data-gap-slider]').fill('7');
+  await page.locator('#kd3dRoot [data-gap-slider]').evaluate(el=>{
+    el.value='7';
+    el.dispatchEvent(new Event('input',{bubbles:true}));
+    el.dispatchEvent(new Event('change',{bubbles:true}));
+  });
   await expect(page.locator('#kd3dRoot [data-parts]')).toContainText('7,0 см');
   await page.locator('#kd3dRoot [data-collapse-params]').click();
   await expect(page.locator('#kd3dRoot [data-editor-content]')).toBeHidden();
