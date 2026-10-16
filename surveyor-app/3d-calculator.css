@@ -32,3 +32,14 @@
 .kd3d-reset{background:#f7f3ec;color:#795d30;border:1px solid #e8dbc1;border-radius:11px;padding:12px;font-weight:800}
 @media(min-width:740px){#threeDScreen .kd3d-root{grid-template-columns:minmax(0,1.6fr) minmax(300px,.8fr);align-items:start}#threeDScreen .kd3d-top,#threeDScreen .kd3d-mode{grid-column:1 / -1}.kd3d-viewport{grid-column:1;grid-row:3;height:530px}.kd3d-form{grid-column:2;grid-row:3;max-height:530px;overflow:auto}.kd3d-fields{grid-template-columns:1fr}}
 @media(max-width:390px){.kd3d-fields{grid-template-columns:1fr 1fr}.kd3d-fields label:last-child{grid-column:1 / -1}}
+
+/* Realistic metal infill options: simple enough to adjust on the phone. */
+.kd3d-picket-settings{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(110px,1fr);gap:12px;align-items:center;
+  padding:12px 13px;background:#f5f8f8;border:1px solid #dae1e2;border-radius:13px}
+.kd3d-picket-settings[hidden]{display:none!important}
+.kd3d-picket-settings strong{display:block;color:#2e353b;font-size:12px;margin-bottom:4px}
+.kd3d-picket-settings span{display:block;color:#68727a;font-size:11px;line-height:1.45}
+.kd3d-picket-settings label{display:grid;gap:5px;color:#4e5861;font-size:11px;font-weight:800}
+.kd3d-picket-settings input{min-width:0;width:100%;border:1px solid #cfd8da;border-radius:10px;
+  background:#fff;padding:11px 9px;font-size:14px;color:#252b2d}
+@media(max-width:400px){.kd3d-picket-settings{grid-template-columns:1fr}.kd3d-picket-settings label{grid-template-columns:1fr 82px;align-items:center}}
