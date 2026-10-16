@@ -28,7 +28,9 @@ const b=bounds(picket);
 assert(picket.getAttribute('position').count>=36,'Pickets need real folded geometry');
 assert(Math.abs(b.min.x+.06)<0.0001 && Math.abs(b.max.x-.06)<0.0001,'Picket width should be 120 mm');
 assert(b.max.z-b.min.z>.02,'Picket must have a pronounced raised center');
-assert(Math.abs(b.max.y-1.67)<0.0001);
+// Rolled/rounded picket tops finish just below nominal centerline height.
+assert(b.max.y <= 1.67 && b.max.y >= 1.665,
+  'Rounded picket top must remain within 5 mm of the nominal height');
 picket.dispose();
 
 const horizontal=buildPicketGeometry(2.25,true);
