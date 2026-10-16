@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {createDefaultSides,normalizeSides,getSiteLayout,verticalPicketPlan,verticalPicketLayout,normalizePostMode,isHorizontalFill} from '../surveyor-app/3d-layout.js';
+import {createDefaultSides,normalizeSides,getSiteLayout,verticalPicketPlan,verticalPicketLayout,normalizePostMode,isHorizontalFill,normalizeSwingGate} from '../surveyor-app/3d-layout.js';
 
 const sides=createDefaultSides({length:12,height:1.8,step:2.5,fill:'picket-double',ral:'8017'});
 let layout=getSiteLayout(sides);
@@ -47,6 +47,46 @@ assert.equal(layout.edges.length,0);
 assert.equal(layout.posts.length,0);
 assert.equal(layout.perimeter,0);
 assert.equal(layout.totalSpans,0);
+
+
+const gateSides=createDefaultSides({length:12,height:1.8,step:2.5,fill:'picket'});
+const baseLayout=getSiteLayout(gateSides);
+const gateDraft={enabled:true,type:'swing',width:3.4,offset:1};
+const layoutGate=getSiteLayout(gateSides,gateDraft);
+assert.equal(baseLayout.totalSpans,5,'legacy fence spans unchanged without gate');
+assert.equal(layoutGate.gate.start,1);
+assert.equal(layoutGate.gate.end,4.4);
+assert.equal(layoutGate.fenceLength,8.6);
+assert.equal(layoutGate.perimeter,12,'outer boundary length retains gate opening');
+assert.equal(layoutGate.edges[0].sections.length,2);
+assert.equal(layoutGate.totalSpans,5,'different residual fence lengths divided independently');
+assert.equal(layoutGate.posts.length,7,'one post at each gate edge');
+for(const segment of layoutGate.edges[0].sections){
+  assert(segment.from>=layoutGate.gate.end-.00001 || segment.to<=layoutGate.gate.start+.00001,
+    'no fence section may overlap gate aperture');
+  assert(segment.span<=gateSides.A.step+.00001,'fence spans cannot exceed post step');
+}
+for(const x of [layoutGate.gate.start,layoutGate.gate.end])
+  assert(layoutGate.posts.some(p=>Math.abs(p.x-x)<.00001&&p.gateSupport),
+    'gate needs separate hinge support at both boundaries');
+const atBeginning=getSiteLayout(gateSides,{enabled:true,width:3.4,offset:0});
+assert.equal(atBeginning.edges[0].sections.length,1,'no zero-length fence at the starting corner');
+assert.equal(atBeginning.posts.filter(p=>Math.abs(p.x)<.00001).length,1);
+const atEnd=getSiteLayout(gateSides,{enabled:true,width:3.4,offset:8.6});
+assert.equal(atEnd.edges[0].sections.length,1,'no zero-length fence at the far corner');
+assert.equal(atEnd.posts.filter(p=>Math.abs(p.x-12)<.00001).length,1);
+gateSides.B.enabled=true;
+const cornerGate=getSiteLayout(gateSides,{enabled:true,width:3.4,offset:8.6});
+assert.equal(cornerGate.posts.filter(p=>Math.abs(p.x-12)<.00001&&Math.abs(p.z)<.00001).length,1,
+  'shared hinge/corner pillar cannot be duplicated');
+assert(cornerGate.posts.find(p=>Math.abs(p.x-12)<.00001&&Math.abs(p.z)<.00001).gateSupport);
+assert.equal(normalizeSwingGate({enabled:true,width:4,offset:99},12).offset,8,
+  'gate shift must remain inside side A');
+gateSides.A.enabled=false;
+assert.equal(getSiteLayout(gateSides,gateDraft).gate,null,'disabled A never paints gate');
+assert(getSiteLayout(gateSides,gateDraft).warnings.some(w=>w.includes('включите сторону А')),
+  'show explicit warning when gate is requested on disabled facade');
+console.log('Swing gate layout: aperture subtraction, boundary pillars, end/corner cases OK');
 
 const legacy=normalizeSides(null,{length:15,height:2,step:2.5,fill:'horizontal-double',ral:'7024'});
 assert.equal(legacy.A.length,15);
