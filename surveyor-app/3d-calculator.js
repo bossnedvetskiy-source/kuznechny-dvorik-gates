@@ -215,9 +215,6 @@ export function mount3DCalculator(root) {
       find('[data-side-length="'+id+'"]').textContent=config.sides[id].length.toFixed(1).replace('.',',')+' м';
     });
   }
-  syncSideInputs();
-  syncSideButtons();
-  find('[data-field="gap"]').value = Number((config.gap*100).toFixed(1));
   const swatches=find('[data-ral-swatches]');
   swatches.innerHTML=Object.entries(RAL).map(([code,hex])=>
     '<button type="button" data-ral-swatch="'+code+'" style="--kd3d-swatch:'+hex+'" aria-label="RAL '+code+' '+RAL_LABELS[code]+'"><span class="kd3d-swatch-color"></span><small>'+code+'</small></button>').join('');
@@ -236,7 +233,8 @@ export function mount3DCalculator(root) {
     updateModel();
     syncSwatches();
   });
-  syncSwatches();
+  syncSideInputs();
+  syncSideButtons();
   const sceneHost = find('[data-scene]');
   const parts = find('[data-parts]');
   const stats = find('[data-stats]');
