@@ -4,6 +4,27 @@
 export const SIDE_IDS=['A','B','V','G'];
 export const SIDE_NAMES={A:'А',B:'Б',V:'В',G:'Г'};
 export const FILL_IDS=['picket','picket-double','horizontal','horizontal-double','sheet','jalousie'];
+export const POST_MODES=['visible','behind'];
+export const isHorizontalFill=fill=>fill==='horizontal'||fill==='horizontal-double';
+export const normalizePostMode=(fill,mode)=>
+  isHorizontalFill(fill)?'visible':mode==='behind'?'behind':'visible';
+// The first and last pickets must touch the faces of the adjacent posts.
+// Trim edge pickets (not empty end margins) to preserve the selected gap.
+export function verticalPicketLayout(spanWidth,gap,plank=.12){
+  const span=Math.max(0,Number(spanWidth)||0);
+  const separation=Math.max(.001,Number(gap)||.05);
+  if(span<=.0001)return [];
+  if(span<=plank)return [{x:0,width:span}];
+  const count=Math.max(2,Math.ceil((span+separation)/(plank+separation)));
+  const edgeWidth=Math.max(.00001,(span-(count-1)*separation-(count-2)*plank)/2);
+  const widths=Array.from({length:count},(_,i)=>i===0||i===count-1?edgeWidth:plank);
+  let cursor=-span/2;
+  return widths.map((width,i)=>{
+    const x=cursor+width/2;
+    cursor+=width+(i<count-1?separation:0);
+    return {x,width};
+  });
+}
 export const RAL_IDS=['9003','8017','7016','7019','7024','9005','6005','3005','5005'];
 const clamp=(n,min,max,fallback)=>{
   const value=Number(String(n).replace(',','.'));
@@ -16,6 +37,7 @@ export function createDefaultSides(legacy={}) {
     height:clamp(legacy.height,.8,3,1.8),
     step:clamp(legacy.step,1,3,2.5),
     fill:FILL_IDS.includes(legacy.fill)?legacy.fill:'picket',
+    postMode:normalizePostMode(legacy.fill,legacy.postMode),
     ral:RAL_IDS.includes(legacy.ral)?legacy.ral:'7024'
   };
   return {
@@ -36,6 +58,7 @@ export function normalizeSides(saved,legacy={}) {
       height:clamp(previous.height,.8,3,d.height),
       step:clamp(previous.step,1,3,d.step),
       fill:FILL_IDS.includes(previous.fill)?previous.fill:d.fill,
+      postMode:normalizePostMode(FILL_IDS.includes(previous.fill)?previous.fill:d.fill,previous.postMode??d.postMode),
       ral:RAL_IDS.includes(previous.ral)?previous.ral:d.ral
     }];
   }));
