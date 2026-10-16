@@ -448,8 +448,17 @@ export function mount3DCalculator(root) {
     const aspect=Math.max(.45,camera.aspect||1);
     const halfFov=Math.tan(THREE.MathUtils.degToRad(camera.fov/2));
     const width=Math.max(3,b.width),depth=Math.max(3,b.depth);
-    const dist=Math.max(7,Math.max(width/(2*halfFov*aspect),depth/(2*halfFov)) * 1.6);
-    camera.position.set(b.centerX+dist*.47,Math.max(5,dist*.53),b.centerZ+dist*.87);
+    const single=layout.edges.length===1;
+    const needed=single ? Math.max(width,depth)/(2*halfFov*aspect) :
+      Math.max(width/(2*halfFov*aspect),depth/(2*halfFov));
+    const dist=Math.max(6,needed*(single?1.23:1.43));
+    if(single){
+      // Face the length of whichever single side is enabled, not only side A.
+      const edge=layout.edges[0],unitX=(edge.end.x-edge.start.x)/edge.side.length;
+      const unitZ=(edge.end.z-edge.start.z)/edge.side.length;
+      camera.position.set(b.centerX-unitZ*dist*.94+unitX*dist*.1,
+        Math.max(3,dist*.38),b.centerZ+unitX*dist*.94+unitZ*dist*.1);
+    }else camera.position.set(b.centerX+dist*.49,Math.max(5,dist*.54),b.centerZ+dist*.85);
     const maxHeight=Math.max(1.8,...layout.posts.map(p=>p.height));
     controls.target.set(b.centerX,maxHeight*.5,b.centerZ);
     controls.maxDistance=500;
@@ -477,6 +486,7 @@ export function mount3DCalculator(root) {
       input.value=field==='gap'?Number((config.gap*100).toFixed(1)):
         field==='postSize'?config.postSize:selected[field];
       updateModel();
+      if(field==='length'||field==='height')fit();
       if(field==='ral')syncSwatches();
     });
   }
