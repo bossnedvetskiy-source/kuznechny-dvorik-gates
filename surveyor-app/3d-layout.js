@@ -81,39 +81,72 @@ export function normalizeSides(saved,legacy={}) {
     }];
   }));
 }
-export function getSiteLayout(sides) {
+// Stage 4.1: one driveway opening on side A only (client price is not calculated).
+// offset is measured from the left-hand beginning of A along its positive X axis.
+export function normalizeSwingGate(saved, sideLength=12){
+  const input=saved&&typeof saved==='object'?saved:{};
+  const width=clamp(input.width,2,6,3.4);
+  const offset=clamp(input.offset,0,Math.max(0,sideLength-width),1);
+  return {enabled:input.enabled===true,type:'swing',width,offset};
+}
+export function getSiteLayout(sides, gateConfig=null) {
   const {A,B,V,G}=normalizeSides(sides);
+  const requestedGate=normalizeSwingGate(gateConfig,A.length);
+  const gateValid=requestedGate.enabled && A.enabled && A.length>=requestedGate.width;
+  const gate=gateValid?{...requestedGate,sideId:'A',
+    start:requestedGate.offset,end:requestedGate.offset+requestedGate.width}:null;
   const candidates=[
     {id:'A',side:A,start:{x:0,z:0},end:{x:A.length,z:0}},
     {id:'B',side:B,start:{x:A.length,z:0},end:{x:A.length,z:B.length}},
     {id:'V',side:V,start:{x:A.length,z:B.length},end:{x:A.length-V.length,z:B.length}},
     {id:'G',side:G,start:{x:0,z:G.length},end:{x:0,z:0}}
   ];
-  const edges=candidates.filter(e=>e.side.enabled).map(e=>({
-    ...e, count:Math.max(1,Math.ceil(e.side.length/e.side.step)),
-    span:e.side.length/Math.max(1,Math.ceil(e.side.length/e.side.step))
-  }));
+  const edges=candidates.filter(e=>e.side.enabled).map(e=>{
+    const lengths=(e.id==='A' && gate)?
+      [[0,gate.start],[gate.end,e.side.length]]:
+      [[0,e.side.length]];
+    const sections=lengths.filter(([from,to])=>to-from>.00001).map(([from,to])=>{
+      const length=to-from;
+      const count=Math.max(1,Math.ceil(length/e.side.step));
+      return {from,to,length,count,span:length/count};
+    });
+    const count=sections.reduce((sum,section)=>sum+section.count,0);
+    return {...e,sections,count,span:sections[0]?.span||0,
+      fenceLength:sections.reduce((sum,section)=>sum+section.length,0),
+      gate:e.id==='A'?gate:null};
+  });
   const byCoordinate=new Map();
-  const includePost=(x,z,height,id)=>{
+  const includePost=(x,z,height,id,gateSupport=false)=>{
     const key=Math.round(x*10000)+'|'+Math.round(z*10000);
     const entry=byCoordinate.get(key);
     if(entry){
       entry.height=Math.max(entry.height,height);
       if(!entry.sides.includes(id))entry.sides.push(id);
-    }else byCoordinate.set(key,{x,z,height,sides:[id]});
+      if(gateSupport)entry.gateSupport=true;
+    }else byCoordinate.set(key,{x,z,height,sides:[id],gateSupport});
   };
   for(const edge of edges){
-    for(let i=0;i<=edge.count;i++){
-      const fraction=i/edge.count;
-      includePost(
-        edge.start.x+(edge.end.x-edge.start.x)*fraction,
-        edge.start.z+(edge.end.z-edge.start.z)*fraction,
-        edge.side.height,edge.id
-      );
+    for(const section of edge.sections){
+      for(let i=0;i<=section.count;i++){
+        const fraction=(section.from+section.length*i/section.count)/edge.side.length;
+        includePost(
+          edge.start.x+(edge.end.x-edge.start.x)*fraction,
+          edge.start.z+(edge.end.z-edge.start.z)*fraction,
+          edge.side.height,edge.id
+        );
+      }
+    }
+    if(edge.gate){
+      for(const localX of [edge.gate.start,edge.gate.end]){
+        const f=localX/edge.side.length;
+        includePost(edge.start.x+(edge.end.x-edge.start.x)*f,
+          edge.start.z+(edge.end.z-edge.start.z)*f,edge.side.height,edge.id,true);
+      }
     }
   }
   const posts=[...byCoordinate.values()];
   const perimeter=edges.reduce((sum,e)=>sum+e.side.length,0);
+  const fenceLength=edges.reduce((sum,e)=>sum+e.fenceLength,0);
   const totalSpans=edges.reduce((sum,e)=>sum+e.count,0);
   const allVertices=edges.flatMap(e=>[e.start,e.end]);
   const minX=Math.min(0,...allVertices.map(p=>p.x));
@@ -121,13 +154,16 @@ export function getSiteLayout(sides) {
   const minZ=Math.min(0,...allVertices.map(p=>p.z));
   const maxZ=Math.max(0,...allVertices.map(p=>p.z));
   const warnings=[];
-  // Lengths are not implicitly changed: the estimator must approve closure.
   if(A.enabled && B.enabled && V.enabled && G.enabled &&
     (Math.abs(A.length-V.length)>.001 || Math.abs(B.length-G.length)>.001)){
     warnings.push('Контур не замкнут: для прямоугольника длины А и В, Б и Г должны совпадать.');
   }
+  if(requestedGate.enabled && !A.enabled)
+    warnings.push('Чтобы добавить ворота, включите сторону А.');
+  if(requestedGate.enabled && A.enabled && !gateValid)
+    warnings.push('Проём ворот шире стороны А. Увеличьте сторону или уменьшите ширину ворот.');
   return {
-    edges,posts,perimeter,totalSpans,warnings,
+    edges,posts,gate,gateSettings:requestedGate,perimeter,fenceLength,totalSpans,warnings,
     bounds:{minX,maxX,minZ,maxZ,centerX:(minX+maxX)/2,centerZ:(minZ+maxZ)/2,
       width:maxX-minX,depth:maxZ-minZ}
   };
