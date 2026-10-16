@@ -498,40 +498,84 @@ export function mount3DCalculator(root) {
     renderer.setSize(width,height,false);
     renderer.render(scene,camera);
   }
-  for (const input of root.querySelectorAll('[data-field]')) {
+  for(const input of root.querySelectorAll('[data-field]')){
     input.addEventListener('change',()=>{
-      const field=input.dataset.field;
-      const selected=activeSettings();
-      if(field==='fill') selected.fill=FILL_IDS.includes(input.value)?input.value:selected.fill;
-      else if(field==='postSize') config.postSize=[60,80,100].includes(Number(input.value))?Number(input.value):config.postSize;
-      else if(field==='gap') config.gap=numeric(input.value,2,12,config.gap*100)/100;
-      else if(field==='ral') selected.ral=Object.hasOwn(RAL,input.value)?input.value:selected.ral;
-      else selected[field]=numeric(input.value,
-        field==='length'?1:field==='height'?.8:1,
-        field==='length'?60:3,selected[field]);
-      input.value=field==='gap'?Number((config.gap*100).toFixed(1)):
-        field==='postSize'?config.postSize:selected[field];
+      const field=input.dataset.field,selected=activeSettings();
+      if(field==='fill')selected.fill=FILL_IDS.includes(input.value)?input.value:selected.fill;
+      else if(field==='postSize')config.postSize=[60,80,100].includes(Number(input.value))?Number(input.value):config.postSize;
+      else if(field==='gap')config.gap=numeric(input.value,2,12,config.gap*100)/100;
+      else if(field==='ral')selected.ral=Object.hasOwn(RAL,input.value)?input.value:selected.ral;
+      else selected[field]=numeric(input.value,field==='height'?.8:1,3,selected[field]);
+      syncSideInputs();
       updateModel();
-      if(field==='length'||field==='height')fit();
-      if(field==='ral')syncSwatches();
+      if(field==='height')fit();
     });
   }
   find('[data-sides]').addEventListener('click',event=>{
-    const toggle=event.target.closest('[data-side-toggle]');
-    if(toggle){
-      const side=config.sides[toggle.dataset.sideToggle];
-      if(!side)return;
-      side.enabled=!side.enabled;
-      updateModel();
-      resize();
-      fit();
-      return;
-    }
     const button=event.target.closest('[data-side]');
     if(!button||!config.sides[button.dataset.side])return;
     config.activeSide=button.dataset.side;
     syncSideInputs();
     updateModel();
+  });
+  find('[data-sides]').addEventListener('change',event=>{
+    const toggle=event.target.closest('[data-side-toggle]');
+    if(toggle){
+      const side=config.sides[toggle.dataset.sideToggle];
+      if(!side)return;
+      side.enabled=toggle.checked;
+      updateModel();
+      resize();fit();
+      return;
+    }
+    const field=event.target.closest('[data-side-length-input]');
+    if(!field)return;
+    const id=field.dataset.sideLengthInput,side=config.sides[id];
+    if(!side)return;
+    side.length=numeric(field.value,1,60,side.length);
+    config.activeSide=id;
+    syncSideInputs();updateModel();resize();fit();
+  });
+  find('[data-presets]').addEventListener('click',event=>{
+    const button=event.target.closest('[data-preset]');
+    if(!button)return;
+    const preset=AREA_PRESETS.find(p=>p.x+'x'+p.z===button.dataset.preset);
+    if(!preset)return;
+    for(const [id,len] of [['A',preset.x],['V',preset.x],['B',preset.z],['G',preset.z]]){
+      config.sides[id].enabled=true;
+      config.sides[id].length=len;
+    }
+    config.activeSide='A';
+    syncSideInputs();updateModel();resize();fit();
+  });
+  root.querySelectorAll('[data-orientation]').forEach(button=>button.addEventListener('click',()=>{
+    const horizontal=button.dataset.orientation==='horizontal';
+    const double=find('[data-double-row]').checked;
+    activeSettings().fill=horizontal?(double?'horizontal-double':'horizontal'):(double?'picket-double':'picket');
+    syncSideInputs();updateModel();
+  }));
+  find('[data-double-row]').addEventListener('change',event=>{
+    const horizontal=activeSettings().fill.startsWith('horizontal');
+    activeSettings().fill=horizontal?(event.target.checked?'horizontal-double':'horizontal'):
+      (event.target.checked?'picket-double':'picket');
+    syncSideInputs();updateModel();
+  });
+  const gapSlider=find('[data-gap-slider]');
+  gapSlider.addEventListener('input',()=>{
+    find('[data-gap-value]').textContent=String(gapSlider.value).replace('.',',')+' см';
+    find('[data-field="gap"]').value=gapSlider.value;
+  });
+  gapSlider.addEventListener('change',()=>{
+    config.gap=numeric(gapSlider.value,2,12,config.gap*100)/100;
+    syncSideInputs();updateModel();
+  });
+  const collapse=find('[data-collapse-params]');
+  collapse.addEventListener('click',()=>{
+    const body=find('[data-editor-content]');
+    body.hidden=!body.hidden;
+    collapse.setAttribute('aria-expanded',String(!body.hidden));
+    collapse.innerHTML=body.hidden?'Развернуть <span aria-hidden="true">⌄</span>':
+      'Свернуть <span aria-hidden="true">⌃</span>';
   });
   root.querySelector('[data-fit]').addEventListener('click',fit);
   root.querySelector('[data-reset]').addEventListener('click',()=>{
