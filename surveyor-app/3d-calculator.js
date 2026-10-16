@@ -371,6 +371,7 @@ export function mount3DCalculator(root) {
   let previousMaterials = [];
   let previousLineGeometries = [];
   let previousDimensionTextures = [];
+  let sharedDimensionLabelMaterials = new Map();
   let webglOk = false;
   try {
     renderer = new THREE.WebGLRenderer({ antialias:true, alpha:false, powerPreference:'low-power' });
@@ -514,6 +515,7 @@ export function mount3DCalculator(root) {
     previousLineGeometries.forEach(g => g.dispose());
     previousDimensionTextures.forEach(texture=>texture.dispose());
     previousDimensionTextures=[];
+    sharedDimensionLabelMaterials.clear();
     previousMaterials = [];
     previousLineGeometries = [];
   }
@@ -530,26 +532,31 @@ export function mount3DCalculator(root) {
       coords.push(x1,y,z1,x2,y,z2);
     }
     function label(text,x,z,width=1.12){
-      const canvas=document.createElement('canvas');
-      canvas.width=512;canvas.height=128;
-      const ctx=canvas.getContext('2d');
-      if(!ctx)return;
-      ctx.fillStyle='rgba(255,255,255,.93)';
-      ctx.beginPath();
-      ctx.roundRect(8,8,496,112,18);
-      ctx.fill();
-      ctx.strokeStyle='rgba(65,75,85,.36)';
-      ctx.lineWidth=3;ctx.stroke();
-      ctx.fillStyle='#202932';
-      ctx.textAlign='center';ctx.textBaseline='middle';
-      ctx.font='bold 48px Arial,sans-serif';
-      ctx.fillText(text,256,66,480);
-      const texture=new THREE.CanvasTexture(canvas);
-      texture.colorSpace=THREE.SRGBColorSpace;
-      texture.minFilter=THREE.LinearFilter;
-      previousDimensionTextures.push(texture);
-      const material=new THREE.SpriteMaterial({map:texture,depthTest:false,transparent:true});
-      previousMaterials.push(material);
+      // Share one GPU texture per identical label rather than one per bay.
+      let material=sharedDimensionLabelMaterials.get(text);
+      if(!material){
+        const canvas=document.createElement('canvas');
+        canvas.width=512;canvas.height=128;
+        const ctx=canvas.getContext('2d');
+        if(!ctx)return;
+        ctx.fillStyle='rgba(255,255,255,.93)';
+        ctx.beginPath();
+        ctx.roundRect(8,8,496,112,18);
+        ctx.fill();
+        ctx.strokeStyle='rgba(65,75,85,.36)';
+        ctx.lineWidth=3;ctx.stroke();
+        ctx.fillStyle='#202932';
+        ctx.textAlign='center';ctx.textBaseline='middle';
+        ctx.font='bold 48px Arial,sans-serif';
+        ctx.fillText(text,256,66,480);
+        const texture=new THREE.CanvasTexture(canvas);
+        texture.colorSpace=THREE.SRGBColorSpace;
+        texture.minFilter=THREE.LinearFilter;
+        previousDimensionTextures.push(texture);
+        material=new THREE.SpriteMaterial({map:texture,depthTest:false,transparent:true});
+        previousMaterials.push(material);
+        sharedDimensionLabelMaterials.set(text,material);
+      }
       const sprite=new THREE.Sprite(material);
       sprite.position.set(x,.16,z);
       sprite.scale.set(width,width/4,1);
