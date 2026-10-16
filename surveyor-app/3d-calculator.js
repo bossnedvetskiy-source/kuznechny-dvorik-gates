@@ -40,6 +40,7 @@ function loadDraft() {
   return {
     ...DEFAULT,
     ...selected,
+    colorScope:o.colorScope==='side'?'side':'all',
     gap:numeric(o.gap,0.02,0.12,DEFAULT.gap),
     postSize:[60,80,100].includes(Number(o.postSize))?Number(o.postSize):DEFAULT.postSize,
     sides,
@@ -199,6 +200,8 @@ export function mount3DCalculator(root) {
     '<p class="kd3d-side-warning" data-site-warning hidden></p></div></details>',
     '<details class="kd3d-section" data-section="fill" open><summary><span>Заполнение и цвет</span></summary><div class="kd3d-section-inner">',
     '<div class="kd3d-subheading">Цвет забора · RAL</div>',
+    '<div class="kd3d-color-scope" role="group" aria-label="Куда применить цвет"><button type="button" data-color-scope="all">Весь забор</button><button type="button" data-color-scope="side">Сторона <span data-color-side-name>А</span></button></div>',
+    '<p data-color-status class="kd3d-color-status"></p>',
     '<div class="kd3d-ral-swatches" data-ral-swatches role="group" aria-label="Выбор цвета RAL"></div>',
     '<label class="kd3d-ral-select">Точный код цвета<select data-field="ral">'+Object.keys(RAL).map(code=>'<option value="'+code+'">'+code+' · '+RAL_LABELS[code]+'</option>').join('')+'</select></label>',
     '<div class="kd3d-picket-settings" data-picket-settings>',
@@ -235,6 +238,7 @@ export function mount3DCalculator(root) {
     find('[data-field="postSize"]').value=config.postSize;
     find('[data-field="gap"]').value=Number((config.gap*100).toFixed(1));
     syncPicketSettings();
+    syncColorScope();
     syncSwatches();
   }
   function syncSideButtons(){
@@ -265,6 +269,30 @@ export function mount3DCalculator(root) {
     }
     syncPicketSettings();
   }
+  function syncColorScope(){
+    root.querySelectorAll('[data-color-scope]').forEach(button=>{
+      const active=button.dataset.colorScope===config.colorScope;
+      button.setAttribute('aria-pressed',String(active));
+      button.classList.toggle('active',active);
+    });
+    find('[data-color-side-name]').textContent=SIDE_NAMES[config.activeSide];
+    const status=find('[data-color-status]');
+    status.textContent=config.colorScope==='all'
+      ? 'Новый цвет перекрасит все стороны участка.'
+      : activeSettings().enabled
+        ? 'Изменится только сторона '+SIDE_NAMES[config.activeSide]+' в 3D.'
+        : 'Сторона '+SIDE_NAMES[config.activeSide]+' выключена и не видна в 3D.';
+    status.classList.toggle('is-warning',config.colorScope==='side'&&!activeSettings().enabled);
+  }
+  function applyFenceColor(ral){
+    if(!Object.hasOwn(RAL,ral))return;
+    if(config.colorScope==='all')SIDE_IDS.forEach(id=>{config.sides[id].ral=ral;});
+    else activeSettings().ral=ral;
+    find('[data-field="ral"]').value=activeSettings().ral;
+    updateModel();
+    syncSwatches();
+    syncColorScope();
+  }
   const swatches=find('[data-ral-swatches]');
   swatches.innerHTML=Object.entries(RAL).map(([code,hex])=>
     '<button type="button" data-ral-swatch="'+code+'" style="--kd3d-swatch:'+hex+'" aria-label="RAL '+code+' '+RAL_LABELS[code]+'"><span class="kd3d-swatch-color"></span><small>'+code+'</small></button>').join('');
@@ -278,11 +306,13 @@ export function mount3DCalculator(root) {
   swatches.addEventListener('click',event=>{
     const button=event.target.closest('[data-ral-swatch]');
     if(!button || !Object.hasOwn(RAL,button.dataset.ralSwatch))return;
-    activeSettings().ral=button.dataset.ralSwatch;
-    find('[data-field="ral"]').value=activeSettings().ral;
-    updateModel();
-    syncSwatches();
+    applyFenceColor(button.dataset.ralSwatch);
   });
+  root.querySelectorAll('[data-color-scope]').forEach(button=>button.addEventListener('click',()=>{
+    config.colorScope=button.dataset.colorScope;
+    syncColorScope();
+    saveDraft(config);
+  }));
   syncSideInputs();
   syncSideButtons();
   const sceneHost = find('[data-scene]');
@@ -383,12 +413,22 @@ export function mount3DCalculator(root) {
     if(!webglOk)return;
     clearGeometry();
     const postWidth=config.postSize/1000;
-    const paintedPost=new THREE.Color(RAL[config.sides.A.ral]).multiplyScalar(.88);
-    const postMat=new THREE.MeshStandardMaterial({color:paintedPost,metalness:.19,roughness:.49});
-    previousMaterials.push(postMat);
+    const postMats=new Map();
+    const postMaterialFor=id=>{
+      const code=config.sides[id]?.ral||config.sides.A.ral;
+      if(!postMats.has(code)){
+        const material=new THREE.MeshStandardMaterial({
+          color:new THREE.Color(RAL[code]).multiplyScalar(.88),metalness:.19,roughness:.49
+        });
+        postMats.set(code,material);
+        previousMaterials.push(material);
+      }
+      return postMats.get(code);
+    };
     const capGeometry=buildPostCapGeometry(postWidth);
     previousLineGeometries.push(capGeometry);
     for(const p of layout.posts){
+      const postMat=postMaterialFor(p.sides[0]);
       const h=p.height+.10;
       frameGeometry(fence,base,postWidth,h,postWidth,p.x,h/2,p.z,postMat);
       frameGeometry(fence,base,postWidth+.013,.012,postWidth+.013,p.x,h+.006,p.z,postMat);
@@ -396,12 +436,15 @@ export function mount3DCalculator(root) {
       cap.position.set(p.x,h+.012,p.z);
       fence.add(cap);
     }
+    const sceneFillColors=new Set();
     for(const edge of layout.edges){
       const side=edge.side;
+      const postMat=postMaterialFor(edge.id);
       const fillMat=new THREE.MeshStandardMaterial({
         color:RAL[side.ral],metalness:.22,roughness:.43,side:THREE.DoubleSide
       });
       previousMaterials.push(fillMat);
+      sceneFillColors.add('#'+fillMat.color.getHexString());
       const group=new THREE.Group();
       const dx=edge.end.x-edge.start.x,dz=edge.end.z-edge.start.z;
       group.rotation.y=-Math.atan2(dz,dx);
@@ -466,6 +509,12 @@ export function mount3DCalculator(root) {
         instancePickets(group,geo,fillMat,rearHorizontalPickets,Math.PI);
       }
     }
+    let renderedPlanks=0;
+    fence.traverse(object=>{if(object.isInstancedMesh)renderedPlanks+=object.count;});
+    root.dataset.scenePickets=String(renderedPlanks);
+    root.dataset.sceneFillColors=[...sceneFillColors].sort().join(',');
+    root.dataset.sceneRevision=String((Number(root.dataset.sceneRevision)||0)+1);
+    renderer.render(scene,camera);
   }
   function fit() {
     if(!webglOk)return;
@@ -504,7 +553,7 @@ export function mount3DCalculator(root) {
       if(field==='fill')selected.fill=FILL_IDS.includes(input.value)?input.value:selected.fill;
       else if(field==='postSize')config.postSize=[60,80,100].includes(Number(input.value))?Number(input.value):config.postSize;
       else if(field==='gap')config.gap=numeric(input.value,2,12,config.gap*100)/100;
-      else if(field==='ral')selected.ral=Object.hasOwn(RAL,input.value)?input.value:selected.ral;
+      else if(field==='ral'){applyFenceColor(input.value);return;}
       else selected[field]=numeric(input.value,field==='height'?.8:1,3,selected[field]);
       syncSideInputs();
       updateModel();
