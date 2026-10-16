@@ -38,6 +38,8 @@ if (!sw.includes('kd-surveyor-v3-frame-face-v4') || !sw.includes('./line-builder
 for (const marker of ['function open3DCalculator','import(\'./3d-calculator.js\')','threeD: \'3D расчёт\'']) if (!app.includes(marker)) throw new Error('3D route missing: '+marker);
 for (const marker of ['OrbitControls','WebGLRenderer','mount3DCalculator','updateModel','fit()','render','DRAFT_KEY']) if (!threeD.includes(marker)) throw new Error('3D module missing: '+marker);
 if (!threeDCss.includes('.kd3d-viewport') || !threeDCss.includes('.kd3d-launch')) throw new Error('3D styles missing');
+if (threeD.includes('dimensionLabel(') || threeD.includes('new THREE.Sprite(')) throw new Error('Floating dimension label must not cover the 3D fence');
+if (!threeD.includes('data-field="length"')) throw new Error('Fence length must remain editable in settings');
 for (const marker of ['ensureSitePlan','newItem','newLine','lineWidth','PLAN_ITEM_TYPES']) {
   if (!lineBuilder.includes(marker)) throw new Error('Line builder missing: '+marker);
 }
