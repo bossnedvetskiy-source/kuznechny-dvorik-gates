@@ -1,6 +1,6 @@
 import * as THREE from '../naves/vendor/three.module.js';
 import { OrbitControls } from '../naves/vendor/OrbitControls.js';
-import { SIDE_IDS, SIDE_NAMES, FILL_IDS, createDefaultSides, normalizeSides, getSiteLayout } from './3d-layout.js';
+import { SIDE_IDS, SIDE_NAMES, FILL_IDS, createDefaultSides, normalizeSides, getSiteLayout, normalizePostMode, verticalPicketLayout, isHorizontalFill } from './3d-layout.js';
 
 // Standalone DEV prototype. This is visual geometry only, not a retail price quote.
 const DRAFT_KEY = 'kd-surveyor-3d-draft-v1';
@@ -133,6 +133,7 @@ function instancePickets(group, geometry, material, positions, rotationY=0) {
   positions.forEach((p,i)=>{
     dummy.position.set(p.x,p.y,p.z);
     dummy.rotation.set(0,rotationY,0);
+    dummy.scale.set(p.width===undefined?1:p.width/.12,1,1);
     dummy.updateMatrix();
     mesh.setMatrixAt(i,dummy.matrix);
   });
@@ -197,6 +198,7 @@ export function mount3DCalculator(root) {
     '<div class="kd3d-fields"><label data-height-label>Высота стороны А, м<input data-field="height" inputmode="decimal" type="number" min="0.8" max="3" step="0.1"></label>',
     '<label>Шаг столбов, м<input data-field="step" inputmode="decimal" type="number" min="1" max="3" step="0.1"></label></div>',
     '<label class="kd3d-select-label">Столбы · профильная труба<select data-field="postSize"><option value="60">60×60 мм</option><option value="80">80×80 мм</option><option value="100">100×100 мм</option></select></label>',
+    '<div class="kd3d-post-layout" data-post-layout><div class="kd3d-subheading">Расположение столбов</div><div class="kd3d-post-options" role="group" aria-label="Расположение столбов"><button type="button" data-post-mode="visible" aria-pressed="true"><strong>Столбы видны</strong><small>Заполнение между столбами, без боковых щелей</small></button><button type="button" data-post-mode="behind" aria-pressed="false"><strong>Столбы сзади</strong><small>Сплошная линия забора перед столбами</small></button></div><p class="kd3d-post-note" data-post-note>Для выбранной стороны участка</p></div>',
     '<p class="kd3d-side-warning" data-site-warning hidden></p></div></details>',
     '<details class="kd3d-section" data-section="fill" open><summary><span>Заполнение и цвет</span></summary><div class="kd3d-section-inner">',
     '<div class="kd3d-subheading">Цвет забора · RAL</div>',
@@ -238,6 +240,7 @@ export function mount3DCalculator(root) {
     find('[data-field="postSize"]').value=config.postSize;
     find('[data-field="gap"]').value=Number((config.gap*100).toFixed(1));
     syncPicketSettings();
+    syncPostMode();
     syncColorScope();
     syncSwatches();
   }
@@ -268,6 +271,26 @@ export function mount3DCalculator(root) {
       find('[data-preset="'+preset.x+'x'+preset.z+'"]').setAttribute('aria-pressed',String(match));
     }
     syncPicketSettings();
+  }
+  function syncPostMode(){
+    const side=activeSettings();
+    side.postMode=normalizePostMode(side.fill,side.postMode);
+    const horizontal=isHorizontalFill(side.fill);
+    const wrap=find('[data-post-layout]');
+    wrap.classList.toggle('horizontal-only',horizontal);
+    const note=find('[data-post-note]');
+    note.textContent=horizontal
+      ? 'Для горизонтального евроштакетника столбы только видимые.'
+      : side.enabled
+        ? 'Расположение столбов меняется на выбранной стороне '+SIDE_NAMES[config.activeSide]+'.'
+        : 'Сторона выключена: включите её в разделе «Стороны участка».';
+    root.querySelectorAll('[data-post-mode]').forEach(button=>{
+      const behind=button.dataset.postMode==='behind';
+      const selected=button.dataset.postMode===side.postMode;
+      button.setAttribute('aria-pressed',String(selected));
+      button.classList.toggle('active',selected);
+      button.disabled=horizontal&&behind;
+    });
   }
   function syncColorScope(){
     root.querySelectorAll('[data-color-scope]').forEach(button=>{
@@ -383,7 +406,7 @@ export function mount3DCalculator(root) {
     for(const edge of layout.edges){
       description+='<p><b>Сторона '+SIDE_NAMES[edge.id]+': '+format(edge.side.length)+' м</b> · высота '+
         format(edge.side.height)+' м · пролётов '+edge.count+' (по '+format2(edge.span)+' м).<br>'+
-        FILL_NAMES[edge.side.fill]+' · RAL '+edge.side.ral+
+        FILL_NAMES[edge.side.fill]+' · RAL '+edge.side.ral+' · '+(edge.side.postMode==='behind'?'столбы сзади':'столбы видны')+
         (edge.side.fill==='sheet'?'':' · зазор '+format(config.gap*100)+' см')+'.</p>';
     }
     description+='<p>Периметр активных сторон: <b>'+format(layout.perimeter)+' м</b>. '+
@@ -405,6 +428,10 @@ export function mount3DCalculator(root) {
     previousLineGeometries = [];
   }
   function updateModel() {
+    SIDE_IDS.forEach(id=>{
+      const side=config.sides[id];
+      side.postMode=normalizePostMode(side.fill,side.postMode);
+    });
     const selected=activeSettings();
     // Legacy keys retained for older locally saved drafts and existing integrations.
     for(const key of ['length','height','step','fill','ral']) config[key]=selected[key];
@@ -437,6 +464,8 @@ export function mount3DCalculator(root) {
       fence.add(cap);
     }
     const sceneFillColors=new Set();
+    const renderedPostModes={};
+    let renderedMaxEdgeClearance=0;
     for(const edge of layout.edges){
       const side=edge.side;
       const postMat=postMaterialFor(edge.id);
@@ -451,26 +480,34 @@ export function mount3DCalculator(root) {
       group.position.set((edge.start.x+edge.end.x)/2,0,(edge.start.z+edge.end.z)/2);
       fence.add(group);
       const start=-side.length/2,actualSpan=edge.span,count=edge.count;
+      const behind=side.postMode==='behind'&&!isHorizontalFill(side.fill);
+      // Visible posts: run right up to the two post faces.
+      // Rear posts: the infill passes across the post centres in front of the steel.
+      const infillWidth=Math.max(.025,actualSpan-(behind?0:postWidth));
+      const frontZ=behind?.115:.005;
+      const rearZ=behind?-.015:-.09;
+      const supportZ=behind?.073:-.008;
       const railY=side.height>2.15?[.32,side.height/2,side.height-.32]:
         [.33,Math.max(.52,side.height-.33)];
       const frontPickets=[],rearPickets=[],horizontalPickets=[],rearHorizontalPickets=[];
-      const isPicket=FILL_IDS.includes(side.fill);
+      let renderedEdgeClearance=0;
       for(let i=0;i<count;i++){
         const mid=start+(i+.5)*actualSpan;
-        const width=Math.max(.2,actualSpan-postWidth-.035);
+        const width=infillWidth;
         if(side.fill==='sheet'){
           const geometry=buildC10Geometry(width,side.height-.12);
           previousLineGeometries.push(geometry);
           const panel=new THREE.Mesh(geometry,fillMat);
-          panel.position.set(mid,.06,.015);
+          panel.position.set(mid,.06,behind?.095:.015);
           panel.receiveShadow=true;
           group.add(panel);
-          railY.forEach(y=>frameGeometry(group,base,width,.04,.02,mid,y,-.005,postMat));
+          railY.forEach(y=>frameGeometry(group,base,width,.04,.02,mid,y,supportZ,postMat));
         }else if(side.fill==='jalousie'){
           const rows=Math.max(1,Math.floor((side.height-.12)/.14));
           for(let n=0;n<rows;n++)
-            frameGeometry(group,base,width,.11,.026,mid,.13+n*.14,0,fillMat);
-        }else if(side.fill==='horizontal'||side.fill==='horizontal-double'){
+            frameGeometry(group,base,width,.11,.026,mid,.13+n*.14,frontZ,fillMat);
+        }else if(isHorizontalFill(side.fill)){
+          // Horizontal pickets always terminate at visible post faces.
           const doubleRow=side.fill==='horizontal-double';
           guideOffsets(width).forEach(offset=>{
             frameGeometry(group,base,.04,side.height-.12,.02,mid+offset,side.height/2,-.008,postMat);
@@ -481,19 +518,27 @@ export function mount3DCalculator(root) {
           const rows=horizontalPicketRows(side.height,config.gap,doubleRow);
           rows.front.forEach(y=>horizontalPickets.push({x:mid,y,z:.005}));
           rows.rear.forEach(y=>rearHorizontalPickets.push({x:mid,y,z:-.09}));
-        }else if(isPicket){
-          railY.forEach(y=>frameGeometry(group,base,width,.04,.02,mid,y,-.008,postMat));
+        }else if(side.fill==='picket'||side.fill==='picket-double'){
+          railY.forEach(y=>frameGeometry(group,base,width,.04,.02,mid,y,supportZ,postMat));
           if(side.fill==='picket-double')
-            railY.forEach(y=>frameGeometry(group,base,width,.04,.02,mid,y,-.078,postMat));
-          const plank=.12,gap=config.gap;
-          const n=Math.max(1,Math.floor((width+gap)/(plank+gap)));
-          const occupied=n*plank+(n-1)*gap;
-          const firstX=mid-occupied/2+plank/2;
-          for(let k=0;k<n;k++)
-            frontPickets.push({x:firstX+k*(plank+gap),y:.065,z:.005});
-          if(side.fill==='picket-double')
-            for(let k=0;k<n-1;k++)
-              rearPickets.push({x:firstX+(k+.5)*(plank+gap),y:.065,z:-.09});
+            railY.forEach(y=>frameGeometry(group,base,width,.04,.02,mid,y,behind?-.035:-.078,postMat));
+          const strips=verticalPicketLayout(width,config.gap);
+          strips.forEach(p=>frontPickets.push({x:mid+p.x,y:.065,z:frontZ,width:p.width}));
+          if(side.fill==='picket-double'){
+            for(let k=0;k<strips.length-1;k++){
+              const left=strips[k],right=strips[k+1];
+              const rearX=(left.x+left.width/2+right.x-right.width/2)/2;
+              rearPickets.push({x:mid+rearX,y:.065,z:rearZ});
+            }
+          }
+          // Exact geometric check: first/last board touches the intended bay boundary.
+          if(strips.length){
+            const left=strips[0].x-strips[0].width/2;
+            const last=strips[strips.length-1];
+            const right=last.x+last.width/2;
+            renderedEdgeClearance=Math.max(renderedEdgeClearance,
+              Math.abs(left+width/2),Math.abs(right-width/2));
+          }
         }
       }
       if(frontPickets.length||rearPickets.length){
@@ -503,15 +548,19 @@ export function mount3DCalculator(root) {
         instancePickets(group,geo,fillMat,rearPickets,Math.PI);
       }
       if(horizontalPickets.length||rearHorizontalPickets.length){
-        const geo=buildPicketGeometry(Math.max(.2,actualSpan-postWidth-.035),true);
+        const geo=buildPicketGeometry(infillWidth,true);
         previousLineGeometries.push(geo);
         instancePickets(group,geo,fillMat,horizontalPickets,0);
         instancePickets(group,geo,fillMat,rearHorizontalPickets,Math.PI);
       }
+      renderedMaxEdgeClearance=Math.max(renderedMaxEdgeClearance,renderedEdgeClearance);
+      renderedPostModes[edge.id]=side.postMode;
     }
     let renderedPlanks=0;
     fence.traverse(object=>{if(object.isInstancedMesh)renderedPlanks+=object.count;});
     root.dataset.scenePickets=String(renderedPlanks);
+    root.dataset.scenePostModes=JSON.stringify(renderedPostModes);
+    root.dataset.sceneEdgeClearance=String(renderedMaxEdgeClearance);
     root.dataset.sceneFillColors=[...sceneFillColors].sort().join(',');
     root.dataset.sceneRevision=String((Number(root.dataset.sceneRevision)||0)+1);
     renderer.render(scene,camera);
@@ -547,6 +596,13 @@ export function mount3DCalculator(root) {
     renderer.setSize(width,height,false);
     renderer.render(scene,camera);
   }
+  root.querySelectorAll('[data-post-mode]').forEach(button=>button.addEventListener('click',()=>{
+    const side=activeSettings();
+    const next=normalizePostMode(side.fill,button.dataset.postMode);
+    side.postMode=next;
+    syncPostMode();
+    updateModel();
+  }));
   for(const input of root.querySelectorAll('[data-field]')){
     input.addEventListener('change',()=>{
       const field=input.dataset.field,selected=activeSettings();
