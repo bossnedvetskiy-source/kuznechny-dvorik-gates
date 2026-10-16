@@ -239,7 +239,7 @@ test('3D расчёт opens independently in DEV and edits geometry without chan
   expect(withGate.offset).toBe(2);
   if(hasReal3D){
     await expect(page.locator('#kd3dRoot')).toHaveAttribute('data-scene-gate-leaves','2');
-    await expect(page.locator('#kd3dRoot')).toHaveAttribute('data-scene-gate-opening',/\\\"start\\\":2/);
+    await expect(page.locator('#kd3dRoot')).toHaveAttribute('data-scene-gate-opening',/"start":2/);
   }
   await page.locator('#kd3dRoot [data-gate-enabled]').uncheck();
   if(hasReal3D)await expect(page.locator('#kd3dRoot')).toHaveAttribute('data-scene-gate-leaves','0');
