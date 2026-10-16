@@ -1,5 +1,6 @@
 import * as THREE from '../naves/vendor/three.module.js';
 import { OrbitControls } from '../naves/vendor/OrbitControls.js';
+import { SIDE_IDS, SIDE_NAMES, FILL_IDS, createDefaultSides, normalizeSides, getSiteLayout } from './3d-layout.js';
 
 // Standalone DEV prototype. This is visual geometry only, not a retail price quote.
 const DRAFT_KEY = 'kd-surveyor-3d-draft-v1';
@@ -25,19 +26,20 @@ function numeric(value, min, max, fallback) {
   return Number.isFinite(n) ? Math.max(min, Math.min(max, n)) : fallback;
 }
 function loadDraft() {
-  try {
-    const o = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null');
-    if (!o || typeof o !== 'object') return { ...DEFAULT };
-    return {
-      length: numeric(o.length, 1, 60, DEFAULT.length),
-      gap: numeric(o.gap, 0.02, 0.12, DEFAULT.gap),
-      height: numeric(o.height, 0.8, 3, DEFAULT.height),
-      postSize: [60, 80, 100].includes(Number(o.postSize)) ? Number(o.postSize) : DEFAULT.postSize,
-      step: numeric(o.step, 1, 3, DEFAULT.step),
-      fill: ['picket', 'picket-double', 'horizontal', 'horizontal-double', 'sheet', 'jalousie'].includes(o.fill) ? o.fill : DEFAULT.fill,
-      ral: Object.hasOwn(RAL, o.ral) ? o.ral : DEFAULT.ral
-    };
-  } catch { return { ...DEFAULT }; }
+  let old=null;
+  try { old=JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null'); } catch { /* Invalid prior draft */ }
+  const o=(old && typeof old==='object')?old:{};
+  const activeSide=SIDE_IDS.includes(o.activeSide)?o.activeSide:'A';
+  const sides=normalizeSides(o.sides,o);
+  const selected=sides[activeSide];
+  return {
+    ...DEFAULT,
+    ...selected,
+    gap:numeric(o.gap,0.02,0.12,DEFAULT.gap),
+    postSize:[60,80,100].includes(Number(o.postSize))?Number(o.postSize):DEFAULT.postSize,
+    sides,
+    activeSide
+  };
 }
 function saveDraft(model) {
   try { localStorage.setItem(DRAFT_KEY, JSON.stringify(model)); } catch { /* Storage may be blocked. */ }
@@ -165,13 +167,18 @@ export function mount3DCalculator(root) {
   }
   if (!root) throw new Error('Не найден раздел 3D расчёта');
   const config = loadDraft();
+  const activeSettings=()=>config.sides[config.activeSide];
   root.innerHTML = [
-    '<div class="kd3d-top"><div><strong>Конструктор участка</strong><small>Этап 2 · реалистичное заполнение</small></div><span>DEV</span></div>',
+    '<div class="kd3d-top"><div><strong>Конструктор участка</strong><small>Этап 3 · геометрия участка</small></div><span>DEV</span></div>',
     '<div class="kd3d-mode" role="group" aria-label="Вид результата"><button type="button" data-mode="scene" class="active">3D-модель</button><button type="button" data-mode="parts">Комплектация</button></div>',
     '<div class="kd3d-viewport" data-viewport><div class="kd3d-scene" data-scene></div><div class="kd3d-parts" data-parts hidden></div>',
     '<div class="kd3d-scene-controls"><button type="button" data-fit>Показать целиком</button></div>',
     '<p class="kd3d-webgl-error" data-error hidden></p></div>',
-    '<div class="kd3d-form"><h3>Параметры забора</h3>',
+    '<div class="kd3d-form"><h3>Параметры участка</h3>',
+    '<div class="kd3d-sides-title"><strong>Стороны участка</strong><small>Выбери сторону для настройки; включение — отдельно</small></div>',
+    '<div class="kd3d-sides" data-sides role="group" aria-label="Стороны участка">'+SIDE_IDS.map(id=>
+      '<div class="kd3d-side-entry" data-side-entry="'+id+'"><button type="button" data-side="'+id+'" aria-pressed="false"><b>'+SIDE_NAMES[id]+'</b><span data-side-length="'+id+'"></span></button><button type="button" data-side-toggle="'+id+'" aria-pressed="false" aria-label="Включить сторону '+SIDE_NAMES[id]+'"></button></div>').join('')+'</div>',
+    '<p class="kd3d-side-warning" data-site-warning hidden></p>',
     '<div class="kd3d-fields"><label>Длина стороны А, м<input data-field="length" inputmode="decimal" type="number" min="1" max="60" step="0.1"></label>',
     '<label>Высота, м<input data-field="height" inputmode="decimal" type="number" min="0.8" max="3" step="0.1"></label>',
     '<label>Макс. шаг столбов, м<input data-field="step" inputmode="decimal" type="number" min="1" max="3" step="0.1"></label></div>',
@@ -182,18 +189,41 @@ export function mount3DCalculator(root) {
     '<div class="kd3d-ral-swatches" data-ral-swatches role="group" aria-label="Выбор цвета RAL"></div>',
     '<p class="kd3d-color-note">Цвета приближены к окрашенному металлу. На экране оттенок зависит от освещения и настроек телефона.</p>',
     '<div class="kd3d-stats" data-stats></div>',
-    '<div class="kd3d-hint">Первая версия: настоящая 3D-модель прямой линии с базовыми заполнениями. Ворота, калитки, несколько сторон, точная спецификация и цена будут добавлены следующими этапами. Сейчас стоимость не рассчитывается.</div>',
+    '<div class="kd3d-hint">3D-модель строит до четырёх сторон и общие угловые столбы. Чтобы замкнуть прямоугольный участок, сделай длины А и В, Б и Г одинаковыми. Ворота, калитки и цены будут добавлены позже.</div>',
     '<button type="button" data-reset class="kd3d-reset">↶ Сбросить тестовые параметры</button></div>'
   ].join('');
   const find = selector => root.querySelector(selector);
-  for (const key of ['length','height','step','postSize','fill','ral']) find('[data-field="' + key + '"]').value = config[key];
+  function syncSideInputs() {
+    const selected=activeSettings();
+    for(const key of ['length','height','step','fill','ral'])
+      find('[data-field="'+key+'"]').value=selected[key];
+    find('[data-field="postSize"]').value=config.postSize;
+    find('[data-field="gap"]').value=Number((config.gap*100).toFixed(1));
+    syncSwatches();
+  }
+  function syncSideButtons() {
+    SIDE_IDS.forEach(id=>{
+      const selected=id===config.activeSide;
+      const enabled=config.sides[id].enabled;
+      const button=find('[data-side="'+id+'"]');
+      const toggle=find('[data-side-toggle="'+id+'"]');
+      button.setAttribute('aria-pressed',String(selected));
+      toggle.setAttribute('aria-pressed',String(enabled));
+      toggle.textContent=enabled?'✓ Вкл':'＋ Выкл';
+      find('[data-side-entry="'+id+'"]').classList.toggle('selected',selected);
+      find('[data-side-entry="'+id+'"]').classList.toggle('enabled',enabled);
+      find('[data-side-length="'+id+'"]').textContent=config.sides[id].length.toFixed(1).replace('.',',')+' м';
+    });
+  }
+  syncSideInputs();
+  syncSideButtons();
   find('[data-field="gap"]').value = Number((config.gap*100).toFixed(1));
   const swatches=find('[data-ral-swatches]');
   swatches.innerHTML=Object.entries(RAL).map(([code,hex])=>
     '<button type="button" data-ral-swatch="'+code+'" style="--kd3d-swatch:'+hex+'" aria-label="RAL '+code+' '+RAL_LABELS[code]+'"><span class="kd3d-swatch-color"></span><small>'+code+'</small></button>').join('');
   function syncSwatches() {
     swatches.querySelectorAll('[data-ral-swatch]').forEach(button=>{
-      const selected=button.dataset.ralSwatch===config.ral;
+      const selected=button.dataset.ralSwatch===activeSettings().ral;
       button.classList.toggle('active',selected);
       button.setAttribute('aria-pressed',String(selected));
     });
@@ -201,8 +231,8 @@ export function mount3DCalculator(root) {
   swatches.addEventListener('click',event=>{
     const button=event.target.closest('[data-ral-swatch]');
     if(!button || !Object.hasOwn(RAL,button.dataset.ralSwatch))return;
-    config.ral=button.dataset.ralSwatch;
-    find('[data-field="ral"]').value=config.ral;
+    activeSettings().ral=button.dataset.ralSwatch;
+    find('[data-field="ral"]').value=activeSettings().ral;
     updateModel();
     syncSwatches();
   });
@@ -252,14 +282,42 @@ export function mount3DCalculator(root) {
     error.textContent = 'На этом устройстве 3D недоступно. Параметры и комплектация продолжают работать.';
     console.warn('KD surveyor 3D WebGL unavailable:', e);
   }
+  const FILL_NAMES={
+    picket:'Евроштакетник вертикальный, один ряд',
+    'picket-double':'Евроштакетник вертикальный, шахматка',
+    horizontal:'Евроштакетник горизонтальный, один ряд',
+    'horizontal-double':'Евроштакетник горизонтальный, шахматка',
+    sheet:'Профнастил С10',jalousie:'Жалюзи (схематично)'
+  };
   function summary() {
-    const count = Math.max(1, Math.ceil(config.length / config.step));
-    const actualSpan = config.length / count;
-    stats.innerHTML = '<div><small>Пролётов</small><b>' + count + '</b></div><div><small>Столбов</small><b>' + (count + 1) + '</b></div><div><small>Длина пролёта</small><b>' + actualSpan.toFixed(2).replace('.', ',') + ' м</b></div>';
-    const names={picket:'Евроштакетник вертикальный, один ряд', 'picket-double':'Евроштакетник вертикальный, шахматка', horizontal:'Евроштакетник горизонтальный, один ряд', 'horizontal-double':'Евроштакетник горизонтальный, шахматка',sheet:'Профнастил С10',jalousie:'Жалюзи (схематично)'};
-    parts.innerHTML = '<h3>Комплектация · предварительная геометрия</h3><p>Сторона А: ' + config.length.toFixed(1).replace('.', ',') + ' м · высота ' + config.height.toFixed(1).replace('.', ',') + ' м</p><p>Пролётов: <b>' + count + '</b>; металлических столбов: <b>' + (count+1) + '</b> ('+config.postSize+'×'+config.postSize+' мм).</p><p>Каркас: <b>лаги 40×20 мм</b>, для горизонтального штакетника — вертикальные направляющие (2–3 шт. на пролёт).</p><p>Средний пролёт: <b>' + actualSpan.toFixed(2).replace('.', ',') + ' м</b>.</p><p>Заполнение: <b>'+names[config.fill]+'</b>'+(config.fill==='sheet'?' · приблизительный профиль 10 мм':' · планка 120 мм, зазор '+(config.gap*100).toFixed(1).replace('.',',')+' см')+'.</p><p class="kd3d-unpriced">Только визуализация! Это не раскрой материала и не расчёт стоимости. Действующие калькуляторы не затронуты.</p>';
-    find('[data-picket-settings]').hidden = !['picket','picket-double','horizontal','horizontal-double'].includes(config.fill);
-    return { count, actualSpan };
+    const layout=getSiteLayout(config.sides);
+    const format=value=>value.toFixed(1).replace('.',',');
+    const format2=value=>value.toFixed(2).replace('.',',');
+    const warning=find('[data-site-warning]');
+    warning.hidden=!layout.warnings.length;
+    warning.textContent=layout.warnings.join(' ');
+    stats.innerHTML=
+      '<div><small>Забор, м</small><b>'+format(layout.perimeter)+'</b></div>'+
+      '<div><small>Пролётов</small><b>'+layout.totalSpans+'</b></div>'+
+      '<div><small>Столбов</small><b>'+layout.posts.length+'</b></div>';
+    let description='<h3>Комплектация · геометрия участка</h3>';
+    if(!layout.edges.length) description+='<p>Включите хотя бы одну сторону участка.</p>';
+    for(const edge of layout.edges){
+      description+='<p><b>Сторона '+SIDE_NAMES[edge.id]+': '+format(edge.side.length)+' м</b> · высота '+
+        format(edge.side.height)+' м · пролётов '+edge.count+' (по '+format2(edge.span)+' м).<br>'+
+        FILL_NAMES[edge.side.fill]+' · RAL '+edge.side.ral+
+        (edge.side.fill==='sheet'?'':' · зазор '+format(config.gap*100)+' см')+'.</p>';
+    }
+    description+='<p>Периметр активных сторон: <b>'+format(layout.perimeter)+' м</b>. '+
+      'Пролётов: <b>'+layout.totalSpans+'</b>; металлических столбов: <b>'+
+      layout.posts.length+'</b> ('+config.postSize+'×'+config.postSize+' мм). Угловые столбы не дублируются.</p>';
+    if(layout.warnings.length) description+='<p class="kd3d-unpriced">'+layout.warnings.join(' ')+'</p>';
+    description+='<p class="kd3d-unpriced">Схема и количество столбов предварительные. '+
+      'Без проёмов, производственного раскроя, прочностной проверки и расчёта стоимости.</p>';
+    parts.innerHTML=description;
+    find('[data-picket-settings]').hidden=!['picket','picket-double','horizontal','horizontal-double'].includes(activeSettings().fill);
+    syncSideButtons();
+    return layout;
   }
   function clearGeometry() {
     if (!fence) return;
@@ -270,111 +328,110 @@ export function mount3DCalculator(root) {
     previousLineGeometries = [];
   }
   function updateModel() {
-    const { count, actualSpan } = summary();
+    const selected=activeSettings();
+    // Legacy keys retained for older locally saved drafts and existing integrations.
+    for(const key of ['length','height','step','fill','ral']) config[key]=selected[key];
+    const layout=summary();
     saveDraft(config);
-    if (!webglOk) return;
+    if(!webglOk)return;
     clearGeometry();
-    // Powder-coated steel: satin rather than chrome-like, with matching painted posts.
-    const paintedPost = new THREE.Color(RAL[config.ral]).multiplyScalar(0.88);
-    const postMat = new THREE.MeshStandardMaterial({color:paintedPost,metalness:0.19,roughness:0.49});
-    const fillMat = new THREE.MeshStandardMaterial({color:RAL[config.ral],metalness:0.22,roughness:0.43,side:THREE.DoubleSide});
-    previousMaterials.push(postMat, fillMat);
-    const start = -config.length / 2;
     const postWidth=config.postSize/1000;
-    const postHeight=config.height+0.10;
-    const railY=config.height>2.15 ? [0.32,config.height/2,config.height-0.32] :
-      [0.33,Math.max(0.52,config.height-0.33)];
+    const paintedPost=new THREE.Color(RAL[config.sides.A.ral]).multiplyScalar(.88);
+    const postMat=new THREE.MeshStandardMaterial({color:paintedPost,metalness:.19,roughness:.49});
+    previousMaterials.push(postMat);
     const capGeometry=buildPostCapGeometry(postWidth);
     previousLineGeometries.push(capGeometry);
-    for (let i=0; i<=count; i++) {
-      const x=start+i*actualSpan;
-      // True 60, 80 or 100 mm square post; small flat seat and sloped metal cap.
-      frameGeometry(fence,base,postWidth,postHeight,postWidth,x,postHeight/2,0,postMat);
-      frameGeometry(fence,base,postWidth+0.013,0.012,postWidth+0.013,
-        x,postHeight+0.006,0,postMat);
+    for(const p of layout.posts){
+      const h=p.height+.10;
+      frameGeometry(fence,base,postWidth,h,postWidth,p.x,h/2,p.z,postMat);
+      frameGeometry(fence,base,postWidth+.013,.012,postWidth+.013,p.x,h+.006,p.z,postMat);
       const cap=new THREE.Mesh(capGeometry,postMat);
-      cap.position.set(x,postHeight+0.012,0);
+      cap.position.set(p.x,h+.012,p.z);
       fence.add(cap);
     }
-    const frontPickets=[], rearPickets=[], horizontalPickets=[], rearHorizontalPickets=[];
-    const isPicket=['picket','picket-double','horizontal','horizontal-double'].includes(config.fill);
-    for (let i=0; i<count; i++) {
-      const mid = start + (i+0.5)*actualSpan;
-      const width = Math.max(0.2, actualSpan - postWidth - 0.035);
-      if (config.fill === 'sheet') {
-        const geometry=buildC10Geometry(width,config.height-0.12);
-        previousLineGeometries.push(geometry);
-        const panel=new THREE.Mesh(geometry,fillMat);
-        panel.position.set(mid,0.06,0.015);
-        panel.receiveShadow=true;
-        fence.add(panel);
-        // The real profiled sheet is mounted over two steel horizontal rails.
-        railY.forEach(y=>frameGeometry(fence,base,width,0.04,0.02,mid,y,-0.005,postMat));
-      } else if (config.fill === 'jalousie') {
-        // Temporarily schematic; dedicated louvre geometry will be a later step.
-        const rows=Math.max(1,Math.floor((config.height-0.12)/0.14));
-        for(let n=0;n<rows;n++)
-          frameGeometry(fence,base,width,0.11,0.026,mid,0.13+n*0.14,0,fillMat);
-      } else if (config.fill === 'horizontal' || config.fill === 'horizontal-double') {
-        // Real 40×20 guides: two for short spans, three for ordinary spans.
-        // Their shallow (20 mm) depth follows the face of each row of pickets.
-        const doubleRow=config.fill==='horizontal-double';
-        const guides=guideOffsets(width);
-        guides.forEach(offset=>{
-          frameGeometry(fence,base,0.04,config.height-0.12,0.02,
-            mid+offset,config.height/2,-0.008,postMat);
-          if(doubleRow)frameGeometry(fence,base,0.04,config.height-0.12,0.02,
-            mid+offset,config.height/2,-0.078,postMat);
-        });
-        // Transverse ties connect the guides; positioned behind the visible slats.
-        railY.forEach(y=>frameGeometry(fence,base,width,0.04,0.02,mid,y,
-          doubleRow?-0.078:-0.008,postMat));
-        const rows=horizontalPicketRows(config.height,config.gap,doubleRow);
-        rows.front.forEach(y=>horizontalPickets.push({x:mid,y,z:0.005}));
-        rows.rear.forEach(y=>rearHorizontalPickets.push({x:mid,y,z:-0.09}));
-      } else if(isPicket) {
-        // 40×20 tube rails behind the profiled pickets (not floating 8 cm away).
-        railY.forEach(y=>frameGeometry(fence,base,width,0.04,0.02,mid,y,-0.008,postMat));
-        if(config.fill==='picket-double'){
-          railY.forEach(y=>frameGeometry(fence,base,width,0.04,0.02,mid,y,-0.078,postMat));
-        }
-        const plank=0.12, gap=config.gap;
-        const n=Math.max(1,Math.floor((width+gap)/(plank+gap)));
-        const occupied=n*plank+(n-1)*gap;
-        const firstX=mid-occupied/2+plank/2;
-        for(let k=0;k<n;k++)
-          frontPickets.push({x:firstX+k*(plank+gap),y:0.065,z:0.005});
-        if(config.fill==='picket-double') {
-          // The rear layer is staggered between front strips (one fewer strip).
-          for(let k=0;k<n-1;k++)
-            rearPickets.push({x:firstX+(k+0.5)*(plank+gap),y:0.065,z:-0.09});
+    for(const edge of layout.edges){
+      const side=edge.side;
+      const fillMat=new THREE.MeshStandardMaterial({
+        color:RAL[side.ral],metalness:.22,roughness:.43,side:THREE.DoubleSide
+      });
+      previousMaterials.push(fillMat);
+      const group=new THREE.Group();
+      const dx=edge.end.x-edge.start.x,dz=edge.end.z-edge.start.z;
+      group.rotation.y=-Math.atan2(dz,dx);
+      group.position.set((edge.start.x+edge.end.x)/2,0,(edge.start.z+edge.end.z)/2);
+      fence.add(group);
+      const start=-side.length/2,actualSpan=edge.span,count=edge.count;
+      const railY=side.height>2.15?[.32,side.height/2,side.height-.32]:
+        [.33,Math.max(.52,side.height-.33)];
+      const frontPickets=[],rearPickets=[],horizontalPickets=[],rearHorizontalPickets=[];
+      const isPicket=FILL_IDS.includes(side.fill);
+      for(let i=0;i<count;i++){
+        const mid=start+(i+.5)*actualSpan;
+        const width=Math.max(.2,actualSpan-postWidth-.035);
+        if(side.fill==='sheet'){
+          const geometry=buildC10Geometry(width,side.height-.12);
+          previousLineGeometries.push(geometry);
+          const panel=new THREE.Mesh(geometry,fillMat);
+          panel.position.set(mid,.06,.015);
+          panel.receiveShadow=true;
+          group.add(panel);
+          railY.forEach(y=>frameGeometry(group,base,width,.04,.02,mid,y,-.005,postMat));
+        }else if(side.fill==='jalousie'){
+          const rows=Math.max(1,Math.floor((side.height-.12)/.14));
+          for(let n=0;n<rows;n++)
+            frameGeometry(group,base,width,.11,.026,mid,.13+n*.14,0,fillMat);
+        }else if(side.fill==='horizontal'||side.fill==='horizontal-double'){
+          const doubleRow=side.fill==='horizontal-double';
+          guideOffsets(width).forEach(offset=>{
+            frameGeometry(group,base,.04,side.height-.12,.02,mid+offset,side.height/2,-.008,postMat);
+            if(doubleRow)
+              frameGeometry(group,base,.04,side.height-.12,.02,mid+offset,side.height/2,-.078,postMat);
+          });
+          railY.forEach(y=>frameGeometry(group,base,width,.04,.02,mid,y,doubleRow?-.078:-.008,postMat));
+          const rows=horizontalPicketRows(side.height,config.gap,doubleRow);
+          rows.front.forEach(y=>horizontalPickets.push({x:mid,y,z:.005}));
+          rows.rear.forEach(y=>rearHorizontalPickets.push({x:mid,y,z:-.09}));
+        }else if(isPicket){
+          railY.forEach(y=>frameGeometry(group,base,width,.04,.02,mid,y,-.008,postMat));
+          if(side.fill==='picket-double')
+            railY.forEach(y=>frameGeometry(group,base,width,.04,.02,mid,y,-.078,postMat));
+          const plank=.12,gap=config.gap;
+          const n=Math.max(1,Math.floor((width+gap)/(plank+gap)));
+          const occupied=n*plank+(n-1)*gap;
+          const firstX=mid-occupied/2+plank/2;
+          for(let k=0;k<n;k++)
+            frontPickets.push({x:firstX+k*(plank+gap),y:.065,z:.005});
+          if(side.fill==='picket-double')
+            for(let k=0;k<n-1;k++)
+              rearPickets.push({x:firstX+(k+.5)*(plank+gap),y:.065,z:-.09});
         }
       }
+      if(frontPickets.length||rearPickets.length){
+        const geo=buildPicketGeometry(side.height-.13);
+        previousLineGeometries.push(geo);
+        instancePickets(group,geo,fillMat,frontPickets,0);
+        instancePickets(group,geo,fillMat,rearPickets,Math.PI);
+      }
+      if(horizontalPickets.length||rearHorizontalPickets.length){
+        const geo=buildPicketGeometry(Math.max(.2,actualSpan-postWidth-.035),true);
+        previousLineGeometries.push(geo);
+        instancePickets(group,geo,fillMat,horizontalPickets,0);
+        instancePickets(group,geo,fillMat,rearHorizontalPickets,Math.PI);
+      }
     }
-    if(frontPickets.length || rearPickets.length) {
-      const geo=buildPicketGeometry(config.height-0.13);
-      previousLineGeometries.push(geo);
-      instancePickets(fence,geo,fillMat,frontPickets,0);
-      instancePickets(fence,geo,fillMat,rearPickets,Math.PI);
-    }
-    if(horizontalPickets.length || rearHorizontalPickets.length) {
-      // Front/back layers share a single low-poly profile and two instanced meshes.
-      const geo=buildPicketGeometry(Math.max(0.2,actualSpan-postWidth-0.035),true);
-      previousLineGeometries.push(geo);
-      instancePickets(fence,geo,fillMat,horizontalPickets,0);
-      instancePickets(fence,geo,fillMat,rearHorizontalPickets,Math.PI);
-    }
-    // Length is shown in the settings and specification, not over the fence.
   }
   function fit() {
-    if (!webglOk) return;
-    // Fit the entire long fence in a portrait mobile viewport without clipping.
-    const aspect=Math.max(0.65,Math.min(1.4,camera.aspect||1));
+    if(!webglOk)return;
+    const layout=getSiteLayout(config.sides);
+    const b=layout.bounds;
+    const aspect=Math.max(.45,camera.aspect||1);
     const halfFov=Math.tan(THREE.MathUtils.degToRad(camera.fov/2));
-    const needed=config.length/(2*halfFov*aspect);
-    const dist=Math.max(7,needed*1.45);
-    camera.position.set(dist*0.14,Math.max(3.3,config.height*2.1),dist);
-    controls.target.set(0,config.height*0.5,0);
+    const width=Math.max(3,b.width),depth=Math.max(3,b.depth);
+    const dist=Math.max(7,Math.max(width/(2*halfFov*aspect),depth/(2*halfFov)) * 1.6);
+    camera.position.set(b.centerX+dist*.47,Math.max(5,dist*.53),b.centerZ+dist*.87);
+    const maxHeight=Math.max(1.8,...layout.posts.map(p=>p.height));
+    controls.target.set(b.centerX,maxHeight*.5,b.centerZ);
+    controls.maxDistance=500;
     controls.update();
   }
   function resize() {
@@ -388,22 +445,46 @@ export function mount3DCalculator(root) {
   for (const input of root.querySelectorAll('[data-field]')) {
     input.addEventListener('change',()=>{
       const field=input.dataset.field;
-      if (field === 'fill') config.fill=input.value;
-      else if (field === 'postSize') config.postSize=[60,80,100].includes(Number(input.value)) ? Number(input.value) : config.postSize;
-      else if (field === 'gap') config.gap=numeric(input.value,2,12,config.gap*100)/100;
-      else if(field === 'ral') config.ral=input.value;
-      else config[field]=numeric(input.value,field==='length'?1:field==='height'?0.8:1,field==='length'?60:3,config[field]);
-      input.value=field==='gap' ? Number((config.gap*100).toFixed(1)) : config[field];
+      const selected=activeSettings();
+      if(field==='fill') selected.fill=FILL_IDS.includes(input.value)?input.value:selected.fill;
+      else if(field==='postSize') config.postSize=[60,80,100].includes(Number(input.value))?Number(input.value):config.postSize;
+      else if(field==='gap') config.gap=numeric(input.value,2,12,config.gap*100)/100;
+      else if(field==='ral') selected.ral=Object.hasOwn(RAL,input.value)?input.value:selected.ral;
+      else selected[field]=numeric(input.value,
+        field==='length'?1:field==='height'?.8:1,
+        field==='length'?60:3,selected[field]);
+      input.value=field==='gap'?Number((config.gap*100).toFixed(1)):
+        field==='postSize'?config.postSize:selected[field];
       updateModel();
       if(field==='ral')syncSwatches();
     });
   }
+  find('[data-sides]').addEventListener('click',event=>{
+    const toggle=event.target.closest('[data-side-toggle]');
+    if(toggle){
+      const side=config.sides[toggle.dataset.sideToggle];
+      if(!side)return;
+      side.enabled=!side.enabled;
+      updateModel();
+      resize();
+      fit();
+      return;
+    }
+    const button=event.target.closest('[data-side]');
+    if(!button||!config.sides[button.dataset.side])return;
+    config.activeSide=button.dataset.side;
+    syncSideInputs();
+    updateModel();
+  });
   root.querySelector('[data-fit]').addEventListener('click',fit);
   root.querySelector('[data-reset]').addEventListener('click',()=>{
     Object.assign(config,DEFAULT);
-    for(const key of ['length','height','step','postSize','fill','ral'])find('[data-field="'+key+'"]').value=config[key];
-    find('[data-field="gap"]').value=Number((config.gap*100).toFixed(1));
-    updateModel();syncSwatches();fit();
+    config.sides=createDefaultSides(DEFAULT);
+    config.activeSide='A';
+    syncSideInputs();
+    updateModel();
+    resize();
+    fit();
   });
   root.querySelectorAll('[data-mode]').forEach(button=>button.addEventListener('click',()=>{
     const isScene=button.dataset.mode==='scene';
@@ -415,6 +496,7 @@ export function mount3DCalculator(root) {
   const observer=new ResizeObserver(resize);
   observer.observe(sceneHost);
   updateModel();
+  resize();
   fit();
   resize();
   if (webglOk) {
