@@ -15,7 +15,7 @@ export function verticalPicketLayout(spanWidth,gap,plank=.12){
   const separation=Math.max(.001,Number(gap)||.05);
   if(span<=.0001)return [];
   if(span<=plank)return [{x:0,width:span}];
-  const count=Math.max(2,Math.ceil((span+separation)/(plank+separation)));
+  const count=Math.max(2,Math.ceil((span+separation)/(plank+separation)-1e-9));
   const edgeWidth=Math.max(.00001,(span-(count-1)*separation-(count-2)*plank)/2);
   const widths=Array.from({length:count},(_,i)=>i===0||i===count-1?edgeWidth:plank);
   let cursor=-span/2;
