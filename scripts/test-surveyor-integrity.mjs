@@ -43,7 +43,7 @@ if (!threeD.includes('data-preset=') || !threeD.includes('data-section="sizes"')
 if (threeD.includes('dimensionLabel(') || threeD.includes('new THREE.Sprite(')) throw new Error('Floating dimension label must not cover the 3D fence');
 if (!sw.includes('./3d-layout.js') || !layout.includes('function getSiteLayout') || !threeD.includes("from './3d-layout.js'"))
   throw new Error('Multi-side 3D geometry module missing from PWA');
-if (!threeD.includes('data-gate-enabled') || !threeD.includes('data-scene-gate-leaves') || !layout.includes('function normalizeSwingGate') || !threeDCss.includes('kd3d-gate-editor')) throw new Error('Swing gate 3D opening or render controls missing');
+if (!threeD.includes('data-gate-enabled') || !threeD.includes('sceneGateLeaves') || !layout.includes('function normalizeSwingGate') || !threeDCss.includes('kd3d-gate-editor')) throw new Error('Swing gate 3D opening or render controls missing');
 if (!threeD.includes('data-auto-gap') || !layout.includes('function verticalPicketPlan') || !threeDCss.includes('kd3d-gap-alert')) throw new Error('Whole-width steel picket gap warning and quick adjust missing');
 if (!threeD.includes('data-post-mode="behind"') || !threeD.includes('verticalPicketPlan') || !layout.includes('const normalizePostMode=')) throw new Error('Post mode or no-gap picket calculation missing');
 if (!threeD.includes('data-side-toggle') || !threeD.includes("function syncSideButtons"))
