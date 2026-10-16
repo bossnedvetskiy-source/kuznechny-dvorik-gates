@@ -18,6 +18,17 @@ test('3D расчёт opens independently in DEV and edits geometry without chan
   await page.locator('#kd3dRoot [data-field="length"]').fill('10');
   await page.locator('#kd3dRoot [data-field="length"]').press('Tab');
   await expect(page.locator('#kd3dRoot [data-parts]')).toContainText('10,0 м');
+  const type = page.locator('#kd3dRoot [data-field="fill"]');
+  await type.selectOption('sheet');
+  await expect(page.locator('#kd3dRoot [data-picket-settings]')).toBeHidden();
+  await expect(page.locator('#kd3dRoot [data-parts]')).toContainText('Профнастил С10');
+  await type.selectOption('picket-double');
+  await expect(page.locator('#kd3dRoot [data-picket-settings]')).toBeVisible();
+  await page.locator('#kd3dRoot [data-field="gap"]').fill('6');
+  await page.locator('#kd3dRoot [data-field="gap"]').press('Tab');
+  await expect(page.locator('#kd3dRoot [data-parts]')).toContainText('6,0 см');
+  await type.selectOption('horizontal');
+  await expect(page.locator('#kd3dRoot [data-parts]')).toContainText('горизонтальный');
   await page.locator('#kd3dRoot [data-mode="parts"]').click();
   await expect(page.locator('#kd3dRoot [data-parts]')).toBeVisible();
   await page.locator('#kd3dRoot [data-mode="scene"]').click();
