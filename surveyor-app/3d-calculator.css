@@ -175,3 +175,16 @@
 #threeDScreen .kd3d-post-options button:disabled{opacity:.42;cursor:not-allowed;background:#f1f1f1;border-color:#e2e2e2}
 #threeDScreen .kd3d-post-note{margin:0;color:#77736d;font-size:11px;line-height:1.4}
 #threeDScreen .kd3d-post-layout.horizontal-only .kd3d-post-note{color:#91611d}
+
+
+/* 120 mm full pickets: visible no-cut warning and one-tap gap optimization. */
+#threeDScreen .kd3d-gap-alert{display:grid;gap:10px;padding:12px;
+  border:1px solid #e6bf7b;border-radius:12px;background:#fff5e3;color:#805018}
+#threeDScreen .kd3d-gap-alert[hidden]{display:none!important}
+#threeDScreen .kd3d-gap-alert p{margin:0;font-size:12px;line-height:1.5}
+#threeDScreen .kd3d-gap-alert button{width:100%;border:1px solid #bd851e;
+  border-radius:11px;background:#d9a33e;color:#261d0f;min-height:43px;
+  padding:9px 12px;font-size:12px;font-weight:850}
+#threeDScreen .kd3d-gap-alert button[hidden]{display:none!important}
+#threeDScreen .kd3d-gap-alert.is-fitted{border-color:#bcd6c3;background:#f0f8f0;color:#355b40}
+#threeDScreen .kd3d-gap-row input[type=range]{min-width:0}
