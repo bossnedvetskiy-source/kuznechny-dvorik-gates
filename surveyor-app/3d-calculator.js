@@ -398,32 +398,42 @@ export function mount3DCalculator(root) {
       .map(edge=>{
         const behind=edge.side.postMode==='behind';
         const width=Math.max(.025,edge.span-(behind?0:config.postSize/1000));
-        return {id:edge.id,plan:verticalPicketPlan(width,config.gap,config.gapFit)};
+        return {id:edge.id,
+          requested:verticalPicketPlan(width,config.gap,false),
+          // The 3D preview must never leave avoidable post-side voids.
+          // Render the no-cut fit immediately, even before user confirmation.
+          plan:verticalPicketPlan(width,config.gap,true)
+        };
       });
   }
   function syncGapWarning(plans){
-    const element=find('[data-gap-alert]');
-    if(!plans.length){element.hidden=true;return;}
-    const unresolved=plans.filter(x=>x.plan.edgeMargin>.0001);
+    const alert=find('[data-gap-alert]');
     const message=find('[data-gap-message]');
     const button=find('[data-auto-gap]');
-    const impossible=unresolved.filter(x=>!x.plan.canFit);
+    if(!plans.length){alert.hidden=true;return;}
+    const impossible=plans.filter(x=>x.plan.edgeMargin>.0001);
+    const altered=plans.filter(x=>x.plan.adjusted);
+    if(!impossible.length&&!altered.length){alert.hidden=true;return;}
+    alert.hidden=false;
     const targetList=plans.map(x=>SIDE_NAMES[x.id]+': '+formatGapCm(x.plan.gapUsed)+' см');
-    if(!unresolved.length && !config.gapFit){element.hidden=true;return;}
-    element.hidden=false;
-    if(config.gapFit&&!unresolved.length){
-      message.textContent='Без подрезки. Фактические зазоры между целыми планками: '+targetList.join('; ')+'. Заданный зазор — верхняя граница.';
-      button.hidden=true;
-      element.classList.add('is-fitted');
-      return;
+    if(impossible.length){
+      const sides=impossible.map(x=>SIDE_NAMES[x.id]).join(', ');
+      const largest=Math.max(...impossible.map(x=>x.plan.edgeMargin));
+      message.textContent='Внимание: сторона '+sides+' — остаётся '+formatGapCm(largest)+
+        ' см у каждого столба. Целая дополнительная штакетина 120 мм не помещается; одним уменьшением зазора закрыть пролёт нельзя. Измените длину пролёта или шаг столбов. Штакетник не подрезаем.';
+      button.hidden=true;alert.classList.remove('is-fitted');return;
     }
-    element.classList.remove('is-fitted');
-    const sides=unresolved.map(x=>SIDE_NAMES[x.id]).join(', ');
-    const maxMargin=Math.max(...unresolved.map(x=>x.plan.edgeMargin));
-    message.textContent='Внимание: на стороне '+sides+' при заданном зазоре остаются пустоты у столбов до '+
-      formatGapCm(maxMargin)+' см с каждой стороны пролёта. Штакетник 120 мм не подрезаем.'+
-      (impossible.length?' Для некоторых пролётов одного уменьшения зазора недостаточно — измените шаг столбов или длину стороны.':'');
-    button.hidden=impossible.length>0;
+    if(config.gapFit){
+      message.textContent='Без подрезки. Фактические зазоры в 3D: '+targetList.join('; ')+
+        '. Крайние планки прилегают к столбам, ширина каждой 120 мм.';
+      button.hidden=true;alert.classList.add('is-fitted');
+    }else{
+      const margin=Math.max(...altered.map(x=>x.requested.edgeMargin));
+      message.textContent='При выбранном зазоре оставались бы щели у столбов до '+
+        formatGapCm(margin)+' см. Штакетник 120 мм не подрезаем. 3D уже показывает целые планки вплотную к столбам: '+
+        targetList.join('; ')+'. Подтвердите уменьшение зазора кнопкой.';
+      button.hidden=false;alert.classList.remove('is-fitted');
+    }
   }
   function summary() {
     const layout=getSiteLayout(config.sides);
@@ -445,7 +455,8 @@ export function mount3DCalculator(root) {
         format(edge.side.height)+' м · пролётов '+edge.count+' (по '+format2(edge.span)+' м).<br>'+
         FILL_NAMES[edge.side.fill]+' · RAL '+edge.side.ral+' · '+(edge.side.postMode==='behind'?'столбы сзади':'столбы видны')+
         (edge.side.fill==='sheet'?'':(edge.side.fill==='picket'||edge.side.fill==='picket-double')
-          ?' · зазор '+formatGapCm(gapPlans.find(x=>x.id===edge.id)?.plan.gapUsed??config.gap)+' см'+(config.gapFit?' (подогнан без подрезки)':' (заданный)'):
+          ?' · фактический зазор '+formatGapCm(gapPlans.find(x=>x.id===edge.id)?.plan.gapUsed??config.gap)+' см'+
+            (gapPlans.find(x=>x.id===edge.id)?.plan.adjusted?(config.gapFit?' (подогнан без подрезки)':' (предпросмотр подгонки)'):' (без подрезки)'):
           ' · зазор '+format(config.gap*100)+' см')+'.</p>';
     }
     description+='<p>Периметр активных сторон: <b>'+format(layout.perimeter)+' м</b>. '+
@@ -565,7 +576,7 @@ export function mount3DCalculator(root) {
           railY.forEach(y=>frameGeometry(group,base,width,.04,.02,mid,y,supportZ,postMat));
           if(side.fill==='picket-double')
             railY.forEach(y=>frameGeometry(group,base,width,.04,.02,mid,y,behind?-.035:-.078,postMat));
-          const stripPlan=verticalPicketPlan(width,config.gap,config.gapFit);
+          const stripPlan=verticalPicketPlan(width,config.gap,true);
           const strips=stripPlan.strips;
           strips.forEach(p=>frontPickets.push({x:mid+p.x,y:.065,z:frontZ,width:p.width}));
           if(side.fill==='picket-double'){
@@ -605,6 +616,8 @@ export function mount3DCalculator(root) {
     root.dataset.scenePickets=String(renderedPlanks);
     root.dataset.scenePostModes=JSON.stringify(renderedPostModes);
     root.dataset.sceneEdgeClearance=String(renderedMaxEdgeClearance);
+    root.dataset.sceneRequestedGap=String(config.gap);
+    root.dataset.sceneActualGaps=getVerticalGapPlans(layout).map(x=>x.id+':'+x.plan.gapUsed.toFixed(6)).join(';');
     root.dataset.sceneFillColors=[...sceneFillColors].sort().join(',');
     root.dataset.sceneRevision=String((Number(root.dataset.sceneRevision)||0)+1);
     renderer.render(scene,camera);
@@ -714,7 +727,7 @@ export function mount3DCalculator(root) {
   });
   find('[data-auto-gap]').addEventListener('click',()=>{
     const plans=getVerticalGapPlans(getSiteLayout(config.sides));
-    if(!plans.length||plans.some(x=>x.plan.edgeMargin>.0001&&!x.plan.canFit))return;
+    if(!plans.length||plans.some(x=>x.plan.edgeMargin>.0001))return;
     config.gapFit=true;
     updateModel();
   });
