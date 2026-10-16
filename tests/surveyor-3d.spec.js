@@ -58,6 +58,17 @@ test('3D расчёт opens independently in DEV and edits geometry without chan
   await expect(postSize).toHaveValue('80');
   await postSize.selectOption('100');
   await expect(page.locator('#kd3dRoot [data-parts]')).toContainText('100×100 мм');
+  const postVisible=page.locator('#kd3dRoot [data-post-mode="visible"]');
+  const postRear=page.locator('#kd3dRoot [data-post-mode="behind"]');
+  await expect(postVisible).toHaveAttribute('aria-pressed','true');
+  await postRear.click();
+  await expect(postRear).toHaveAttribute('aria-pressed','true');
+  await expect(page.locator('#kd3dRoot [data-parts]')).toContainText('столбы сзади');
+  if(hasReal3D) {
+    await expect(page.locator('#kd3dRoot')).toHaveAttribute('data-scene-post-modes',/behind/);
+    const clearance=Number(await page.locator('#kd3dRoot').getAttribute('data-scene-edge-clearance'));
+    expect(clearance).toBeLessThan(0.000001);
+  }
   const type = page.locator('#kd3dRoot [data-field="fill"]');
   await type.selectOption('sheet');
   await expect(page.locator('#kd3dRoot [data-picket-settings]')).toBeHidden();
