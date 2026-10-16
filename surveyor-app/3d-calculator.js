@@ -4,7 +4,20 @@ import { OrbitControls } from '../naves/vendor/OrbitControls.js';
 // Standalone DEV prototype. This is visual geometry only, not a retail price quote.
 const DRAFT_KEY = 'kd-surveyor-3d-draft-v1';
 const DEFAULT = { length: 12, height: 1.8, step: 2.5, fill: 'picket', gap: 0.05, ral: '7024' };
-const RAL = { '7024': '#45494a', '8017': '#4d3227', '6005': '#1c493c', '9005': '#222426', '9003': '#e8e9e6' };
+// Approximate screen representations of powder-coated RAL metal, not calibrated paint samples.
+const RAL = { '7024': '#46494f', '8017': '#49312c', '6005': '#114436', '9005': '#151719', '9003': '#eeefea' };
+const RAL_LABELS = { '7024':'Графит', '8017':'Шоколад', '6005':'Зелёный', '9005':'Чёрный', '9003':'Белый' };
+function horizontalPicketRows(height, gap, doubleRow=false) {
+  const plank=0.12, available=Math.max(0.12,height-0.12);
+  const count=Math.max(1,Math.floor((available+gap)/(plank+gap)));
+  const occupied=count*plank+(count-1)*gap;
+  const firstY=0.06+(available-occupied)/2+plank/2;
+  const pitch=plank+gap;
+  return {
+    front:Array.from({length:count},(_,k)=>firstY+k*pitch),
+    rear:doubleRow ? Array.from({length:Math.max(0,count-1)},(_,k)=>firstY+(k+0.5)*pitch) : []
+  };
+}
 let instance = null;
 
 function numeric(value, min, max, fallback) {
@@ -20,7 +33,7 @@ function loadDraft() {
       gap: numeric(o.gap, 0.02, 0.12, DEFAULT.gap),
       height: numeric(o.height, 0.8, 3, DEFAULT.height),
       step: numeric(o.step, 1, 3, DEFAULT.step),
-      fill: ['picket', 'picket-double', 'horizontal', 'sheet', 'jalousie'].includes(o.fill) ? o.fill : DEFAULT.fill,
+      fill: ['picket', 'picket-double', 'horizontal', 'horizontal-double', 'sheet', 'jalousie'].includes(o.fill) ? o.fill : DEFAULT.fill,
       ral: Object.hasOwn(RAL, o.ral) ? o.ral : DEFAULT.ral
     };
   } catch { return { ...DEFAULT }; }
@@ -156,9 +169,11 @@ export function mount3DCalculator(root) {
     '<div class="kd3d-fields"><label>Длина стороны А, м<input data-field="length" inputmode="decimal" type="number" min="1" max="60" step="0.1"></label>',
     '<label>Высота, м<input data-field="height" inputmode="decimal" type="number" min="0.8" max="3" step="0.1"></label>',
     '<label>Макс. шаг столбов, м<input data-field="step" inputmode="decimal" type="number" min="1" max="3" step="0.1"></label></div>',
-    '<label class="kd3d-select-label">Заполнение<select data-field="fill"><option value="picket">Штакетник · вертикальный односторонний</option><option value="picket-double">Штакетник · вертикальный шахматка</option><option value="horizontal">Штакетник · горизонтальный</option><option value="sheet">Профнастил С10 · объёмный</option><option value="jalousie">Жалюзи · схематично</option></select></label>',
+    '<label class="kd3d-select-label">Заполнение<select data-field="fill"><option value="picket">Штакетник · вертикальный односторонний</option><option value="picket-double">Штакетник · вертикальный шахматка</option><option value="horizontal">Штакетник · горизонтальный односторонний</option><option value="horizontal-double">Штакетник · горизонтальный шахматка</option><option value="sheet">Профнастил С10 · объёмный</option><option value="jalousie">Жалюзи · схематично</option></select></label>',
     '<div class="kd3d-picket-settings" data-picket-settings><div><strong>Штакетник 120 мм</strong><span>Объёмный профиль с продольным ребром и загнутыми краями</span></div><label>Зазор между планками, см<input data-field="gap" inputmode="decimal" type="number" min="2" max="12" step="0.5"></label></div>',
-    '<label class="kd3d-select-label">Цвет RAL<select data-field="ral"><option value="7024">7024 · графит</option><option value="8017">8017 · шоколад</option><option value="6005">6005 · зелёный</option><option value="9005">9005 · чёрный</option><option value="9003">9003 · белый</option></select></label>',
+    '<label class="kd3d-select-label">Порошковая окраска · RAL<select data-field="ral"><option value="7024">7024 · графит</option><option value="8017">8017 · шоколад</option><option value="6005">6005 · зелёный</option><option value="9005">9005 · чёрный</option><option value="9003">9003 · белый</option></select></label>',
+    '<div class="kd3d-ral-swatches" data-ral-swatches role="group" aria-label="Выбор цвета RAL"></div>',
+    '<p class="kd3d-color-note">Цвета приближены к окрашенному металлу. На экране оттенок зависит от освещения и настроек телефона.</p>',
     '<div class="kd3d-stats" data-stats></div>',
     '<div class="kd3d-hint">Первая версия: настоящая 3D-модель прямой линии с базовыми заполнениями. Ворота, калитки, несколько сторон, точная спецификация и цена будут добавлены следующими этапами. Сейчас стоимость не рассчитывается.</div>',
     '<button type="button" data-reset class="kd3d-reset">↶ Сбросить тестовые параметры</button></div>'
@@ -166,6 +181,24 @@ export function mount3DCalculator(root) {
   const find = selector => root.querySelector(selector);
   for (const key of ['length','height','step','fill','ral']) find('[data-field="' + key + '"]').value = config[key];
   find('[data-field="gap"]').value = Number((config.gap*100).toFixed(1));
+  const swatches=find('[data-ral-swatches]');
+  swatches.innerHTML=Object.entries(RAL).map(([code,hex])=>
+    '<button type="button" data-ral-swatch="'+code+'" style="--kd3d-swatch:'+hex+'" aria-label="RAL '+code+' '+RAL_LABELS[code]+'"><span class="kd3d-swatch-color"></span><small>'+code+'</small></button>').join('');
+  function syncSwatches() {
+    swatches.querySelectorAll('[data-ral-swatch]').forEach(button=>{
+      const selected=button.dataset.ralSwatch===config.ral;
+      button.classList.toggle('active',selected);
+      button.setAttribute('aria-pressed',String(selected));
+    });
+  }
+  swatches.addEventListener('click',event=>{
+    const button=event.target.closest('[data-ral-swatch]');
+    if(!button || !Object.hasOwn(RAL,button.dataset.ralSwatch))return;
+    config.ral=button.dataset.ralSwatch;
+    find('[data-field="ral"]').value=config.ral;
+    updateModel();
+  });
+  syncSwatches();
   const sceneHost = find('[data-scene]');
   const parts = find('[data-parts]');
   const stats = find('[data-stats]');
@@ -179,6 +212,10 @@ export function mount3DCalculator(root) {
     renderer = new THREE.WebGLRenderer({ antialias:true, alpha:false, powerPreference:'low-power' });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
     renderer.setClearColor(0xe8eaeb);
+    // Use a controlled neutral studio setup so RAL colours do not wash out on mobile.
+    renderer.outputColorSpace=THREE.SRGBColorSpace;
+    renderer.toneMapping=THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure=1.05;
     sceneHost.appendChild(renderer.domElement);
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0xe8eaeb);
@@ -189,11 +226,11 @@ export function mount3DCalculator(root) {
     controls.maxPolarAngle = Math.PI * 0.48;
     controls.minDistance = 2;
     controls.maxDistance = 100;
-    const light = new THREE.DirectionalLight(0xffffff, 2.1);
+    const light = new THREE.DirectionalLight(0xfff5e8, 1.9);
     light.position.set(10, 20, 10);
     scene.add(light);
-    scene.add(new THREE.AmbientLight(0xffffff, 1.05));
-    const fillLight=new THREE.DirectionalLight(0xe7f4ff,0.65);
+    scene.add(new THREE.HemisphereLight(0xffffff,0x9ba4a9,0.9));
+    const fillLight=new THREE.DirectionalLight(0xe2edff,0.55);
     fillLight.position.set(-5,8,-12);
     scene.add(fillLight);
     grid = new THREE.GridHelper(140, 140, 0xc4ced2, 0xd4dcde);
@@ -212,9 +249,9 @@ export function mount3DCalculator(root) {
     const count = Math.max(1, Math.ceil(config.length / config.step));
     const actualSpan = config.length / count;
     stats.innerHTML = '<div><small>Пролётов</small><b>' + count + '</b></div><div><small>Столбов</small><b>' + (count + 1) + '</b></div><div><small>Длина пролёта</small><b>' + actualSpan.toFixed(2).replace('.', ',') + ' м</b></div>';
-    const names={picket:'Евроштакетник вертикальный, один ряд', 'picket-double':'Евроштакетник вертикальный, шахматка', horizontal:'Евроштакетник горизонтальный',sheet:'Профнастил С10',jalousie:'Жалюзи (схематично)'};
+    const names={picket:'Евроштакетник вертикальный, один ряд', 'picket-double':'Евроштакетник вертикальный, шахматка', horizontal:'Евроштакетник горизонтальный, один ряд', 'horizontal-double':'Евроштакетник горизонтальный, шахматка',sheet:'Профнастил С10',jalousie:'Жалюзи (схематично)'};
     parts.innerHTML = '<h3>Комплектация · предварительная геометрия</h3><p>Сторона А: ' + config.length.toFixed(1).replace('.', ',') + ' м · высота ' + config.height.toFixed(1).replace('.', ',') + ' м</p><p>Пролётов: <b>' + count + '</b>; металлических столбов: <b>' + (count+1) + '</b>.</p><p>Средний пролёт: <b>' + actualSpan.toFixed(2).replace('.', ',') + ' м</b>.</p><p>Заполнение: <b>'+names[config.fill]+'</b>'+(config.fill==='sheet'?' · приблизительный профиль 10 мм':' · планка 120 мм, зазор '+(config.gap*100).toFixed(1).replace('.',',')+' см')+'.</p><p class="kd3d-unpriced">Только визуализация! Это не раскрой материала и не расчёт стоимости. Действующие калькуляторы не затронуты.</p>';
-    find('[data-picket-settings]').hidden = !['picket','picket-double','horizontal'].includes(config.fill);
+    find('[data-picket-settings]').hidden = !['picket','picket-double','horizontal','horizontal-double'].includes(config.fill);
     return { count, actualSpan };
   }
   function clearGeometry() {
@@ -232,8 +269,10 @@ export function mount3DCalculator(root) {
     saveDraft(config);
     if (!webglOk) return;
     clearGeometry();
-    const postMat = new THREE.MeshStandardMaterial({ color:0x333c42, metalness:0.5, roughness:0.5 });
-    const fillMat = new THREE.MeshStandardMaterial({ color:RAL[config.ral], metalness:0.38, roughness:0.43, side:THREE.DoubleSide });
+    // Powder-coated steel: satin rather than chrome-like, with matching painted posts.
+    const paintedPost = new THREE.Color(RAL[config.ral]).multiplyScalar(0.88);
+    const postMat = new THREE.MeshStandardMaterial({color:paintedPost,metalness:0.19,roughness:0.49});
+    const fillMat = new THREE.MeshStandardMaterial({color:RAL[config.ral],metalness:0.22,roughness:0.43,side:THREE.DoubleSide});
     previousMaterials.push(postMat, fillMat);
     const start = -config.length / 2;
     const railY = [0.38, Math.max(0.56, config.height - 0.38)];
@@ -242,8 +281,8 @@ export function mount3DCalculator(root) {
       frameGeometry(fence, base, 0.085, config.height + 0.16, 0.085, x, (config.height+0.16)/2, 0, postMat);
       frameGeometry(fence, base, 0.105, 0.035, 0.105, x, config.height+0.16, 0, postMat);
     }
-    const frontPickets=[], rearPickets=[], horizontalPickets=[];
-    const isPicket=['picket','picket-double','horizontal'].includes(config.fill);
+    const frontPickets=[], rearPickets=[], horizontalPickets=[], rearHorizontalPickets=[];
+    const isPicket=['picket','picket-double','horizontal','horizontal-double'].includes(config.fill);
     for (let i=0; i<count; i++) {
       const mid = start + (i+0.5)*actualSpan;
       const width = Math.max(0.2, actualSpan - 0.11);
@@ -261,16 +300,16 @@ export function mount3DCalculator(root) {
         const rows=Math.max(1,Math.floor((config.height-0.12)/0.14));
         for(let n=0;n<rows;n++)
           frameGeometry(fence,base,width,0.11,0.026,mid,0.13+n*0.14,0,fillMat);
-      } else if (config.fill === 'horizontal') {
-        // Vertical 40x20 supports, horizontal separate folded strips with a true profile.
-        [-.28,.28].forEach(factor=>
-          frameGeometry(fence,base,0.035,config.height-0.12,0.035,mid+width*factor,config.height/2,-0.065,postMat));
-        const plank=0.12, gap=config.gap, available=config.height-0.12;
-        const n=Math.max(1,Math.floor((available+gap)/(plank+gap)));
-        const filled=n*plank+(n-1)*gap;
-        const firstY=0.06+(available-filled)/2+plank/2;
-        for(let k=0;k<n;k++)
-          horizontalPickets.push({x:mid,y:firstY+k*(plank+gap),z:0.025});
+      } else if (config.fill === 'horizontal' || config.fill === 'horizontal-double') {
+        // Two true rows in a checkerboard: back planks bridge front gaps vertically.
+        const doubleRow=config.fill==='horizontal-double';
+        [-.28,.28].forEach(factor=>{
+          frameGeometry(fence,base,0.035,config.height-0.12,0.035,mid+width*factor,config.height/2,-0.065,postMat);
+          if(doubleRow)frameGeometry(fence,base,0.035,config.height-0.12,0.035,mid+width*factor,config.height/2,-0.18,postMat);
+        });
+        const rows=horizontalPicketRows(config.height,config.gap,doubleRow);
+        rows.front.forEach(y=>horizontalPickets.push({x:mid,y,z:0.038}));
+        rows.rear.forEach(y=>rearHorizontalPickets.push({x:mid,y,z:-0.13}));
       } else if(isPicket) {
         railY.forEach(y=>frameGeometry(fence,base,width,0.04,0.035,mid,y,-0.065,postMat));
         const plank=0.12, gap=config.gap;
@@ -292,11 +331,12 @@ export function mount3DCalculator(root) {
       instancePickets(fence,geo,fillMat,frontPickets);
       instancePickets(fence,geo,fillMat,rearPickets);
     }
-    if(horizontalPickets.length) {
-      // One instanced set for all horizontal boards rather than hundreds of meshes.
+    if(horizontalPickets.length || rearHorizontalPickets.length) {
+      // Front/back layers share a single low-poly profile and two instanced meshes.
       const geo=buildPicketGeometry(Math.max(0.2,actualSpan-0.11),true);
       previousLineGeometries.push(geo);
       instancePickets(fence,geo,fillMat,horizontalPickets);
+      instancePickets(fence,geo,fillMat,rearHorizontalPickets);
     }
     const dimMaterial = new THREE.LineBasicMaterial({color:0x536477});
     previousMaterials.push(dimMaterial);
@@ -337,6 +377,7 @@ export function mount3DCalculator(root) {
       else config[field]=numeric(input.value,field==='length'?1:field==='height'?0.8:1,field==='length'?60:3,config[field]);
       input.value=field==='gap' ? Number((config.gap*100).toFixed(1)) : config[field];
       updateModel();
+      if(field==='ral')syncSwatches();
     });
   }
   root.querySelector('[data-fit]').addEventListener('click',fit);
@@ -344,7 +385,7 @@ export function mount3DCalculator(root) {
     Object.assign(config,DEFAULT);
     for(const key of ['length','height','step','fill','ral'])find('[data-field="'+key+'"]').value=config[key];
     find('[data-field="gap"]').value=Number((config.gap*100).toFixed(1));
-    updateModel();fit();
+    updateModel();syncSwatches();fit();
   });
   root.querySelectorAll('[data-mode]').forEach(button=>button.addEventListener('click',()=>{
     const isScene=button.dataset.mode==='scene';
