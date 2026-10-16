@@ -6,8 +6,8 @@ import { SIDE_IDS, SIDE_NAMES, FILL_IDS, createDefaultSides, normalizeSides, get
 const DRAFT_KEY = 'kd-surveyor-3d-draft-v1';
 const DEFAULT = { length: 12, height: 1.8, step: 2.5, postSize: 80, fill: 'picket', gap: 0.05, ral: '7024' };
 // Approximate screen representations of powder-coated RAL metal, not calibrated paint samples.
-const RAL = { '7024': '#46494f', '8017': '#49312c', '6005': '#114436', '9005': '#151719', '9003': '#eeefea' };
-const RAL_LABELS = { '7024':'Графит', '8017':'Шоколад', '6005':'Зелёный', '9005':'Чёрный', '9003':'Белый' };
+const RAL = { '9003':'#eeefea','8017':'#49312c','7016':'#383e42','7019':'#545653','7024':'#46494f','9005':'#151719','6005':'#114436','3005':'#56212b','5005':'#164b83' };
+const RAL_LABELS = { '9003':'Белый','8017':'Шоколад','7016':'Антрацит','7019':'Серый','7024':'Графит','9005':'Чёрный','6005':'Зелёный','3005':'Бордовый','5005':'Синий' };
 function horizontalPicketRows(height, gap, doubleRow=false) {
   const plank=0.12, available=Math.max(0.12,height-0.12);
   const count=Math.max(1,Math.floor((available+gap)/(plank+gap)));
@@ -19,6 +19,11 @@ function horizontalPicketRows(height, gap, doubleRow=false) {
     rear:doubleRow ? Array.from({length:Math.max(0,count-1)},(_,k)=>firstY+(k+0.5)*pitch) : []
   };
 }
+const AREA_PRESETS=[{name:'6 соток',x:20,z:30},{name:'10 соток',x:25,z:40},{name:'15 соток',x:30,z:50},{name:'20 соток',x:40,z:50}];
+const SIDE_SUBTITLES={A:'Фасад',B:'Правая',V:'Задняя',G:'Левая'};
+const FILL_LABELS={picket:'Евроштакетник · вертикальный','picket-double':'Евроштакетник · вертикальный шахматка',
+  horizontal:'Евроштакетник · горизонтальный','horizontal-double':'Евроштакетник · горизонтальный шахматка',
+  sheet:'Профнастил С10',jalousie:'Жалюзи · визуализация'};
 let instance = null;
 
 function numeric(value, min, max, fallback) {
@@ -160,83 +165,105 @@ function buildPostCapGeometry(size) {
   return geometry;
 }
 
-// The independent DEV screen must remain styled even if an older PWA serves stale CSS.
-const SIDE_CARD_STYLE_ID='kd3d-side-cards-style-v2';
-const SIDE_CARD_CRITICAL_CSS="\n/* Critical mobile side-card styling is inserted with the JS module as an offline CSS fallback. */\n#threeDScreen .kd3d-side-panel{display:grid!important;gap:12px!important;padding:14px!important;border:1px solid #e7dfd1!important;border-radius:17px!important;background:linear-gradient(180deg,#fffefb,#f9f6ef)!important}\n#threeDScreen .kd3d-sides-head{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:12px!important}\n#threeDScreen .kd3d-sides-head strong{font-size:15px!important;line-height:1.2!important;color:#27231d!important}\n#threeDScreen .kd3d-sides-count{flex-shrink:0;background:#24211d;color:#f1d084;font-size:11px;font-weight:800;border-radius:40px;padding:6px 9px}\n#threeDScreen .kd3d-sides-help{font-size:12px;line-height:1.45;color:#756f65;margin:0}\n#threeDScreen .kd3d-sides{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:9px!important;margin:0}\n#threeDScreen .kd3d-side-entry{min-width:0!important;min-height:74px!important;display:grid!important;grid-template-columns:minmax(0,1fr) 32px!important;gap:4px!important;align-items:stretch!important;padding:8px!important;border:1.5px solid #e4ded4!important;border-radius:14px!important;background:#fff!important;box-shadow:0 2px 5px #00000008!important}\n#threeDScreen .kd3d-side-entry.enabled{border-color:#d2b575!important;background:#fffcf6!important}\n#threeDScreen .kd3d-side-entry.selected{border-color:#c99b46!important;background:#24211e!important;box-shadow:0 0 0 1px #c99b46,0 4px 10px #00000014!important}\n#threeDScreen .kd3d-side-entry [data-side]{display:flex!important;align-items:center!important;min-width:0!important;width:100%!important;gap:7px!important;border:0!important;border-radius:0!important;background:transparent!important;color:#39342d!important;text-align:left!important;padding:3px 0!important;box-shadow:none!important}\n#threeDScreen .kd3d-side-letter{flex:0 0 30px;display:grid;place-items:center;width:30px;height:38px;border-radius:10px;font-size:21px;font-weight:900;background:#f3eee4;color:#8b631c}\n#threeDScreen .kd3d-side-copy{min-width:0;display:grid;align-content:center;gap:2px}\n#threeDScreen .kd3d-side-copy b{font-size:13px;font-weight:900;white-space:nowrap;letter-spacing:-.02em}\n#threeDScreen .kd3d-side-copy small{font-size:10px;color:#80796d;white-space:nowrap}\n#threeDScreen .kd3d-side-entry.selected .kd3d-side-letter{background:#c99b46;color:#211d16}\n#threeDScreen .kd3d-side-entry.selected .kd3d-side-copy b{color:#fff5e2}\n#threeDScreen .kd3d-side-entry.selected .kd3d-side-copy small{color:#d7be8e}\n#threeDScreen .kd3d-side-entry [data-side-toggle]{width:32px!important;height:36px!important;min-width:32px!important;align-self:center!important;display:grid!important;place-items:center!important;border:0!important;border-radius:10px!important;padding:0!important;background:#f0ede8!important;color:#777268!important;font-size:20px!important;font-weight:800!important;line-height:1!important;box-shadow:none!important}\n#threeDScreen .kd3d-side-entry.enabled [data-side-toggle]{background:#c99b46!important;color:#251e13!important}\n#threeDScreen .kd3d-side-entry [data-side-toggle]:focus-visible,#threeDScreen .kd3d-side-entry [data-side]:focus-visible{outline:3px solid #c99b46;outline-offset:2px}\n#threeDScreen .kd3d-side-current{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px 10px;padding-top:11px;border-top:1px solid #eae2d5}\n#threeDScreen .kd3d-side-current strong{font-size:13px;color:#292620}\n#threeDScreen .kd3d-side-current small{font-size:11px;font-weight:800;color:#8d6832;background:#f8edda;padding:6px 9px;border-radius:22px}\n#threeDScreen .kd3d-side-current small.is-off{background:#eee;color:#777}\n#threeDScreen .kd3d-fields label{min-width:0!important}\n#threeDScreen .kd3d-side-warning{display:block;border-radius:12px;padding:11px 12px;margin:0;background:#fff5e5;color:#83521c;font-size:12px;line-height:1.5}\n#threeDScreen .kd3d-side-warning[hidden]{display:none!important}\n@media(max-width:360px){#threeDScreen .kd3d-side-panel{padding:10px!important}#threeDScreen .kd3d-sides{gap:6px!important}#threeDScreen .kd3d-side-entry{padding:6px!important}#threeDScreen .kd3d-side-copy b{font-size:12px}}\n";
-function ensureSideCardStyles() {
-  if(document.getElementById(SIDE_CARD_STYLE_ID))return;
-  const style=document.createElement('style');
-  style.id=SIDE_CARD_STYLE_ID;
-  style.textContent=SIDE_CARD_CRITICAL_CSS;
-  document.head.appendChild(style);
-}
-
 export function mount3DCalculator(root) {
   if (instance && instance.root === root) {
     instance.resize();
     return;
   }
   if (!root) throw new Error('Не найден раздел 3D расчёта');
-  ensureSideCardStyles();
   const config = loadDraft();
   const activeSettings=()=>config.sides[config.activeSide];
   root.innerHTML = [
-    '<div class="kd3d-top"><div><strong>Конструктор участка</strong><small>Этап 3 · геометрия участка</small></div><span>DEV</span></div>',
+    '<div class="kd3d-top"><div><strong>Конструктор участка</strong><small>3D расчёт · DEV</small></div><span>DEV</span></div>',
     '<div class="kd3d-mode" role="group" aria-label="Вид результата"><button type="button" data-mode="scene" class="active">3D-модель</button><button type="button" data-mode="parts">Комплектация</button></div>',
     '<div class="kd3d-viewport" data-viewport><div class="kd3d-scene" data-scene></div><div class="kd3d-parts" data-parts hidden></div>',
     '<div class="kd3d-scene-controls"><button type="button" data-fit>Показать целиком</button></div>',
     '<p class="kd3d-webgl-error" data-error hidden></p></div>',
-    '<div class="kd3d-form"><h3>Параметры участка</h3>',
-    '<section class="kd3d-side-panel" aria-label="Выбор сторон участка">',
+    '<div class="kd3d-form kd3d-editor"><div class="kd3d-editor-head"><h3>Параметры забора</h3><button type="button" data-collapse-params aria-expanded="true">Свернуть <span aria-hidden="true">⌃</span></button></div>',
+    '<div class="kd3d-editor-content" data-editor-content>',
+    '<details class="kd3d-section" data-section="type"><summary><span>Тип забора</span><small data-type-name>Евроштакетник</small></summary><div class="kd3d-section-inner">',
+    '<label class="kd3d-select-label">Материал выбранной стороны<select data-field="fill"><option value="picket">Штакетник · вертикальный односторонний</option><option value="picket-double">Штакетник · вертикальный шахматка</option><option value="horizontal">Штакетник · горизонтальный односторонний</option><option value="horizontal-double">Штакетник · горизонтальный шахматка</option><option value="sheet">Профнастил С10 · объёмный</option><option value="jalousie">Жалюзи · схематично</option></select></label>',
+    '<p class="kd3d-mini-note">Материал выбирается отдельно для каждой стороны участка.</p></div></details>',
+    '<details class="kd3d-section" data-section="sizes" open><summary><span>Размеры и стороны</span></summary><div class="kd3d-section-inner">',
+    '<div class="kd3d-subheading">Размеры участка</div><p class="kd3d-mini-note">Для замкнутого участка включи все четыре стороны. Сторона А — фасад.</p>',
+    '<div class="kd3d-preset-heading">Быстрый выбор площади</div>',
+    '<div class="kd3d-presets" data-presets>'+AREA_PRESETS.map(p=>'<button type="button" data-preset="'+p.x+'x'+p.z+'" aria-pressed="false"><strong>'+p.name+'</strong><small>'+p.x+'×'+p.z+' м</small></button>').join('')+'</div>',
     '<div class="kd3d-sides-head"><strong>Стороны участка</strong><span class="kd3d-sides-count" data-active-side-count>1 из 4</span></div>',
-    '<p class="kd3d-sides-help">Нажми на карточку для настройки. Кнопка справа включает или убирает сторону из 3D.</p>',
-    '<div class="kd3d-sides" data-sides role="group" aria-label="Стороны участка">'+SIDE_IDS.map(id=>
-      '<div class="kd3d-side-entry" data-side-entry="'+id+'"><button type="button" data-side="'+id+'" aria-pressed="false"><span class="kd3d-side-letter">'+SIDE_NAMES[id]+'</span><span class="kd3d-side-copy"><b data-side-length="'+id+'"></b><small>Настроить</small></span></button><button type="button" data-side-toggle="'+id+'" aria-pressed="false" aria-label="Включить сторону '+SIDE_NAMES[id]+'"></button></div>').join('')+'</div>',
+    '<div class="kd3d-sides kd3d-side-list" data-sides role="group" aria-label="Стороны участка">'+SIDE_IDS.map(id=>
+      '<div class="kd3d-side-entry" data-side-entry="'+id+'"><div class="kd3d-side-line"><label class="kd3d-side-checkbox"><input type="checkbox" data-side-toggle="'+id+'" aria-label="Включить сторону '+SIDE_NAMES[id]+'"><span aria-hidden="true"></span></label><button type="button" data-side="'+id+'" aria-pressed="false"><b>Сторона '+SIDE_NAMES[id]+' <small>('+SIDE_SUBTITLES[id]+')</small></b><span data-side-material="'+id+'">Штакетник</span></button></div>',
+      '<label class="kd3d-side-inline-length"><span>Длина стороны</span><span class="kd3d-side-input-wrap"><input type="number" inputmode="decimal" min="1" max="60" step="0.1" data-side-length-input="'+id+'" aria-label="Длина стороны '+SIDE_NAMES[id]+', м"><small>м</small></span></label></div>').join('')+'</div>',
     '<div class="kd3d-side-current"><strong data-current-side-label>Настройка стороны А</strong><small data-current-side-status>Включена</small></div>',
-    '<p class="kd3d-side-warning" data-site-warning hidden></p></section>',
-    '<div class="kd3d-fields"><label data-length-label>Длина стороны А, м<input data-field="length" inputmode="decimal" type="number" min="1" max="60" step="0.1"></label>',
-    '<label>Высота, м<input data-field="height" inputmode="decimal" type="number" min="0.8" max="3" step="0.1"></label>',
-    '<label>Макс. шаг столбов, м<input data-field="step" inputmode="decimal" type="number" min="1" max="3" step="0.1"></label></div>',
+    '<div class="kd3d-fields"><label data-height-label>Высота стороны А, м<input data-field="height" inputmode="decimal" type="number" min="0.8" max="3" step="0.1"></label>',
+    '<label>Шаг столбов, м<input data-field="step" inputmode="decimal" type="number" min="1" max="3" step="0.1"></label></div>',
     '<label class="kd3d-select-label">Столбы · профильная труба<select data-field="postSize"><option value="60">60×60 мм</option><option value="80">80×80 мм</option><option value="100">100×100 мм</option></select></label>',
-    '<label class="kd3d-select-label">Заполнение<select data-field="fill"><option value="picket">Штакетник · вертикальный односторонний</option><option value="picket-double">Штакетник · вертикальный шахматка</option><option value="horizontal">Штакетник · горизонтальный односторонний</option><option value="horizontal-double">Штакетник · горизонтальный шахматка</option><option value="sheet">Профнастил С10 · объёмный</option><option value="jalousie">Жалюзи · схематично</option></select></label>',
-    '<div class="kd3d-picket-settings" data-picket-settings><div><strong>Штакетник 120 мм</strong><span>Объёмный профиль с продольным ребром и загнутыми краями</span></div><label>Зазор между планками, см<input data-field="gap" inputmode="decimal" type="number" min="2" max="12" step="0.5"></label></div>',
-    '<label class="kd3d-select-label">Порошковая окраска · RAL<select data-field="ral"><option value="7024">7024 · графит</option><option value="8017">8017 · шоколад</option><option value="6005">6005 · зелёный</option><option value="9005">9005 · чёрный</option><option value="9003">9003 · белый</option></select></label>',
+    '<p class="kd3d-side-warning" data-site-warning hidden></p></div></details>',
+    '<details class="kd3d-section" data-section="fill" open><summary><span>Заполнение и цвет</span></summary><div class="kd3d-section-inner">',
+    '<div class="kd3d-subheading">Цвет забора · RAL</div>',
     '<div class="kd3d-ral-swatches" data-ral-swatches role="group" aria-label="Выбор цвета RAL"></div>',
-    '<p class="kd3d-color-note">Цвета приближены к окрашенному металлу. На экране оттенок зависит от освещения и настроек телефона.</p>',
+    '<label class="kd3d-ral-select">Точный код цвета<select data-field="ral">'+Object.keys(RAL).map(code=>'<option value="'+code+'">'+code+' · '+RAL_LABELS[code]+'</option>').join('')+'</select></label>',
+    '<div class="kd3d-picket-settings" data-picket-settings>',
+    '<div class="kd3d-subheading">Евроштакетник 120 мм</div>',
+    '<div class="kd3d-orientation" role="group" aria-label="Направление штакетника"><button type="button" data-orientation="vertical" aria-pressed="true">Вертикально</button><button type="button" data-orientation="horizontal" aria-pressed="false">Горизонтально</button></div>',
+    '<label class="kd3d-gap-title">Зазор между планками <span data-gap-value>5 см</span></label>',
+    '<div class="kd3d-gap-row"><input type="range" min="2" max="12" step="0.5" data-gap-slider aria-label="Зазор между штакетинами"><input data-field="gap" inputmode="decimal" type="number" min="2" max="12" step="0.5" aria-label="Зазор, см"><span>см</span></div>',
+    '<label class="kd3d-check-row"><input type="checkbox" data-double-row><span><strong>Шахматный порядок</strong><small>Штакетник с двух сторон</small></span></label>',
+    '</div><p class="kd3d-color-note">Оттенки на экране приблизительные; точный цвет выбирается по образцу RAL.</p></div></details>',
     '<div class="kd3d-stats" data-stats></div>',
-    '<div class="kd3d-hint">3D-модель строит до четырёх сторон и общие угловые столбы. Чтобы замкнуть прямоугольный участок, сделай длины А и В, Б и Г одинаковыми. Ворота, калитки и цены будут добавлены позже.</div>',
-    '<button type="button" data-reset class="kd3d-reset">↶ Сбросить тестовые параметры</button></div>'
+    '<div class="kd3d-hint">Предварительная 3D-визуализация. Стоимость, ворота, калитки и доставка будут подключены отдельно.</div>',
+    '<button type="button" data-reset class="kd3d-reset">↶ Сбросить параметры</button>',
+    '</div></div>'
   ].join('');
   const find = selector => root.querySelector(selector);
-  function syncSideInputs() {
+  function isPicketFill(fill){return ['picket','picket-double','horizontal','horizontal-double'].includes(fill);}
+  function syncPicketSettings(){
+    const fill=activeSettings().fill;
+    find('[data-picket-settings]').hidden=!isPicketFill(fill);
+    root.querySelectorAll('[data-orientation]').forEach(button=>{
+      const value=fill.startsWith('horizontal')?'horizontal':'vertical';
+      button.setAttribute('aria-pressed',String(button.dataset.orientation===value));
+      button.classList.toggle('active',button.dataset.orientation===value);
+    });
+    find('[data-double-row]').checked=fill==='picket-double'||fill==='horizontal-double';
+    find('[data-gap-slider]').value=config.gap*100;
+    find('[data-gap-value]').textContent=(config.gap*100).toFixed(1).replace(/\.0$/,'').replace('.',',')+' см';
+    find('[data-type-name]').textContent=fill==='sheet'?'Профнастил':fill==='jalousie'?'Жалюзи':'Евроштакетник';
+  }
+  function syncSideInputs(){
     const selected=activeSettings();
-    for(const key of ['length','height','step','fill','ral'])
+    for(const key of ['height','step','fill','ral'])
       find('[data-field="'+key+'"]').value=selected[key];
     find('[data-field="postSize"]').value=config.postSize;
     find('[data-field="gap"]').value=Number((config.gap*100).toFixed(1));
+    syncPicketSettings();
     syncSwatches();
   }
-  function syncSideButtons() {
+  function syncSideButtons(){
     SIDE_IDS.forEach(id=>{
-      const selected=id===config.activeSide;
-      const enabled=config.sides[id].enabled;
+      const selected=id===config.activeSide, enabled=config.sides[id].enabled;
       const button=find('[data-side="'+id+'"]');
       const toggle=find('[data-side-toggle="'+id+'"]');
       button.setAttribute('aria-pressed',String(selected));
-      toggle.setAttribute('aria-pressed',String(enabled));
-      toggle.textContent=enabled?'✓':'＋';
+      toggle.checked=enabled;
       toggle.setAttribute('aria-label',(enabled?'Выключить':'Включить')+' сторону '+SIDE_NAMES[id]);
-      button.setAttribute('aria-label','Настроить сторону '+SIDE_NAMES[id]+', '+config.sides[id].length.toFixed(1).replace('.',',')+' м');
+      button.setAttribute('aria-label','Настроить сторону '+SIDE_NAMES[id]);
       find('[data-side-entry="'+id+'"]').classList.toggle('selected',selected);
       find('[data-side-entry="'+id+'"]').classList.toggle('enabled',enabled);
-      find('[data-side-length="'+id+'"]').textContent=config.sides[id].length.toFixed(1).replace('.',',')+' м';
+      find('[data-side-length-input="'+id+'"]').value=config.sides[id].length;
+      find('[data-side-material="'+id+'"]').textContent=FILL_LABELS[config.sides[id].fill];
     });
     find('[data-active-side-count]').textContent=SIDE_IDS.filter(id=>config.sides[id].enabled).length+' из 4';
     find('[data-current-side-label]').textContent='Настройка стороны '+SIDE_NAMES[config.activeSide];
     const status=find('[data-current-side-status]');
-    status.textContent=activeSettings().enabled?'Включена в 3D':'Сторона выключена';
+    status.textContent=activeSettings().enabled?'Включена':'Выключена';
     status.classList.toggle('is-off',!activeSettings().enabled);
-    find('[data-length-label]').firstChild.textContent='Длина стороны '+SIDE_NAMES[config.activeSide]+', м';
+    find('[data-height-label]').firstChild.textContent='Высота стороны '+SIDE_NAMES[config.activeSide]+', м';
+    for(const preset of AREA_PRESETS){
+      const match=SIDE_IDS.every(id=>config.sides[id].enabled)&&
+        Math.abs(config.sides.A.length-preset.x)<.001&&Math.abs(config.sides.V.length-preset.x)<.001&&
+        Math.abs(config.sides.B.length-preset.z)<.001&&Math.abs(config.sides.G.length-preset.z)<.001;
+      find('[data-preset="'+preset.x+'x'+preset.z+'"]').setAttribute('aria-pressed',String(match));
+    }
+    syncPicketSettings();
   }
   const swatches=find('[data-ral-swatches]');
   swatches.innerHTML=Object.entries(RAL).map(([code,hex])=>
@@ -336,7 +363,6 @@ export function mount3DCalculator(root) {
     description+='<p class="kd3d-unpriced">Схема и количество столбов предварительные. '+
       'Без проёмов, производственного раскроя, прочностной проверки и расчёта стоимости.</p>';
     parts.innerHTML=description;
-    find('[data-picket-settings]').hidden=!['picket','picket-double','horizontal','horizontal-double'].includes(activeSettings().fill);
     syncSideButtons();
     return layout;
   }
