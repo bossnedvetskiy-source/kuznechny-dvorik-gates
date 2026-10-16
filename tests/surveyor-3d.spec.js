@@ -3,7 +3,7 @@ import {test, expect} from '@playwright/test';
 test.use({viewport:{width:390,height:844}});
 
 test('3D расчёт opens independently in DEV and edits geometry without changing surveys', async ({page}) => {
-  test.setTimeout(90000);
+  test.setTimeout(120000);
   const diagnosticErrors=[];
   page.on('pageerror',error=>diagnosticErrors.push('page: '+error.message));
   page.on('console',message=>{if(message.type()==='error')diagnosticErrors.push('console: '+message.text());});
@@ -238,6 +238,10 @@ test('3D расчёт opens independently in DEV and edits geometry without chan
     await expect(page.locator('#kd3dRoot')).toHaveAttribute('data-scene-fill-colors',/#[0-9a-f]{6},#[0-9a-f]{6}/);
   }
 
+  // New compact pictograms work independently on A/B/V/G, like reference calculator.
+  await expect(page.locator('#kd3dRoot [data-opening-kind="gate"]')).toHaveCount(4);
+  await expect(page.locator('#kd3dRoot [data-opening-kind="wicket"]')).toHaveCount(4);
+  await page.locator('#kd3dRoot [data-side="A"]').click();
   // A-side swing opening is a real hole in the fence with 2 separate gate leaves.
   await expect(page.locator('#kd3dRoot [data-gate-enabled]')).not.toBeChecked();
   await page.locator('#kd3dRoot [data-gate-enabled]').check();
@@ -264,6 +268,38 @@ test('3D расчёт opens independently in DEV and edits geometry without chan
   await page.locator('#kd3dRoot [data-gate-enabled]').uncheck();
   if(hasReal3D)await expect(page.locator('#kd3dRoot')).toHaveAttribute('data-scene-gate-leaves','0');
   await expect(page.locator('#kd3dRoot [data-parts]')).not.toContainText('Распашные ворота на стороне А:');
+
+  // Independent gate + wicket on side B without affecting side A.
+  await page.locator('#kd3dRoot [data-opening-side="B"][data-opening-kind="gate"]').click();
+  await expect(page.locator('#kd3dRoot [data-opening-side="B"][data-opening-kind="gate"]'))
+    .toHaveAttribute('aria-pressed','true');
+  await page.locator('#kd3dRoot [data-opening-side="B"][data-opening-kind="wicket"]').click();
+  await expect(page.locator('#kd3dRoot [data-wicket-fields]')).toBeVisible();
+  await page.locator('#kd3dRoot [data-wicket-offset]').fill('6');
+  await page.locator('#kd3dRoot [data-wicket-offset]').press('Tab');
+  await expect(page.locator('#kd3dRoot [data-parts]')).toContainText('Распашные ворота на стороне Б');
+  await expect(page.locator('#kd3dRoot [data-parts]')).toContainText('Калитка на стороне Б');
+  await expect(page.locator('#kd3dRoot [data-parts]')).toContainText('Калитка: 920 мм');
+  const savedOpenings=await page.evaluate(()=>
+    JSON.parse(localStorage.getItem('kd-surveyor-3d-draft-v1')).openings);
+  expect(savedOpenings.B.gate.enabled).toBe(true);
+  expect(savedOpenings.B.wicket.enabled).toBe(true);
+  expect(savedOpenings.A.gate.enabled).toBe(false);
+  if(hasReal3D){
+    await expect(page.locator('#kd3dRoot')).toHaveAttribute('data-scene-gate-leaves','2');
+    await expect(page.locator('#kd3dRoot')).toHaveAttribute('data-scene-wicket-leaves','1');
+    await expect(page.locator('#kd3dRoot')).toHaveAttribute('data-scene-openings',/B:gate:/);
+    await expect(page.locator('#kd3dRoot')).toHaveAttribute('data-scene-dimension-values',/B:wicket:920/);
+  }
+  // A wicket alone on another side, with no automatic second gate.
+  await page.locator('#kd3dRoot [data-opening-side="G"][data-opening-kind="wicket"]').click();
+  const finalOpenings=await page.evaluate(()=>
+    JSON.parse(localStorage.getItem('kd-surveyor-3d-draft-v1')).openings);
+  expect(finalOpenings.G.wicket.enabled).toBe(true);
+  expect(finalOpenings.G.gate.enabled).toBe(false);
+  expect(finalOpenings.B.wicket.enabled).toBe(true);
+  if(hasReal3D) await expect(page.locator('#kd3dRoot'))
+    .toHaveAttribute('data-scene-wicket-leaves','2');
 
   await page.locator('#kd3dRoot [data-collapse-params]').click();
   await expect(page.locator('#kd3dRoot [data-editor-content]')).toBeHidden();
