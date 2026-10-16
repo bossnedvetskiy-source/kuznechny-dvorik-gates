@@ -15,13 +15,14 @@ test('3D расчёт opens independently in DEV and edits geometry without chan
   await expect(page.locator('#open3DCalcBtn')).toContainText('3D расчёт');
   await page.locator('#open3DCalcBtn').click();
   await expect(page.locator('#threeDScreen')).toBeVisible();
+  let hasReal3D=false;
   try {
   await expect(page.locator('#kd3dRoot [data-stats]')).toContainText('Пролётов',{timeout:12000});
-  const hasReal3D=(await page.locator('#kd3dRoot .kd3d-scene canvas').count())>0;
+  hasReal3D=(await page.locator('#kd3dRoot .kd3d-scene canvas').count())>0;
   if(hasReal3D){
     // The diagnostics are taken from rendered Three.js materials and instanced meshes,
     // not the form controls or localStorage model.
-    await expect(page.locator('#kd3dRoot')).toHaveAttribute('data-scene-revision',/^\\d+$/);
+    await expect(page.locator('#kd3dRoot')).toHaveAttribute('data-scene-revision',/^\d+$/);
     await expect(page.locator('#kd3dRoot')).toHaveAttribute('data-scene-fill-colors',/#[0-9a-f]{6}/);
   }
   } catch(error) {
