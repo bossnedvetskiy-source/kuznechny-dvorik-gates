@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {createDefaultSides,normalizeSides,getSiteLayout,verticalPicketLayout,normalizePostMode,isHorizontalFill} from '../surveyor-app/3d-layout.js';
+import {createDefaultSides,normalizeSides,getSiteLayout,verticalPicketPlan,verticalPicketLayout,normalizePostMode,isHorizontalFill} from '../surveyor-app/3d-layout.js';
 
 const sides=createDefaultSides({length:12,height:1.8,step:2.5,fill:'picket-double',ral:'8017'});
 let layout=getSiteLayout(sides);
@@ -58,31 +58,49 @@ assert.equal(invalid.A.height,.8);
 assert.equal(invalid.A.fill,'picket');
 assert.equal(invalid.A.step,1);
 
-// No empty end margins: edge pickets meet the steel post faces even when
-// the chosen gap does not divide the bay into full 120 mm pickets.
+// Product rule: standard vertical 120 mm pickets must NEVER be trimmed.
 for(const postSize of [.06,.08,.10]){
-  for(const span of [1.0,1.35,2.1,2.42,2.5,2.82]){
-    for(const gap of [.02,.05,.115,.12]){
-      const between=span-postSize;
+  for(const span of [1,1.35,2.1,2.42,2.5,2.82]){
+    for(const gap of [0,.02,.05,.115,.12]){
       for(const mode of ['visible','behind']){
-        const width=mode==='behind'?span:between;
-        const strips=verticalPicketLayout(width,gap);
-        assert(strips.length>=2,'normal bay has multiple pickets');
-        const left=strips[0],right=strips.at(-1);
-        assert(Math.abs(left.x-left.width/2+width/2)<1e-8,
-          'first picket must meet the left post face / bay end');
-        assert(Math.abs(right.x+right.width/2-width/2)<1e-8,
-          'last picket must meet the right post face / bay end');
-        for(let i=1;i<strips.length;i++){
-          const a=strips[i-1],b=strips[i];
-          const actualGap=(b.x-b.width/2)-(a.x+a.width/2);
-          assert(Math.abs(actualGap-gap)<1e-8,'chosen gap must be respected');
-          assert(b.width>0&&b.width<=.12+.00000001,'edge trim must not exceed 120 mm width');
+        const width=mode==='behind'?span:span-postSize;
+        const initial=verticalPicketPlan(width,gap,false);
+        const fitted=verticalPicketPlan(width,gap,true);
+        assert(initial.strips.every(p=>Math.abs(p.width-.12)<1e-10),
+          'all default pickets must be full-width 120 mm');
+        assert(fitted.strips.every(p=>Math.abs(p.width-.12)<1e-10),
+          'quick-fit is forbidden from cutting pickets');
+        assert.equal(verticalPicketLayout(width,gap).length,initial.count);
+        const check=(plan)=>{
+          if(plan.count){
+            const occupied=plan.count*.12+(plan.count-1)*plan.gapUsed+2*plan.edgeMargin;
+            assert(Math.abs(occupied-width)<1e-7,'pickets+gaps+margins must fill bay dimensions');
+            for(let i=1;i<plan.strips.length;i++){
+              const a=plan.strips[i-1],b=plan.strips[i];
+              assert(Math.abs(b.x-a.x-.12-plan.gapUsed)<1e-7,'consistent full plank and gap spacing');
+            }
+          }
+        };
+        check(initial);check(fitted);
+        assert(fitted.gapUsed<=gap+1e-9,'quick fit must never increase selected gap');
+        if(initial.edgeMargin>.0001 && initial.canFit){
+          assert(fitted.edgeMargin<1e-7,'one click must close post-side margins');
+          assert(fitted.gapUsed<gap,'gap must decrease to accommodate one more whole picket');
+        }else if(initial.edgeMargin>.0001){
+          assert(!initial.canFit,'unsafe gap must raise a warning');
+          assert(fitted.edgeMargin>.0001,'never hide a physically unsatisfiable gap');
         }
       }
     }
   }
 }
+const demo=verticalPicketPlan(2.42,.05,true);
+assert.equal(demo.count,15);
+assert(Math.abs(demo.gapUsed-.044285714285714296)<1e-8);
+assert.equal(demo.edgeMargin,0);
+assert(verticalPicketPlan(.97,0,true).canFit===false,
+  'if no whole additional picket fits, reducing zero gap cannot close the bay');
+console.log('Vertical steel pickets: no trimming, visible warning, one-click gap reduction OK');
 assert.equal(normalizePostMode('picket','behind'),'behind');
 assert.equal(normalizePostMode('picket-double','behind'),'behind');
 assert.equal(normalizePostMode('sheet','behind'),'behind');
@@ -96,6 +114,6 @@ assert.equal(restored.A.postMode,'visible','invalid horizontal layout must be mi
 const old=normalizeSides({A:{fill:'picket',length:12}});
 assert.equal(old.A.postMode,'visible','old drafts remain visible-post by default');
 
-console.log('3D post modes and gap-free, exactly spaced end pickets OK');
+console.log('3D post modes and whole-width, adjustable-gap pickets OK');
 
 console.log('3D layout A/B/V/G shared corners, independent sides, warnings and legacy drafts OK');
