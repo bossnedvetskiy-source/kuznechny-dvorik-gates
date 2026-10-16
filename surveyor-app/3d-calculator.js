@@ -1,6 +1,6 @@
 import * as THREE from '../naves/vendor/three.module.js';
 import { OrbitControls } from '../naves/vendor/OrbitControls.js';
-import { SIDE_IDS, SIDE_NAMES, FILL_IDS, createDefaultSides, normalizeSides, getSiteLayout, normalizePostMode, verticalPicketPlan, isHorizontalFill, normalizeSwingGate, getClearDimensionPlan } from './3d-layout.js';
+import { SIDE_IDS, SIDE_NAMES, FILL_IDS, createDefaultSides, normalizeSides, getSiteLayout, normalizePostMode, verticalPicketPlan, isHorizontalFill, normalizeSwingGate, normalizeWicket, normalizeOpenings, getClearDimensionPlan } from './3d-layout.js';
 
 // Standalone DEV prototype. This is visual geometry only, not a retail price quote.
 const DRAFT_KEY = 'kd-surveyor-3d-draft-v1';
@@ -44,7 +44,8 @@ function loadDraft() {
     gap:numeric(o.gap,0,0.12,DEFAULT.gap),
     gapFit:o.gapFit===true,
     showDimensions:o.showDimensions===true,
-    gate:normalizeSwingGate(o.gate,sides.A.length),
+    gate:normalizeSwingGate(o.openings?.A?.gate||o.gate,sides.A.length),
+    openings:normalizeOpenings(sides,o.openings,o.gate),
     postSize:[60,80,100].includes(Number(o.postSize))?Number(o.postSize):DEFAULT.postSize,
     sides,
     activeSide
@@ -197,15 +198,20 @@ export function mount3DCalculator(root) {
     '<div class="kd3d-sides-head"><strong>Стороны участка</strong><span class="kd3d-sides-count" data-active-side-count>1 из 4</span></div>',
     '<div class="kd3d-sides kd3d-side-list" data-sides role="group" aria-label="Стороны участка">'+SIDE_IDS.map(id=>
       '<div class="kd3d-side-entry" data-side-entry="'+id+'"><div class="kd3d-side-line"><label class="kd3d-side-checkbox"><input type="checkbox" data-side-toggle="'+id+'" aria-label="Включить сторону '+SIDE_NAMES[id]+'"><span aria-hidden="true"></span></label><button type="button" data-side="'+id+'" aria-pressed="false"><b>Сторона '+SIDE_NAMES[id]+' <small>('+SIDE_SUBTITLES[id]+')</small></b><span data-side-material="'+id+'">Штакетник</span></button></div>'+
+      '<div class="kd3d-opening-actions" role="group" aria-label="Проёмы на стороне '+SIDE_NAMES[id]+'">'+
+      '<button type="button" data-opening-side="'+id+'" data-opening-kind="gate" aria-pressed="false" aria-label="Добавить ворота на сторону '+SIDE_NAMES[id]+'" title="Ворота на стороне '+SIDE_NAMES[id]+'"><svg viewBox="0 0 28 22" aria-hidden="true"><path d="M2 20V4h24v16M14 4v16M4 7l8 3v8M24 7l-8 3v8" /></svg><small>Ворота</small></button>'+
+      '<button type="button" data-opening-side="'+id+'" data-opening-kind="wicket" aria-pressed="false" aria-label="Добавить калитку на сторону '+SIDE_NAMES[id]+'" title="Калитка на стороне '+SIDE_NAMES[id]+'"><svg viewBox="0 0 28 22" aria-hidden="true"><path d="M6 20V2h16v18M9 5l10 3v12M17 13h1" /></svg><small>Калитка</small></button></div>'+
       '<label class="kd3d-side-inline-length"><span>Длина стороны</span><span class="kd3d-side-input-wrap"><input type="number" inputmode="decimal" min="1" max="60" step="0.1" data-side-length-input="'+id+'" aria-label="Длина стороны '+SIDE_NAMES[id]+', м"><small>м</small></span></label></div>').join('')+'</div>',
     '<div class="kd3d-side-current"><strong data-current-side-label>Настройка стороны А</strong><small data-current-side-status>Включена</small></div>',
     '<div class="kd3d-fields"><label data-height-label>Высота стороны А, м<input data-field="height" inputmode="decimal" type="number" min="0.8" max="3" step="0.1"></label>',
     '<label>Шаг столбов, м<input data-field="step" inputmode="decimal" type="number" min="1" max="3" step="0.1"></label></div>',
     '<label class="kd3d-select-label">Столбы · профильная труба<select data-field="postSize"><option value="60">60×60 мм</option><option value="80">80×80 мм</option><option value="100">100×100 мм</option></select></label>',
     '<div class="kd3d-post-layout" data-post-layout><div class="kd3d-subheading">Расположение столбов</div><div class="kd3d-post-options" role="group" aria-label="Расположение столбов"><button type="button" data-post-mode="visible" aria-pressed="true"><strong>Столбы видны</strong><small>Заполнение между столбами, без боковых щелей</small></button><button type="button" data-post-mode="behind" aria-pressed="false"><strong>Столбы сзади</strong><small>Сплошная линия забора перед столбами</small></button></div><p class="kd3d-post-note" data-post-note>Для выбранной стороны участка</p></div>',
-    '<div class="kd3d-gate-editor" data-gate-editor><label class="kd3d-gate-toggle"><input type="checkbox" data-gate-enabled><span><strong>Распашные ворота на стороне А</strong><small>Добавить проём и две створки в 3D</small></span></label>',
+    '<div class="kd3d-gate-editor" data-gate-editor><label class="kd3d-gate-toggle"><input type="checkbox" data-gate-enabled><span><strong data-gate-title>Распашные ворота</strong><small>Две створки в выбранном месте стороны</small></span></label>',
     '<div class="kd3d-gate-fields" data-gate-fields hidden><label>Ширина ворот, м<input type="number" data-gate-width inputmode="decimal" min="2" max="6" step="0.1"></label><label>Отступ слева, м<input type="number" data-gate-offset inputmode="decimal" min="0" max="60" step="0.1"></label></div>',
-    '<p class="kd3d-gate-note" data-gate-note>Проём расположен на фасадной стороне А. Калитку добавим следующим этапом.</p></div>',
+    '<label class="kd3d-gate-toggle"><input type="checkbox" data-wicket-enabled><span><strong data-wicket-title>Калитка</strong><small>Отдельная одностворчатая калитка</small></span></label>',
+    '<div class="kd3d-gate-fields" data-wicket-fields hidden><label>Ширина калитки, м<input type="number" data-wicket-width inputmode="decimal" min="0.7" max="1.5" step="0.1"></label><label>Отступ от начала стороны, м<input type="number" data-wicket-offset inputmode="decimal" min="0" max="60" step="0.1"></label></div>',
+    '<p class="kd3d-gate-note" data-gate-note>Выберите ворота, калитку или оба изделия на любой стороне участка.</p></div>',
     '<p class="kd3d-side-warning" data-site-warning hidden></p></div></details>',
     '<details class="kd3d-section" data-section="fill" open><summary><span>Заполнение и цвет</span></summary><div class="kd3d-section-inner">',
     '<div class="kd3d-subheading">Цвет забора · RAL</div>',
@@ -267,6 +273,11 @@ export function mount3DCalculator(root) {
       find('[data-side-entry="'+id+'"]').classList.toggle('enabled',enabled);
       find('[data-side-length-input="'+id+'"]').value=config.sides[id].length;
       find('[data-side-material="'+id+'"]').textContent=FILL_LABELS[config.sides[id].fill];
+    root.querySelectorAll('[data-opening-side="'+id+'"]').forEach(button=>{
+      const active=config.openings[id][button.dataset.openingKind].enabled;
+      button.setAttribute('aria-pressed',String(active));
+      button.classList.toggle('active',active);
+    });
     });
     find('[data-active-side-count]').textContent=SIDE_IDS.filter(id=>config.sides[id].enabled).length+' из 4';
     find('[data-current-side-label]').textContent='Настройка стороны '+SIDE_NAMES[config.activeSide];
@@ -283,19 +294,26 @@ export function mount3DCalculator(root) {
     syncPicketSettings();
   }
   function syncGateInputs(){
-    const gate=normalizeSwingGate(config.gate,config.sides.A.length);
-    config.gate=gate;
+    const id=config.activeSide;
+    config.openings=normalizeOpenings(config.sides,config.openings,config.gate);
+    const {gate,wicket}=config.openings[id];
+    config.gate=config.openings.A.gate; // backward compatible saved A-side gate.
+    find('[data-gate-title]').textContent='Распашные ворота · сторона '+SIDE_NAMES[id];
+    find('[data-wicket-title]').textContent='Калитка · сторона '+SIDE_NAMES[id];
     find('[data-gate-enabled]').checked=gate.enabled;
     find('[data-gate-fields]').hidden=!gate.enabled;
     find('[data-gate-width]').value=gate.width;
     find('[data-gate-offset]').value=gate.offset;
-    find('[data-gate-offset]').max=Math.max(0,config.sides.A.length-gate.width);
-    const note=find('[data-gate-note]');
-    note.textContent=!config.sides.A.enabled && gate.enabled
-      ?'Сторона А выключена: включите её, чтобы увидеть ворота.'
-      :gate.enabled
-        ?'Отступ измеряется от начала стороны А до первого воротного столба. Калитку добавим позже.'
-        :'Включите ворота, затем задайте ширину и положение на стороне А.';
+    find('[data-gate-offset]').max=Math.max(0,config.sides[id].length-gate.width);
+    find('[data-wicket-enabled]').checked=wicket.enabled;
+    find('[data-wicket-fields]').hidden=!wicket.enabled;
+    find('[data-wicket-width]').value=wicket.width;
+    find('[data-wicket-offset]').value=wicket.offset;
+    find('[data-wicket-offset]').max=Math.max(0,config.sides[id].length-wicket.width);
+    find('[data-gate-note]').textContent=!config.sides[id].enabled?
+      'Сторона выключена. Включите её, чтобы отобразить проёмы в 3D.':
+      gate.enabled&&wicket.enabled?'На этой стороне есть ворота и калитка. Проёмы не пересекаются; столбы на общей границе объединяются.':
+      'Отступ измеряется от начала выбранной стороны '+SIDE_NAMES[id]+'. Можно добавить оба проёма.';
   }
   function syncPostMode(){
     const side=activeSettings();
@@ -461,7 +479,7 @@ export function mount3DCalculator(root) {
     }
   }
   function summary() {
-    const layout=getSiteLayout(config.sides,config.gate);
+    const layout=getSiteLayout(config.sides,config.openings);
     const gapPlans=getVerticalGapPlans(layout);
     syncGapWarning(gapPlans);
     const format=value=>value.toFixed(1).replace('.',',');
@@ -478,22 +496,26 @@ export function mount3DCalculator(root) {
     if(!layout.edges.length) description+='<p>Включите хотя бы одну сторону участка.</p>';
     for(const edge of layout.edges){
       description+='<p><b>Сторона '+SIDE_NAMES[edge.id]+': '+format(edge.side.length)+' м</b> · высота '+
-        format(edge.side.height)+' м · пролётов '+edge.count+(edge.gate?' (проём '+format(edge.gate.width)+' м)':' (по '+format2(edge.span)+' м)')+'.<br>'+
+        format(edge.side.height)+' м · пролётов '+edge.count+
+        (edge.openings.length?' (проёмов '+edge.openings.length+')':' (по '+format2(edge.span)+' м)')+'.<br>'+
         FILL_NAMES[edge.side.fill]+' · RAL '+edge.side.ral+' · '+(edge.side.postMode==='behind'?'столбы сзади':'столбы видны')+
         (edge.side.fill==='sheet'?'':(edge.side.fill==='picket'||edge.side.fill==='picket-double')
           ?' · фактический зазор '+formatGapCm(gapPlans.find(x=>x.id===edge.id)?.plan.gapUsed??config.gap)+' см'+
             (gapPlans.find(x=>x.id===edge.id)?.plan.adjusted?(config.gapFit?' (подогнан без подрезки)':' (предпросмотр подгонки)'):' (без подрезки)'):
           ' · зазор '+format(config.gap*100)+' см')+'.</p>';
     }
-    if(layout.gate){
-      description+='<p><b>Распашные ворота на стороне А:</b> проём '+format(layout.gate.width)+
-        ' м, отступ слева '+format(layout.gate.start)+' м. Две створки в 3D. Ворота без стоимости и подробной фурнитуры.</p>';
+    for(const opening of layout.openings){
+      description+='<p><b>'+(opening.kind==='gate'?'Распашные ворота':'Калитка')+
+        ' на стороне '+SIDE_NAMES[opening.sideId]+':</b> проём '+format(opening.width)+
+        ' м, отступ слева '+format(opening.start)+' м. '+
+        (opening.kind==='gate'?'Две створки':'Одна створка')+
+        ' в 3D. Без стоимости и подробной фурнитуры.</p>';
     }
     if(config.showDimensions){
       description+='<p><b>Размеры в свету (между гранями столбов):</b></p>';
       for(const dimension of dimensions){
         const measures=dimension.spans.map(piece=>
-          (piece.kind==='gate'?'Ворота: ':'Пролёт '+piece.index+': ')+piece.clearMm+' мм'
+          (piece.kind==='gate'?'Ворота: ':piece.kind==='wicket'?'Калитка: ':'Пролёт '+piece.index+': ')+piece.clearMm+' мм'
         );
         description+='<p>Сторона '+SIDE_NAMES[dimension.id]+': '+(measures.length?measures.join(' · '):'пролётов нет')+'</p>';
       }
@@ -605,6 +627,11 @@ export function mount3DCalculator(root) {
     const selected=activeSettings();
     // Legacy keys retained for older locally saved drafts and existing integrations.
     for(const key of ['length','height','step','fill','ral']) config[key]=selected[key];
+    const preliminary=getSiteLayout(config.sides,config.openings);
+    // A displaced wicket follows its actual collision-free 3D location.
+    for(const opening of preliminary.openings)
+      config.openings[opening.sideId][opening.kind].offset=opening.start;
+    config.gate=config.openings.A.gate;
     const layout=summary();
     saveDraft(config);
     if(!webglOk)return;
@@ -735,18 +762,19 @@ export function mount3DCalculator(root) {
         instancePickets(group,geo,fillMat,frontPickets,0);
         instancePickets(group,geo,fillMat,rearPickets,Math.PI);
       }
-      if(edge.gate){
-        const opening=edge.gate;
-        const leafGap=.024;
-        const leafWidth=(opening.width-leafGap)/2;
+      for(const opening of edge.openings){
+        const leafCount=opening.kind==='wicket'?1:2;
+        const leafGap=leafCount===2?.024:0;
+        const leafWidth=(opening.width-leafGap)/leafCount;
         const gateHeight=Math.max(.8,side.height-.13);
         const yCenter=.075+gateHeight/2;
         const gateStart=start+opening.start;
         const gateFillZ=behind?.12:.036;
-        for(let j=0;j<2;j++){
+        for(let j=0;j<leafCount;j++){
           const leaf=new THREE.Group();
-          leaf.userData.kdGateLeaf=true;
-          leaf.position.x=gateStart+(j===0?leafWidth/2:leafWidth+leafGap+leafWidth/2);
+          leaf.userData.kdGateLeaf=opening.kind==='gate';
+          leaf.userData.kdWicketLeaf=opening.kind==='wicket';
+          leaf.position.x=gateStart+leafWidth/2+j*(leafWidth+leafGap);
           group.add(leaf);
           // Uprights, top and bottom rails form real independent swing leaves.
           for(const x of [-leafWidth/2+.026,leafWidth/2-.026])
@@ -798,9 +826,14 @@ export function mount3DCalculator(root) {
     root.dataset.sceneDimensionValues=config.showDimensions?
       clearDimensions.flatMap(d=>d.spans.map(p=>d.id+':'+p.kind+':'+p.clearMm)).join(';'):'';
     root.dataset.scenePickets=String(renderedPlanks);
-    let actualLeaves=0;
-    fence.traverse(object=>{if(object.userData.kdGateLeaf)actualLeaves++;});
+    let actualLeaves=0,wicketLeaves=0;
+    fence.traverse(object=>{
+      if(object.userData.kdGateLeaf)actualLeaves++;
+      if(object.userData.kdWicketLeaf)wicketLeaves++;
+    });
     root.dataset.sceneGateLeaves=String(actualLeaves);
+    root.dataset.sceneWicketLeaves=String(wicketLeaves);
+    root.dataset.sceneOpenings=layout.openings.map(o=>o.sideId+':'+o.kind+':'+o.start.toFixed(2)).join(';');
     root.dataset.sceneGateOpening=layout.gate?JSON.stringify({start:layout.gate.start,end:layout.gate.end}):'';
     root.dataset.scenePostModes=JSON.stringify(renderedPostModes);
     root.dataset.sceneEdgeClearance=String(renderedMaxEdgeClearance);
@@ -812,7 +845,7 @@ export function mount3DCalculator(root) {
   }
   function fit() {
     if(!webglOk)return;
-    const layout=getSiteLayout(config.sides,config.gate);
+    const layout=getSiteLayout(config.sides,config.openings);
     const b=layout.bounds;
     const aspect=Math.max(.45,camera.aspect||1);
     const halfFov=Math.tan(THREE.MathUtils.degToRad(camera.fov/2));
@@ -841,19 +874,36 @@ export function mount3DCalculator(root) {
     renderer.setSize(width,height,false);
     renderer.render(scene,camera);
   }
-  find('[data-gate-enabled]').addEventListener('change',event=>{
-    config.gate={...config.gate,enabled:event.target.checked};
-    syncGateInputs();updateModel();
-  });
-  for(const [selector,key,min,max] of [
-    ['[data-gate-width]','width',2,6],['[data-gate-offset]','offset',0,60]
-  ]){
-    find(selector).addEventListener('change',event=>{
-      config.gate={...config.gate,[key]:numeric(event.target.value,min,max,config.gate[key])};
-      config.gate=normalizeSwingGate(config.gate,config.sides.A.length);
-      syncGateInputs();updateModel();
+  for(const kind of ['gate','wicket']){
+    const name=kind==='gate'?'gate':'wicket';
+    find('[data-'+name+'-enabled]').addEventListener('change',event=>{
+      const id=config.activeSide;
+      config.openings[id][kind].enabled=event.target.checked;
+      if(event.target.checked)config.sides[id].enabled=true;
+      updateModel();syncSideInputs();
     });
+    for(const [key,min,max] of [['width',kind==='gate'?2:.7,kind==='gate'?6:1.5],
+      ['offset',0,60]]){
+      find('[data-'+name+'-'+key+']').addEventListener('change',event=>{
+        const id=config.activeSide;
+        const item=config.openings[id][kind];
+        item[key]=numeric(event.target.value,min,max,item[key]);
+        config.openings=normalizeOpenings(config.sides,config.openings,config.gate);
+        updateModel();syncSideInputs();
+      });
+    }
   }
+  find('[data-sides]').addEventListener('click',event=>{
+    const button=event.target.closest('[data-opening-side][data-opening-kind]');
+    if(!button)return;
+    const id=button.dataset.openingSide,kind=button.dataset.openingKind;
+    if(!config.sides[id]||!['gate','wicket'].includes(kind))return;
+    const item=config.openings[id][kind];
+    item.enabled=!item.enabled;
+    if(item.enabled)config.sides[id].enabled=true;
+    config.activeSide=id;
+    updateModel();syncSideInputs();resize();fit();
+  });
   find('[data-show-dimensions]').addEventListener('change',event=>{
     config.showDimensions=event.target.checked;
     updateModel();
@@ -931,7 +981,7 @@ export function mount3DCalculator(root) {
     syncSideInputs();updateModel();
   });
   find('[data-auto-gap]').addEventListener('click',()=>{
-    const plans=getVerticalGapPlans(getSiteLayout(config.sides,config.gate));
+    const plans=getVerticalGapPlans(getSiteLayout(config.sides,config.openings));
     if(!plans.length||plans.some(x=>x.plan.edgeMargin>.0001))return;
     config.gapFit=true;
     updateModel();
@@ -978,6 +1028,7 @@ export function mount3DCalculator(root) {
   root.querySelector('[data-reset]').addEventListener('click',()=>{
     Object.assign(config,DEFAULT);
     config.gate=normalizeSwingGate(null,DEFAULT.length);
+    config.openings=normalizeOpenings(createDefaultSides(DEFAULT),null,config.gate);
     config.gapFit=false;
     config.showDimensions=false;
     config.sides=createDefaultSides(DEFAULT);
