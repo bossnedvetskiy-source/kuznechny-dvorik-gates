@@ -7,6 +7,8 @@ const lineBuilder = await readFile('surveyor-app/line-builder.js','utf8');
 const threeD = await readFile('surveyor-app/3d-calculator.js','utf8');
 const gateFrame=await readFile('surveyor-app/3d-gate-frame.js','utf8');
 const gateRender=await readFile('surveyor-app/3d-gate-render.js','utf8');
+const slidingFrame=await readFile('surveyor-app/3d-sliding-frame.js','utf8');
+const slidingRender=await readFile('surveyor-app/3d-sliding-render.js','utf8');
 const layout = await readFile('surveyor-app/3d-layout.js','utf8');
 const threeDCss = await readFile('surveyor-app/3d-calculator.css','utf8');
 const api = await readFile('timeweb/backend/surveyor.php','utf8');
@@ -68,6 +70,15 @@ if (!threeD.includes('data-gate-mode="sliding"') || !threeD.includes('data-gate-
   !threeD.includes('data-gate-slide-direction') || !threeD.includes('sceneSlidingLeaves') ||
   !sw.includes('./3d-sliding-frame.js') || !sw.includes('./3d-sliding-render.js'))
   throw new Error('DEV sliding gate selector, 3D render, or offline assets missing');
+if (!threeD.includes('data-gate-slide-position="open"') ||
+  !threeD.includes('data-scene-slide-position="open"') ||
+  !threeD.includes('data-gate-show-slide-zone') ||
+  !threeD.includes('sceneSlidingZones') ||
+  !slidingFrame.includes('function getSlidingTravelPlan') ||
+  !slidingRender.includes('kdSlidingMoving') ||
+  !slidingRender.includes('kdSlidingParkingZone') ||
+  !threeDCss.includes('kd3d-slide-legend'))
+  throw new Error('Sliding gate live 3D movement, full parking zones or mobile controls missing');
 if (!threeD.includes('data-auto-gap') || !layout.includes('function verticalPicketPlan') || !threeDCss.includes('kd3d-gap-alert')) throw new Error('Whole-width steel picket gap warning and quick adjust missing');
 if (!threeD.includes('data-post-mode="behind"') || !threeD.includes('verticalPicketPlan') || !layout.includes('const normalizePostMode=')) throw new Error('Post mode or no-gap picket calculation missing');
 if (!threeD.includes('data-side-toggle') || !threeD.includes("function syncSideButtons"))
