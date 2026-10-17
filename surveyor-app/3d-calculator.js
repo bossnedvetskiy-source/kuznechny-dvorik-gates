@@ -365,6 +365,30 @@ export function mount3DCalculator(root) {
     }
     syncPicketSettings();
   }
+  function renderObstacleRows(id,gate){
+    const target=productField(id,'[data-gate-obstacles]');
+    if(!target)return;
+    const items=gate.obstacles||[];
+    if(!items.length){
+      target.innerHTML='<p class="kd3d-obstacle-none">Препятствия ещё не добавлены.</p>';
+      return;
+    }
+    target.innerHTML=items.map((o,index)=>
+      '<div class="kd3d-obstacle-row" data-obstacle-row="'+index+'">'+
+      '<div class="kd3d-obstacle-head"><strong>Препятствие '+(index+1)+'</strong>'+
+      '<button type="button" data-obstacle-remove="'+index+'">Удалить</button></div>'+
+      '<label>Тип<select data-obstacle-index="'+index+'" data-obstacle-key="type">'+
+      [['tree','Дерево'],['wall','Стена'],['pillar','Опора'],['other','Другое']].map(([value,label])=>
+        '<option value="'+value+'"'+(o.type===value?' selected':'')+'>'+label+'</option>').join('')+
+      '</select></label>'+
+      '<label>От начала стороны, м<input type="number" inputmode="decimal" min="0" max="60" step="0.1" data-obstacle-index="'+index+'" data-obstacle-key="offset" value="'+o.offset+'"></label>'+
+      '<label>Ширина вдоль забора, м<input type="number" inputmode="decimal" min="0.1" max="3" step="0.1" data-obstacle-index="'+index+'" data-obstacle-key="width" value="'+o.width+'"></label>'+
+      '<label>Центр от линии забора, см<input type="number" inputmode="decimal" min="-100" max="200" step="1" data-obstacle-index="'+index+'" data-obstacle-key="distance" value="'+Math.round(o.distance*100)+'"></label>'+
+      '<label>Глубина препятствия, м<input type="number" inputmode="decimal" min="0.1" max="2" step="0.1" data-obstacle-index="'+index+'" data-obstacle-key="depth" value="'+o.depth+'"></label>'+
+      '<label>Высота, м<input type="number" inputmode="decimal" min="0.2" max="5" step="0.1" data-obstacle-index="'+index+'" data-obstacle-key="height" value="'+o.height+'"></label>'+
+      '</div>'
+    ).join('');
+  }
   function syncGateInputs(){
     config.openings=normalizeOpenings(config.sides,config.openings,config.gate);
     config.gate=config.openings.A.gate; // Backward-compatible facade draft.
@@ -390,14 +414,19 @@ export function mount3DCalculator(root) {
       get('[data-gate-slide-direction]').value=gate.slideDirection;
       get('[data-gate-tail-shape]').value=gate.tailShape;
       get('[data-gate-center-post]').checked=gate.centerPost;
+      get('[data-gate-track-offset]').value=Math.round(gate.trackOffset*100);
+      renderObstacleRows(id,gate);
       get('[data-gate-show-slide-zone]').checked=gate.showSlideZone;
       get('[data-gate-slide-position="closed"]').setAttribute('aria-pressed',String(!gate.slideOpen));
       get('[data-gate-slide-position="open"]').setAttribute('aria-pressed',String(gate.slideOpen));
       if(gate.type==='sliding'){
         const edge=sideLayout.edges.find(e=>e.id===id);
         const opening=edge?.gate||{...gate,start:gate.offset};
-        const travel=getSlidingTravelPlan(opening,config.sides[id].length,
-          edge?.openings||[],config.postSize/1000,config.sides[id].height);
+        const travel=edge?.installation||getSlidingInstallationPlan(
+          opening,config.sides[id].length,edge?.openings||[],{
+            postWidth:config.postSize/1000,sideHeight:config.sides[id].height,
+            postMode:config.sides[id].postMode
+          });
         const format=v=>v.toFixed(2).replace('.',',');
         get('[data-gate-slide-geometry]').textContent='Хвостовик '+format(travel.tail)+
           ' м · балка '+travel.beam+' м · полотно '+format(travel.gateLength)+' м.';
@@ -406,7 +435,10 @@ export function mount3DCalculator(root) {
           ' м вдоль забора. Доступно '+format(travel.available)+' м.'+
           (travel.shortage>.0001?' Не хватает '+format(travel.shortage)+' м.':'')+
           (travel.wicketCollisions.length?' Зона отката пересекает калитку.':'')+
-          (travel.showZone?' Цветная полоса видна в 3D.':' Зона скрыта в 3D.');
+          (travel.collisions.length?' Возможное столкновение с '+travel.collisions.length+
+            ' элементами (столбы, забор или отмеченные препятствия).':'')+
+          (travel.showZone?' Цветная полоса видна в 3D.':' Зона скрыта в 3D.')+
+          ' Это предварительная геометрическая проверка, нужен осмотр участка.';
         status.classList.toggle('is-warning',!travel.valid);
       }
       get('[data-gate-frame-profile]').value=gate.frameProfile;
@@ -656,8 +688,11 @@ export function mount3DCalculator(root) {
         const plan=getSlidingGatePlan(opening,config.postSize/1000,
           config.sides[opening.sideId].height);
         const sideEdge=layout.edges.find(e=>e.id===opening.sideId);
-        const travel=getSlidingTravelPlan(opening,sideEdge.side.length,
-          sideEdge.openings,config.postSize/1000,sideEdge.side.height);
+        const travel=sideEdge.installation||getSlidingInstallationPlan(opening,
+          sideEdge.side.length,sideEdge.openings,{
+            postWidth:config.postSize/1000,sideHeight:sideEdge.side.height,
+            postMode:sideEdge.side.postMode
+          });
         description+='<p><b>Откатные ворота на стороне '+SIDE_NAMES[opening.sideId]+
           ':</b> проём '+format(opening.width)+' м, отступ '+format(opening.start)+
           ' м. Откат '+(plan.direction==='left'?'влево':'вправо')+
@@ -671,7 +706,9 @@ export function mount3DCalculator(root) {
           format2(travel.available)+' м'+
           (travel.shortage>.0001?' (не хватает '+format2(travel.shortage)+' м)':'')+
           (travel.wicketCollisions.length?' · пересечение с калиткой':'')+
-          '. Визуальная модель, без расчёта цены и проверки прочности.</p>';
+          (travel.collisions.length?' · помех в зоне движения: '+travel.collisions.length:'')+
+          ' · отступ полотна от забора '+Math.round(travel.trackOffset*100)+' см.'+
+          ' Ролики и фундамент схематичные: нужен осмотр и проектное согласование, без расчёта цены и проверки прочности.</p>';
         continue;
       }
       description+='<p><b>'+(opening.kind==='gate'?'Распашные ворота':'Калитка')+
@@ -949,6 +986,7 @@ export function mount3DCalculator(root) {
         renderOpening({
           group,base,opening,openingStart:start+opening.start,postWidth,
           side,sideLength:side.length,otherOpenings:edge.openings,
+          installationPlan:edge.installation,
           behind,gap:config.gap,postMat,fillMat,frameGeometry,
           buildC10Geometry,buildPicketGeometry,instancePickets,horizontalPicketRows,
           verticalPicketPlan,ownedGeometries:previousLineGeometries,
