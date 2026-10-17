@@ -506,6 +506,14 @@ test('Откатные ворота в сторонах А/Б: хвостови�
   }
   await a.locator('[data-gate-slide-position="closed"]').click();
   if(has3D)await expect(root).toHaveAttribute('data-scene-sliding-shifts','0.000');
+  await expect(root.locator('[data-scene-slide-controls]')).toBeVisible();
+  await expect(root.locator('[data-scene-slide-label]')).toHaveText('Ворота · сторона А');
+  await root.locator('[data-scene-slide-position="open"]').click();
+  await expect(a.locator('[data-gate-slide-position="open"]')).toHaveAttribute('aria-pressed','true');
+  if(has3D)await expect(root).toHaveAttribute('data-scene-sliding-shifts','4.000');
+  await root.locator('[data-scene-slide-position="closed"]').click();
+  await expect(a.locator('[data-gate-slide-position="closed"]')).toHaveAttribute('aria-pressed','true');
+  if(has3D)await expect(root).toHaveAttribute('data-scene-sliding-shifts','0.000');
   if(has3D){
     await expect(root).toHaveAttribute('data-scene-sliding-leaves','1');
     await expect(root).toHaveAttribute('data-scene-sliding-tails','1');
@@ -525,6 +533,7 @@ test('Откатные ворота в сторонах А/Б: хвостови�
   // B has an independent rectangular counterweight; A's model stays intact.
   await root.locator('[data-opening-side="B"][data-opening-kind="gate"]').click();
   await b.locator('[data-gate-mode="sliding"]').click();
+  await expect(root.locator('[data-scene-slide-label]')).toHaveText('Ворота · сторона Б');
   await b.locator('[data-gate-width]').fill('3.4');
   await b.locator('[data-gate-width]').press('Tab');
   await b.locator('[data-gate-offset]').fill('6');
