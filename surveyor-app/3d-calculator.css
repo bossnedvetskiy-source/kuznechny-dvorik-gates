@@ -352,3 +352,40 @@
   #threeDScreen .kd3d-side-products,#threeDScreen .kd3d-side-quick{margin-left:7px}
   #threeDScreen .kd3d-side-products .kd3d-product-card{padding:10px}
 }
+
+
+/* Cantilever sliding gate configuration, side-local to each A/B/V/G card. */
+#threeDScreen .kd3d-gate-type{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:7px;padding:4px;border-radius:12px;border:1px solid #e5d6b7;background:#fff
+}
+#threeDScreen .kd3d-gate-type[hidden],
+#threeDScreen .kd3d-sliding-fields[hidden],
+#threeDScreen [data-gate-swing-direction][hidden]{display:none!important}
+#threeDScreen .kd3d-gate-type button{
+  min-width:0;min-height:43px;border:0;border-radius:10px;
+  background:#f5f3ee;color:#636a70;font-weight:850;font-size:13px;
+  box-shadow:none;cursor:pointer
+}
+#threeDScreen .kd3d-gate-type button[aria-pressed="true"]{
+  background:#e9a123;color:#221a0b;box-shadow:0 1px 5px #b88b4645
+}
+#threeDScreen .kd3d-sliding-fields{
+  grid-column:1/-1;display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;
+  border-radius:12px;padding:11px;
+  border:1px solid #e1c795;background:#fffdf4
+}
+#threeDScreen .kd3d-sliding-fields label{min-width:0;font-size:11px}
+#threeDScreen .kd3d-sliding-fields .kd3d-inner-frame{
+  grid-column:1/-1;display:flex;align-items:center;gap:9px;
+  font-size:12px;font-weight:750;color:#625137
+}
+#threeDScreen .kd3d-slide-geometry{
+  grid-column:1/-1;margin:0;padding:7px 9px;
+  border-radius:9px;background:#f7efdd;
+  color:#75603e;font-size:11px;line-height:1.4
+}
+@media(max-width:360px){
+  #threeDScreen .kd3d-sliding-fields{grid-template-columns:1fr}
+}
