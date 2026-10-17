@@ -382,3 +382,61 @@ test('Встроенная калитка внутри распашных вор
   if(has3D)await expect(root).toHaveAttribute('data-scene-embedded-wickets','0');
   expect(await root.locator('[data-stats]').innerText()).toBe(postsWithGate);
 });
+
+
+test('Редактор и эскизы находятся ВНУТРИ каждой стороны, параметры изделий независимы',async ({page})=>{
+  test.setTimeout(85000);
+  await page.goto('/kuznechny-dvorik-gates/zamer-app-v2/');
+  await page.locator('#loginInput').fill('zamer');
+  await page.locator('#passwordInput').fill('1234');
+  await page.locator('#loginForm button[type="submit"]').click();
+  await expect(page.locator('#mainView')).toBeVisible({timeout:10000});
+  await page.locator('#open3DCalcBtn').click();
+  const root=page.locator('#kd3dRoot');
+  await expect(root.locator('[data-stats]')).toContainText('Столбов',{timeout:12000});
+  // One editor, physically inside the selected side; nothing left below all four cards.
+  await expect(root.locator('[data-side-edit-slot="A"] .kd3d-side-inline-editor')).toHaveCount(1);
+  await expect(root.locator('[data-side-edit-slot="B"] .kd3d-side-inline-editor')).toHaveCount(0);
+  await expect(root.locator('[data-side-entry="A"] [data-gate-editor]')).toHaveCount(1);
+  await expect(root.locator('[data-side-entry="A"] [data-section="fill"]')).toHaveCount(1);
+  await expect(root.locator('[data-side-entry="A"] [data-section="type"]')).toHaveCount(1);
+  await root.locator('[data-opening-side="A"][data-opening-kind="gate"]').click();
+  await expect(root.locator('[data-gate-fields]')).toBeVisible();
+  await root.locator('[data-gate-frame-profile]').selectOption('60x40');
+  await root.locator('[data-gate-fill]').selectOption('sheet');
+  await root.locator('[data-gate-inner-frame]').uncheck();
+  await expect(root.locator('[data-parts]')).toContainText('рама 60×40');
+  await expect(root.locator('[data-parts]')).toContainText('обшивка Профнастил');
+  const a=await page.evaluate(()=>JSON.parse(localStorage.getItem('kd-surveyor-3d-draft-v1')).openings.A.gate);
+  expect(a.frameProfile).toBe('60x40');
+  expect(a.fill).toBe('sheet');
+  expect(a.innerFrame).toBe(false);
+  await root.locator('[data-drawing-kind="gate"]').click();
+  await expect(root.locator('[data-drawing-dialog]')).toBeVisible();
+  await expect(root.locator('[data-drawing-preview] svg')).toHaveCount(1);
+  await expect(root.locator('[data-drawing-preview]')).toContainText('РАСПАШНЫЕ ВОРОТА');
+  const downloadPromise=page.waitForEvent('download');
+  await root.locator('[data-drawing-download]').click();
+  const download=await downloadPromise;
+  expect(download.suggestedFilename()).toBe('KD-vorota-A.svg');
+  await root.locator('[data-drawing-close]').click();
+  // Side B has its OWN data even when A remains enabled.
+  await root.locator('[data-side-toggle="B"]').check();
+  await root.locator('[data-side="B"]').click();
+  await expect(root.locator('[data-side-edit-slot="B"] .kd3d-side-inline-editor')).toHaveCount(1);
+  await expect(root.locator('[data-side-edit-slot="A"] .kd3d-side-inline-editor')).toHaveCount(0);
+  await expect(root.locator('[data-gate-enabled]')).not.toBeChecked();
+  await root.locator('[data-opening-side="B"][data-opening-kind="wicket"]').click();
+  await root.locator('[data-wicket-frame-profile]').selectOption('40x40');
+  await root.locator('[data-wicket-fill]').selectOption('picket-double');
+  await root.locator('[data-wicket-hinge-side]').selectOption('right');
+  await root.locator('[data-drawing-kind="wicket"]').click();
+  await expect(root.locator('[data-drawing-preview]')).toContainText('КАЛИТКА');
+  await expect(root.locator('[data-drawing-preview]')).toContainText('Петли: справа');
+  await root.locator('[data-drawing-close]').click();
+  await root.locator('[data-side="A"]').click();
+  await expect(root.locator('[data-gate-enabled]')).toBeChecked();
+  await expect(root.locator('[data-gate-frame-profile]')).toHaveValue('60x40');
+  await expect(root.locator('[data-gate-fill]')).toHaveValue('sheet');
+  await expect(root.locator('[data-wicket-enabled]')).not.toBeChecked();
+});
