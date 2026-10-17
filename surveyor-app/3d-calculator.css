@@ -243,3 +243,17 @@
 #threeDScreen .kd3d-gate-editor .kd3d-gate-toggle + .kd3d-gate-toggle{
   border-top:1px solid #e7dfd1;padding-top:10px
 }
+
+
+/* Wicket integrated in one gate leaf, not an additional perimeter opening. */
+#threeDScreen .kd3d-built-in{display:grid;gap:9px;padding:11px;
+  border:1px dashed #ddbc79;border-radius:12px;background:#fffaf0}
+#threeDScreen .kd3d-built-in[hidden]{display:none!important}
+#threeDScreen .kd3d-built-in .kd3d-gate-toggle small{line-height:1.45}
+#threeDScreen .kd3d-built-in select{width:100%;max-width:100%;min-width:0;
+  padding:10px 8px;border-radius:10px;background:#fff;
+  border:1px solid #dcd4c8;font-size:13px;font-weight:700;color:#25211b}
+#threeDScreen .kd3d-builtin-warning{margin:0;color:#985c17;
+  border-left:3px solid #cc8b29;padding:6px 8px;background:#fff1da;
+  border-radius:4px;font-size:12px;line-height:1.45}
+#threeDScreen .kd3d-builtin-warning[hidden]{display:none!important}
