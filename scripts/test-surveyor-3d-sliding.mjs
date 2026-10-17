@@ -141,7 +141,11 @@ for(const shape of ['square','triangle']){
                 'entire physical model must translate horizontally');
               assert(o.children.length>6,'all parts of movable frame must share one parent');
             }
-            if(o.userData.kdSlidingParkingZone)zoneBands++;
+            if(o.userData.kdSlidingParkingZone){
+              zoneBands++;
+              assert(Math.abs(o.position.x-(direction==='left'?-5:5))<1e-8,
+                'parking zone must use side-local coordinates, without adding the gate offset twice');
+            }
             if(o.userData.kdSlidingTravelArrow)arrows++;
           });
           assert.deepEqual([leaves,tail,beams,centers,movers],
