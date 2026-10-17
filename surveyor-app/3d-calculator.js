@@ -189,7 +189,7 @@ export function mount3DCalculator(root) {
     '<div class="kd3d-top"><div><strong>Конструктор участка</strong><small>3D расчёт · DEV</small></div><span>DEV</span></div>',
     '<div class="kd3d-mode" role="group" aria-label="Вид результата"><button type="button" data-mode="scene" class="active">3D-модель</button><button type="button" data-mode="parts">Комплектация</button></div>',
     '<div class="kd3d-viewport" data-viewport><div class="kd3d-scene" data-scene></div><div class="kd3d-parts" data-parts hidden></div>',
-    '<div class="kd3d-scene-controls"><button type="button" data-fit>Показать целиком</button></div><div class="kd3d-scene-slide-controls" data-scene-slide-controls hidden><small data-scene-slide-label>Сторона А</small><div><button type="button" data-scene-slide-position="closed" aria-pressed="true">Закрыто</button><button type="button" data-scene-slide-position="open" aria-pressed="false">Открыто</button></div></div><div class="kd3d-slide-legend" data-slide-legend hidden><span><i class="kd3d-legend-ok"></i> Свободное место</span><span><i class="kd3d-legend-blocked"></i> Не хватает места</span><span><i class="kd3d-legend-wicket"></i> Калитка</span></div>',
+    '<div class="kd3d-scene-controls"><button type="button" data-fit>Показать целиком</button></div><div class="kd3d-scene-slide-controls" data-scene-slide-controls hidden><small data-scene-slide-label>Сторона А</small><div><button type="button" data-scene-slide-position="closed" aria-pressed="true">Закрыто</button><button type="button" data-scene-slide-position="open" aria-pressed="false">Открыто</button></div></div><div class="kd3d-slide-legend" data-slide-legend hidden><span><i class="kd3d-legend-ok"></i> Свободное место</span><span><i class="kd3d-legend-blocked"></i> Не хватает места</span><span><i class="kd3d-legend-wicket"></i> Калитка / препятствие</span></div>',
     '<p class="kd3d-webgl-error" data-error hidden></p></div>',
     '<div class="kd3d-form kd3d-editor"><div class="kd3d-editor-head"><h3>Параметры забора</h3><button type="button" data-collapse-params aria-expanded="true">Свернуть <span aria-hidden="true">⌃</span></button></div>',
     '<div class="kd3d-editor-content" data-editor-content>',
@@ -1041,6 +1041,26 @@ export function mount3DCalculator(root) {
     root.dataset.sceneSlidingShifts=slideStates.join(';');
     root.dataset.sceneSlidingZones=zones.join(';');
     root.dataset.sceneSlidingArrows=arrows.join(';');
+    let carriages=0,rollers=0,foundations=0,receivers=0,upperGuides=0,
+      markedObstacles=0,blockedObstacles=0;
+    fence.traverse(object=>{
+      if(object.userData.kdSlidingCarriage)carriages++;
+      if(object.userData.kdSlidingRoller)rollers++;
+      if(object.userData.kdSlidingFoundation)foundations++;
+      if(object.userData.kdSlidingReceiver)receivers++;
+      if(object.userData.kdSlidingUpperGuide)upperGuides++;
+      if(object.userData.kdSlidingObstacle){
+        markedObstacles++;
+        if(object.userData.kdSlidingObstacleCollision)blockedObstacles++;
+      }
+    });
+    root.dataset.sceneSlidingCarriages=String(carriages);
+    root.dataset.sceneSlidingRollers=String(rollers);
+    root.dataset.sceneSlidingFoundations=String(foundations);
+    root.dataset.sceneSlidingReceivers=String(receivers);
+    root.dataset.sceneSlidingUpperGuides=String(upperGuides);
+    root.dataset.sceneSlidingObstacles=String(markedObstacles);
+    root.dataset.sceneSlidingBlockedObstacles=String(blockedObstacles);
     root.dataset.sceneGateLeaves=String(actualLeaves);
     root.dataset.sceneWicketLeaves=String(wicketLeaves);
     root.dataset.sceneHinges=String(visibleHinges);
@@ -1146,6 +1166,55 @@ export function mount3DCalculator(root) {
         afterProductEdit(id);
         fit();
       });
+    });
+    get('[data-gate-track-offset]').addEventListener('change',event=>{
+      const gate=config.openings[id].gate;
+      gate.trackOffset=numeric(event.target.value,10,60,gate.trackOffset*100)/100;
+      afterProductEdit(id);
+    });
+    const obstaclesArea=get('[data-obstacle-editor]');
+    obstaclesArea.addEventListener('click',event=>{
+      if(event.target.closest('[data-obstacle-add]')){
+        const gate=config.openings[id].gate;
+        if(gate.obstacles.length>=8)return;
+        const edge=getSiteLayout(config.sides,config.openings,config.postSize)
+          .edges.find(e=>e.id===id);
+        const zone=edge?.installation;
+        const proposed=zone?(zone.from+zone.to)/2:gate.offset+gate.width;
+        const offset=Math.max(0,Math.min(config.sides[id].length-.5,proposed-.25));
+        gate.obstacles.push({id:'obstacle-'+Date.now()+'-'+gate.obstacles.length,
+          type:'pillar',offset,width:.5,distance:gate.trackOffset,
+          depth:.35,height:1.5});
+        afterProductEdit(id);
+        return;
+      }
+      const remove=event.target.closest('[data-obstacle-remove]');
+      if(!remove)return;
+      const index=Number(remove.dataset.obstacleRemove);
+      const gate=config.openings[id].gate;
+      if(!Number.isInteger(index)||index<0||index>=gate.obstacles.length)return;
+      gate.obstacles.splice(index,1);
+      afterProductEdit(id);
+    });
+    obstaclesArea.addEventListener('change',event=>{
+      const field=event.target.closest('[data-obstacle-key]');
+      if(!field)return;
+      const index=Number(field.dataset.obstacleIndex);
+      const obstacle=config.openings[id].gate.obstacles[index];
+      if(!obstacle)return;
+      const key=field.dataset.obstacleKey;
+      if(key==='type'){
+        obstacle.type=['tree','wall','pillar','other'].includes(field.value)?field.value:'other';
+      }else{
+        const ranges={offset:[0,config.sides[id].length],
+          width:[.1,3],distance:[-100,200],depth:[.1,2],height:[.2,5]};
+        const limits=ranges[key];
+        if(!limits)return;
+        obstacle[key]=numeric(field.value,limits[0],limits[1],
+          key==='distance'?obstacle.distance*100:obstacle[key]);
+        if(key==='distance')obstacle.distance/=100;
+      }
+      afterProductEdit(id);
     });
     get('[data-gate-show-slide-zone]').addEventListener('change',event=>{
       config.openings[id].gate.showSlideZone=event.target.checked;
