@@ -40,7 +40,41 @@ export function getGateFramePlan(opening,postWidth,sideHeight){
       hingeHeights:[bottomClearance+Math.min(.27,leafHeight*.23),
         bottomClearance+leafHeight-Math.min(.27,leafHeight*.23)]};
   });
+  // Inset door replaces part of one swing leaf, without creating another
+  // fence opening or another ground post. It has a step-over bottom threshold.
+  const embeddedRequested=kind==='gate'&&opening.builtInWicket===true;
+  const embeddedSide=opening.builtInSide==='left'?'left':'right';
+  const embeddedWidth=Math.min(1.2,Math.max(.7,Number(opening.builtInWidth)||1));
+  const target=leaves[embeddedSide==='left'?0:1];
+  const minFixedPart=.20;
+  let embedded=null, embeddedWarning=null;
+  if(embeddedRequested){
+    const margin=.048; // 40 mm gate perimeter with some side clearance
+    const fixedNeeded=minFixedPart;
+    if(embeddedWidth>target.width-2*margin-fixedNeeded){
+      embeddedWarning='Для встроенной калитки шириной '+
+        embeddedWidth.toFixed(2).replace('.',',')+
+        ' м не хватает места в створке. Увеличьте ширину ворот или уменьшите калитку.';
+    }else{
+      const nearFreeRight=target.freeSide==='right';
+      const left=nearFreeRight?target.width/2-margin-embeddedWidth:
+        -target.width/2+margin;
+      const right=left+embeddedWidth;
+      const hingeSide=nearFreeRight?'left':'right';
+      const hingeX=hingeSide==='left'?left:right;
+      const fixedLeft=nearFreeRight?-target.width/2+margin:right;
+      const fixedRight=nearFreeRight?left:target.width/2-margin;
+      embedded={
+        leafIndex:target.index,side:embeddedSide,width:embeddedWidth,
+        localLeft:left,localRight:right,hingeSide,hingeX,
+        fixedLeft,fixedRight,fixedWidth:fixedRight-fixedLeft,
+        bottomThreshold:.12,frameWidth:.06,frameDepth:.04,
+        hingeHeights:[bottomClearance+.30,bottomClearance+leafHeight-.30]
+      };
+    }
+  }
   return {kind,openingWidth:value,postWidth:post,clearWidth,leafCount:count,
     sideClearance,centreClearance:middleGap,bottomClearance,topClearance,
-    leafHeight,leaves,totalHinges:count*GATE_FRAME_VISUAL.hingesPerLeaf};
+    leafHeight,leaves,embedded,embeddedWarning,
+    totalHinges:count*GATE_FRAME_VISUAL.hingesPerLeaf+(embedded?2:0)};
 }
