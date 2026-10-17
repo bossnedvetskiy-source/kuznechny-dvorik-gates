@@ -180,6 +180,26 @@ for(const fill of ['picket','picket-double','horizontal','horizontal-double','sh
   }
 }
 
+// Every inward/outward selection must rotate the leaf toward the matching
+// side of the site, with the opposite sign for the other hinge side.
+for(const kind of ['gate','wicket']){
+  for(const openDirection of ['inward','outward']){
+    for(const hingeSide of ['left','right']){
+      const input={kind,width:kind==='gate'?3.4:1,openDirection,hingeSide};
+      const plan=getGateFramePlan(input,.08,1.8);
+      assert.equal(plan.openDirection,openDirection);
+      for(const leaf of plan.leaves){
+        const towardInside=(leaf.hingeSide==='left'?-1:1)*leaf.swingAngle>0;
+        assert.equal(towardInside,openDirection==='inward',
+          'rotation sign must point toward the chosen side of the plot');
+      }
+      if(kind==='wicket')assert.equal(plan.leaves[0].hingeSide,hingeSide);
+      assert.equal(plan.totalHinges,kind==='gate'?4:2);
+    }
+  }
+}
+console.log('Swing direction: inward/outward gate leaves and left/right wicket hinges OK');
+
 // Embedded pedestrian wicket must remain INSIDE its swing leaf; two 60x40
 // jambs and a step-over threshold are visible for both left/right variants.
 for(const builtInSide of ['left','right']){
