@@ -22,13 +22,22 @@ export function renderGateFrame(options){
   );
   ownedGeometries.push(hingeGeo);
   for(const part of plan.leaves){
+    // Real post-side hinge axis: the hinge barrels remain stationary.
+    const pivot=new THREE.Group();
+    pivot.position.set(openingStart+part.hingeAxis,0,z+.012);
+    pivot.rotation.y=part.swingAngle;
+    pivot.userData.kdSwingPivot=true;
+    pivot.userData.kdSwingSignature=opening.sideId+':'+opening.kind+':'+
+      part.hingeSide+':'+part.swingAngle.toFixed(3);
+    group.add(pivot);
     const leaf=new THREE.Group();
     leaf.userData.kdGateLeaf=opening.kind==='gate';
     leaf.userData.kdWicketLeaf=opening.kind==='wicket';
     leaf.userData.kdFrameWidth=part.width;
     leaf.userData.kdPostFaceClearance=plan.sideClearance;
-    leaf.position.x=openingStart+part.center;
-    group.add(leaf);
+    leaf.position.x=part.center-part.hingeAxis;
+    leaf.position.z=-(z+.012);
+    pivot.add(leaf);
     const half=part.width/2, bottom=plan.bottomClearance;
     const midY=bottom+part.height/2;
     const edgeX=half-tube/2;
