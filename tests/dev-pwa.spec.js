@@ -135,10 +135,20 @@ test('cross-calculator offline navigation works inside the installed DEV work PW
     return rows.every(Boolean);
   }), {timeout:15000}).toBe(true);
 
+  // Wait for the actual ROOT worker to activate, not merely for its install
+  // cache to exist. Chromium can take longer to claim the first DEV page.
+  await expect.poll(
+    () => page.evaluate(async ()=>{
+      const registrations=await navigator.serviceWorker.getRegistrations();
+      return registrations.some(reg=>reg.active?.scriptURL.includes('/site-sw.js')
+        && reg.scope.endsWith('/kuznechny-dvorik-gates/'));
+    }),
+    {timeout:20000}
+  ).toBe(true);
   await page.reload();
   await expect.poll(
     () => page.evaluate(() => navigator.serviceWorker.controller?.scriptURL.includes('/site-sw.js') || false),
-    {timeout:7000}
+    {timeout:15000}
   ).toBe(true);
 
   await context.setOffline(true);
