@@ -13,6 +13,7 @@ export const GATE_FRAME_VISUAL={
 };
 export function getGateFramePlan(opening,postWidth,sideHeight){
   const kind=opening.kind==='wicket'?'wicket':'gate';
+  const openDirection=opening.openDirection==='outward'?'outward':'inward';
   const count=kind==='gate'?2:1;
   const value=Number(opening.width),post=Number(postWidth),height=Number(sideHeight);
   if(!Number.isFinite(value)||!Number.isFinite(post)||!Number.isFinite(height)||
@@ -30,13 +31,17 @@ export function getGateFramePlan(opening,postWidth,sideHeight){
   const leaves=Array.from({length:count},(_,i)=>{
     const left=postFaceLeft+sideClearance+i*(leafWidth+middleGap);
     const right=left+leafWidth;
-    const hingeSide=kind==='gate'&&i===1?'right':'left';
+    const hingeSide=kind==='gate'?(i===1?'right':'left'):
+      (opening.hingeSide==='right'?'right':'left');
+    // Local +Z points inside the plot on each of its four perimeter sides.
+    const swingAngle=(openDirection==='inward'?1:-1)*
+      (hingeSide==='left'?-1:1)*Math.PI/6;
     const outerHingeEdge=hingeSide==='left'?left:right;
     const face=hingeSide==='left'?postFaceLeft:postFaceRight;
     const hingeAxis=(outerHingeEdge+face)/2;
     return {index:i+1,kind,width:leafWidth,height:leafHeight,left,right,
       center:(left+right)/2,hingeSide,hingeAxis,hingePostFace:face,
-      freeSide:hingeSide==='left'?'right':'left',
+      swingAngle,freeSide:hingeSide==='left'?'right':'left',
       hingeHeights:[bottomClearance+Math.min(.27,leafHeight*.23),
         bottomClearance+leafHeight-Math.min(.27,leafHeight*.23)]};
   });
@@ -73,7 +78,7 @@ export function getGateFramePlan(opening,postWidth,sideHeight){
       };
     }
   }
-  return {kind,openingWidth:value,postWidth:post,clearWidth,leafCount:count,
+  return {kind,openDirection,openingWidth:value,postWidth:post,clearWidth,leafCount:count,
     sideClearance,centreClearance:middleGap,bottomClearance,topClearance,
     leafHeight,leaves,embedded,embeddedWarning,
     totalHinges:count*GATE_FRAME_VISUAL.hingesPerLeaf+(embedded?2:0)};
