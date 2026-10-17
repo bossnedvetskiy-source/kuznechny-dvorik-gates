@@ -185,7 +185,7 @@ for(const fill of ['picket','picket-double','horizontal','horizontal-double','sh
 for(const kind of ['gate','wicket']){
   for(const openDirection of ['inward','outward']){
     for(const hingeSide of ['left','right']){
-      const input={kind,width:kind==='gate'?3.4:1,openDirection,hingeSide};
+      const input={kind,width:kind==='gate'?3.4:1,openDirection,hingeSide,swingOpen:true};
       const plan=getGateFramePlan(input,.08,1.8);
       assert.equal(plan.openDirection,openDirection);
       for(const leaf of plan.leaves){
@@ -197,6 +197,11 @@ for(const kind of ['gate','wicket']){
       assert.equal(plan.totalHinges,kind==='gate'?4:2);
     }
   }
+}
+for(const kind of ['gate','wicket']){
+  const closed=getGateFramePlan({kind,width:kind==='gate'?3.4:1},.08,1.8);
+  assert(closed.leaves.every(leaf=>leaf.swingAngle===0),
+    'both gate and wicket must default to closed preview');
 }
 console.log('Swing direction: inward/outward gate leaves and left/right wicket hinges OK');
 
