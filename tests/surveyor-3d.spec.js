@@ -689,3 +689,54 @@ test('Откатные ворота: 3D ролики/фундамент/приё
   await expect(a.locator('[data-gate-track-offset]')).toHaveValue('22');
   await expect(root.locator('[data-parts]')).toContainText('проектное согласование');
 });
+
+
+test('DEV mobile product controls use final styled CSS, no native stacked buttons or overflow',async ({page})=>{
+  test.setTimeout(120000);
+  await page.goto('/kuznechny-dvorik-gates/zamer-app-v2/');
+  await page.locator('#loginInput').fill('zamer');
+  await page.locator('#passwordInput').fill('1234');
+  await page.locator('#loginForm button[type="submit"]').click();
+  await page.locator('#open3DCalcBtn').click();
+  const root=page.locator('#kd3dRoot');
+  await expect(root.locator('[data-stats]')).toContainText('Столбов',{timeout:15000});
+  const a=root.locator('[data-side-products="A"]');
+  await root.locator('[data-opening-side="A"][data-opening-kind="gate"]').click();
+  await root.locator('[data-opening-side="A"][data-opening-kind="wicket"]').click();
+  await expect(a.locator('[data-gate-swing-state="closed"]')).toHaveAttribute('aria-pressed','true');
+  await expect(a.locator('[data-wicket-swing-state="closed"]')).toHaveAttribute('aria-pressed','true');
+  const result=await page.evaluate(()=>{
+    const root=document.querySelector('#threeDScreen');
+    const card=root.querySelector('[data-side-products="A"] .kd3d-product-gate');
+    const buttons=card.querySelector('[data-gate-swing-position]>div');
+    const button=card.querySelector('[data-gate-swing-state="closed"]');
+    const fields=card.querySelector('[data-gate-fields]');
+    const selected=button.getBoundingClientRect();
+    const other=card.querySelector('[data-gate-swing-state="open"]').getBoundingClientRect();
+    const styles=getComputedStyle(card);
+    const segmented=getComputedStyle(buttons);
+    const loaded=[...document.styleSheets].some(sheet=>sheet.href?.includes('3d-mobile-ui.css'));
+    const children=[...root.querySelectorAll('[data-side-products="A"] input,[data-side-products="A"] select')];
+    const noOverflow=children.every(e=>e.getBoundingClientRect().right<=
+      root.getBoundingClientRect().right+2);
+    return {loaded,background:styles.backgroundColor,
+      borderRadius:parseFloat(styles.borderTopLeftRadius),
+      columns:segmented.gridTemplateColumns.split(' ').length,
+      sameRow:Math.abs(selected.y-other.y)<3,
+      buttonsWide:Math.abs(selected.width-other.width)<5,
+      fontSize:parseFloat(getComputedStyle(button).fontSize),
+      noOverflow,fieldsVisible:getComputedStyle(fields).display!=='none'};
+  });
+  expect(result.loaded).toBe(true);
+  expect(result.background).toBe('rgb(255, 255, 255)');
+  expect(result.borderRadius).toBeGreaterThanOrEqual(14);
+  expect(result.columns).toBe(2);
+  expect(result.sameRow).toBe(true);
+  expect(result.buttonsWide).toBe(true);
+  expect(result.fontSize).toBeGreaterThanOrEqual(12);
+  expect(result.noOverflow).toBe(true);
+  expect(result.fieldsVisible).toBe(true);
+  await a.locator('[data-gate-swing-state="open"]').click();
+  await expect(a.locator('[data-gate-swing-state="open"]')).toHaveAttribute('aria-pressed','true');
+  await expect(a.locator('[data-wicket-swing-state="closed"]')).toHaveAttribute('aria-pressed','true');
+});
