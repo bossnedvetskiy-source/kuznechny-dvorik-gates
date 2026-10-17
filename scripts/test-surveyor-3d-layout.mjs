@@ -142,6 +142,26 @@ const migrated=normalizeOpenings(createDefaultSides({length:12}),null,
   {enabled:true,width:3.4,offset:2});
 assert.equal(migrated.A.gate.enabled,true,'legacy A gate draft must migrate');
 assert.equal(migrated.B.gate.enabled,false,'migration must not create gates on other sides');
+// Opening directions are independent per side and survive normalization.
+const allSides=createDefaultSides({length:12});
+for(const id of ['B','V','G'])allSides[id].enabled=true;
+const custom=normalizeOpenings(allSides,{
+  A:{gate:{enabled:true,openDirection:'outward'},wicket:{enabled:true,hingeSide:'right'}},
+  B:{gate:{enabled:true,openDirection:'inward'},wicket:{enabled:true,openDirection:'outward',hingeSide:'right'}},
+  V:{gate:{enabled:true,openDirection:'outward'},wicket:{enabled:true,hingeSide:'left'}}
+});
+assert.equal(custom.A.gate.openDirection,'outward');
+assert.equal(custom.A.wicket.hingeSide,'right');
+assert.equal(custom.B.wicket.openDirection,'outward');
+assert.equal(custom.V.gate.openDirection,'outward');
+assert.equal(custom.G.wicket.hingeSide,'left');
+const directed=getSiteLayout(allSides,custom);
+assert.equal(directed.edges.find(e=>e.id==='B').wicket.hingeSide,'right');
+assert.equal(directed.edges.find(e=>e.id==='V').gate.openDirection,'outward');
+assert.equal(normalizeSwingGate({},12).openDirection,'inward');
+assert.equal(normalizeOpenings(allSides).A.wicket.openDirection,'inward');
+assert.equal(normalizeOpenings(allSides).A.wicket.hingeSide,'left');
+console.log('Opening direction: side-local defaults, persistence and layout OK');
 console.log('Four-side gate/wicket combinations, shared posts and collisions OK');
 
 // DIMENSIONS MUST BE MEASURED FROM THE INSIDE FACES, NOT POST AXES.
