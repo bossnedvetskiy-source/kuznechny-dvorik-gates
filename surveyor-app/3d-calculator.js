@@ -205,6 +205,8 @@ export function mount3DCalculator(root) {
       '<button type="button" data-opening-side="'+id+'" data-opening-kind="gate" aria-pressed="false" aria-label="Добавить ворота на сторону '+SIDE_NAMES[id]+'" title="Ворота на стороне '+SIDE_NAMES[id]+'"><svg viewBox="0 0 28 22" aria-hidden="true"><path d="M2 20V4h24v16M14 4v16M4 7l8 3v8M24 7l-8 3v8" /></svg><small>Ворота</small></button>'+
       '<button type="button" data-opening-side="'+id+'" data-opening-kind="wicket" aria-pressed="false" aria-label="Добавить калитку на сторону '+SIDE_NAMES[id]+'" title="Калитка на стороне '+SIDE_NAMES[id]+'"><svg viewBox="0 0 28 22" aria-hidden="true"><path d="M6 20V2h16v18M9 5l10 3v12M17 13h1" /></svg><small>Калитка</small></button></div>'+
       '<label class="kd3d-side-inline-length"><span>Длина стороны</span><span class="kd3d-side-input-wrap"><input type="number" inputmode="decimal" min="1" max="60" step="0.1" data-side-length-input="'+id+'" aria-label="Длина стороны '+SIDE_NAMES[id]+', м"><small>м</small></span></label>'+
+      '<div class="kd3d-side-quick" data-side-quick="'+id+'"><label>Материал стороны<select data-side-quick-fill="'+id+'" aria-label="Материал стороны '+SIDE_NAMES[id]+'">'+FILL_IDS.map(fill=>'<option value="'+fill+'">'+FILL_LABELS[fill]+'</option>').join('')+'</select></label><label>Высота, м<input type="number" min="0.8" max="3" step="0.1" inputmode="decimal" data-side-quick-height="'+id+'" aria-label="Высота стороны '+SIDE_NAMES[id]+'"></label><label>Цвет RAL<select data-side-quick-ral="'+id+'" aria-label="Цвет стороны '+SIDE_NAMES[id]+'">'+Object.keys(RAL).map(code=>'<option value="'+code+'">'+code+'</option>').join('')+'</select></label></div>'+
+      '<div class="kd3d-side-products" data-side-products="'+id+'"></div>'+
       '<div class="kd3d-side-edit-slot" data-side-edit-slot="'+id+'"></div></div>').join('')+'</div>',
     '<div class="kd3d-side-current"><strong data-current-side-label>Настройка стороны А</strong><small data-current-side-status>Включена</small></div>',
     '<div class="kd3d-fields"><label data-height-label>Высота стороны А, м<input data-field="height" inputmode="decimal" type="number" min="0.8" max="3" step="0.1"></label>',
@@ -240,24 +242,48 @@ export function mount3DCalculator(root) {
     '</div></div>',
     '<dialog class="kd3d-drawing-dialog" data-drawing-dialog aria-label="Эскиз ворот или калитки"><div class="kd3d-drawing-header"><strong data-drawing-title>Эскиз</strong><button type="button" data-drawing-close aria-label="Закрыть">✕</button></div><div class="kd3d-drawing-preview" data-drawing-preview></div><p>Предварительный эскиз для согласования. Не использовать вместо производственного чертежа или карты раскроя.</p><button type="button" class="kd3d-drawing-download" data-drawing-download>Сохранить SVG</button></dialog>'
   ].join('');
-  // A single set of inputs is RE-PARENTED into the selected side card.
-  // No duplicate input IDs and no re-rendering of controls on side changes.
-  // All values still live in config.sides[id] / config.openings[id].
+  // Each side owns a stable pair of product cards. Switching to another side
+  // never moves, destroys or overwrites its gate, wicket, or drawing controls.
+  const productTemplate=root.querySelector('[data-gate-editor]');
+  if(!productTemplate)throw new Error('Не найден шаблон изделий 3D');
+  for(const id of SIDE_IDS){
+    const slot=root.querySelector('[data-side-products="'+id+'"]');
+    const editor=productTemplate.cloneNode(true);
+    editor.dataset.productSide=id;
+    slot.appendChild(editor);
+  }
+  productTemplate.remove();
+  // Advanced fence settings are side-specific and follow the selected side.
+  // Common parameters (post profile and picket gap) remain shared deliberately.
   const inlineEditor=document.createElement('div');
   inlineEditor.className='kd3d-side-inline-editor';
+  const extraToggle=document.createElement('button');
+  extraToggle.type='button';
+  extraToggle.className='kd3d-extra-toggle';
+  extraToggle.textContent='Дополнительные настройки стороны ▾';
+  extraToggle.setAttribute('aria-expanded','false');
+  const extraContent=document.createElement('div');
+  extraContent.className='kd3d-side-extra-content';
+  extraContent.hidden=true;
+  inlineEditor.append(extraToggle,extraContent);
+  extraToggle.addEventListener('click',()=>{
+    extraContent.hidden=!extraContent.hidden;
+    extraToggle.setAttribute('aria-expanded',String(!extraContent.hidden));
+    extraToggle.textContent=extraContent.hidden?
+      'Дополнительные настройки стороны ▾':'Скрыть дополнительные настройки ▴';
+  });
   const inlineParts=[
     root.querySelector('[data-section="type"]'),
     root.querySelector('.kd3d-side-current'),
     root.querySelector('.kd3d-fields'),
     root.querySelector('[data-field="postSize"]').closest('label'),
     root.querySelector('[data-post-layout]'),
-    root.querySelector('[data-gate-editor]'),
     root.querySelector('[data-section="fill"]'),
     root.querySelector('[data-site-warning]')
   ];
   inlineParts.forEach(part=>{
     if(!part)throw new Error('Не найдена секция редактора стороны 3D');
-    inlineEditor.appendChild(part);
+    extraContent.appendChild(part);
   });
   function placeInlineEditor(){
     const slot=root.querySelector('[data-side-edit-slot="'+config.activeSide+'"]');
@@ -267,6 +293,8 @@ export function mount3DCalculator(root) {
   }
   placeInlineEditor();
   const find = selector => root.querySelector(selector);
+  const productField=(id,selector)=>
+    root.querySelector('[data-side-products="'+id+'"] '+selector);
   function isPicketFill(fill){return ['picket','picket-double','horizontal','horizontal-double'].includes(fill);}
   function syncPicketSettings(){
     const fill=activeSettings().fill;
@@ -308,6 +336,9 @@ export function mount3DCalculator(root) {
       find('[data-side-entry="'+id+'"]').classList.toggle('enabled',enabled);
       find('[data-side-length-input="'+id+'"]').value=config.sides[id].length;
       find('[data-side-material="'+id+'"]').textContent=FILL_LABELS[config.sides[id].fill];
+      find('[data-side-quick-fill="'+id+'"]').value=config.sides[id].fill;
+      find('[data-side-quick-height="'+id+'"]').value=config.sides[id].height;
+      find('[data-side-quick-ral="'+id+'"]').value=config.sides[id].ral;
     root.querySelectorAll('[data-opening-side="'+id+'"]').forEach(button=>{
       const active=config.openings[id][button.dataset.openingKind].enabled;
       button.setAttribute('aria-pressed',String(active));
@@ -329,46 +360,56 @@ export function mount3DCalculator(root) {
     syncPicketSettings();
   }
   function syncGateInputs(){
-    const id=config.activeSide;
     config.openings=normalizeOpenings(config.sides,config.openings,config.gate);
-    const {gate,wicket}=config.openings[id];
-    config.gate=config.openings.A.gate; // backward compatible saved A-side gate.
-    find('[data-gate-title]').textContent='Распашные ворота · сторона '+SIDE_NAMES[id];
-    find('[data-wicket-title]').textContent='Калитка · сторона '+SIDE_NAMES[id];
-    find('[data-gate-enabled]').checked=gate.enabled;
-    find('[data-gate-fields]').hidden=!gate.enabled;
-    find('[data-gate-width]').value=gate.width;
-    find('[data-gate-offset]').value=gate.offset;
-    find('[data-gate-open-direction]').value=gate.openDirection;
-    find('[data-gate-frame-profile]').value=gate.frameProfile;
-    find('[data-gate-fill]').value=gate.fill;
-    find('[data-gate-inner-frame]').checked=gate.innerFrame;
-    find('[data-gate-offset]').max=Math.max(0,config.sides[id].length-gate.width);
-    find('[data-builtin-area]').hidden=!gate.enabled;
-    find('[data-builtin-enabled]').checked=gate.builtInWicket;
-    find('[data-builtin-fields]').hidden=!gate.enabled||!gate.builtInWicket;
-    find('[data-builtin-side]').value=gate.builtInSide;
-    find('[data-builtin-width]').value=gate.builtInWidth;
-    const geometry=getGateFramePlan({kind:'gate',...gate},config.postSize/1000,
-      config.sides[id].height);
-    const builtInWarning=find('[data-builtin-warning]');
-    builtInWarning.hidden=!gate.enabled||!gate.builtInWicket||!geometry.embeddedWarning;
-    builtInWarning.textContent=geometry.embeddedWarning||'';
-    find('[data-wicket-enabled]').checked=wicket.enabled;
-    find('[data-wicket-fields]').hidden=!wicket.enabled;
-    find('[data-wicket-width]').value=wicket.width;
-    find('[data-wicket-offset]').value=wicket.offset;
-    find('[data-wicket-open-direction]').value=wicket.openDirection;
-    find('[data-wicket-hinge-side]').value=wicket.hingeSide;
-    find('[data-wicket-frame-profile]').value=wicket.frameProfile;
-    find('[data-wicket-fill]').value=wicket.fill;
-    find('[data-wicket-inner-frame]').checked=wicket.innerFrame;
-    root.querySelectorAll('[data-drawing-side]').forEach(el=>{el.textContent=SIDE_NAMES[id];});
-    find('[data-wicket-offset]').max=Math.max(0,config.sides[id].length-wicket.width);
-    find('[data-gate-note]').textContent=!config.sides[id].enabled?
-      'Сторона выключена. Включите её, чтобы отобразить проёмы в 3D.':
-      gate.enabled&&wicket.enabled?'На этой стороне есть ворота и калитка. Проёмы не пересекаются; столбы на общей границе объединяются.':
-      'Отступ измеряется от начала выбранной стороны '+SIDE_NAMES[id]+'. Можно добавить оба проёма.';
+    config.gate=config.openings.A.gate; // Backward-compatible facade draft.
+    for(const id of SIDE_IDS){
+      const {gate,wicket}=config.openings[id];
+      const get=selector=>productField(id,selector);
+      get('[data-gate-title]').textContent='Распашные ворота · сторона '+SIDE_NAMES[id];
+      get('[data-wicket-title]').textContent='Калитка · сторона '+SIDE_NAMES[id];
+      get('[data-gate-enabled]').checked=gate.enabled;
+      get('[data-gate-fields]').hidden=!gate.enabled;
+      get('[data-gate-width]').value=gate.width;
+      get('[data-gate-offset]').value=gate.offset;
+      get('[data-gate-offset]').max=Math.max(0,config.sides[id].length-gate.width);
+      get('[data-gate-open-direction]').value=gate.openDirection;
+      get('[data-gate-frame-profile]').value=gate.frameProfile;
+      get('[data-gate-fill]').value=gate.fill;
+      get('[data-gate-inner-frame]').checked=gate.innerFrame;
+      get('[data-builtin-area]').hidden=!gate.enabled;
+      get('[data-builtin-enabled]').checked=gate.builtInWicket;
+      get('[data-builtin-fields]').hidden=!gate.enabled||!gate.builtInWicket;
+      get('[data-builtin-side]').value=gate.builtInSide;
+      get('[data-builtin-width]').value=gate.builtInWidth;
+      const geometry=getGateFramePlan({kind:'gate',...gate},config.postSize/1000,
+        config.sides[id].height);
+      const warning=get('[data-builtin-warning]');
+      warning.hidden=!gate.enabled||!gate.builtInWicket||!geometry.embeddedWarning;
+      warning.textContent=geometry.embeddedWarning||'';
+      get('[data-wicket-enabled]').checked=wicket.enabled;
+      get('[data-wicket-fields]').hidden=!wicket.enabled;
+      get('[data-wicket-width]').value=wicket.width;
+      get('[data-wicket-offset]').value=wicket.offset;
+      get('[data-wicket-offset]').max=Math.max(0,config.sides[id].length-wicket.width);
+      get('[data-wicket-open-direction]').value=wicket.openDirection;
+      get('[data-wicket-hinge-side]').value=wicket.hingeSide;
+      get('[data-wicket-frame-profile]').value=wicket.frameProfile;
+      get('[data-wicket-fill]').value=wicket.fill;
+      get('[data-wicket-inner-frame]').checked=wicket.innerFrame;
+      get('.kd3d-product-gate').hidden=!gate.enabled;
+      get('.kd3d-product-wicket').hidden=!wicket.enabled;
+      get('[data-side-products-placeholder]')?.remove();
+      const zone=find('[data-side-products="'+id+'"]');
+      zone.hidden=!gate.enabled&&!wicket.enabled;
+      zone.querySelectorAll('[data-drawing-side]').forEach(el=>{
+        el.textContent=SIDE_NAMES[id];
+      });
+      get('[data-gate-note]').textContent=!config.sides[id].enabled?
+        'Сторона выключена. Включите её, чтобы отобразить проёмы в 3D.':
+        gate.enabled&&wicket.enabled?
+          'На этой стороне есть ворота и калитка. Проёмы не пересекаются; общий столб учитывается один раз.':
+          'Отступ измеряется от начала стороны '+SIDE_NAMES[id]+'.';
+    }
   }
   function syncPostMode(){
     const side=activeSettings();
