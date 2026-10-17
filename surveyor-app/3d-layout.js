@@ -87,7 +87,10 @@ export function normalizeSwingGate(saved,sideLength=12){
   const input=saved&&typeof saved==='object'?saved:{};
   const width=clamp(input.width,2,6,3.4);
   return {enabled:input.enabled===true,type:'swing',width,
-    offset:clamp(input.offset,0,Math.max(0,sideLength-width),1)};
+    offset:clamp(input.offset,0,Math.max(0,sideLength-width),1),
+    builtInWicket:input.builtInWicket===true,
+    builtInSide:input.builtInSide==='left'?'left':'right',
+    builtInWidth:clamp(input.builtInWidth,.7,1.2,1)};
 }
 export function normalizeWicket(saved,sideLength=12){
   const input=saved&&typeof saved==='object'?saved:{};
@@ -136,7 +139,11 @@ function resolveSideOpenings(id,side,config,warnings){
       }
     }
     result.push({kind,type:item.type,sideId:id,width:item.width,
-      start:offset,end:offset+item.width,offset});
+      start:offset,end:offset+item.width,offset,
+      ...(kind==='gate'?{
+        builtInWicket:item.builtInWicket,builtInSide:item.builtInSide,
+        builtInWidth:item.builtInWidth
+      }:{})});
   }
   return result.sort((a,b)=>a.start-b.start);
 }
