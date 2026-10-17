@@ -55,6 +55,7 @@ test('3D расчёт opens independently in DEV and edits geometry without chan
   const showDimensions=page.locator('#kd3dRoot [data-show-dimensions]');
   await expect(showDimensions).not.toBeChecked();
   await showDimensions.check();
+  if(hasReal3D)await expect(page.locator('#kd3dRoot')).toHaveAttribute('data-scene-dimension-count',/^[1-9]/);
   await expect(showDimensions).toBeChecked();
   await expect(page.locator('#kd3dRoot [data-parts]')).toContainText('Размеры в свету');
   await expect(page.locator('#kd3dRoot [data-parts]')).toContainText('Пролёт 1: 2320 мм');
@@ -265,8 +266,12 @@ test('3D расчёт opens independently in DEV and edits geometry without chan
   const rotatedGate=await page.evaluate(()=>
     JSON.parse(localStorage.getItem('kd-surveyor-3d-draft-v1')).openings.A.gate);
   expect(rotatedGate.openDirection).toBe('outward');
+  await expect(page.locator('#kd3dRoot [data-side-products="A"] [data-gate-swing-state="closed"]')).toHaveAttribute('aria-pressed','true');
   if(hasReal3D)await expect(page.locator('#kd3dRoot'))
-    .toHaveAttribute('data-scene-swing-angles',/A:gate:left:0\.524;A:gate:right:-0\.524/);
+    .toHaveAttribute('data-scene-swing-angles',/A:gate:left:0\.000;A:gate:right:0\.000/);
+  await page.locator('#kd3dRoot [data-side-products="A"] [data-gate-swing-state="open"]').click();
+  if(hasReal3D)await expect(page.locator('#kd3dRoot'))
+    .toHaveAttribute('data-scene-swing-angles',/A:gate:left:1\.571;A:gate:right:-1\.571/);
   await showDimensions.check();
   await expect(page.locator('#kd3dRoot [data-parts]')).toContainText('Ворота: 3900 мм');
   if(hasReal3D){
@@ -307,7 +312,10 @@ test('3D расчёт opens independently in DEV and edits geometry without chan
   expect(directedWicket.openDirection).toBe('outward');
   expect(directedWicket.hingeSide).toBe('right');
   if(hasReal3D)await expect(page.locator('#kd3dRoot'))
-    .toHaveAttribute('data-scene-swing-angles',/B:wicket:right:-0\.524/);
+    .toHaveAttribute('data-scene-swing-angles',/B:wicket:right:0\.000/);
+  await page.locator('#kd3dRoot [data-side-products="B"] [data-wicket-swing-state="open"]').click();
+  if(hasReal3D)await expect(page.locator('#kd3dRoot'))
+    .toHaveAttribute('data-scene-swing-angles',/B:wicket:right:-1\.571/);
   expect(savedOpenings.A.gate.enabled).toBe(false);
   if(hasReal3D){
     await expect(page.locator('#kd3dRoot')).toHaveAttribute('data-scene-gate-leaves','2');
