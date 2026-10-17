@@ -79,6 +79,12 @@ if (!threeD.includes('data-gate-slide-position="open"') ||
   !slidingRender.includes('kdSlidingParkingZone') ||
   !threeDCss.includes('kd3d-slide-legend'))
   throw new Error('Sliding gate live 3D movement, full parking zones or mobile controls missing');
+if (!threeD.includes('data-obstacle-add') || !threeD.includes('data-gate-track-offset') ||
+  !threeD.includes('sceneSlidingCarriages') ||
+  !slidingFrame.includes('getSlidingTravelPlan') ||
+  !sw.includes('./3d-sliding-installation.js') ||
+  !sw.includes('./3d-sliding-hardware.js'))
+  throw new Error('DEV sliding roller/obstacle hardware or offline assets missing');
 if (!threeD.includes('data-auto-gap') || !layout.includes('function verticalPicketPlan') || !threeDCss.includes('kd3d-gap-alert')) throw new Error('Whole-width steel picket gap warning and quick adjust missing');
 if (!threeD.includes('data-post-mode="behind"') || !threeD.includes('verticalPicketPlan') || !layout.includes('const normalizePostMode=')) throw new Error('Post mode or no-gap picket calculation missing');
 if (!threeD.includes('data-side-toggle') || !threeD.includes("function syncSideButtons"))
