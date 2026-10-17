@@ -478,3 +478,55 @@
   #threeDScreen .kd3d-scene-controls button{padding:8px;font-size:10px}
   #threeDScreen .kd3d-scene-slide-controls{right:7px}
 }
+
+
+/* DEV sliding obstacle measurements; compact and readable on phones. */
+#threeDScreen .kd3d-obstacle-editor{
+  grid-column:1/-1;display:grid;gap:10px;padding:12px;
+  border:1px solid #d8c9aa;background:#fffcf5;border-radius:12px
+}
+#threeDScreen .kd3d-obstacle-editor>strong{
+  font-size:12px;color:#59472b;font-weight:850
+}
+#threeDScreen .kd3d-obstacle-editor>p,
+#threeDScreen .kd3d-obstacle-editor>small{
+  margin:0;font-size:11px;color:#766c5b;line-height:1.5
+}
+#threeDScreen .kd3d-obstacle-editor label{
+  display:grid;gap:5px;min-width:0;font-size:11px;
+  font-weight:750;color:#625d54
+}
+#threeDScreen .kd3d-obstacle-editor input,
+#threeDScreen .kd3d-obstacle-editor select{
+  box-sizing:border-box;width:100%;min-width:0;min-height:42px;
+  background:white;border:1px solid #dfd8ca;border-radius:9px;
+  color:#32373a;padding:9px;font-size:13px;font-weight:750
+}
+#threeDScreen .kd3d-obstacle-editor [data-obstacle-add]{
+  min-height:43px;width:100%;border:1px solid #cead72;
+  background:#fff2d7;border-radius:9px;color:#74531e;
+  font-size:12px;font-weight:850;box-shadow:none
+}
+#threeDScreen .kd3d-obstacle-row{
+  display:grid;grid-template-columns:1fr 1fr;gap:9px;
+  border:1px solid #e3dcd0;background:#fff;
+  border-radius:11px;padding:10px;margin:9px 0
+}
+#threeDScreen .kd3d-obstacle-row label:first-of-type{grid-column:1/-1}
+#threeDScreen .kd3d-obstacle-head{
+  display:flex;grid-column:1/-1;justify-content:space-between;
+  align-items:center;gap:8px
+}
+#threeDScreen .kd3d-obstacle-head strong{font-size:12px}
+#threeDScreen .kd3d-obstacle-head button{
+  border:1px solid #e9b7aa;border-radius:8px;
+  min-height:34px;background:#fff4f1;color:#a8432a;
+  font-size:11px;font-weight:750;box-shadow:none
+}
+#threeDScreen .kd3d-obstacle-none{
+  padding:10px;background:#f7f5f0;border-radius:9px;
+  font-size:11px;color:#858078
+}
+@media(max-width:360px){
+  #threeDScreen .kd3d-obstacle-row{grid-template-columns:1fr}
+}
