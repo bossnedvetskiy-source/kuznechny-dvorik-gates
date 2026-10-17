@@ -201,8 +201,11 @@
 #threeDScreen .kd3d-gate-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
 #threeDScreen .kd3d-gate-fields[hidden]{display:none!important}
 #threeDScreen .kd3d-gate-fields label{display:grid;gap:6px;min-width:0;font-size:11px;font-weight:750;color:#5e5548}
-#threeDScreen .kd3d-gate-fields input{min-width:0;width:100%;border:1px solid #dcd4c8;
-  border-radius:10px;background:#fff;padding:10px;font-size:15px;font-weight:750;color:#25211b}
+#threeDScreen .kd3d-gate-fields input,#threeDScreen .kd3d-gate-fields select{
+  min-width:0;width:100%;border:1px solid #dcd4c8;border-radius:10px;
+  background:#fff;padding:10px;font-size:15px;font-weight:750;color:#25211b}
+#threeDScreen .kd3d-gate-fields .kd3d-direction-field{grid-column:1/-1}
+#threeDScreen .kd3d-direction-note{margin:0;font-size:11px;line-height:1.5;color:#686258}
 #threeDScreen .kd3d-gate-note{margin:0;font-size:11px;line-height:1.5;color:#86662f}
 
 
