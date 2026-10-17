@@ -740,3 +740,58 @@ test('DEV mobile product controls use final styled CSS, no native stacked button
   await expect(a.locator('[data-gate-swing-state="open"]')).toHaveAttribute('aria-pressed','true');
   await expect(a.locator('[data-wicket-swing-state="closed"]')).toHaveAttribute('aria-pressed','true');
 });
+
+test('3D mobile card really loads refined CSS, keeps horizontal toggles and aligned controls',async ({page})=>{
+  test.setTimeout(120000);
+  await page.goto('/kuznechny-dvorik-gates/zamer-app-v2/');
+  await page.locator('#loginInput').fill('zamer');
+  await page.locator('#passwordInput').fill('1234');
+  await page.locator('#loginForm button[type="submit"]').click();
+  await expect(page.locator('#mainView')).toBeVisible({timeout:10000});
+  await page.locator('#open3DCalcBtn').click();
+  const root=page.locator('#kd3dRoot'),a=root.locator('[data-side-products="A"]');
+  await expect(root.locator('[data-stats]')).toContainText('Столбов',{timeout:15000});
+  await root.locator('[data-opening-side="A"][data-opening-kind="gate"]').click();
+  await root.locator('[data-opening-side="A"][data-opening-kind="wicket"]').click();
+  const values=await a.evaluate(node=>{
+    const q=selector=>node.querySelector(selector);
+    const gate=q('.kd3d-product-gate'),fields=q('[data-gate-fields]'),
+      segments=q('[data-gate-swing-position]>div'),
+      gateToggle=q('[data-gate-enabled]'),
+      gateLabel=q('[data-gate-width]').closest('label'),
+      gateWidth=q('[data-gate-width]'),
+      gateOffset=q('[data-gate-offset]'),
+      wicket=q('[data-wicket-fields]'),
+      wicketSegments=q('[data-wicket-swing-position]>div');
+    const css=e=>getComputedStyle(e);
+    return {
+      gateBg:css(gate).backgroundColor,
+      cardsWidth:Math.round(gate.getBoundingClientRect().width),
+      outerWidth:Math.round(node.getBoundingClientRect().width),
+      columns:css(segments).gridTemplateColumns.split(' ').length,
+      wicketColumns:css(wicketSegments).gridTemplateColumns.split(' ').length,
+      toggleAppearance:css(gateToggle).appearance,
+      toggleWidth:Math.round(gateToggle.getBoundingClientRect().width),
+      labelDirection:css(gateLabel).flexDirection,
+      fieldWidth:gateWidth.getBoundingClientRect().width,
+      offsetWidth:gateOffset.getBoundingClientRect().width,
+      wicketGrid:css(wicket).gridTemplateColumns.split(' ').length,
+      labelsOverflow:[...fields.querySelectorAll('label')].some(el=>
+        el.scrollWidth>el.clientWidth+3),
+      buttonGrid:css(q('[data-gate-type]')).gridTemplateColumns.split(' ').length
+    };
+  });
+  expect(values.columns).toBe(2);
+  expect(values.wicketColumns).toBe(2);
+  expect(values.buttonGrid).toBe(2);
+  expect(values.toggleAppearance).toBe('none');
+  expect(values.toggleWidth).toBeGreaterThanOrEqual(42);
+  expect(values.labelDirection).toBe('column');
+  expect(values.wicketGrid).toBe(2);
+  expect(values.cardsWidth).toBeLessThanOrEqual(values.outerWidth+2);
+  expect(values.fieldWidth).toBeGreaterThan(75);
+  expect(values.offsetWidth).toBeGreaterThan(75);
+  expect(values.labelsOverflow).toBe(false);
+  await a.locator('[data-gate-swing-state="open"]').click();
+  await expect(a.locator('[data-gate-swing-state="open"]')).toHaveAttribute('aria-pressed','true');
+});
