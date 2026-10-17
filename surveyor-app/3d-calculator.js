@@ -1,6 +1,7 @@
 import * as THREE from '../naves/vendor/three.module.js';
 import { OrbitControls } from '../naves/vendor/OrbitControls.js';
 import { renderGateFrame } from './3d-gate-render.js';
+import { getGateFramePlan } from './3d-gate-frame.js';
 import { SIDE_IDS, SIDE_NAMES, FILL_IDS, createDefaultSides, normalizeSides, getSiteLayout, normalizePostMode, verticalPicketPlan, isHorizontalFill, normalizeSwingGate, normalizeWicket, normalizeOpenings, getClearDimensionPlan } from './3d-layout.js';
 
 // Standalone DEV prototype. This is visual geometry only, not a retail price quote.
@@ -210,6 +211,9 @@ export function mount3DCalculator(root) {
     '<div class="kd3d-post-layout" data-post-layout><div class="kd3d-subheading">Расположение столбов</div><div class="kd3d-post-options" role="group" aria-label="Расположение столбов"><button type="button" data-post-mode="visible" aria-pressed="true"><strong>Столбы видны</strong><small>Заполнение между столбами, без боковых щелей</small></button><button type="button" data-post-mode="behind" aria-pressed="false"><strong>Столбы сзади</strong><small>Сплошная линия забора перед столбами</small></button></div><p class="kd3d-post-note" data-post-note>Для выбранной стороны участка</p></div>',
     '<div class="kd3d-gate-editor" data-gate-editor><label class="kd3d-gate-toggle"><input type="checkbox" data-gate-enabled><span><strong data-gate-title>Распашные ворота</strong><small>Две створки в выбранном месте стороны</small></span></label>',
     '<div class="kd3d-gate-fields" data-gate-fields hidden><label>Ширина ворот, м<input type="number" data-gate-width inputmode="decimal" min="2" max="6" step="0.1"></label><label>Отступ слева, м<input type="number" data-gate-offset inputmode="decimal" min="0" max="60" step="0.1"></label></div>',
+    '<div class="kd3d-built-in" data-builtin-area hidden><label class="kd3d-gate-toggle"><input type="checkbox" data-builtin-enabled><span><strong>Встроенная калитка в воротах</strong><small>Внутри створки, с переступаемым порогом · без отдельного столба</small></span></label>',
+    '<div class="kd3d-gate-fields" data-builtin-fields hidden><label>Расположение<select data-builtin-side><option value="left">В левой створке</option><option value="right">В правой створке</option></select></label><label>Ширина калитки, м<input type="number" data-builtin-width inputmode="decimal" min="0.7" max="1.2" step="0.1"></label></div>',
+    '<p class="kd3d-builtin-warning" data-builtin-warning hidden></p></div>',
     '<label class="kd3d-gate-toggle"><input type="checkbox" data-wicket-enabled><span><strong data-wicket-title>Калитка</strong><small>Отдельная одностворчатая калитка</small></span></label>',
     '<div class="kd3d-gate-fields" data-wicket-fields hidden><label>Ширина калитки, м<input type="number" data-wicket-width inputmode="decimal" min="0.7" max="1.5" step="0.1"></label><label>Отступ от начала стороны, м<input type="number" data-wicket-offset inputmode="decimal" min="0" max="60" step="0.1"></label></div>',
     '<p class="kd3d-gate-note" data-gate-note>Выберите ворота, калитку или оба изделия на любой стороне участка.</p></div>',
@@ -306,6 +310,16 @@ export function mount3DCalculator(root) {
     find('[data-gate-width]').value=gate.width;
     find('[data-gate-offset]').value=gate.offset;
     find('[data-gate-offset]').max=Math.max(0,config.sides[id].length-gate.width);
+    find('[data-builtin-area]').hidden=!gate.enabled;
+    find('[data-builtin-enabled]').checked=gate.builtInWicket;
+    find('[data-builtin-fields]').hidden=!gate.enabled||!gate.builtInWicket;
+    find('[data-builtin-side]').value=gate.builtInSide;
+    find('[data-builtin-width]').value=gate.builtInWidth;
+    const geometry=getGateFramePlan({kind:'gate',...gate},config.postSize/1000,
+      config.sides[id].height);
+    const builtInWarning=find('[data-builtin-warning]');
+    builtInWarning.hidden=!gate.enabled||!gate.builtInWicket||!geometry.embeddedWarning;
+    builtInWarning.textContent=geometry.embeddedWarning||'';
     find('[data-wicket-enabled]').checked=wicket.enabled;
     find('[data-wicket-fields]').hidden=!wicket.enabled;
     find('[data-wicket-width]').value=wicket.width;
@@ -482,6 +496,13 @@ export function mount3DCalculator(root) {
   function summary() {
     const layout=getSiteLayout(config.sides,config.openings);
     const gapPlans=getVerticalGapPlans(layout);
+    for(const opening of layout.openings){
+      if(opening.kind!=='gate'||!opening.builtInWicket)continue;
+      const side=config.sides[opening.sideId];
+      const framePlan=getGateFramePlan(opening,config.postSize/1000,side.height);
+      if(framePlan.embeddedWarning)
+        layout.warnings.push('Сторона '+SIDE_NAMES[opening.sideId]+': '+framePlan.embeddedWarning);
+    }
     syncGapWarning(gapPlans);
     const format=value=>value.toFixed(1).replace('.',',');
     const format2=value=>value.toFixed(2).replace('.',',');
@@ -510,6 +531,9 @@ export function mount3DCalculator(root) {
         ' на стороне '+SIDE_NAMES[opening.sideId]+':</b> проём '+format(opening.width)+
         ' м, отступ слева '+format(opening.start)+' м. '+
         (opening.kind==='gate'?'Две створки':'Одна створка')+
+        (opening.kind==='gate'&&opening.builtInWicket?
+          ' · встроенная калитка '+opening.builtInWidth.toFixed(1).replace('.',',')+
+          ' м в '+(opening.builtInSide==='left'?'левой':'правой')+' створке':'')+
         ' в 3D: рама 40×25, средняя перемычка 40×20, '+
         (opening.kind==='gate'?'4':'2')+' петли; зазор до столбов 15 мм'+
         (opening.kind==='gate'?', между створками 20 мм':'')+
@@ -789,13 +813,15 @@ export function mount3DCalculator(root) {
     root.dataset.sceneDimensionValues=config.showDimensions?
       clearDimensions.flatMap(d=>d.spans.map(p=>d.id+':'+p.kind+':'+p.clearMm)).join(';'):'';
     root.dataset.scenePickets=String(renderedPlanks);
-    let actualLeaves=0,wicketLeaves=0,visibleHinges=0,diagonalBraces=0;
+    let actualLeaves=0,wicketLeaves=0,visibleHinges=0,diagonalBraces=0,embeddedWickets=0,thresholds=0;
     const leafWidths=[];
     fence.traverse(object=>{
       if(object.userData.kdGateLeaf)actualLeaves++;
       if(object.userData.kdWicketLeaf)wicketLeaves++;
       if(object.userData.kdHinge)visibleHinges++;
       if(object.userData.kdDiagonalBrace)diagonalBraces++;
+      if(object.userData.kdEmbeddedWicket)embeddedWickets++;
+      if(object.userData.kdEmbeddedThreshold)thresholds++;
       if(typeof object.userData.kdFrameWidth==='number')
         leafWidths.push(object.userData.kdFrameWidth);
     });
@@ -803,6 +829,8 @@ export function mount3DCalculator(root) {
     root.dataset.sceneWicketLeaves=String(wicketLeaves);
     root.dataset.sceneHinges=String(visibleHinges);
     root.dataset.sceneBraces=String(diagonalBraces);
+    root.dataset.sceneEmbeddedWickets=String(embeddedWickets);
+    root.dataset.sceneThresholds=String(thresholds);
     root.dataset.sceneLeafWidths=leafWidths.map(w=>Math.round(w*1000)).join(',');
     root.dataset.sceneOpenings=layout.openings.map(o=>o.sideId+':'+o.kind+':'+o.start.toFixed(2)).join(';');
     root.dataset.sceneGateOpening=layout.gate?JSON.stringify({start:layout.gate.start,end:layout.gate.end}):'';
@@ -864,6 +892,19 @@ export function mount3DCalculator(root) {
       });
     }
   }
+  find('[data-builtin-enabled]').addEventListener('change',event=>{
+    config.openings[config.activeSide].gate.builtInWicket=event.target.checked;
+    updateModel();syncSideInputs();
+  });
+  find('[data-builtin-side]').addEventListener('change',event=>{
+    config.openings[config.activeSide].gate.builtInSide=event.target.value==='left'?'left':'right';
+    updateModel();syncSideInputs();
+  });
+  find('[data-builtin-width]').addEventListener('change',event=>{
+    const gate=config.openings[config.activeSide].gate;
+    gate.builtInWidth=numeric(event.target.value,.7,1.2,gate.builtInWidth);
+    updateModel();syncSideInputs();
+  });
   find('[data-sides]').addEventListener('click',event=>{
     const button=event.target.closest('[data-opening-side][data-opening-kind]');
     if(!button)return;
