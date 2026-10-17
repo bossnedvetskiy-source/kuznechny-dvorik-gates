@@ -210,13 +210,13 @@ export function mount3DCalculator(root) {
     '<label class="kd3d-select-label">Столбы · профильная труба<select data-field="postSize"><option value="60">60×60 мм</option><option value="80">80×80 мм</option><option value="100">100×100 мм</option></select></label>',
     '<div class="kd3d-post-layout" data-post-layout><div class="kd3d-subheading">Расположение столбов</div><div class="kd3d-post-options" role="group" aria-label="Расположение столбов"><button type="button" data-post-mode="visible" aria-pressed="true"><strong>Столбы видны</strong><small>Заполнение между столбами, без боковых щелей</small></button><button type="button" data-post-mode="behind" aria-pressed="false"><strong>Столбы сзади</strong><small>Сплошная линия забора перед столбами</small></button></div><p class="kd3d-post-note" data-post-note>Для выбранной стороны участка</p></div>',
     '<div class="kd3d-gate-editor" data-gate-editor><label class="kd3d-gate-toggle"><input type="checkbox" data-gate-enabled><span><strong data-gate-title>Распашные ворота</strong><small>Две створки в выбранном месте стороны</small></span></label>',
-    '<div class="kd3d-gate-fields" data-gate-fields hidden><label>Ширина ворот, м<input type="number" data-gate-width inputmode="decimal" min="2" max="6" step="0.1"></label><label>Отступ слева, м<input type="number" data-gate-offset inputmode="decimal" min="0" max="60" step="0.1"></label></div>',
+    '<div class="kd3d-gate-fields" data-gate-fields hidden><label>Ширина ворот, м<input type="number" data-gate-width inputmode="decimal" min="2" max="6" step="0.1"></label><label>Отступ слева, м<input type="number" data-gate-offset inputmode="decimal" min="0" max="60" step="0.1"></label><label class="kd3d-direction-field">Куда открываются ворота<select data-gate-open-direction><option value="inward">Внутрь участка</option><option value="outward">Наружу участка</option></select></label></div>',
     '<div class="kd3d-built-in" data-builtin-area hidden><label class="kd3d-gate-toggle"><input type="checkbox" data-builtin-enabled><span><strong>Встроенная калитка в воротах</strong><small>Внутри створки, с переступаемым порогом · без отдельного столба</small></span></label>',
     '<div class="kd3d-gate-fields" data-builtin-fields hidden><label>Расположение<select data-builtin-side><option value="left">В левой створке</option><option value="right">В правой створке</option></select></label><label>Ширина калитки, м<input type="number" data-builtin-width inputmode="decimal" min="0.7" max="1.2" step="0.1"></label></div>',
     '<p class="kd3d-builtin-warning" data-builtin-warning hidden></p></div>',
     '<label class="kd3d-gate-toggle"><input type="checkbox" data-wicket-enabled><span><strong data-wicket-title>Калитка</strong><small>Отдельная одностворчатая калитка</small></span></label>',
-    '<div class="kd3d-gate-fields" data-wicket-fields hidden><label>Ширина калитки, м<input type="number" data-wicket-width inputmode="decimal" min="0.7" max="1.5" step="0.1"></label><label>Отступ от начала стороны, м<input type="number" data-wicket-offset inputmode="decimal" min="0" max="60" step="0.1"></label></div>',
-    '<p class="kd3d-gate-note" data-gate-note>Выберите ворота, калитку или оба изделия на любой стороне участка.</p></div>',
+    '<div class="kd3d-gate-fields" data-wicket-fields hidden><label>Ширина калитки, м<input type="number" data-wicket-width inputmode="decimal" min="0.7" max="1.5" step="0.1"></label><label>Отступ от начала стороны, м<input type="number" data-wicket-offset inputmode="decimal" min="0" max="60" step="0.1"></label><label>Куда открывается калитка<select data-wicket-open-direction><option value="inward">Внутрь участка</option><option value="outward">Наружу участка</option></select></label><label>Открывание влево / вправо<select data-wicket-hinge-side><option value="left">Влево · петли слева</option><option value="right">Вправо · петли справа</option></select></label></div>',
+    '<p class="kd3d-gate-note" data-gate-note>Выберите ворота, калитку или оба изделия на любой стороне участка.</p><p class="kd3d-direction-note">В 3D створки приоткрыты на 30° для показа направления. Лево/право калитки — по расположению петель вдоль выбранной стороны. Свободная зона открывания пока не проверяется.</p></div>',
     '<p class="kd3d-side-warning" data-site-warning hidden></p></div></details>',
     '<details class="kd3d-section" data-section="fill" open><summary><span>Заполнение и цвет</span></summary><div class="kd3d-section-inner">',
     '<div class="kd3d-subheading">Цвет забора · RAL</div>',
@@ -233,7 +233,7 @@ export function mount3DCalculator(root) {
     '<label class="kd3d-check-row"><input type="checkbox" data-double-row><span><strong>Шахматный порядок</strong><small>Штакетник с двух сторон</small></span></label>',
     '</div><p class="kd3d-color-note">Оттенки на экране приблизительные; точный цвет выбирается по образцу RAL.</p></div></details>',
     '<div class="kd3d-stats" data-stats></div>',
-    '<div class="kd3d-hint">Предварительная 3D-визуализация. Стоимость, ворота, калитки и доставка будут подключены отдельно.</div>',
+    '<div class="kd3d-hint">Предварительная 3D-визуализация ворот и забора. Расчёт стоимости и доставки пока не подключён.</div>',
     '<button type="button" data-reset class="kd3d-reset">↶ Сбросить параметры</button>',
     '</div></div>'
   ].join('');
@@ -309,6 +309,7 @@ export function mount3DCalculator(root) {
     find('[data-gate-fields]').hidden=!gate.enabled;
     find('[data-gate-width]').value=gate.width;
     find('[data-gate-offset]').value=gate.offset;
+    find('[data-gate-open-direction]').value=gate.openDirection;
     find('[data-gate-offset]').max=Math.max(0,config.sides[id].length-gate.width);
     find('[data-builtin-area]').hidden=!gate.enabled;
     find('[data-builtin-enabled]').checked=gate.builtInWicket;
@@ -324,6 +325,8 @@ export function mount3DCalculator(root) {
     find('[data-wicket-fields]').hidden=!wicket.enabled;
     find('[data-wicket-width]').value=wicket.width;
     find('[data-wicket-offset]').value=wicket.offset;
+    find('[data-wicket-open-direction]').value=wicket.openDirection;
+    find('[data-wicket-hinge-side]').value=wicket.hingeSide;
     find('[data-wicket-offset]').max=Math.max(0,config.sides[id].length-wicket.width);
     find('[data-gate-note]').textContent=!config.sides[id].enabled?
       'Сторона выключена. Включите её, чтобы отобразить проёмы в 3D.':
@@ -531,6 +534,8 @@ export function mount3DCalculator(root) {
         ' на стороне '+SIDE_NAMES[opening.sideId]+':</b> проём '+format(opening.width)+
         ' м, отступ слева '+format(opening.start)+' м. '+
         (opening.kind==='gate'?'Две створки':'Одна створка')+
+        ' · открывание '+(opening.openDirection==='outward'?'наружу':'внутрь')+' участка'+
+        (opening.kind==='wicket'?' · '+(opening.hingeSide==='right'?'вправо, петли справа':'влево, петли слева'):'')+
         (opening.kind==='gate'&&opening.builtInWicket?
           ' · встроенная калитка '+opening.builtInWidth.toFixed(1).replace('.',',')+
           ' м в '+(opening.builtInSide==='left'?'левой':'правой')+' створке':'')+
@@ -833,6 +838,11 @@ export function mount3DCalculator(root) {
     root.dataset.sceneThresholds=String(thresholds);
     root.dataset.sceneLeafWidths=leafWidths.map(w=>Math.round(w*1000)).join(',');
     root.dataset.sceneOpenings=layout.openings.map(o=>o.sideId+':'+o.kind+':'+o.start.toFixed(2)).join(';');
+    const swingPivots=[];
+    fence.traverse(object=>{
+      if(object.userData.kdSwingPivot)swingPivots.push(object.userData.kdSwingSignature);
+    });
+    root.dataset.sceneSwingAngles=swingPivots.join(';');
     root.dataset.sceneGateOpening=layout.gate?JSON.stringify({start:layout.gate.start,end:layout.gate.end}):'';
     root.dataset.scenePostModes=JSON.stringify(renderedPostModes);
     root.dataset.sceneEdgeClearance=String(renderedMaxEdgeClearance);
@@ -892,6 +902,18 @@ export function mount3DCalculator(root) {
       });
     }
   }
+  for(const kind of ['gate','wicket']){
+    find('[data-'+kind+'-open-direction]').addEventListener('change',event=>{
+      config.openings[config.activeSide][kind].openDirection=
+        event.target.value==='outward'?'outward':'inward';
+      updateModel();syncSideInputs();
+    });
+  }
+  find('[data-wicket-hinge-side]').addEventListener('change',event=>{
+    config.openings[config.activeSide].wicket.hingeSide=
+      event.target.value==='right'?'right':'left';
+    updateModel();syncSideInputs();
+  });
   find('[data-builtin-enabled]').addEventListener('change',event=>{
     config.openings[config.activeSide].gate.builtInWicket=event.target.checked;
     updateModel();syncSideInputs();
