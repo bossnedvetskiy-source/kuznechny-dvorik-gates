@@ -260,3 +260,52 @@
   border-left:3px solid #cc8b29;padding:6px 8px;background:#fff1da;
   border-radius:4px;font-size:12px;line-height:1.45}
 #threeDScreen .kd3d-builtin-warning[hidden]{display:none!important}
+
+
+/* Side-owned settings: controls appear directly UNDER A / B / V / G. */
+#threeDScreen .kd3d-side-edit-slot[hidden]{display:none!important}
+#threeDScreen .kd3d-side-inline-editor{display:grid;gap:13px;min-width:0;
+  margin:5px 0 0 30px;padding:12px 0 6px;border-top:1px solid #ece5d9}
+#threeDScreen .kd3d-side-inline-editor .kd3d-section{border:1px solid #e6e2da;
+  border-radius:13px;background:#fff;overflow:hidden}
+#threeDScreen .kd3d-side-inline-editor .kd3d-section>summary{padding:12px;min-height:46px}
+#threeDScreen .kd3d-side-inline-editor .kd3d-section-inner{padding:3px 12px 13px}
+#threeDScreen .kd3d-side-entry.selected{background:#fffaf0;
+  border-radius:14px;box-shadow:inset 3px 0 0 #c99130;padding-right:11px}
+#threeDScreen .kd3d-side-entry.selected:not(.enabled){opacity:1}
+#threeDScreen .kd3d-side-inline-editor .kd3d-side-current{border-top:0;padding-top:0}
+#threeDScreen .kd3d-side-inline-editor .kd3d-fields{gap:8px}
+#threeDScreen .kd3d-side-inline-editor .kd3d-gate-editor{background:transparent;
+  border:0;padding:0;gap:11px}
+#threeDScreen .kd3d-side-inline-editor .kd3d-product-card{display:grid;gap:11px;
+  border:1px solid #efd5a0;border-radius:14px;background:#fff8e7;padding:12px}
+#threeDScreen .kd3d-side-inline-editor .kd3d-product-wicket{background:#eafaf5;
+  border-color:#b7e7d8}
+#threeDScreen .kd3d-product-card .kd3d-gate-fields{grid-template-columns:repeat(2,minmax(0,1fr))}
+#threeDScreen .kd3d-product-card .kd3d-gate-fields label{font-size:11px}
+#threeDScreen .kd3d-product-card .kd3d-gate-fields select{font-size:13px}
+#threeDScreen .kd3d-product-card .kd3d-inner-frame{display:flex;align-items:center;
+  gap:8px;grid-column:1/-1;font-size:12px;color:#47545a}
+#threeDScreen .kd3d-product-card .kd3d-inner-frame input{width:18px;height:18px;
+  min-height:18px;flex:0 0 18px;accent-color:#c38e26}
+#threeDScreen .kd3d-product-card .kd3d-drawing-action{grid-column:1/-1;
+  min-height:43px;border:1px solid #cca45c;border-radius:11px;background:#fff;
+  color:#855818;font-size:12px;font-weight:850;box-shadow:none}
+#threeDScreen .kd3d-product-wicket .kd3d-drawing-action{border-color:#83c9b7;color:#287d6b}
+#threeDScreen .kd3d-drawing-dialog{width:min(96vw,880px);max-height:89dvh;
+  padding:16px;border:1px solid #d9c28f;border-radius:16px;background:#fff;color:#303740}
+#threeDScreen .kd3d-drawing-dialog::backdrop{background:#111b27bd}
+#threeDScreen .kd3d-drawing-header{display:flex;align-items:center;justify-content:space-between;gap:10px}
+#threeDScreen .kd3d-drawing-header strong{font-size:15px}
+#threeDScreen .kd3d-drawing-header button{border:1px solid #ddd;border-radius:10px;
+  background:#fff;min-height:35px;min-width:35px;color:#474747}
+#threeDScreen .kd3d-drawing-preview{margin:13px 0;border:1px solid #dfe2e5;
+  background:#fff;border-radius:9px;max-height:57dvh;overflow:auto}
+#threeDScreen .kd3d-drawing-preview svg{display:block;width:100%;height:auto;min-width:400px}
+#threeDScreen .kd3d-drawing-dialog p{font-size:11px;line-height:1.5;color:#80603a}
+#threeDScreen .kd3d-drawing-download{width:100%;background:#c38c30;border:0;
+  border-radius:11px;color:#fff;font-weight:850;min-height:45px}
+@media(max-width:400px){
+  #threeDScreen .kd3d-side-inline-editor{margin-left:7px}
+  #threeDScreen .kd3d-side-inline-editor .kd3d-product-card{padding:9px}
+}
