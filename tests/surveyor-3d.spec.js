@@ -725,7 +725,12 @@ test('DEV mobile product controls use final styled CSS, no native stacked button
       sameRow:Math.abs(selected.y-other.y)<3,
       buttonsWide:Math.abs(selected.width-other.width)<5,
       fontSize:parseFloat(getComputedStyle(button).fontSize),
-      noOverflow,fieldsVisible:getComputedStyle(fields).display!=='none'};
+      noOverflow,fieldsVisible:getComputedStyle(fields).display!=='none',
+      checkboxAppearance:getComputedStyle(card.querySelector('[data-gate-enabled]')).appearance,
+      checkboxWidth:card.querySelector('[data-gate-enabled]').getBoundingClientRect().width,
+      fieldLabelDirection:getComputedStyle(card.querySelector('[data-gate-width]').closest('label')).flexDirection,
+      widthField:card.querySelector('[data-gate-width]').getBoundingClientRect().width,
+      offsetField:card.querySelector('[data-gate-offset]').getBoundingClientRect().width};
   });
   expect(result.loaded).toBe(true);
   expect(result.background).toBe('rgb(255, 255, 255)');
@@ -736,6 +741,11 @@ test('DEV mobile product controls use final styled CSS, no native stacked button
   expect(result.fontSize).toBeGreaterThanOrEqual(12);
   expect(result.noOverflow).toBe(true);
   expect(result.fieldsVisible).toBe(true);
+  expect(result.checkboxAppearance).toBe('none');
+  expect(result.checkboxWidth).toBeGreaterThanOrEqual(42);
+  expect(result.fieldLabelDirection).toBe('column');
+  expect(result.widthField).toBeGreaterThan(75);
+  expect(result.offsetField).toBeGreaterThan(75);
   await a.locator('[data-gate-swing-state="open"]').click();
   await expect(a.locator('[data-gate-swing-state="open"]')).toHaveAttribute('aria-pressed','true');
   await expect(a.locator('[data-wicket-swing-state="closed"]')).toHaveAttribute('aria-pressed','true');
