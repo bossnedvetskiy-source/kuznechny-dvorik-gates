@@ -1,3 +1,4 @@
+import { getSlidingParkingWarning } from './3d-sliding-frame.js';
 // DEV-only top view planner. All dimensions and coordinates are metres.
 // Sides: A bottom (+X), B right (+Z), V top (-X), G left (+Z).
 // Opposite sides may have distinct lengths; in that case an open contour is intentional.
@@ -87,10 +88,14 @@ export function normalizeSides(saved,legacy={}) {
 // Offsets are measured from the start of THAT side, following its local axis.
 export function normalizeSwingGate(saved,sideLength=12){
   const input=saved&&typeof saved==='object'?saved:{};
-  const width=clamp(input.width,2,6,3.4);
-  return {enabled:input.enabled===true,type:'swing',width,
+  const type=input.type==='sliding'?'sliding':'swing';
+  const width=clamp(input.width,2,type==='sliding'?5:6,3.4);
+  return {enabled:input.enabled===true,type,width,
     offset:clamp(input.offset,0,Math.max(0,sideLength-width),1),
     openDirection:input.openDirection==='outward'?'outward':'inward',
+    slideDirection:input.slideDirection==='right'?'right':'left',
+    tailShape:input.tailShape==='triangle'?'triangle':'square',
+    centerPost:input.centerPost===true,
     frameProfile:FRAME_PROFILES.includes(input.frameProfile)?input.frameProfile:'40x25',
     innerFrame:input.innerFrame!==false,
     fill:OPENING_FILLS.includes(input.fill)?input.fill:'side',
@@ -152,6 +157,10 @@ function resolveSideOpenings(id,side,config,warnings){
     result.push({kind,type:item.type,sideId:id,width:item.width,
       start:offset,end:offset+item.width,offset,
       openDirection:item.openDirection,
+      ...(kind==='gate'?{
+        slideDirection:item.slideDirection,tailShape:item.tailShape,
+        centerPost:item.centerPost
+      }:{}),
       frameProfile:item.frameProfile,innerFrame:item.innerFrame,fill:item.fill,
       ...(kind==='gate'?{
         builtInWicket:item.builtInWicket,builtInSide:item.builtInSide,
@@ -176,6 +185,11 @@ export function getSiteLayout(sides,openingsOrLegacyGate=null){
   const warnings=[];
   const edges=candidates.filter(e=>e.side.enabled).map(e=>{
     const openings=resolveSideOpenings(e.id,e.side,configured[e.id],warnings);
+    for(const opening of openings){
+      if(opening.kind!=='gate'||opening.type!=='sliding')continue;
+      const parkingWarning=getSlidingParkingWarning(opening,e.side.length,openings);
+      if(parkingWarning)warnings.push('Сторона '+SIDE_NAMES[e.id]+': '+parkingWarning);
+    }
     const sections=[];
     let cursor=0;
     for(const opening of openings){
