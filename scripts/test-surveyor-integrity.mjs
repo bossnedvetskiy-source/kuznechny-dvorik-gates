@@ -12,8 +12,8 @@ const slidingRender=await readFile('surveyor-app/3d-sliding-render.js','utf8');
 const layout = await readFile('surveyor-app/3d-layout.js','utf8');
 const threeDCss = await readFile('surveyor-app/3d-calculator.css','utf8');
 const mobileCardsCss = await readFile('surveyor-app/3d-mobile-ui.css','utf8');
-if (!html.includes('3d-mobile-ui.css?v=card-v2-20261017') ||
-    !sw.includes('./3d-mobile-ui.css?v=card-v2-20261017') ||
+if (!html.includes('3d-mobile-ui.css?v=card-v3-20261017') ||
+    !sw.includes('./3d-mobile-ui.css?v=card-v3-20261017') ||
     !mobileCardsCss.includes('.kd3d-swing-position') ||
     !mobileCardsCss.includes('grid-template-columns:repeat(2,minmax(0,1fr))!important'))
   throw new Error('Side-local mobile CSS missing, unversioned or absent from offline cache');
