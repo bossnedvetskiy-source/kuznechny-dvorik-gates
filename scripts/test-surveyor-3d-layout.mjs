@@ -259,3 +259,30 @@ assert.equal(old.A.postMode,'visible','old drafts remain visible-post by default
 console.log('3D post modes and whole-width, adjustable-gap pickets OK');
 
 console.log('3D layout A/B/V/G shared corners, independent sides, warnings and legacy drafts OK');
+
+
+// Per-product model options must not leak across sides, even when a shared
+// mobile editor is moved between four side cards.
+{
+  const sides=createDefaultSides({length:15,height:1.8,fill:'picket'});
+  sides.B.enabled=true;
+  const options=normalizeOpenings(sides,{
+    A:{gate:{enabled:true,width:3.4,offset:1,frameProfile:'60x40',
+      fill:'sheet',innerFrame:false}},
+    B:{wicket:{enabled:true,width:1,offset:5,frameProfile:'40x40',
+      fill:'picket-double',innerFrame:true,hingeSide:'right'}}
+  });
+  const result=getSiteLayout(sides,options);
+  const a=result.openings.find(o=>o.sideId==='A'&&o.kind==='gate');
+  const b=result.openings.find(o=>o.sideId==='B'&&o.kind==='wicket');
+  assert.equal(a.frameProfile,'60x40');
+  assert.equal(a.fill,'sheet');
+  assert.equal(a.innerFrame,false);
+  assert.equal(b.frameProfile,'40x40');
+  assert.equal(b.fill,'picket-double');
+  assert.equal(b.hingeSide,'right');
+  assert.equal(options.A.wicket.fill,'side');
+  assert.equal(options.B.gate.frameProfile,'40x25');
+  assert.equal(normalizeOpenings(sides,{A:{gate:{fill:'javascript:bad',frameProfile:'unknown'}}}).A.gate.fill,'side');
+  console.log('Per-side gate/wicket frame profile, infill and inner rail options OK');
+}
