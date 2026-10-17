@@ -1,5 +1,5 @@
-const CACHE = 'kd-surveyor-v3-mobile-swing-ux-v24';
-const CORE = ['./index.html','./styles.css','./app.js','./line-builder.js','./calculator-bridge.js','./3d-calculator.js','./3d-layout.js','./3d-gate-frame.js','./3d-gate-render.js','./3d-sliding-frame.js','./3d-sliding-render.js','./3d-sliding-installation.js','./3d-sliding-hardware.js','./3d-drawing.js','./3d-calculator.css?v=mobile-swing-ux-20261017','./manifest.webmanifest','./icon.svg','./sliding-gates/index.html'];
+const CACHE = 'kd-surveyor-v3-card-v2-v25';
+const CORE = ['./index.html','./styles.css','./app.js','./line-builder.js','./calculator-bridge.js','./3d-calculator.js','./3d-layout.js','./3d-gate-frame.js','./3d-gate-render.js','./3d-sliding-frame.js','./3d-sliding-render.js','./3d-sliding-installation.js','./3d-sliding-hardware.js','./3d-drawing.js','./3d-calculator.css?v=mobile-swing-ux-20261017','./3d-mobile-ui.css?v=card-v2-20261017','./manifest.webmanifest','./icon.svg','./sliding-gates/index.html'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(CORE)).then(() => self.skipWaiting()));
 });
@@ -9,16 +9,21 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
   event.respondWith((async () => {
-    const cached = await caches.match(event.request);
-    if (cached) return cached;
+    // When online always validate styles rather than serving an old CSS from
+    // another named cache. Offline still uses the current-version copy.
+    const isCss = new URL(event.request.url).pathname.endsWith('.css');
+    const cache = await caches.open(CACHE);
+    const cached = await cache.match(event.request);
+    if (cached && !isCss) return cached;
     try {
       const response = await fetch(event.request);
       if (response.ok && new URL(event.request.url).origin === self.location.origin) {
-        const cache = await caches.open(CACHE); cache.put(event.request, response.clone());
+        cache.put(event.request, response.clone());
       }
       return response;
     } catch {
-      if (event.request.mode === 'navigate') return caches.match('./index.html');
+      if (cached) return cached;
+      if (event.request.mode === 'navigate') return cache.match('./index.html');
       throw new Error('offline');
     }
   })());
