@@ -234,3 +234,10 @@
 #threeDScreen .kd3d-side-products [hidden]{
   display:none!important;
 }
+
+/* Higher specificity than >label {display:flex!important} above. */
+#threeDScreen .kd3d-side-products .kd3d-gate-fields > label[hidden],
+#threeDScreen .kd3d-side-products .kd3d-gate-fields > div[hidden],
+#threeDScreen .kd3d-side-products .kd3d-product-card > div[hidden]{
+  display:none!important;
+}
