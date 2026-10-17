@@ -1136,6 +1136,12 @@ export function mount3DCalculator(root) {
     controls.target.set(b.centerX,maxHeight*.5,b.centerZ);
     controls.maxDistance=500;
     controls.update();
+    // Browser regression diagnostics: default view must be outside facade.
+    root.dataset.sceneCameraX=camera.position.x.toFixed(3);
+    root.dataset.sceneCameraZ=camera.position.z.toFixed(3);
+    root.dataset.sceneCameraTargetX=controls.target.x.toFixed(3);
+    root.dataset.sceneCameraTargetZ=controls.target.z.toFixed(3);
+    root.dataset.sceneCameraMode=single?'single':'multi';
   }
   function resize() {
     if (!webglOk) return;
