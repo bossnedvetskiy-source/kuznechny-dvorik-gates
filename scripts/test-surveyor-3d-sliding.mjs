@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import {getSlidingGatePlan,getSlidingTravelPlan,getSlidingParkingWarning} from '../surveyor-app/3d-sliding-frame.js';
 import {getSiteLayout,createDefaultSides,normalizeOpenings} from '../surveyor-app/3d-layout.js';
+import {normalizeSlidingObstacles,getSlidingInstallationPlan,getSlidingInstallationWarnings}
+  from '../surveyor-app/3d-sliding-installation.js';
 import {buildSlidingSketchSvg} from '../surveyor-app/3d-drawing.js';
 import {readFile} from 'node:fs/promises';
 
@@ -70,10 +72,13 @@ assert.equal(normalizeOpenings(sides,{
   A:{gate:{enabled:true,type:'sliding',width:6,tailShape:'broken',slideDirection:'bad'}}
 }).A.gate.width,5,'sliding gate width is capped at the supported 5m');
 const source=await readFile('surveyor-app/3d-sliding-render.js','utf8');
-const renderFactory=new Function('THREE','getSlidingTravelPlan',
+const hardwareSource=await readFile('surveyor-app/3d-sliding-hardware.js','utf8');
+const renderHardware=new Function('THREE',hardwareSource.replace(/^import .*$/gm,'')
+  .replace(/^export /gm,'')+'\nreturn renderSlidingHardware;')(THREE);
+const renderFactory=new Function('THREE','getSlidingInstallationPlan','renderSlidingHardware',
   source.replace(/^import .*$/gm,'').replace(/^export /gm,'')+
   '\nreturn renderSlidingGate;');
-const render=renderFactory(THREE,getSlidingTravelPlan);
+const render=renderFactory(THREE,getSlidingInstallationPlan,renderHardware);
 
 const travelStart=8,sideLength=20;
 for(const direction of ['left','right']){
@@ -104,6 +109,48 @@ const clashing=getSlidingTravelPlan({type:'sliding',kind:'gate',width:4,
 assert.equal(clashing.wicketCollisions.length,1);
 assert.equal(clashing.valid,false);
 
+// Full-body clearance: the default 22 cm inward track misses 80 mm posts.
+const gateForCheck={type:'sliding',kind:'gate',width:4,start:2,
+  slideDirection:'right',trackOffset:.22};
+const sourcePosts=[2,6,8.5,11];
+const noCollisions=getSlidingInstallationPlan(gateForCheck,12,[],{
+  postWidth:.08,sideHeight:1.8,postMode:'visible',posts:sourcePosts,
+  sections:[{from:6,to:12}]
+});
+assert.equal(noCollisions.collisions.length,0);
+assert.equal(noCollisions.valid,true);
+assert.equal(noCollisions.rollerPositions.length,2);
+assert.equal(noCollisions.receiverX,2);
+assert.equal(noCollisions.siteSurveyRequired,true);
+const hitsPost=getSlidingInstallationPlan({...gateForCheck,trackOffset:.10},12,[],{
+  postWidth:.08,posts:sourcePosts,sections:[{from:6,to:12}]
+});
+assert(hitsPost.collisions.some(c=>c.kind==='post'));
+const hitsRearFence=getSlidingInstallationPlan({...gateForCheck,trackOffset:.14},12,[],{
+  postWidth:.08,postMode:'behind',posts:[],sections:[{from:6,to:12}]
+});
+assert(hitsRearFence.collisions.some(c=>c.kind==='fence'));
+const measured={id:'tree-1',type:'tree',offset:8,width:.8,
+  distance:.22,depth:.5,height:2};
+const withTree=getSlidingInstallationPlan({...gateForCheck,obstacles:[measured]},12,[],{
+  postWidth:.08,posts:[],sections:[]});
+assert.equal(withTree.collisions.filter(c=>c.kind==='obstacle').length,1);
+assert.equal(withTree.valid,false);
+assert(getSlidingInstallationWarnings(withTree).join(' ').includes('препятствие'));
+const outside=getSlidingInstallationPlan({...gateForCheck,
+  obstacles:[{...measured,distance:1.2}]},12,[],{postWidth:.08});
+assert.equal(outside.collisions.length,0);
+assert.equal(normalizeSlidingObstacles([{type:'bad',width:99,distance:99}],12)[0].width,3);
+assert.equal(normalizeSlidingObstacles(new Array(11).fill(measured)).length,8);
+const converted=normalizeOpenings(sides,{A:{gate:{enabled:true,type:'sliding',
+  width:4,offset:2,trackOffset:.35,obstacles:[measured]}}});
+assert.equal(converted.A.gate.trackOffset,.35);
+assert.equal(converted.A.gate.obstacles[0].id,'tree-1');
+const grounded=getSiteLayout(createDefaultSides({length:12}),{
+  A:{gate:{enabled:true,type:'sliding',width:4,offset:2,
+    slideDirection:'right',obstacles:[measured]}}
+});
+assert(grounded.warnings.some(w=>w.includes('препятствие')));
 const material=new THREE.MeshStandardMaterial({color:0x565d65});
 for(const shape of ['square','triangle']){
   for(const centerPost of [false,true]){
@@ -129,6 +176,7 @@ for(const shape of ['square','triangle']){
             ownedGeometries:geometries,ownedMaterials:materials
           });
           let leaves=0,tail=0,beams=0,centers=0,movers=0,zoneBands=0,arrows=0;
+          let carriages=0,rollers=0,footings=0,receivers=0,upperGuides=0;
           group.traverse(o=>{
             if(o.userData.kdSlidingLeaf)leaves++;
             if(o.userData.kdSlidingTail)tail++;
@@ -147,9 +195,16 @@ for(const shape of ['square','triangle']){
                 'parking zone must use side-local coordinates, without adding the gate offset twice');
             }
             if(o.userData.kdSlidingTravelArrow)arrows++;
+            if(o.userData.kdSlidingCarriage)carriages++;
+            if(o.userData.kdSlidingRoller)rollers++;
+            if(o.userData.kdSlidingFoundation)footings++;
+            if(o.userData.kdSlidingReceiver)receivers++;
+            if(o.userData.kdSlidingUpperGuide)upperGuides++;
           });
           assert.deepEqual([leaves,tail,beams,centers,movers],
             [1,1,1,centerPost?1:0,1]);
+          assert.deepEqual([carriages,rollers,footings,receivers,upperGuides],
+            [2,8,1,1,1],'hardware remains fixed in both open/closed states');
           assert.equal(zoneBands,showSlideZone?1:0,'valid parking strip stays fixed on ground');
           assert.equal(arrows,showSlideZone?1:0);
           assert.equal(plan.tailShape,shape);
