@@ -203,7 +203,8 @@ export function mount3DCalculator(root) {
       '<div class="kd3d-opening-actions" role="group" aria-label="Проёмы на стороне '+SIDE_NAMES[id]+'">'+
       '<button type="button" data-opening-side="'+id+'" data-opening-kind="gate" aria-pressed="false" aria-label="Добавить ворота на сторону '+SIDE_NAMES[id]+'" title="Ворота на стороне '+SIDE_NAMES[id]+'"><svg viewBox="0 0 28 22" aria-hidden="true"><path d="M2 20V4h24v16M14 4v16M4 7l8 3v8M24 7l-8 3v8" /></svg><small>Ворота</small></button>'+
       '<button type="button" data-opening-side="'+id+'" data-opening-kind="wicket" aria-pressed="false" aria-label="Добавить калитку на сторону '+SIDE_NAMES[id]+'" title="Калитка на стороне '+SIDE_NAMES[id]+'"><svg viewBox="0 0 28 22" aria-hidden="true"><path d="M6 20V2h16v18M9 5l10 3v12M17 13h1" /></svg><small>Калитка</small></button></div>'+
-      '<label class="kd3d-side-inline-length"><span>Длина стороны</span><span class="kd3d-side-input-wrap"><input type="number" inputmode="decimal" min="1" max="60" step="0.1" data-side-length-input="'+id+'" aria-label="Длина стороны '+SIDE_NAMES[id]+', м"><small>м</small></span></label></div>').join('')+'</div>',
+      '<label class="kd3d-side-inline-length"><span>Длина стороны</span><span class="kd3d-side-input-wrap"><input type="number" inputmode="decimal" min="1" max="60" step="0.1" data-side-length-input="'+id+'" aria-label="Длина стороны '+SIDE_NAMES[id]+', м"><small>м</small></span></label>'+
+      '<div class="kd3d-side-edit-slot" data-side-edit-slot="'+id+'"></div></div>').join('')+'</div>',
     '<div class="kd3d-side-current"><strong data-current-side-label>Настройка стороны А</strong><small data-current-side-status>Включена</small></div>',
     '<div class="kd3d-fields"><label data-height-label>Высота стороны А, м<input data-field="height" inputmode="decimal" type="number" min="0.8" max="3" step="0.1"></label>',
     '<label>Шаг столбов, м<input data-field="step" inputmode="decimal" type="number" min="1" max="3" step="0.1"></label></div>',
@@ -237,6 +238,32 @@ export function mount3DCalculator(root) {
     '<button type="button" data-reset class="kd3d-reset">↶ Сбросить параметры</button>',
     '</div></div>'
   ].join('');
+  // A single set of inputs is RE-PARENTED into the selected side card.
+  // No duplicate input IDs and no re-rendering of controls on side changes.
+  // All values still live in config.sides[id] / config.openings[id].
+  const inlineEditor=document.createElement('div');
+  inlineEditor.className='kd3d-side-inline-editor';
+  const inlineParts=[
+    root.querySelector('[data-section="type"]'),
+    root.querySelector('[data-side-current]'),
+    root.querySelector('.kd3d-fields'),
+    root.querySelector('[data-field="postSize"]').closest('label'),
+    root.querySelector('[data-post-layout]'),
+    root.querySelector('[data-gate-editor]'),
+    root.querySelector('[data-section="fill"]'),
+    root.querySelector('[data-site-warning]')
+  ];
+  inlineParts.forEach(part=>{
+    if(!part)throw new Error('Не найдена секция редактора стороны 3D');
+    inlineEditor.appendChild(part);
+  });
+  function placeInlineEditor(){
+    const slot=root.querySelector('[data-side-edit-slot="'+config.activeSide+'"]');
+    if(!slot)return;
+    if(inlineEditor.parentElement!==slot)slot.appendChild(inlineEditor);
+    root.querySelectorAll('[data-side-edit-slot]').forEach(el=>{el.hidden=el!==slot;});
+  }
+  placeInlineEditor();
   const find = selector => root.querySelector(selector);
   function isPicketFill(fill){return ['picket','picket-double','horizontal','horizontal-double'].includes(fill);}
   function syncPicketSettings(){
@@ -253,6 +280,7 @@ export function mount3DCalculator(root) {
     find('[data-type-name]').textContent=fill==='sheet'?'Профнастил':fill==='jalousie'?'Жалюзи':'Евроштакетник';
   }
   function syncSideInputs(){
+    placeInlineEditor();
     const selected=activeSettings();
     for(const key of ['height','step','fill','ral'])
       find('[data-field="'+key+'"]').value=selected[key];
