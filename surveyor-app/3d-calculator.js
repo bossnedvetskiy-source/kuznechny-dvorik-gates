@@ -278,13 +278,15 @@ export function mount3DCalculator(root) {
     root.querySelector('.kd3d-fields'),
     root.querySelector('[data-field="postSize"]').closest('label'),
     root.querySelector('[data-post-layout]'),
-    root.querySelector('[data-section="fill"]'),
-    root.querySelector('[data-site-warning]')
+    root.querySelector('[data-section="fill"]')
   ];
   inlineParts.forEach(part=>{
     if(!part)throw new Error('Не найдена секция редактора стороны 3D');
     extraContent.appendChild(part);
   });
+  // Plot problems must be visible even when advanced settings are collapsed.
+  const siteWarning=root.querySelector('[data-site-warning]');
+  if(siteWarning)inlineEditor.appendChild(siteWarning);
   function placeInlineEditor(){
     const slot=root.querySelector('[data-side-edit-slot="'+config.activeSide+'"]');
     if(!slot)return;
