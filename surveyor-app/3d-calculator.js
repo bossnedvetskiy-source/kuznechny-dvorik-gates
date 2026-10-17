@@ -1015,6 +1015,24 @@ export function mount3DCalculator(root) {
   }
   for(const id of SIDE_IDS){
     const get=selector=>productField(id,selector);
+    get('[data-gate-type]').querySelectorAll('[data-gate-mode]').forEach(button=>{
+      button.addEventListener('click',()=>{
+        const gate=config.openings[id].gate;
+        gate.type=button.dataset.gateMode==='sliding'?'sliding':'swing';
+        config.openings=normalizeOpenings(config.sides,config.openings,config.gate);
+        afterProductEdit(id);
+      });
+    });
+    for(const [selector,key] of [
+      ['[data-gate-slide-direction]','slideDirection'],
+      ['[data-gate-tail-shape]','tailShape'],
+      ['[data-gate-center-post]','centerPost']
+    ]){
+      get(selector).addEventListener('change',event=>{
+        config.openings[id].gate[key]=key==='centerPost'?event.target.checked:event.target.value;
+        afterProductEdit(id);
+      });
+    }
     for(const kind of ['gate','wicket']){
       get('[data-'+kind+'-enabled]').addEventListener('change',event=>{
         config.openings[id][kind].enabled=event.target.checked;
@@ -1069,12 +1087,18 @@ export function mount3DCalculator(root) {
     const sideId=button.closest('[data-side-products]').dataset.sideProducts;
     const opening=config.openings[sideId][kind];
     if(!opening?.enabled)return;
-    const plan=getGateFramePlan({kind,...opening},config.postSize/1000,config.sides[sideId].height);
-    pendingDrawing=buildOpeningSketchSvg(plan,{sideId,opening,postSize:config.postSize,
-      fillName:FILL_LABELS[opening.fill==='side'?config.sides[sideId].fill:opening.fill]});
-    pendingDrawingFilename='KD-'+(kind==='gate'?'vorota-':'kalitka-')+sideId+'.svg';
+    const sliding=kind==='gate'&&opening.type==='sliding';
+    const plan=sliding?
+      getSlidingGatePlan(opening,config.postSize/1000,config.sides[sideId].height):
+      getGateFramePlan({kind,...opening},config.postSize/1000,config.sides[sideId].height);
+    const drawingData={sideId,opening,postSize:config.postSize,
+      fillName:FILL_LABELS[opening.fill==='side'?config.sides[sideId].fill:opening.fill]};
+    pendingDrawing=sliding?buildSlidingSketchSvg(plan,drawingData):
+      buildOpeningSketchSvg(plan,drawingData);
+    pendingDrawingFilename='KD-'+(sliding?'otkatnye-':kind==='gate'?'vorota-':'kalitka-')+sideId+'.svg';
     find('[data-drawing-title]').textContent='Эскиз: '+
-      (kind==='gate'?'ворота':'калитка')+' · сторона '+SIDE_NAMES[sideId];
+      (sliding?'откатные ворота':kind==='gate'?'ворота':'калитка')+
+      ' · сторона '+SIDE_NAMES[sideId];
     find('[data-drawing-preview]').innerHTML=pendingDrawing;
     if(!drawingDialog.open)drawingDialog.showModal();
   }));
