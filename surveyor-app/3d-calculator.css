@@ -309,3 +309,46 @@
   #threeDScreen .kd3d-side-inline-editor{margin-left:7px}
   #threeDScreen .kd3d-side-inline-editor .kd3d-product-card{padding:9px}
 }
+
+
+/* Always-visible, independent product controls directly beneath each side. */
+#threeDScreen .kd3d-side-quick{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+  gap:9px;margin:10px 0 8px 30px;min-width:0}
+#threeDScreen .kd3d-side-quick label{display:grid;gap:5px;min-width:0;
+  font-size:11px;font-weight:750;color:#68605a}
+#threeDScreen .kd3d-side-quick label:first-child{grid-column:1/-1}
+#threeDScreen .kd3d-side-quick select,#threeDScreen .kd3d-side-quick input{
+  width:100%;min-width:0;min-height:41px;max-width:100%;border:1px solid #dcd6ce;
+  border-radius:10px;background:#fff;padding:8px 9px;font-size:13px;
+  font-weight:700;color:#303841}
+#threeDScreen .kd3d-side-products{min-width:0;margin:11px 0 0 30px}
+#threeDScreen .kd3d-side-products[hidden],
+#threeDScreen .kd3d-side-products .kd3d-product-card[hidden],
+#threeDScreen .kd3d-side-extra-content[hidden]{display:none!important}
+#threeDScreen .kd3d-side-products .kd3d-gate-editor{
+  display:grid;gap:10px;background:none;border:0;padding:0}
+#threeDScreen .kd3d-side-products .kd3d-product-card{
+  display:grid;gap:10px;border:1px solid #efd5a0;
+  border-radius:14px;background:#fff8e7;padding:12px}
+#threeDScreen .kd3d-side-products .kd3d-product-wicket{
+  border-color:#b7e7d8;background:#eafaf5}
+#threeDScreen .kd3d-side-products .kd3d-gate-fields select{font-size:13px}
+#threeDScreen .kd3d-side-products .kd3d-gate-fields .kd3d-inner-frame{
+  display:flex;align-items:center;gap:9px;grid-column:1/-1;font-size:12px}
+#threeDScreen .kd3d-side-products .kd3d-inner-frame input{
+  min-height:19px;width:19px;flex:0 0 19px;accent-color:#c38e26}
+#threeDScreen .kd3d-side-products .kd3d-drawing-action{
+  grid-column:1/-1;width:100%;min-height:44px;border:1px solid #cca45c;
+  border-radius:10px;background:#fff;color:#855818;font-size:13px;font-weight:850}
+#threeDScreen .kd3d-side-products .kd3d-product-wicket .kd3d-drawing-action{
+  color:#287d6b;border-color:#83c9b7}
+#threeDScreen .kd3d-side-products .kd3d-gate-note{font-size:11px}
+#threeDScreen .kd3d-side-inline-editor{border-top:0;padding-top:0;margin-top:9px}
+#threeDScreen .kd3d-extra-toggle{width:100%;min-height:42px;
+  border:1px solid #e6e0d7;border-radius:11px;
+  background:#fff;color:#655b50;font-size:12px;font-weight:750;box-shadow:none}
+#threeDScreen .kd3d-side-extra-content{display:grid;gap:12px;padding:10px 0 0}
+@media(max-width:400px){
+  #threeDScreen .kd3d-side-products,#threeDScreen .kd3d-side-quick{margin-left:7px}
+  #threeDScreen .kd3d-side-products .kd3d-product-card{padding:10px}
+}
