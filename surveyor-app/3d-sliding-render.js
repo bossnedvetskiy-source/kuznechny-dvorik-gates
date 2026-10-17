@@ -128,7 +128,7 @@ export function renderSlidingGate(options){
       ownedGeometries.push(geometry);
       const material=new THREE.MeshBasicMaterial({
         color,side:THREE.DoubleSide,transparent:true,opacity:.48,
-        depthWrite:false,depthTest:false
+        depthWrite:false,depthTest:true
       });
       ownedMaterials.push(material);
       const band=new THREE.Mesh(geometry,material);
