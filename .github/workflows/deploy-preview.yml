@@ -66,6 +66,8 @@ jobs:
           node scripts/test-surveyor-3d-geometry.mjs
           node --check surveyor-app/3d-sliding-frame.js
           node --check surveyor-app/3d-sliding-render.js
+          node --check surveyor-app/3d-sliding-installation.js
+          node --check surveyor-app/3d-sliding-hardware.js
           node scripts/test-surveyor-3d-sliding.mjs
           node --check surveyor-app/3d-layout.js
           node scripts/test-surveyor-3d-layout.mjs
