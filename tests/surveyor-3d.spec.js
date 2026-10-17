@@ -317,3 +317,50 @@ test('3D расчёт opens independently in DEV and edits geometry without chan
   await expect(page.locator('#surveysScreen')).toBeVisible();
   await expect(page.locator('#screenTitle')).toHaveText('Замеры');
 });
+
+test('Встроенная калитка внутри распашных ворот — обе створки, порог и сохранение', async ({page})=>{
+  test.setTimeout(65000);
+  await page.goto('/kuznechny-dvorik-gates/zamer-app-v2/');
+  await page.locator('#loginInput').fill('zamer');
+  await page.locator('#passwordInput').fill('1234');
+  await page.locator('#loginForm button[type="submit"]').click();
+  await expect(page.locator('#mainView')).toBeVisible({timeout:10000});
+  await page.locator('#open3DCalcBtn').click();
+  const root=page.locator('#kd3dRoot');
+  await expect(root.locator('[data-stats]')).toContainText('Столбов',{timeout:15000});
+  const has3D=(await root.locator('.kd3d-scene canvas').count())>0;
+  const beforePosts=await root.locator('[data-stats]').innerText();
+  await root.locator('[data-opening-side="A"][data-opening-kind="gate"]').click();
+  await expect(root.locator('[data-builtin-area]')).toBeVisible();
+  const postsWithGate=await root.locator('[data-stats]').innerText();
+  await root.locator('[data-builtin-enabled]').check();
+  await expect(root.locator('[data-builtin-fields]')).toBeVisible();
+  await expect(root.locator('[data-parts]')).toContainText('встроенная калитка 1,0 м');
+  await expect(root.locator('[data-stats]')).toHaveText(postsWithGate);
+  if(has3D){
+    await expect(root).toHaveAttribute('data-scene-embedded-wickets','1');
+    await expect(root).toHaveAttribute('data-scene-thresholds','1');
+    await expect(root).toHaveAttribute('data-scene-hinges','6');
+    await expect(root).toHaveAttribute('data-scene-gate-leaves','2');
+    await expect(root).toHaveAttribute('data-scene-wicket-leaves','0');
+  }
+  await root.locator('[data-builtin-side]').selectOption('left');
+  await expect(root.locator('[data-parts]')).toContainText('в левой створке');
+  await root.locator('[data-builtin-width]').fill('0.9');
+  await root.locator('[data-builtin-width]').press('Tab');
+  const data=await page.evaluate(()=>JSON.parse(localStorage.getItem('kd-surveyor-3d-draft-v1')).openings.A.gate);
+  expect(data.builtInSide).toBe('left');
+  expect(data.builtInWidth).toBe(.9);
+  expect(data.builtInWicket).toBe(true);
+  await root.locator('[data-gate-width]').fill('2');
+  await root.locator('[data-gate-width]').press('Tab');
+  await expect(root.locator('[data-builtin-warning]')).toBeVisible();
+  if(has3D)await expect(root).toHaveAttribute('data-scene-embedded-wickets','0');
+  await root.locator('[data-gate-width]').fill('3.4');
+  await root.locator('[data-gate-width]').press('Tab');
+  await expect(root.locator('[data-builtin-warning]')).toBeHidden();
+  if(has3D)await expect(root).toHaveAttribute('data-scene-embedded-wickets','1');
+  await root.locator('[data-builtin-enabled]').uncheck();
+  if(has3D)await expect(root).toHaveAttribute('data-scene-embedded-wickets','0');
+  expect(await root.locator('[data-stats]').innerText()).toBe(postsWithGate);
+});
