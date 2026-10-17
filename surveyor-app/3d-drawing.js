@@ -78,3 +78,61 @@ export function buildOpeningSketchSvg(plan,options={}){
   <text x="60" y="666" font-size="14" font-weight="bold" fill="#a35a19">ЭСКИЗ ДЛЯ СОГЛАСОВАНИЯ · НЕ КАРТА РАСКРОЯ И НЕ ПРОИЗВОДСТВЕННЫЙ ЧЕРТЁЖ</text>
   </svg>`;
 }
+
+
+// Elevation-only sliding gate sketch. Uses the same geometry plan as Three.js.
+// Not a workshop cut map, structural certification or actual order calculation.
+export function buildSlidingSketchSvg(plan,options={}){
+  const {sideId='A',opening={},postSize=80,fillName='Как на стороне забора'}=options;
+  if(plan?.type!=='sliding'||!Number.isFinite(plan.tail))throw Error('Нет данных откатных ворот');
+  const minX=Math.min(plan.left,plan.tailFrom);
+  const scale=Math.min(770/plan.gateLength,280/plan.leafHeight);
+  const x=value=>160+(value-minX)*scale;
+  const y=value=>505-(value-plan.bottom)*scale;
+  const panelLeft=x(plan.left),panelRight=x(plan.right),top=y(plan.bottom+plan.leafHeight),bottom=y(plan.bottom);
+  const tip=x(plan.tailTip),junction=x(plan.junction);
+  const title='ОТКАТНЫЕ ВОРОТА · СТОРОНА '+sideId;
+  const shape=plan.tailShape==='square'?'квадратный':'треугольный';
+  const direction=plan.direction==='left'?'влево':'вправо';
+  const bar=(x1,y1,x2,y2,klass='steel')=>
+    '<path class="'+klass+'" d="M '+x1.toFixed(2)+' '+y1.toFixed(2)+' L '+x2.toFixed(2)+' '+y2.toFixed(2)+'"/>';
+  const parts=[
+    '<rect class="fill" x="'+panelLeft+'" y="'+top+'" width="'+(panelRight-panelLeft)+'" height="'+(bottom-top)+'"/>',
+    bar(panelLeft,top,panelRight,top),
+    bar(panelLeft,bottom,panelRight,bottom),
+    bar(panelLeft,top,panelLeft,bottom),
+    bar(panelRight,top,panelRight,bottom)
+  ];
+  if(opening.innerFrame!==false)parts.push(bar(panelLeft,(top+bottom)/2,panelRight,(top+bottom)/2,'inner'));
+  if(plan.centerPost)parts.push(bar((panelLeft+panelRight)/2,top,(panelLeft+panelRight)/2,bottom));
+  parts.push(bar(Math.min(panelLeft,tip),bottom+7,Math.max(panelRight,tip),bottom+7,'guide'));
+  if(plan.tailShape==='square'){
+    parts.push(bar(tip,top,tip,bottom),bar(tip,top,junction,top));
+    parts.push(bar(tip,bottom,junction,top,'brace'));
+  }else parts.push(bar(tip,bottom,junction,top,'brace'));
+  const spanStart=Math.min(panelLeft,tip),spanEnd=Math.max(panelRight,tip);
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 690" width="1100" height="690" role="img" aria-label="${safe(title)}">
+    <style>
+    text{font-family:Arial,"DejaVu Sans",sans-serif;fill:#24313e}
+    .steel{fill:none;stroke:#35465a;stroke-width:6;stroke-linecap:round}
+    .inner{fill:none;stroke:#627d95;stroke-width:4}
+    .fill{fill:#e9f0f4;stroke:#b7c8d3;stroke-width:1.5}
+    .guide{fill:none;stroke:#3c4550;stroke-width:12}
+    .brace{fill:none;stroke:#b27c2e;stroke-width:6}
+    .dim{stroke:#405669;stroke-width:1.5;fill:none}
+    </style>
+    <rect width="1100" height="690" fill="white"/>
+    <text x="60" y="61" font-size="27" font-weight="bold">${safe(title)}</text>
+    <text x="60" y="94" font-size="17">Вид спереди · откат ${safe(direction)} · хвостовик ${safe(shape)}</text>
+    ${parts.join('\n')}
+    <path class="dim" d="M ${panelLeft} 154 V 129 M ${panelRight} 154 V 129 M ${panelLeft} 138 H ${panelRight}"/>
+    <text x="${(panelLeft+panelRight)/2}" y="125" font-size="17" text-anchor="middle">${mm(plan.clearWidth)} мм между столбами</text>
+    <text x="${(tip+junction)/2}" y="${bottom+43}" font-size="16" text-anchor="middle">Хвост ${mm(plan.tail)} мм</text>
+    <text x="${(spanStart+spanEnd)/2}" y="${bottom+73}" font-size="17" text-anchor="middle">Полотно ${mm(plan.gateLength)} мм · балка ${plan.beam} м</text>
+    <path d="M 60 580 H 1040" stroke="#d5dfe6"/>
+    <text x="60" y="606" font-size="17">Проём ${mm(plan.openingWidth)} мм · высота полотна ${mm(plan.leafHeight)} мм</text>
+    <text x="60" y="631" font-size="17">Каркас ${safe((opening.frameProfile||'40x25').replace('x','×'))} мм · ${plan.centerPost?'со средней стойкой':'без средней стойки'} · столбы ${postSize} мм</text>
+    <text x="60" y="656" font-size="16">Обшивка: ${safe(fillName)}</text>
+    <text x="60" y="678" font-size="12" font-weight="bold">ЭСКИЗ ДЛЯ СОГЛАСОВАНИЯ · НЕ КАРТА РАСКРОЯ И НЕ ПРОИЗВОДСТВЕННЫЙ ЧЕРТЁЖ</text>
+  </svg>`;
+}
