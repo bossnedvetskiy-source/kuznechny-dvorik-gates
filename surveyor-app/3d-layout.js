@@ -5,6 +5,8 @@ export const SIDE_IDS=['A','B','V','G'];
 export const SIDE_NAMES={A:'А',B:'Б',V:'В',G:'Г'};
 export const FILL_IDS=['picket','picket-double','horizontal','horizontal-double','sheet','jalousie'];
 export const POST_MODES=['visible','behind'];
+export const FRAME_PROFILES=['40x25','40x40','60x40'];
+export const OPENING_FILLS=['side',...FILL_IDS];
 export const isHorizontalFill=fill=>fill==='horizontal'||fill==='horizontal-double';
 export const normalizePostMode=(fill,mode)=>
   isHorizontalFill(fill)?'visible':mode==='behind'?'behind':'visible';
@@ -89,6 +91,9 @@ export function normalizeSwingGate(saved,sideLength=12){
   return {enabled:input.enabled===true,type:'swing',width,
     offset:clamp(input.offset,0,Math.max(0,sideLength-width),1),
     openDirection:input.openDirection==='outward'?'outward':'inward',
+    frameProfile:FRAME_PROFILES.includes(input.frameProfile)?input.frameProfile:'40x25',
+    innerFrame:input.innerFrame!==false,
+    fill:OPENING_FILLS.includes(input.fill)?input.fill:'side',
     builtInWicket:input.builtInWicket===true,
     builtInSide:input.builtInSide==='left'?'left':'right',
     builtInWidth:clamp(input.builtInWidth,.7,1.2,1)};
@@ -99,7 +104,10 @@ export function normalizeWicket(saved,sideLength=12){
   return {enabled:input.enabled===true,type:'wicket',width,
     offset:clamp(input.offset,0,Math.max(0,sideLength-width),5),
     openDirection:input.openDirection==='outward'?'outward':'inward',
-    hingeSide:input.hingeSide==='right'?'right':'left'};
+    hingeSide:input.hingeSide==='right'?'right':'left',
+    frameProfile:FRAME_PROFILES.includes(input.frameProfile)?input.frameProfile:'40x25',
+    innerFrame:input.innerFrame!==false,
+    fill:OPENING_FILLS.includes(input.fill)?input.fill:'side'};
 }
 export function normalizeOpenings(sides,saved=null,legacyGate=null){
   const raw=saved&&typeof saved==='object'?saved:{};
@@ -144,6 +152,7 @@ function resolveSideOpenings(id,side,config,warnings){
     result.push({kind,type:item.type,sideId:id,width:item.width,
       start:offset,end:offset+item.width,offset,
       openDirection:item.openDirection,
+      frameProfile:item.frameProfile,innerFrame:item.innerFrame,fill:item.fill,
       ...(kind==='gate'?{
         builtInWicket:item.builtInWicket,builtInSide:item.builtInSide,
         builtInWidth:item.builtInWidth
