@@ -367,6 +367,7 @@ export function mount3DCalculator(root) {
   function syncGateInputs(){
     config.openings=normalizeOpenings(config.sides,config.openings,config.gate);
     config.gate=config.openings.A.gate; // Backward-compatible facade draft.
+    const sideLayout=getSiteLayout(config.sides,config.openings);
     for(const id of SIDE_IDS){
       const {gate,wicket}=config.openings[id];
       const get=selector=>productField(id,selector);
@@ -388,10 +389,24 @@ export function mount3DCalculator(root) {
       get('[data-gate-slide-direction]').value=gate.slideDirection;
       get('[data-gate-tail-shape]').value=gate.tailShape;
       get('[data-gate-center-post]').checked=gate.centerPost;
+      get('[data-gate-show-slide-zone]').checked=gate.showSlideZone;
+      get('[data-gate-slide-position="closed"]').setAttribute('aria-pressed',String(!gate.slideOpen));
+      get('[data-gate-slide-position="open"]').setAttribute('aria-pressed',String(gate.slideOpen));
       if(gate.type==='sliding'){
-        const model=getSlidingGatePlan(gate,config.postSize/1000,config.sides[id].height);
-        get('[data-gate-slide-geometry]').textContent='Хвостовик '+model.tail.toFixed(2).replace('.',',')+
-          ' м · балка '+model.beam+' м · общая длина '+model.gateLength.toFixed(2).replace('.',',')+' м.';
+        const edge=sideLayout.edges.find(e=>e.id===id);
+        const opening=edge?.gate||{...gate,start:gate.offset};
+        const travel=getSlidingTravelPlan(opening,config.sides[id].length,
+          edge?.openings||[],config.postSize/1000,config.sides[id].height);
+        const format=v=>v.toFixed(2).replace('.',',');
+        get('[data-gate-slide-geometry]').textContent='Хвостовик '+format(travel.tail)+
+          ' м · балка '+travel.beam+' м · полотно '+format(travel.gateLength)+' м.';
+        const status=get('[data-gate-zone-status]');
+        status.textContent='Для полного открытия нужно '+format(travel.required)+
+          ' м вдоль забора. Доступно '+format(travel.available)+' м.'+
+          (travel.shortage>.0001?' Не хватает '+format(travel.shortage)+' м.':'')+
+          (travel.wicketCollisions.length?' Зона отката пересекает калитку.':'')+
+          (travel.showZone?' Цветная полоса видна в 3D.':' Зона скрыта в 3D.');
+        status.classList.toggle('is-warning',!travel.valid);
       }
       get('[data-gate-frame-profile]').value=gate.frameProfile;
       get('[data-gate-fill]').value=gate.fill;
@@ -630,6 +645,9 @@ export function mount3DCalculator(root) {
       if(opening.kind==='gate'&&opening.type==='sliding'){
         const plan=getSlidingGatePlan(opening,config.postSize/1000,
           config.sides[opening.sideId].height);
+        const sideEdge=layout.edges.find(e=>e.id===opening.sideId);
+        const travel=getSlidingTravelPlan(opening,sideEdge.side.length,
+          sideEdge.openings,config.postSize/1000,sideEdge.side.height);
         description+='<p><b>Откатные ворота на стороне '+SIDE_NAMES[opening.sideId]+
           ':</b> проём '+format(opening.width)+' м, отступ '+format(opening.start)+
           ' м. Откат '+(plan.direction==='left'?'влево':'вправо')+
@@ -638,6 +656,11 @@ export function mount3DCalculator(root) {
           format2(plan.gateLength)+' м ·'+(plan.centerPost?' со средней стойкой':' без средней стойки')+
           ' · рама '+opening.frameProfile.replace('x','×')+
           (opening.fill!=='side'?' · заполнение '+FILL_LABELS[opening.fill]:' · заполнение как на заборе')+
+          '. Положение: '+(travel.isOpen?'открыто':'закрыто')+
+          ' · для отката требуется '+format2(travel.required)+' м, доступно '+
+          format2(travel.available)+' м'+
+          (travel.shortage>.0001?' (не хватает '+format2(travel.shortage)+' м)':'')+
+          (travel.wicketCollisions.length?' · пересечение с калиткой':'')+
           '. Визуальная модель, без расчёта цены и проверки прочности.</p>';
         continue;
       }
@@ -673,6 +696,8 @@ export function mount3DCalculator(root) {
     description+='<p class="kd3d-unpriced">Схема и количество столбов предварительные. '+
       'Без производственного раскроя, прочностной проверки и расчёта стоимости.</p>';
     parts.innerHTML=description;
+    find('[data-slide-legend]').hidden=Boolean(sceneHost.hidden)||
+      !layout.openings.some(o=>o.type==='sliding'&&o.showSlideZone);
     syncSideButtons();
     return layout;
   }
@@ -913,7 +938,8 @@ export function mount3DCalculator(root) {
           renderSlidingGate:renderGateFrame;
         renderOpening({
           group,base,opening,openingStart:start+opening.start,postWidth,
-          side,behind,gap:config.gap,postMat,fillMat,frameGeometry,
+          side,sideLength:side.length,otherOpenings:edge.openings,
+          behind,gap:config.gap,postMat,fillMat,frameGeometry,
           buildC10Geometry,buildPicketGeometry,instancePickets,horizontalPicketRows,
           verticalPicketPlan,ownedGeometries:previousLineGeometries,
           ownedMaterials:previousMaterials
