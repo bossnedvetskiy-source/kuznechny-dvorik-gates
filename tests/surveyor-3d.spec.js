@@ -256,6 +256,14 @@ test('3D расчёт opens independently in DEV and edits geometry without chan
   expect(withGate.enabled).toBe(true);
   expect(withGate.width).toBe(4);
   expect(withGate.offset).toBe(2);
+  await expect(page.locator('#kd3dRoot [data-gate-open-direction]')).toHaveValue('inward');
+  await page.locator('#kd3dRoot [data-gate-open-direction]').selectOption('outward');
+  await expect(page.locator('#kd3dRoot [data-parts]')).toContainText('открывание наружу участка');
+  const rotatedGate=await page.evaluate(()=>
+    JSON.parse(localStorage.getItem('kd-surveyor-3d-draft-v1')).openings.A.gate);
+  expect(rotatedGate.openDirection).toBe('outward');
+  if(hasReal3D)await expect(page.locator('#kd3dRoot'))
+    .toHaveAttribute('data-scene-swing-angles',/A:gate:left:0\.524;A:gate:right:-0\.524/);
   await showDimensions.check();
   await expect(page.locator('#kd3dRoot [data-parts]')).toContainText('Ворота: 3900 мм');
   if(hasReal3D){
@@ -287,6 +295,16 @@ test('3D расчёт opens independently in DEV and edits geometry without chan
     JSON.parse(localStorage.getItem('kd-surveyor-3d-draft-v1')).openings);
   expect(savedOpenings.B.gate.enabled).toBe(true);
   expect(savedOpenings.B.wicket.enabled).toBe(true);
+  await page.locator('#kd3dRoot [data-wicket-open-direction]').selectOption('outward');
+  await page.locator('#kd3dRoot [data-wicket-hinge-side]').selectOption('right');
+  await expect(page.locator('#kd3dRoot [data-parts]'))
+    .toContainText('открывание наружу участка · вправо, петли справа');
+  const directedWicket=await page.evaluate(()=>
+    JSON.parse(localStorage.getItem('kd-surveyor-3d-draft-v1')).openings.B.wicket);
+  expect(directedWicket.openDirection).toBe('outward');
+  expect(directedWicket.hingeSide).toBe('right');
+  if(hasReal3D)await expect(page.locator('#kd3dRoot'))
+    .toHaveAttribute('data-scene-swing-angles',/B:wicket:right:-0\.524/);
   expect(savedOpenings.A.gate.enabled).toBe(false);
   if(hasReal3D){
     await expect(page.locator('#kd3dRoot')).toHaveAttribute('data-scene-gate-leaves','2');
