@@ -1,14 +1,17 @@
 import * as THREE from '../naves/vendor/three.module.js';
-import { getSlidingTravelPlan } from './3d-sliding-frame.js';
+import { getSlidingInstallationPlan } from './3d-sliding-installation.js';
+import {renderSlidingHardware} from './3d-sliding-hardware.js';
 
 // One movable steel frame: a rectangular opening panel and a real cantilever
 // tail, either square or triangular. This is a visual model, not a cut list.
 export function renderSlidingGate(options){
   const {group,base,opening,openingStart,postWidth,side,sideLength,otherOpenings,
-    postMat,fillMat,gap,
+    installationPlan,postMat,fillMat,gap,
     frameGeometry,buildC10Geometry,buildPicketGeometry,instancePickets,
     horizontalPicketRows,verticalPicketPlan,ownedGeometries,ownedMaterials}=options;
-  const plan=getSlidingTravelPlan(opening,sideLength,otherOpenings,postWidth,side.height);
+  const plan=installationPlan||getSlidingInstallationPlan(opening,sideLength,otherOpenings,{
+    postWidth,sideHeight:side.height,postMode:side.postMode
+  });
   // Every steel member and sheet panel travels as ONE rigid assembly.
   // The ground parking zone remains stationary in the perimeter-side group.
   const moving=new THREE.Group();
@@ -21,7 +24,7 @@ export function renderSlidingGate(options){
   const tube=opening.frameProfile==='60x40'?.06:.04;
   const depth=opening.frameProfile==='40x25'?.025:.04;
   const x=value=>openingStart+value;
-  const z=plan.frameOffsetZ;
+  const z=plan.trackOffset;
   const yBottom=plan.bottom,yTop=yBottom+plan.leafHeight;
   const centerY=(yBottom+yTop)/2;
   function bar(x1,y1,x2,y2,width=tube){
@@ -117,6 +120,8 @@ export function renderSlidingGate(options){
       instancePickets(moving,geometry,fillMat,back,Math.PI);
     }
   }
+  renderSlidingHardware({group,base,opening,installation:plan,openingStart,
+    postWidth,postMat,frameGeometry,ownedGeometries,ownedMaterials});
   if(plan.showZone){
     // plan.from/to are SIDE-LOCAL positions; openingStart is relative to
     // the centre of the side and already contains opening.start.
@@ -150,6 +155,11 @@ export function renderSlidingGate(options){
     for(const wicket of plan.wicketCollisions)
       strip(Math.max(plan.from,wicket.start),Math.min(plan.to,wicket.end),
         0xe45044,'wicket',.043);
+    for(const obstacle of plan.collisions){
+      if(obstacle.kind==='obstacle'||obstacle.kind==='post'||obstacle.kind==='fence')
+        strip(Math.max(plan.from,obstacle.from),Math.min(plan.to,obstacle.to),
+          0xe45044,obstacle.kind,.048);
+    }
     // Arrows point from the opening toward the parking area; they are fixed
     // to the ground so the direction stays legible in open and closed views.
     const end=plan.direction==='left'?plan.from:plan.to;
