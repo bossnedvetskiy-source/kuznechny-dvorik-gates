@@ -1122,9 +1122,16 @@ export function mount3DCalculator(root) {
       // Face the length of whichever single side is enabled, not only side A.
       const edge=layout.edges[0],unitX=(edge.end.x-edge.start.x)/edge.side.length;
       const unitZ=(edge.end.z-edge.start.z)/edge.side.length;
-      camera.position.set(b.centerX-unitZ*dist*.94+unitX*dist*.1,
-        Math.max(3,dist*.38),b.centerZ+unitX*dist*.94+unitZ*dist*.1);
-    }else camera.position.set(b.centerX+dist*.49,Math.max(5,dist*.54),b.centerZ+dist*.85);
+      // Look from the OUTSIDE of the selected perimeter segment.
+      // Perimeter is ordered A(+X), B(+Z), V(-X), G(-Z): its outside is
+      // local -Z, thus +unitZ in world X and -unitX in world Z.
+      camera.position.set(b.centerX+unitZ*dist*.94+unitX*dist*.1,
+        Math.max(3,dist*.38),b.centerZ-unitX*dist*.94+unitZ*dist*.1);
+    }else {
+      // Street/facade viewpoint: A is in front and right-hand B must appear
+      // to the RIGHT of the image, not swapped by looking from the back.
+      camera.position.set(b.centerX+dist*.49,Math.max(5,dist*.54),b.centerZ-dist*.85);
+    }
     const maxHeight=Math.max(1.8,...layout.posts.map(p=>p.height));
     controls.target.set(b.centerX,maxHeight*.5,b.centerZ);
     controls.maxDistance=500;
