@@ -389,3 +389,58 @@
 @media(max-width:360px){
   #threeDScreen .kd3d-sliding-fields{grid-template-columns:1fr}
 }
+
+
+/* Side-local full sliding-travel preview; no storefront styles affected. */
+#threeDScreen .kd3d-slide-position{
+  grid-column:1/-1;display:grid;gap:8px;min-width:0
+}
+#threeDScreen .kd3d-slide-position>strong{
+  font-size:12px;font-weight:850;color:#53432b
+}
+#threeDScreen .kd3d-slide-position>div{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  padding:4px;gap:5px;background:#ebe9e5;border-radius:12px
+}
+#threeDScreen .kd3d-slide-position button{
+  min-width:0;min-height:42px;box-shadow:none;border:1px solid transparent;
+  border-radius:9px;background:transparent;color:#697079;
+  font-size:13px;font-weight:800;cursor:pointer
+}
+#threeDScreen .kd3d-slide-position button[aria-pressed="true"]{
+  background:#fff;color:#835315;border-color:#e3c895;
+  box-shadow:0 2px 5px #29251a16
+}
+#threeDScreen .kd3d-slide-position button:focus-visible{
+  outline:3px solid #c99538;outline-offset:1px
+}
+#threeDScreen .kd3d-sliding-fields .kd3d-slide-show-zone{
+  grid-column:1/-1;min-height:35px;display:flex;
+  align-items:center;gap:9px;font-size:12px
+}
+#threeDScreen .kd3d-slide-zone-status{
+  grid-column:1/-1;margin:0;padding:10px 11px;
+  background:#ecf9f0;border:1px solid #b6dfc4;
+  border-radius:11px;color:#206344;
+  font-size:12px;line-height:1.5
+}
+#threeDScreen .kd3d-slide-zone-status.is-warning{
+  background:#fff2e7;border-color:#edbd84;color:#97501b
+}
+#threeDScreen .kd3d-slide-legend[hidden]{display:none!important}
+#threeDScreen .kd3d-slide-legend{
+  position:absolute;left:10px;right:10px;bottom:11px;
+  display:flex;flex-wrap:wrap;align-items:center;gap:5px 11px;
+  padding:9px 10px;border-radius:11px;background:#fffffff0;
+  border:1px solid #dfe7e5;
+  pointer-events:none;z-index:2;box-shadow:0 2px 9px #00000015;
+  font-size:10px;color:#354b49;font-weight:750
+}
+#threeDScreen .kd3d-slide-legend span{display:flex;align-items:center;gap:5px}
+#threeDScreen .kd3d-slide-legend i{
+  width:11px;height:11px;display:inline-block;flex:0 0 11px;
+  border-radius:3px
+}
+#threeDScreen .kd3d-legend-ok{background:#2eac7b}
+#threeDScreen .kd3d-legend-blocked{background:#f0a036}
+#threeDScreen .kd3d-legend-wicket{background:#e45044}
