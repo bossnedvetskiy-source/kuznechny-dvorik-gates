@@ -336,7 +336,7 @@ test('Встроенная калитка внутри распашных вор
   await root.locator('[data-builtin-enabled]').check();
   await expect(root.locator('[data-builtin-fields]')).toBeVisible();
   await expect(root.locator('[data-parts]')).toContainText('встроенная калитка 1,0 м');
-  await expect(root.locator('[data-stats]')).toHaveText(postsWithGate);
+  expect(await root.locator('[data-stats]').innerText()).toBe(postsWithGate);
   if(has3D){
     await expect(root).toHaveAttribute('data-scene-embedded-wickets','1');
     await expect(root).toHaveAttribute('data-scene-thresholds','1');
