@@ -458,3 +458,80 @@ test('Редактор и эскизы находятся ВНУТРИ кажд�
   await expect(root.locator('[data-side-products="B"] [data-wicket-hinge-side]')).toHaveValue('right');
   await expect(root.locator('[data-side-products="A"] [data-wicket-enabled]')).not.toBeChecked();
 });
+
+
+test('Откатные ворота в сторонах А/Б: хвостовик, 3D, чертёж, сохранение без цены',async ({page})=>{
+  test.setTimeout(120000);
+  await page.goto('/kuznechny-dvorik-gates/zamer-app-v2/');
+  await page.locator('#loginInput').fill('zamer');
+  await page.locator('#passwordInput').fill('1234');
+  await page.locator('#loginForm button[type="submit"]').click();
+  await expect(page.locator('#mainView')).toBeVisible({timeout:10000});
+  await page.locator('#open3DCalcBtn').click();
+  const root=page.locator('#kd3dRoot');
+  await expect(root.locator('[data-stats]')).toContainText('Столбов',{timeout:15000});
+  const has3D=(await root.locator('.kd3d-scene canvas').count())>0;
+  const a=root.locator('[data-side-products="A"]');
+  const b=root.locator('[data-side-products="B"]');
+  await root.locator('[data-opening-side="A"][data-opening-kind="gate"]').click();
+  await expect(a.locator('[data-gate-type]')).toBeVisible();
+  await a.locator('[data-gate-mode="sliding"]').click();
+  await expect(a.locator('[data-gate-mode="sliding"]')).toHaveAttribute('aria-pressed','true');
+  await expect(a.locator('[data-gate-sliding-fields]')).toBeVisible();
+  await expect(a.locator('[data-gate-swing-direction]')).toBeHidden();
+  await expect(a.locator('[data-builtin-area]')).toBeHidden();
+  await a.locator('[data-gate-width]').fill('4');
+  await a.locator('[data-gate-width]').press('Tab');
+  await a.locator('[data-gate-offset]').fill('3');
+  await a.locator('[data-gate-offset]').press('Tab');
+  await a.locator('[data-gate-slide-direction]').selectOption('right');
+  await a.locator('[data-gate-tail-shape]').selectOption('triangle');
+  await a.locator('[data-gate-center-post]').check();
+  await a.locator('[data-gate-fill]').selectOption('sheet');
+  await expect(a.locator('[data-gate-slide-geometry]')).toContainText('Хвостовик 2,00 м');
+  await expect(root.locator('[data-parts]')).toContainText('Откатные ворота на стороне А');
+  await expect(root.locator('[data-parts]')).toContainText('хвостовик треугольный');
+  await expect(root.locator('[data-parts]')).toContainText('со средней стойкой');
+  if(has3D){
+    await expect(root).toHaveAttribute('data-scene-sliding-leaves','1');
+    await expect(root).toHaveAttribute('data-scene-sliding-tails','1');
+    await expect(root).toHaveAttribute('data-scene-sliding-centers','1');
+    await expect(root).toHaveAttribute('data-scene-gate-leaves','0');
+  }
+  await a.locator('[data-drawing-kind="gate"]').click();
+  await expect(root.locator('[data-drawing-dialog]')).toBeVisible();
+  await expect(root.locator('[data-drawing-preview]')).toContainText('ОТКАТНЫЕ ВОРОТА');
+  await expect(root.locator('[data-drawing-preview]')).toContainText('Хвост 2000 мм');
+  const downloadPromise=page.waitForEvent('download');
+  await root.locator('[data-drawing-download]').click();
+  const download=await downloadPromise;
+  expect(download.suggestedFilename()).toBe('KD-otkatnye-A.svg');
+  await root.locator('[data-drawing-close]').click();
+
+  // B has an independent rectangular counterweight; A's model stays intact.
+  await root.locator('[data-opening-side="B"][data-opening-kind="gate"]').click();
+  await b.locator('[data-gate-mode="sliding"]').click();
+  await b.locator('[data-gate-width]').fill('3.4');
+  await b.locator('[data-gate-width]').press('Tab');
+  await b.locator('[data-gate-offset]').fill('3');
+  await b.locator('[data-gate-offset]').press('Tab');
+  await b.locator('[data-gate-tail-shape]').selectOption('square');
+  await b.locator('[data-gate-slide-direction]').selectOption('left');
+  await expect(a.locator('[data-gate-tail-shape]')).toHaveValue('triangle');
+  await expect(a.locator('[data-gate-slide-direction]')).toHaveValue('right');
+  await expect(b.locator('[data-gate-tail-shape]')).toHaveValue('square');
+  await expect(root.locator('[data-parts]')).toContainText('Откатные ворота на стороне Б');
+  if(has3D)await expect(root).toHaveAttribute('data-scene-sliding-leaves','2');
+  const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('kd-surveyor-3d-draft-v1')).openings);
+  expect(saved.A.gate).toMatchObject({enabled:true,type:'sliding',width:4,
+    offset:3,slideDirection:'right',tailShape:'triangle',centerPost:true,fill:'sheet'});
+  expect(saved.B.gate).toMatchObject({enabled:true,type:'sliding',width:3.4,
+    offset:3,slideDirection:'left',tailShape:'square',centerPost:false});
+  await a.locator('[data-gate-mode="swing"]').click();
+  await expect(a.locator('[data-gate-swing-direction]')).toBeVisible();
+  await expect(a.locator('[data-gate-sliding-fields]')).toBeHidden();
+  if(has3D)await expect(root).toHaveAttribute('data-scene-sliding-leaves','1');
+  await a.locator('[data-gate-mode="sliding"]').click();
+  await expect(a.locator('[data-gate-tail-shape]')).toHaveValue('triangle');
+  await expect(root.locator('[data-site-warning]')).toBeHidden();
+});
