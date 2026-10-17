@@ -1,4 +1,6 @@
 import { getSlidingParkingWarning } from './3d-sliding-frame.js';
+import {normalizeSlidingObstacles,getSlidingInstallationPlan,
+  getSlidingInstallationWarnings} from './3d-sliding-installation.js';
 // DEV-only top view planner. All dimensions and coordinates are metres.
 // Sides: A bottom (+X), B right (+Z), V top (-X), G left (+Z).
 // Opposite sides may have distinct lengths; in that case an open contour is intentional.
@@ -98,6 +100,8 @@ export function normalizeSwingGate(saved,sideLength=12){
     centerPost:input.centerPost===true,
     slideOpen:input.slideOpen===true,
     showSlideZone:input.showSlideZone!==false,
+    trackOffset:clamp(input.trackOffset,.10,.60,.22),
+    obstacles:normalizeSlidingObstacles(input.obstacles,sideLength),
     frameProfile:FRAME_PROFILES.includes(input.frameProfile)?input.frameProfile:'40x25',
     innerFrame:input.innerFrame!==false,
     fill:OPENING_FILLS.includes(input.fill)?input.fill:'side',
@@ -162,7 +166,8 @@ function resolveSideOpenings(id,side,config,warnings){
       ...(kind==='gate'?{
         slideDirection:item.slideDirection,tailShape:item.tailShape,
         centerPost:item.centerPost,slideOpen:item.slideOpen,
-        showSlideZone:item.showSlideZone
+        showSlideZone:item.showSlideZone,
+        trackOffset:item.trackOffset,obstacles:item.obstacles
       }:{}),
       frameProfile:item.frameProfile,innerFrame:item.innerFrame,fill:item.fill,
       ...(kind==='gate'?{
@@ -172,7 +177,7 @@ function resolveSideOpenings(id,side,config,warnings){
   }
   return result.sort((a,b)=>a.start-b.start);
 }
-export function getSiteLayout(sides,openingsOrLegacyGate=null){
+export function getSiteLayout(sides,openingsOrLegacyGate=null,postSizeMm=80){
   const normalized=normalizeSides(sides);
   const {A,B,V,G}=normalized;
   // Compatibility with all previously saved A-side gate drafts / geometry tests.
@@ -246,6 +251,30 @@ export function getSiteLayout(sides,openingsOrLegacyGate=null){
     }
   }
   const posts=[...byCoordinate.values()];
+  // Check the entire swept frame corridor against actual fence posts, infill
+  // sections and obstacles supplied by the surveyor on THIS exact side.
+  const postWidth=Math.min(.1,Math.max(.06,(Number(postSizeMm)||80)/1000));
+  for(const edge of edges){
+    if(edge.gate?.type!=='sliding')continue;
+    const len=edge.side.length;
+    const ux=(edge.end.x-edge.start.x)/len;
+    const uz=(edge.end.z-edge.start.z)/len;
+    const localPosts=posts.filter(p=>
+      Math.abs((p.x-edge.start.x)*(-uz)+(p.z-edge.start.z)*ux)<.001
+    ).map(p=>(p.x-edge.start.x)*ux+(p.z-edge.start.z)*uz)
+      .filter(x=>x>=-.001&&x<=len+.001);
+    const sections=edge.sections.flatMap(sec=>Array.from(
+      {length:sec.count},(_,i)=>({
+        from:sec.from+i*sec.span,to:sec.from+(i+1)*sec.span
+      })));
+    const installation=getSlidingInstallationPlan(edge.gate,len,edge.openings,{
+      postWidth,sideHeight:edge.side.height,postMode:edge.side.postMode,
+      posts:localPosts,sections
+    });
+    edge.installation=installation;
+    for(const warning of getSlidingInstallationWarnings(installation))
+      warnings.push('Сторона '+SIDE_NAMES[edge.id]+': '+warning);
+  }
   const perimeter=edges.reduce((sum,e)=>sum+e.side.length,0);
   const fenceLength=edges.reduce((sum,e)=>sum+e.fenceLength,0);
   const totalSpans=edges.reduce((sum,e)=>sum+e.count,0);
