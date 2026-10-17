@@ -46,6 +46,9 @@ if (!threeD.includes('data-preset=') || !threeD.includes('data-section="sizes"')
   !stylesheetVersion || !sw.includes('./3d-calculator.css?v='+stylesheetVersion))
   throw new Error('Reference style editor or current stylesheet missing');
 if (!threeD.includes('drawDimensionGuides') || !threeD.includes('baselineZ=(id===') || !threeD.includes('data-show-dimensions') || !layout.includes('function getClearDimensionPlan') || !threeDCss.includes('kd3d-dim-switch')) throw new Error('Optional ground-offset clear dimension guides missing');
+if (!sw.includes('./3d-drawing.js') || !threeD.includes("from './3d-drawing.js'") ||
+  !threeD.includes('data-side-edit-slot') || !threeD.includes('data-drawing-kind') ||
+  !layout.includes('FRAME_PROFILES')) throw new Error('Inline side editor, per-product options or SVG drawing missing');
 if (!sw.includes('./3d-layout.js') || !layout.includes('function getSiteLayout') || !threeD.includes("from './3d-layout.js'"))
   throw new Error('Multi-side 3D geometry module missing from PWA');
 if (!gateFrame.includes('function getGateFramePlan') || !gateRender.includes('function renderGateFrame') ||
