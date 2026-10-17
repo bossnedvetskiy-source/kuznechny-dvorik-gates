@@ -65,6 +65,9 @@ test('3D расчёт opens independently in DEV and edits geometry without chan
   expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('kd-surveyor-3d-draft-v1')).showDimensions)).toBe(true);
   await showDimensions.uncheck();
   if(hasReal3D)await expect(page.locator('#kd3dRoot')).toHaveAttribute('data-scene-dimension-count','0');
+  // Advanced fence controls stay directly beneath the selected side and are
+  // collapsed initially so each product card is reachable without scrolling.
+  await page.locator('#kd3dRoot .kd3d-extra-toggle').click();
   // Standard 120 mm metal pickets are NEVER cut: warn first, then fit by reducing spacing.
   const gapAlert=page.locator('#kd3dRoot [data-gap-alert]');
   await expect(gapAlert).toBeVisible();
@@ -243,21 +246,21 @@ test('3D расчёт opens independently in DEV and edits geometry without chan
   await expect(page.locator('#kd3dRoot [data-opening-kind="wicket"]')).toHaveCount(4);
   await page.locator('#kd3dRoot [data-side="A"]').click();
   // A-side swing opening is a real hole in the fence with 2 separate gate leaves.
-  await expect(page.locator('#kd3dRoot [data-gate-enabled]')).not.toBeChecked();
-  await page.locator('#kd3dRoot [data-gate-enabled]').check();
-  await expect(page.locator('#kd3dRoot [data-gate-fields]')).toBeVisible();
-  await page.locator('#kd3dRoot [data-gate-width]').fill('4');
-  await page.locator('#kd3dRoot [data-gate-width]').press('Tab');
-  await page.locator('#kd3dRoot [data-gate-offset]').fill('2');
-  await page.locator('#kd3dRoot [data-gate-offset]').press('Tab');
+  await expect(page.locator('#kd3dRoot [data-side-products="A"] [data-gate-enabled]')).not.toBeChecked();
+  await page.locator('#kd3dRoot [data-opening-side="A"][data-opening-kind="gate"]').click();
+  await expect(page.locator('#kd3dRoot [data-side-products="A"] [data-gate-fields]')).toBeVisible();
+  await page.locator('#kd3dRoot [data-side-products="A"] [data-gate-width]').fill('4');
+  await page.locator('#kd3dRoot [data-side-products="A"] [data-gate-width]').press('Tab');
+  await page.locator('#kd3dRoot [data-side-products="A"] [data-gate-offset]').fill('2');
+  await page.locator('#kd3dRoot [data-side-products="A"] [data-gate-offset]').press('Tab');
   await expect(page.locator('#kd3dRoot [data-parts]')).toContainText('Распашные ворота на стороне А');
   await expect(page.locator('#kd3dRoot [data-parts]')).toContainText('отступ слева 2,0 м');
   const withGate=await page.evaluate(()=>JSON.parse(localStorage.getItem('kd-surveyor-3d-draft-v1')).gate);
   expect(withGate.enabled).toBe(true);
   expect(withGate.width).toBe(4);
   expect(withGate.offset).toBe(2);
-  await expect(page.locator('#kd3dRoot [data-gate-open-direction]')).toHaveValue('inward');
-  await page.locator('#kd3dRoot [data-gate-open-direction]').selectOption('outward');
+  await expect(page.locator('#kd3dRoot [data-side-products="A"] [data-gate-open-direction]')).toHaveValue('inward');
+  await page.locator('#kd3dRoot [data-side-products="A"] [data-gate-open-direction]').selectOption('outward');
   await expect(page.locator('#kd3dRoot [data-parts]')).toContainText('открывание наружу участка');
   const rotatedGate=await page.evaluate(()=>
     JSON.parse(localStorage.getItem('kd-surveyor-3d-draft-v1')).openings.A.gate);
@@ -276,7 +279,7 @@ test('3D расчёт opens independently in DEV and edits geometry without chan
     await expect(page.locator('#kd3dRoot')).toHaveAttribute('data-scene-gate-leaves','2');
     await expect(page.locator('#kd3dRoot')).toHaveAttribute('data-scene-gate-opening',/"start":2/);
   }
-  await page.locator('#kd3dRoot [data-gate-enabled]').uncheck();
+  await page.locator('#kd3dRoot [data-side-products="A"] [data-gate-enabled]').uncheck();
   if(hasReal3D)await expect(page.locator('#kd3dRoot')).toHaveAttribute('data-scene-gate-leaves','0');
   await expect(page.locator('#kd3dRoot [data-parts]')).not.toContainText('Распашные ворота на стороне А:');
 
@@ -285,9 +288,9 @@ test('3D расчёт opens independently in DEV and edits geometry without chan
   await expect(page.locator('#kd3dRoot [data-opening-side="B"][data-opening-kind="gate"]'))
     .toHaveAttribute('aria-pressed','true');
   await page.locator('#kd3dRoot [data-opening-side="B"][data-opening-kind="wicket"]').click();
-  await expect(page.locator('#kd3dRoot [data-wicket-fields]')).toBeVisible();
-  await page.locator('#kd3dRoot [data-wicket-offset]').fill('6');
-  await page.locator('#kd3dRoot [data-wicket-offset]').press('Tab');
+  await expect(page.locator('#kd3dRoot [data-side-products="B"] [data-wicket-fields]')).toBeVisible();
+  await page.locator('#kd3dRoot [data-side-products="B"] [data-wicket-offset]').fill('6');
+  await page.locator('#kd3dRoot [data-side-products="B"] [data-wicket-offset]').press('Tab');
   await expect(page.locator('#kd3dRoot [data-parts]')).toContainText('Распашные ворота на стороне Б');
   await expect(page.locator('#kd3dRoot [data-parts]')).toContainText('Калитка на стороне Б');
   await expect(page.locator('#kd3dRoot [data-parts]')).toContainText('Калитка: 900 мм');
@@ -295,8 +298,8 @@ test('3D расчёт opens independently in DEV and edits geometry without chan
     JSON.parse(localStorage.getItem('kd-surveyor-3d-draft-v1')).openings);
   expect(savedOpenings.B.gate.enabled).toBe(true);
   expect(savedOpenings.B.wicket.enabled).toBe(true);
-  await page.locator('#kd3dRoot [data-wicket-open-direction]').selectOption('outward');
-  await page.locator('#kd3dRoot [data-wicket-hinge-side]').selectOption('right');
+  await page.locator('#kd3dRoot [data-side-products="B"] [data-wicket-open-direction]').selectOption('outward');
+  await page.locator('#kd3dRoot [data-side-products="B"] [data-wicket-hinge-side]').selectOption('right');
   await expect(page.locator('#kd3dRoot [data-parts]'))
     .toContainText('открывание наружу участка · вправо, петли справа');
   const directedWicket=await page.evaluate(()=>
@@ -349,10 +352,10 @@ test('Встроенная калитка внутри распашных вор
   const has3D=(await root.locator('.kd3d-scene canvas').count())>0;
   const beforePosts=await root.locator('[data-stats]').innerText();
   await root.locator('[data-opening-side="A"][data-opening-kind="gate"]').click();
-  await expect(root.locator('[data-builtin-area]')).toBeVisible();
+  await expect(root.locator('[data-side-products="A"] [data-builtin-area]')).toBeVisible();
   const postsWithGate=await root.locator('[data-stats]').innerText();
-  await root.locator('[data-builtin-enabled]').check();
-  await expect(root.locator('[data-builtin-fields]')).toBeVisible();
+  await root.locator('[data-side-products="A"] [data-builtin-enabled]').check();
+  await expect(root.locator('[data-side-products="A"] [data-builtin-fields]')).toBeVisible();
   await expect(root.locator('[data-parts]')).toContainText('встроенная калитка 1,0 м');
   expect(await root.locator('[data-stats]').innerText()).toBe(postsWithGate);
   if(has3D){
@@ -362,23 +365,23 @@ test('Встроенная калитка внутри распашных вор
     await expect(root).toHaveAttribute('data-scene-gate-leaves','2');
     await expect(root).toHaveAttribute('data-scene-wicket-leaves','0');
   }
-  await root.locator('[data-builtin-side]').selectOption('left');
+  await root.locator('[data-side-products="A"] [data-builtin-side]').selectOption('left');
   await expect(root.locator('[data-parts]')).toContainText('в левой створке');
-  await root.locator('[data-builtin-width]').fill('0.9');
-  await root.locator('[data-builtin-width]').press('Tab');
+  await root.locator('[data-side-products="A"] [data-builtin-width]').fill('0.9');
+  await root.locator('[data-side-products="A"] [data-builtin-width]').press('Tab');
   const data=await page.evaluate(()=>JSON.parse(localStorage.getItem('kd-surveyor-3d-draft-v1')).openings.A.gate);
   expect(data.builtInSide).toBe('left');
   expect(data.builtInWidth).toBe(.9);
   expect(data.builtInWicket).toBe(true);
-  await root.locator('[data-gate-width]').fill('2');
-  await root.locator('[data-gate-width]').press('Tab');
-  await expect(root.locator('[data-builtin-warning]')).toBeVisible();
+  await root.locator('[data-side-products="A"] [data-gate-width]').fill('2');
+  await root.locator('[data-side-products="A"] [data-gate-width]').press('Tab');
+  await expect(root.locator('[data-side-products="A"] [data-builtin-warning]')).toBeVisible();
   if(has3D)await expect(root).toHaveAttribute('data-scene-embedded-wickets','0');
-  await root.locator('[data-gate-width]').fill('3.4');
-  await root.locator('[data-gate-width]').press('Tab');
-  await expect(root.locator('[data-builtin-warning]')).toBeHidden();
+  await root.locator('[data-side-products="A"] [data-gate-width]').fill('3.4');
+  await root.locator('[data-side-products="A"] [data-gate-width]').press('Tab');
+  await expect(root.locator('[data-side-products="A"] [data-builtin-warning]')).toBeHidden();
   if(has3D)await expect(root).toHaveAttribute('data-scene-embedded-wickets','1');
-  await root.locator('[data-builtin-enabled]').uncheck();
+  await root.locator('[data-side-products="A"] [data-builtin-enabled]').uncheck();
   if(has3D)await expect(root).toHaveAttribute('data-scene-embedded-wickets','0');
   expect(await root.locator('[data-stats]').innerText()).toBe(postsWithGate);
 });
@@ -394,24 +397,30 @@ test('Редактор и эскизы находятся ВНУТРИ кажд�
   await page.locator('#open3DCalcBtn').click();
   const root=page.locator('#kd3dRoot');
   await expect(root.locator('[data-stats]')).toContainText('Столбов',{timeout:12000});
-  // One editor, physically inside the selected side; nothing left below all four cards.
+  // Every side has permanent product cards. Only advanced fence controls follow selection.
   await expect(root.locator('[data-side-edit-slot="A"] .kd3d-side-inline-editor')).toHaveCount(1);
   await expect(root.locator('[data-side-edit-slot="B"] .kd3d-side-inline-editor')).toHaveCount(0);
+  await expect(root.locator('[data-side-products]')).toHaveCount(4);
+  for(const id of ['A','B','V','G']){
+    await expect(root.locator('[data-side-products="'+id+'"] .kd3d-product-gate')).toHaveCount(1);
+    await expect(root.locator('[data-side-products="'+id+'"] .kd3d-product-wicket')).toHaveCount(1);
+    await expect(root.locator('[data-side-quick-fill="'+id+'"]')).toHaveCount(1);
+  }
   await expect(root.locator('[data-side-entry="A"] [data-gate-editor]')).toHaveCount(1);
   await expect(root.locator('[data-side-entry="A"] [data-section="fill"]')).toHaveCount(1);
   await expect(root.locator('[data-side-entry="A"] [data-section="type"]')).toHaveCount(1);
   await root.locator('[data-opening-side="A"][data-opening-kind="gate"]').click();
-  await expect(root.locator('[data-gate-fields]')).toBeVisible();
-  await root.locator('[data-gate-frame-profile]').selectOption('60x40');
-  await root.locator('[data-gate-fill]').selectOption('sheet');
-  await root.locator('[data-gate-inner-frame]').uncheck();
+  await expect(root.locator('[data-side-products="A"] [data-gate-fields]')).toBeVisible();
+  await root.locator('[data-side-products="A"] [data-gate-frame-profile]').selectOption('60x40');
+  await root.locator('[data-side-products="A"] [data-gate-fill]').selectOption('sheet');
+  await root.locator('[data-side-products="A"] [data-gate-inner-frame]').uncheck();
   await expect(root.locator('[data-parts]')).toContainText('рама 60×40');
   await expect(root.locator('[data-parts]')).toContainText('обшивка Профнастил');
   const a=await page.evaluate(()=>JSON.parse(localStorage.getItem('kd-surveyor-3d-draft-v1')).openings.A.gate);
   expect(a.frameProfile).toBe('60x40');
   expect(a.fill).toBe('sheet');
   expect(a.innerFrame).toBe(false);
-  await root.locator('[data-drawing-kind="gate"]').click();
+  await root.locator('[data-side-products="A"] [data-drawing-kind="gate"]').click();
   await expect(root.locator('[data-drawing-dialog]')).toBeVisible();
   await expect(root.locator('[data-drawing-preview] svg')).toHaveCount(1);
   await expect(root.locator('[data-drawing-preview]')).toContainText('РАСПАШНЫЕ ВОРОТА');
@@ -423,20 +432,29 @@ test('Редактор и эскизы находятся ВНУТРИ кажд�
   // Side B has its OWN data even when A remains enabled.
   await root.locator('[data-side-toggle="B"]').check();
   await root.locator('[data-side="B"]').click();
+  await root.locator('[data-side-quick-fill="B"]').selectOption('sheet');
+  await root.locator('[data-side-quick-height="B"]').fill('2.4');
+  await root.locator('[data-side-quick-height="B"]').press('Tab');
+  const sideBDraft=await page.evaluate(()=>
+    JSON.parse(localStorage.getItem('kd-surveyor-3d-draft-v1')).sides.B);
+  expect(sideBDraft.fill).toBe('sheet');
+  expect(sideBDraft.height).toBe(2.4);
   await expect(root.locator('[data-side-edit-slot="B"] .kd3d-side-inline-editor')).toHaveCount(1);
   await expect(root.locator('[data-side-edit-slot="A"] .kd3d-side-inline-editor')).toHaveCount(0);
-  await expect(root.locator('[data-gate-enabled]')).not.toBeChecked();
+  await expect(root.locator('[data-side-products="B"] [data-gate-enabled]')).not.toBeChecked();
   await root.locator('[data-opening-side="B"][data-opening-kind="wicket"]').click();
-  await root.locator('[data-wicket-frame-profile]').selectOption('40x40');
-  await root.locator('[data-wicket-fill]').selectOption('picket-double');
-  await root.locator('[data-wicket-hinge-side]').selectOption('right');
-  await root.locator('[data-drawing-kind="wicket"]').click();
+  await root.locator('[data-side-products="B"] [data-wicket-frame-profile]').selectOption('40x40');
+  await root.locator('[data-side-products="B"] [data-wicket-fill]').selectOption('picket-double');
+  await root.locator('[data-side-products="B"] [data-wicket-hinge-side]').selectOption('right');
+  await root.locator('[data-side-products="B"] [data-drawing-kind="wicket"]').click();
   await expect(root.locator('[data-drawing-preview]')).toContainText('КАЛИТКА');
   await expect(root.locator('[data-drawing-preview]')).toContainText('Петли: справа');
   await root.locator('[data-drawing-close]').click();
   await root.locator('[data-side="A"]').click();
-  await expect(root.locator('[data-gate-enabled]')).toBeChecked();
-  await expect(root.locator('[data-gate-frame-profile]')).toHaveValue('60x40');
-  await expect(root.locator('[data-gate-fill]')).toHaveValue('sheet');
-  await expect(root.locator('[data-wicket-enabled]')).not.toBeChecked();
+  await expect(root.locator('[data-side-products="A"] [data-gate-enabled]')).toBeChecked();
+  await expect(root.locator('[data-side-products="A"] [data-gate-frame-profile]')).toHaveValue('60x40');
+  await expect(root.locator('[data-side-products="A"] [data-gate-fill]')).toHaveValue('sheet');
+  await expect(root.locator('[data-side-quick-fill="B"]')).toHaveValue('sheet');
+  await expect(root.locator('[data-side-products="B"] [data-wicket-hinge-side]')).toHaveValue('right');
+  await expect(root.locator('[data-side-products="A"] [data-wicket-enabled]')).not.toBeChecked();
 });
