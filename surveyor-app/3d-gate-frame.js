@@ -34,8 +34,9 @@ export function getGateFramePlan(opening,postWidth,sideHeight){
     const hingeSide=kind==='gate'?(i===1?'right':'left'):
       (opening.hingeSide==='right'?'right':'left');
     // Local +Z points inside the plot on each of its four perimeter sides.
-    const swingAngle=(openDirection==='inward'?1:-1)*
-      (hingeSide==='left'?-1:1)*Math.PI/6;
+    const swingAngle=opening.swingOpen===true?
+      (openDirection==='inward'?1:-1)*
+      (hingeSide==='left'?-1:1)*Math.PI/2:0;
     const outerHingeEdge=hingeSide==='left'?left:right;
     const face=hingeSide==='left'?postFaceLeft:postFaceRight;
     const hingeAxis=(outerHingeEdge+face)/2;
