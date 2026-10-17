@@ -1,5 +1,5 @@
-const CACHE = 'kd-surveyor-v3-sliding-gates-v21';
-const CORE = ['./index.html','./styles.css','./app.js','./line-builder.js','./calculator-bridge.js','./3d-calculator.js','./3d-layout.js','./3d-gate-frame.js','./3d-gate-render.js','./3d-sliding-frame.js','./3d-sliding-render.js','./3d-drawing.js','./3d-calculator.css?v=sliding-gates-20261017','./manifest.webmanifest','./icon.svg','./sliding-gates/index.html'];
+const CACHE = 'kd-surveyor-v3-sliding-travel-v22';
+const CORE = ['./index.html','./styles.css','./app.js','./line-builder.js','./calculator-bridge.js','./3d-calculator.js','./3d-layout.js','./3d-gate-frame.js','./3d-gate-render.js','./3d-sliding-frame.js','./3d-sliding-render.js','./3d-drawing.js','./3d-calculator.css?v=sliding-travel-20261017','./manifest.webmanifest','./icon.svg','./sliding-gates/index.html'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(CORE)).then(() => self.skipWaiting()));
 });
