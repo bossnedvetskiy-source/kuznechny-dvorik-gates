@@ -88,6 +88,7 @@ export function normalizeSwingGate(saved,sideLength=12){
   const width=clamp(input.width,2,6,3.4);
   return {enabled:input.enabled===true,type:'swing',width,
     offset:clamp(input.offset,0,Math.max(0,sideLength-width),1),
+    openDirection:input.openDirection==='outward'?'outward':'inward',
     builtInWicket:input.builtInWicket===true,
     builtInSide:input.builtInSide==='left'?'left':'right',
     builtInWidth:clamp(input.builtInWidth,.7,1.2,1)};
@@ -96,7 +97,9 @@ export function normalizeWicket(saved,sideLength=12){
   const input=saved&&typeof saved==='object'?saved:{};
   const width=clamp(input.width,.7,1.5,1);
   return {enabled:input.enabled===true,type:'wicket',width,
-    offset:clamp(input.offset,0,Math.max(0,sideLength-width),5)};
+    offset:clamp(input.offset,0,Math.max(0,sideLength-width),5),
+    openDirection:input.openDirection==='outward'?'outward':'inward',
+    hingeSide:input.hingeSide==='right'?'right':'left'};
 }
 export function normalizeOpenings(sides,saved=null,legacyGate=null){
   const raw=saved&&typeof saved==='object'?saved:{};
@@ -140,10 +143,11 @@ function resolveSideOpenings(id,side,config,warnings){
     }
     result.push({kind,type:item.type,sideId:id,width:item.width,
       start:offset,end:offset+item.width,offset,
+      openDirection:item.openDirection,
       ...(kind==='gate'?{
         builtInWicket:item.builtInWicket,builtInSide:item.builtInSide,
         builtInWidth:item.builtInWidth
-      }:{})});
+      }:{hingeSide:item.hingeSide})});
   }
   return result.sort((a,b)=>a.start-b.start);
 }
