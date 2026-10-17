@@ -96,6 +96,8 @@ export function normalizeSwingGate(saved,sideLength=12){
     slideDirection:input.slideDirection==='right'?'right':'left',
     tailShape:input.tailShape==='triangle'?'triangle':'square',
     centerPost:input.centerPost===true,
+    slideOpen:input.slideOpen===true,
+    showSlideZone:input.showSlideZone!==false,
     frameProfile:FRAME_PROFILES.includes(input.frameProfile)?input.frameProfile:'40x25',
     innerFrame:input.innerFrame!==false,
     fill:OPENING_FILLS.includes(input.fill)?input.fill:'side',
@@ -159,7 +161,8 @@ function resolveSideOpenings(id,side,config,warnings){
       openDirection:item.openDirection,
       ...(kind==='gate'?{
         slideDirection:item.slideDirection,tailShape:item.tailShape,
-        centerPost:item.centerPost
+        centerPost:item.centerPost,slideOpen:item.slideOpen,
+        showSlideZone:item.showSlideZone
       }:{}),
       frameProfile:item.frameProfile,innerFrame:item.innerFrame,fill:item.fill,
       ...(kind==='gate'?{
