@@ -118,6 +118,11 @@ export function renderSlidingGate(options){
     }
   }
   if(plan.showZone){
+    // plan.from/to are SIDE-LOCAL positions; openingStart is relative to
+    // the centre of the side and already contains opening.start.
+    // Subtract the opening offset once or the ground band drifts from the
+    // actual parking space whenever the gate is moved off the corner.
+    const sideBaseX=openingStart-plan.start;
     // Transparent ground strips: green = available space along this side;
     // amber = part of the necessary parking that extends beyond its corner.
     // Amber marks a wicket collision as well. This is a planning aid, not
@@ -133,7 +138,7 @@ export function renderSlidingGate(options){
       ownedMaterials.push(material);
       const band=new THREE.Mesh(geometry,material);
       band.rotation.x=-Math.PI/2;
-      band.position.set(openingStart+(from+to)/2,level,.44);
+      band.position.set(sideBaseX+(from+to)/2,level,.44);
       band.renderOrder=9;
       band.userData.kdSlidingParkingZone=kind;
       band.userData.kdSlidingParkingSide=opening.sideId;
@@ -151,7 +156,7 @@ export function renderSlidingGate(options){
     const origin=plan.boundary;
     const sign=plan.direction==='left'?-1:1;
     const wing=Math.min(.23,plan.required*.12);
-    const ax=openingsX=>openingStart+openingsX;
+    const ax=distance=>sideBaseX+distance;
     const vertices=[
       ax(origin),.087,.44,ax(end),.087,.44,
       ax(end),.087,.44,ax(end-sign*wing),.087,.44-wing*.50,
