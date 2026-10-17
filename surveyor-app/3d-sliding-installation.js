@@ -34,8 +34,11 @@ export function getSlidingInstallationPlan(opening,sideLength,otherOpenings=[],
   const laneHalfDepth=.066+safety;
   const lane={from:trackOffset-laneHalfDepth,to:trackOffset+laneHalfDepth};
   // Full body passes between its closed and fully opened positions.
-  const swept={from:Math.min(travel.closedFrom,travel.movingFrom),
-    to:Math.max(travel.closedTo,travel.movingTo)};
+  // Check the ENTIRE motion even while the user is viewing the CLOSED gate.
+  // travel.movingFrom/movingTo represent its CURRENT preview state only.
+  const fullStroke=(travel.direction==='right'?1:-1)*travel.openingWidth;
+  const swept={from:Math.min(travel.closedFrom,travel.closedFrom+fullStroke),
+    to:Math.max(travel.closedTo,travel.closedTo+fullStroke)};
   const sign=travel.direction==='right'?1:-1;
   const rollerPositions=[.23,.77].map(t=>travel.boundary+sign*travel.tail*t);
   const foundation={
