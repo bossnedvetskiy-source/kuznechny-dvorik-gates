@@ -188,7 +188,7 @@ export function mount3DCalculator(root) {
     '<div class="kd3d-top"><div><strong>Конструктор участка</strong><small>3D расчёт · DEV</small></div><span>DEV</span></div>',
     '<div class="kd3d-mode" role="group" aria-label="Вид результата"><button type="button" data-mode="scene" class="active">3D-модель</button><button type="button" data-mode="parts">Комплектация</button></div>',
     '<div class="kd3d-viewport" data-viewport><div class="kd3d-scene" data-scene></div><div class="kd3d-parts" data-parts hidden></div>',
-    '<div class="kd3d-scene-controls"><button type="button" data-fit>Показать целиком</button></div><div class="kd3d-slide-legend" data-slide-legend hidden><span><i class="kd3d-legend-ok"></i> Свободное место</span><span><i class="kd3d-legend-blocked"></i> Не хватает места</span><span><i class="kd3d-legend-wicket"></i> Калитка</span></div>',
+    '<div class="kd3d-scene-controls"><button type="button" data-fit>Показать целиком</button></div><div class="kd3d-scene-slide-controls" data-scene-slide-controls hidden><small data-scene-slide-label>Сторона А</small><div><button type="button" data-scene-slide-position="closed" aria-pressed="true">Закрыто</button><button type="button" data-scene-slide-position="open" aria-pressed="false">Открыто</button></div></div><div class="kd3d-slide-legend" data-slide-legend hidden><span><i class="kd3d-legend-ok"></i> Свободное место</span><span><i class="kd3d-legend-blocked"></i> Не хватает места</span><span><i class="kd3d-legend-wicket"></i> Калитка</span></div>',
     '<p class="kd3d-webgl-error" data-error hidden></p></div>',
     '<div class="kd3d-form kd3d-editor"><div class="kd3d-editor-head"><h3>Параметры забора</h3><button type="button" data-collapse-params aria-expanded="true">Свернуть <span aria-hidden="true">⌃</span></button></div>',
     '<div class="kd3d-editor-content" data-editor-content>',
@@ -444,6 +444,15 @@ export function mount3DCalculator(root) {
           'На этой стороне есть ворота и калитка. Проёмы не пересекаются; общий столб учитывается один раз.':
           'Отступ измеряется от начала стороны '+SIDE_NAMES[id]+'.';
     }
+    const selectedGate=config.openings[config.activeSide].gate;
+    const sceneButtons=find('[data-scene-slide-controls]');
+    sceneButtons.hidden=!(selectedGate.enabled&&selectedGate.type==='sliding')||
+      Boolean(root.querySelector('[data-scene]').hidden);
+    find('[data-scene-slide-label]').textContent='Ворота · сторона '+SIDE_NAMES[config.activeSide];
+    root.querySelectorAll('[data-scene-slide-position]').forEach(button=>{
+      button.setAttribute('aria-pressed',String(
+        (button.dataset.sceneSlidePosition==='open')===selectedGate.slideOpen));
+    });
   }
   function syncPostMode(){
     const side=activeSettings();
@@ -1150,6 +1159,15 @@ export function mount3DCalculator(root) {
       afterProductEdit(id);
     });
   }
+  root.querySelectorAll('[data-scene-slide-position]').forEach(button=>{
+    button.addEventListener('click',()=>{
+      const id=config.activeSide;
+      if(!config.openings[id].gate.enabled||config.openings[id].gate.type!=='sliding')return;
+      config.openings[id].gate.slideOpen=button.dataset.sceneSlidePosition==='open';
+      afterProductEdit(id);
+      fit();
+    });
+  });
   let pendingDrawing='';
   let pendingDrawingFilename='';
   const drawingDialog=find('[data-drawing-dialog]');
@@ -1349,6 +1367,9 @@ export function mount3DCalculator(root) {
     const isScene=button.dataset.mode==='scene';
     root.querySelectorAll('[data-mode]').forEach(b=>b.classList.toggle('active',b===button));
     sceneHost.hidden=!isScene;parts.hidden=isScene;
+    root.querySelector('[data-scene-slide-controls]').hidden=!isScene||
+      !(config.openings[config.activeSide].gate.enabled&&
+        config.openings[config.activeSide].gate.type==='sliding');
     root.querySelector('[data-slide-legend]').hidden=!isScene||
       !getSiteLayout(config.sides,config.openings).openings.some(o=>
         o.kind==='gate'&&o.type==='sliding'&&o.showSlideZone);
