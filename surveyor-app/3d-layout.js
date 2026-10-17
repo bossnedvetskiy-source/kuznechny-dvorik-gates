@@ -95,6 +95,7 @@ export function normalizeSwingGate(saved,sideLength=12){
   return {enabled:input.enabled===true,type,width,
     offset:clamp(input.offset,0,Math.max(0,sideLength-width),1),
     openDirection:input.openDirection==='outward'?'outward':'inward',
+    swingOpen:input.swingOpen===true,
     slideDirection:input.slideDirection==='right'?'right':'left',
     tailShape:input.tailShape==='triangle'?'triangle':'square',
     centerPost:input.centerPost===true,
@@ -115,6 +116,7 @@ export function normalizeWicket(saved,sideLength=12){
   return {enabled:input.enabled===true,type:'wicket',width,
     offset:clamp(input.offset,0,Math.max(0,sideLength-width),5),
     openDirection:input.openDirection==='outward'?'outward':'inward',
+    swingOpen:input.swingOpen===true,
     hingeSide:input.hingeSide==='right'?'right':'left',
     frameProfile:FRAME_PROFILES.includes(input.frameProfile)?input.frameProfile:'40x25',
     innerFrame:input.innerFrame!==false,
@@ -162,7 +164,7 @@ function resolveSideOpenings(id,side,config,warnings){
     }
     result.push({kind,type:item.type,sideId:id,width:item.width,
       start:offset,end:offset+item.width,offset,
-      openDirection:item.openDirection,
+      openDirection:item.openDirection,swingOpen:item.swingOpen,
       ...(kind==='gate'?{
         slideDirection:item.slideDirection,tailShape:item.tailShape,
         centerPost:item.centerPost,slideOpen:item.slideOpen,
