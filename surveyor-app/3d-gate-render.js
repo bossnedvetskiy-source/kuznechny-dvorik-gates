@@ -11,7 +11,10 @@ export function renderGateFrame(options){
     ownedGeometries,ownedMaterials}=options;
   const plan=getGateFramePlan(opening,postWidth,side.height);
   const z=behind?.093:0,faceZ=z+.029;
-  const tube=GATE_FRAME_VISUAL.outerProfileWidth;
+  const tube=opening.frameProfile==='60x40'?.06:GATE_FRAME_VISUAL.outerProfileWidth;
+  const profileDepth=opening.frameProfile==='60x40'||opening.frameProfile==='40x40'?.04:
+    GATE_FRAME_VISUAL.outerProfileDepth;
+  const infillKind=opening.fill&&opening.fill!=='side'?opening.fill:side.fill;
   const hingeMat=new THREE.MeshStandardMaterial({
     color:0x323940,metalness:.60,roughness:.36
   });
@@ -45,15 +48,15 @@ export function renderGateFrame(options){
     // 40x25 mm outside frame, with 40x20 mm center rail.
     for(const x of [-edgeX,edgeX])
       frameGeometry(leaf,base,tube,part.height-2*tube,
-        GATE_FRAME_VISUAL.outerProfileDepth,x,midY,z,postMat);
+        profileDepth,x,midY,z,postMat);
     for(const y of [bottom+tube/2,bottom+part.height-tube/2])
       frameGeometry(leaf,base,part.width,tube,
-        GATE_FRAME_VISUAL.outerProfileDepth,0,y,z,postMat);
-    if(embedded){
+        profileDepth,0,y,z,postMat);
+    if(embedded&&opening.innerFrame!==false){
       frameGeometry(leaf,base,Math.max(.08,embedded.fixedWidth-.045),
         GATE_FRAME_VISUAL.railWidth,GATE_FRAME_VISUAL.railDepth,
         (embedded.fixedLeft+embedded.fixedRight)/2,midY,z-.005,postMat);
-    }else frameGeometry(leaf,base,part.width-2*tube,GATE_FRAME_VISUAL.railWidth,
+    }else if(!embedded&&opening.innerFrame!==false)frameGeometry(leaf,base,part.width-2*tube,GATE_FRAME_VISUAL.railWidth,
       GATE_FRAME_VISUAL.railDepth,0,midY,z-.005,postMat);
     // Stiffening brace on the back: low at the hinge, high at the free end.
     const xa=part.hingeSide==='left'?-half+.068:half-.068;
@@ -68,16 +71,16 @@ export function renderGateFrame(options){
     brace.userData.kdDiagonalBrace=true;
     function renderInfill(xCenter,insideWidth,insideHeight,fillY,target=leaf){
       if(insideWidth<.09||insideHeight<.1)return;
-      if(side.fill==='sheet'){
+      if(infillKind==='sheet'){
         const geo=buildC10Geometry(insideWidth,insideHeight);
         ownedGeometries.push(geo);
         const panel=new THREE.Mesh(geo,fillMat);
         panel.position.set(xCenter,fillY,faceZ);
         target.add(panel);
-      }else if(side.fill==='horizontal'||side.fill==='horizontal-double'||side.fill==='jalousie'){
-        const double=side.fill==='horizontal-double';
+      }else if(infillKind==='horizontal'||infillKind==='horizontal-double'||infillKind==='jalousie'){
+        const double=infillKind==='horizontal-double';
         const rows=horizontalPicketRows(insideHeight,gap,double);
-        if(side.fill==='jalousie'){
+        if(infillKind==='jalousie'){
           rows.front.forEach(y=>frameGeometry(target,base,insideWidth,.11,.023,
             xCenter,fillY+y,faceZ,fillMat));
         }else{
@@ -98,7 +101,7 @@ export function renderGateFrame(options){
         instancePickets(target,geo,fillMat,strips.map(p=>({
           x:xCenter+p.x,y:fillY,z:faceZ,width:p.width
         })),0);
-        if(side.fill==='picket-double'){
+        if(infillKind==='picket-double'){
           const rear=[];
           for(let k=0;k<strips.length-1;k++)
             rear.push({x:xCenter+(strips[k].x+strips[k+1].x)/2,
@@ -132,7 +135,7 @@ export function renderGateFrame(options){
       const threshold=frameGeometry(door,base,embedded.width,.045,
         embedded.frameDepth,0,thresholdY,z+.013,postMat);
       threshold.userData.kdEmbeddedThreshold=true;
-      frameGeometry(door,base,Math.max(.1,embedded.width-2*frame),.032,.020,
+      if(opening.innerFrame!==false)frameGeometry(door,base,Math.max(.1,embedded.width-2*frame),.032,.020,
         0,midY,z+.006,postMat);
       const innerFillW=embedded.width-2*frame-.022;
       const innerFillH=part.height-embedded.bottomThreshold-frame-.042;
