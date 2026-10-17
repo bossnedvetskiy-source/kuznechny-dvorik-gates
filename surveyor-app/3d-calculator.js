@@ -980,6 +980,19 @@ export function mount3DCalculator(root) {
     root.dataset.sceneSlidingLeaves=String(slidingLeaves);
     root.dataset.sceneSlidingTails=String(slidingTails);
     root.dataset.sceneSlidingCenters=String(slidingCenters);
+    const slideStates=[],zones=[],arrows=[];
+    fence.traverse(object=>{
+      if(object.userData.kdSlidingMoving)
+        slideStates.push(object.userData.kdSlidingShift.toFixed(3));
+      if(object.userData.kdSlidingParkingZone)
+        zones.push(object.userData.kdSlidingParkingSide+':'+
+          object.userData.kdSlidingParkingZone);
+      if(object.userData.kdSlidingTravelArrow)
+        arrows.push(object.userData.kdSlidingRequired.toFixed(2));
+    });
+    root.dataset.sceneSlidingShifts=slideStates.join(';');
+    root.dataset.sceneSlidingZones=zones.join(';');
+    root.dataset.sceneSlidingArrows=arrows.join(';');
     root.dataset.sceneGateLeaves=String(actualLeaves);
     root.dataset.sceneWicketLeaves=String(wicketLeaves);
     root.dataset.sceneHinges=String(visibleHinges);
@@ -1005,7 +1018,27 @@ export function mount3DCalculator(root) {
   function fit() {
     if(!webglOk)return;
     const layout=getSiteLayout(config.sides,config.openings);
-    const b=layout.bounds;
+    // Include external parking strips and opened leaf positions in the view.
+    const vertices=[];
+    for(const edge of layout.edges){
+      for(const opening of edge.openings){
+        if(opening.kind!=='gate'||opening.type!=='sliding')continue;
+        const travel=getSlidingTravelPlan(opening,edge.side.length,edge.openings,
+          config.postSize/1000,edge.side.height);
+        if(!travel.showZone&&!travel.isOpen)continue;
+        for(const distance of [travel.from,travel.to,travel.movingFrom,travel.movingTo]){
+          const ratio=distance/edge.side.length;
+          vertices.push({x:edge.start.x+(edge.end.x-edge.start.x)*ratio,
+            z:edge.start.z+(edge.end.z-edge.start.z)*ratio});
+        }
+      }
+    }
+    const minX=Math.min(layout.bounds.minX,...vertices.map(p=>p.x));
+    const maxX=Math.max(layout.bounds.maxX,...vertices.map(p=>p.x));
+    const minZ=Math.min(layout.bounds.minZ,...vertices.map(p=>p.z));
+    const maxZ=Math.max(layout.bounds.maxZ,...vertices.map(p=>p.z));
+    const b={width:maxX-minX,depth:maxZ-minZ,centerX:(minX+maxX)/2,
+      centerZ:(minZ+maxZ)/2};
     const aspect=Math.max(.45,camera.aspect||1);
     const halfFov=Math.tan(THREE.MathUtils.degToRad(camera.fov/2));
     const width=Math.max(3,b.width),depth=Math.max(3,b.depth);
@@ -1059,6 +1092,18 @@ export function mount3DCalculator(root) {
         afterProductEdit(id);
       });
     }
+    root.querySelectorAll('[data-side-products="'+id+'"] [data-gate-slide-position]').forEach(button=>{
+      button.addEventListener('click',()=>{
+        config.openings[id].gate.slideOpen=button.dataset.gateSlidePosition==='open';
+        afterProductEdit(id);
+        fit();
+      });
+    });
+    get('[data-gate-show-slide-zone]').addEventListener('change',event=>{
+      config.openings[id].gate.showSlideZone=event.target.checked;
+      afterProductEdit(id);
+      fit();
+    });
     for(const kind of ['gate','wicket']){
       get('[data-'+kind+'-enabled]').addEventListener('change',event=>{
         config.openings[id][kind].enabled=event.target.checked;
@@ -1304,6 +1349,9 @@ export function mount3DCalculator(root) {
     const isScene=button.dataset.mode==='scene';
     root.querySelectorAll('[data-mode]').forEach(b=>b.classList.toggle('active',b===button));
     sceneHost.hidden=!isScene;parts.hidden=isScene;
+    root.querySelector('[data-slide-legend]').hidden=!isScene||
+      !getSiteLayout(config.sides,config.openings).openings.some(o=>
+        o.kind==='gate'&&o.type==='sliding'&&o.showSlideZone);
     root.querySelector('.kd3d-scene-controls').hidden=!isScene;
     if(isScene)resize();
   }));
