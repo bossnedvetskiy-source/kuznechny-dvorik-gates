@@ -179,6 +179,51 @@ for(const fill of ['picket','picket-double','horizontal','horizontal-double','sh
     cube.dispose();metal.dispose();infill.dispose();
   }
 }
+
+// Embedded pedestrian wicket must remain INSIDE its swing leaf; two 60x40
+// jambs and a step-over threshold are visible for both left/right variants.
+for(const builtInSide of ['left','right']){
+  const opening={kind:'gate',width:3.4,builtInWicket:true,builtInWidth:1,builtInSide};
+  const plan=getGateFramePlan(opening,.08,1.8);
+  assert(plan.embedded,'standard 3.4m driveway supports a 1m inset wicket');
+  assert.equal(plan.embedded.side,builtInSide);
+  assert.equal(plan.embedded.width,1);
+  assert(plan.embedded.fixedWidth>.2,'fixed part must remain beside the inset');
+  assert.equal(plan.embedded.bottomThreshold,.12,'embedded threshold must be steppable');
+  assert.equal(plan.totalHinges,6,'4 main hinges plus 2 built-in wicket hinges');
+  const target=plan.leaves.find(p=>p.index===plan.embedded.leafIndex);
+  assert(plan.embedded.localLeft>=-target.width/2);
+  assert(plan.embedded.localRight<=target.width/2);
+  const group=new THREE.Group(),cube=new THREE.BoxGeometry(1,1,1);
+  const metal=new THREE.MeshStandardMaterial(),infill=new THREE.MeshStandardMaterial();
+  const ownedGeometries=[],ownedMaterials=[];
+  renderGateFrame({group,base:cube,opening,openingStart:2,postWidth:.08,
+    side:{fill:'sheet',height:1.8},behind:false,gap:.05,
+    postMat:metal,fillMat:infill,frameGeometry,buildC10Geometry,
+    buildPicketGeometry,instancePickets,horizontalPicketRows,verticalPicketPlan,
+    ownedGeometries,ownedMaterials});
+  const found={leaves:0,door:0,jambs:0,threshold:0,hinges:0,braces:0};
+  group.traverse(obj=>{
+    if(obj.userData.kdGateLeaf)found.leaves++;
+    if(obj.userData.kdEmbeddedWicket)found.door++;
+    if(obj.userData.kdEmbeddedJamb)found.jambs++;
+    if(obj.userData.kdEmbeddedThreshold)found.threshold++;
+    if(obj.userData.kdHinge)found.hinges++;
+    if(obj.userData.kdDiagonalBrace)found.braces++;
+  });
+  assert.deepEqual(found,{leaves:2,door:1,jambs:2,threshold:1,hinges:6,braces:2},
+    '3D must show a single framed inset door, two jambs and 6 hinges total');
+  ownedGeometries.forEach(g=>g.dispose());
+  ownedMaterials.forEach(m=>m.dispose());cube.dispose();metal.dispose();infill.dispose();
+}
+for(const width of [2,2.4]){
+  const short=getGateFramePlan({kind:'gate',width,builtInWicket:true,
+    builtInWidth:1,builtInSide:'right'},.08,1.8);
+  assert.equal(short.embedded,null,'never silently shrink a 1m inset wicket');
+  assert(short.embeddedWarning?.includes('не хватает места'));
+  assert.equal(short.totalHinges,4);
+}
+console.log('Embedded wicket: both swing leaves, 1m jamb frame, threshold and width guards OK');
 console.log('Gate 3D: full-width frames, 15/20mm clearances, latch, diagonals and 2 hinges/leaf OK');
 
 console.log('Surveyor 3D: caps, guides, rotated double pickets and previous geometry OK');
