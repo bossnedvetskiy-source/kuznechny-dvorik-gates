@@ -530,3 +530,124 @@
 @media(max-width:360px){
   #threeDScreen .kd3d-obstacle-row{grid-template-columns:1fr}
 }
+
+/* Mobile-first, modern side product cards. Scoped to DEV 3D only. */
+#threeDScreen .kd3d-side-quick{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:13px 0 12px 14px}
+#threeDScreen .kd3d-side-quick label{font-size:12px;line-height:1.45;gap:7px;color:#665d50}
+#threeDScreen .kd3d-side-quick select,#threeDScreen .kd3d-side-quick input{
+  appearance:auto;box-sizing:border-box;min-height:46px;border:1px solid #ded9d0;
+  background:#fff;border-radius:12px;padding:11px 12px;font-size:14px;
+  font-weight:650;color:#222a32;line-height:1.2
+}
+#threeDScreen .kd3d-side-products{margin:14px 0 0 14px}
+#threeDScreen .kd3d-side-products .kd3d-gate-editor{gap:14px}
+#threeDScreen .kd3d-side-products .kd3d-product-card{
+  min-width:0;overflow:hidden;display:grid;gap:14px;padding:17px;
+  background:#fff;border:1px solid #e6e2da;border-radius:18px;
+  box-shadow:0 3px 14px rgba(30,36,45,.045)
+}
+#threeDScreen .kd3d-side-products .kd3d-product-wicket{background:#fff;border-color:#dde5e2}
+#threeDScreen .kd3d-side-products .kd3d-gate-toggle{min-height:44px;gap:12px}
+#threeDScreen .kd3d-side-products .kd3d-gate-toggle input{
+  appearance:none;flex:0 0 43px;width:43px;height:25px;
+  border:1px solid #c8cbd0;background:#d6d8db;border-radius:18px;
+  position:relative;transition:background .15s;cursor:pointer
+}
+#threeDScreen .kd3d-side-products .kd3d-gate-toggle input::before{
+  content:"";position:absolute;top:2px;left:2px;width:19px;height:19px;
+  border-radius:50%;background:#fff;box-shadow:0 1px 3px #0003;
+  transition:transform .15s
+}
+#threeDScreen .kd3d-side-products .kd3d-gate-toggle input:checked{
+  background:#b98931;border-color:#b98931
+}
+#threeDScreen .kd3d-side-products .kd3d-gate-toggle input:checked::before{
+  transform:translateX(18px)
+}
+#threeDScreen .kd3d-side-products .kd3d-gate-toggle strong{font-size:15px;color:#23272c;font-weight:850}
+#threeDScreen .kd3d-side-products .kd3d-gate-toggle small{font-size:11px;color:#777f84;line-height:1.35}
+#threeDScreen .kd3d-side-products .kd3d-gate-fields{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px 11px
+}
+#threeDScreen .kd3d-side-products .kd3d-gate-fields label{
+  min-width:0;display:grid;gap:7px;color:#575e63;font-size:12px;
+  line-height:1.38;font-weight:720
+}
+#threeDScreen .kd3d-side-products .kd3d-gate-fields input:not([type=checkbox]),
+#threeDScreen .kd3d-side-products .kd3d-gate-fields select{
+  box-sizing:border-box;appearance:auto;display:block;min-width:0;
+  width:100%;max-width:100%;min-height:45px;padding:10px 11px;
+  border:1px solid #d8dce0;border-radius:11px;background:#fff;
+  color:#232a30;font-size:14px;font-weight:650;line-height:1.3
+}
+#threeDScreen .kd3d-side-products .kd3d-gate-fields label:has(select){grid-column:1/-1}
+#threeDScreen .kd3d-gate-type,#threeDScreen .kd3d-swing-position>div,
+#threeDScreen .kd3d-slide-position>div{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:5px;padding:4px;background:#f2f3f3;border:1px solid #ebedf0;
+  border-radius:13px
+}
+#threeDScreen .kd3d-gate-type button,
+#threeDScreen .kd3d-swing-position button,
+#threeDScreen .kd3d-slide-position button{
+  min-height:42px;border:0;border-radius:10px;background:transparent;
+  box-shadow:none;color:#656b71;font-size:13px;font-weight:800;
+  padding:9px 10px;cursor:pointer
+}
+#threeDScreen .kd3d-gate-type button[aria-pressed=true],
+#threeDScreen .kd3d-swing-position button[aria-pressed=true],
+#threeDScreen .kd3d-slide-position button[aria-pressed=true]{
+  color:#44300d;background:#fff;border:1px solid #e3cca0;
+  box-shadow:0 2px 7px #00000012
+}
+#threeDScreen .kd3d-gate-fields .kd3d-swing-position{
+  grid-column:1/-1;display:grid;gap:8px;min-width:0
+}
+#threeDScreen .kd3d-swing-position>span{font-size:12px;font-weight:800;color:#464b50}
+#threeDScreen [data-gate-swing-position][hidden]{display:none!important}
+#threeDScreen .kd3d-side-products .kd3d-inner-frame{
+  grid-column:1/-1;display:flex;align-items:center;gap:12px;
+  min-height:41px;font-size:12px
+}
+#threeDScreen .kd3d-side-products .kd3d-inner-frame input[type=checkbox]{
+  appearance:none;width:43px;height:25px;flex:0 0 43px;
+  border:1px solid #c8cbd0;background:#d6d8db;border-radius:18px;
+  position:relative;cursor:pointer
+}
+#threeDScreen .kd3d-side-products .kd3d-inner-frame input[type=checkbox]::before{
+  content:"";position:absolute;top:2px;left:2px;width:19px;height:19px;
+  border-radius:50%;background:#fff;box-shadow:0 1px 3px #0003
+}
+#threeDScreen .kd3d-side-products .kd3d-inner-frame input[type=checkbox]:checked{
+  background:#b98931;border-color:#b98931
+}
+#threeDScreen .kd3d-side-products .kd3d-inner-frame input[type=checkbox]:checked::before{
+  transform:translateX(18px)
+}
+#threeDScreen .kd3d-side-products .kd3d-drawing-action{
+  grid-column:1/-1;min-height:44px;background:#f6f1e8;
+  border:1px solid #e5d5b7;border-radius:12px;
+  color:#76511e;font-size:13px;font-weight:800;box-shadow:none
+}
+#threeDScreen .kd3d-side-products .kd3d-built-in{
+  border:1px solid #e8dfd0;border-radius:13px;background:#faf9f6;padding:12px
+}
+#threeDScreen .kd3d-side-products .kd3d-gate-note,
+#threeDScreen .kd3d-side-products .kd3d-direction-note{font-size:11px;line-height:1.55;color:#77736d}
+#threeDScreen .kd3d-extra-toggle{
+  border:1px solid #e1e4e7;background:#fff;border-radius:12px;
+  font-size:13px;min-height:44px;color:#4f5961
+}
+@media(max-width:430px){
+  #threeDScreen .kd3d-side-products,#threeDScreen .kd3d-side-quick{margin-left:6px}
+  #threeDScreen .kd3d-side-products .kd3d-product-card{padding:13px}
+  #threeDScreen .kd3d-side-products .kd3d-gate-fields{gap:12px 8px}
+  #threeDScreen .kd3d-side-products .kd3d-gate-fields label{
+    grid-column:1/-1
+  }
+  #threeDScreen .kd3d-side-products .kd3d-gate-fields label:has(input[data-gate-width]),
+  #threeDScreen .kd3d-side-products .kd3d-gate-fields label:has(input[data-gate-offset]),
+  #threeDScreen .kd3d-side-products .kd3d-gate-fields label:has(input[data-wicket-width]),
+  #threeDScreen .kd3d-side-products .kd3d-gate-fields label:has(input[data-wicket-offset]),
+  #threeDScreen .kd3d-side-quick label:not(:first-child){grid-column:auto}
+}
