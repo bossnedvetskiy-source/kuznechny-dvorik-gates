@@ -3,6 +3,7 @@ import { OrbitControls } from '../naves/vendor/OrbitControls.js';
 import { renderGateFrame } from './3d-gate-render.js';
 import { renderSlidingGate } from './3d-sliding-render.js';
 import { getSlidingGatePlan, getSlidingTravelPlan } from './3d-sliding-frame.js';
+import {getSlidingInstallationPlan} from './3d-sliding-installation.js';
 import { getGateFramePlan } from './3d-gate-frame.js';
 import { buildOpeningSketchSvg, buildSlidingSketchSvg } from './3d-drawing.js';
 import { SIDE_IDS, SIDE_NAMES, FILL_IDS, createDefaultSides, normalizeSides, getSiteLayout, normalizePostMode, verticalPicketPlan, isHorizontalFill, normalizeSwingGate, normalizeWicket, normalizeOpenings, getClearDimensionPlan } from './3d-layout.js';
@@ -217,7 +218,7 @@ export function mount3DCalculator(root) {
     '<div class="kd3d-post-layout" data-post-layout><div class="kd3d-subheading">Расположение столбов</div><div class="kd3d-post-options" role="group" aria-label="Расположение столбов"><button type="button" data-post-mode="visible" aria-pressed="true"><strong>Столбы видны</strong><small>Заполнение между столбами, без боковых щелей</small></button><button type="button" data-post-mode="behind" aria-pressed="false"><strong>Столбы сзади</strong><small>Сплошная линия забора перед столбами</small></button></div><p class="kd3d-post-note" data-post-note>Для выбранной стороны участка</p></div>',
     '<div class="kd3d-gate-editor" data-gate-editor><div class="kd3d-product-card kd3d-product-gate"><label class="kd3d-gate-toggle"><input type="checkbox" data-gate-enabled><span><strong data-gate-title>Распашные ворота</strong><small>Две створки в выбранном месте стороны</small></span></label>',
     '<div class="kd3d-gate-type" data-gate-type role="group" aria-label="Тип ворот"><button type="button" data-gate-mode="swing" aria-pressed="true">Распашные</button><button type="button" data-gate-mode="sliding" aria-pressed="false">Откатные</button></div>',
-    '<div class="kd3d-gate-fields" data-gate-fields hidden><label>Ширина ворот, м<input type="number" data-gate-width inputmode="decimal" min="2" max="6" step="0.1"></label><label>Отступ слева, м<input type="number" data-gate-offset inputmode="decimal" min="0" max="60" step="0.1"></label><label class="kd3d-direction-field" data-gate-swing-direction>Куда открываются ворота<select data-gate-open-direction><option value="inward">Внутрь участка</option><option value="outward">Наружу участка</option></select></label><div class="kd3d-sliding-fields" data-gate-sliding-fields hidden><label>Направление отката<select data-gate-slide-direction><option value="left">Влево по стороне</option><option value="right">Вправо по стороне</option></select></label><label>Форма хвостовика<select data-gate-tail-shape><option value="square">Квадратный</option><option value="triangle">Треугольный</option></select></label><label class="kd3d-inner-frame"><input type="checkbox" data-gate-center-post> Стойка по центру полотна</label><div class="kd3d-slide-position"><strong>Положение ворот в 3D</strong><div role="group" aria-label="Положение откатных ворот"><button type="button" data-gate-slide-position="closed" aria-pressed="true">Закрыто</button><button type="button" data-gate-slide-position="open" aria-pressed="false">Открыто</button></div></div><label class="kd3d-inner-frame kd3d-slide-show-zone"><input type="checkbox" data-gate-show-slide-zone checked> Показывать зону отката в 3D</label><p class="kd3d-slide-geometry" data-gate-slide-geometry></p><p class="kd3d-slide-zone-status" data-gate-zone-status></p></div><label>Профиль каркаса<select data-gate-frame-profile><option value="40x25">40×25 мм</option><option value="40x40">40×40 мм</option><option value="60x40">60×40 мм</option></select></label><label>Обшивка створок<select data-gate-fill><option value="side">Как на стороне забора</option>'+FILL_IDS.map(fill=>'<option value="'+fill+'">'+FILL_LABELS[fill]+'</option>').join('')+'</select></label><label class="kd3d-inner-frame"><input type="checkbox" data-gate-inner-frame> Внутренняя перемычка</label><button type="button" class="kd3d-drawing-action" data-drawing-kind="gate">Чертёж: ворота <span data-drawing-side></span></button></div>',
+    '<div class="kd3d-gate-fields" data-gate-fields hidden><label>Ширина ворот, м<input type="number" data-gate-width inputmode="decimal" min="2" max="6" step="0.1"></label><label>Отступ слева, м<input type="number" data-gate-offset inputmode="decimal" min="0" max="60" step="0.1"></label><label class="kd3d-direction-field" data-gate-swing-direction>Куда открываются ворота<select data-gate-open-direction><option value="inward">Внутрь участка</option><option value="outward">Наружу участка</option></select></label><div class="kd3d-sliding-fields" data-gate-sliding-fields hidden><label>Направление отката<select data-gate-slide-direction><option value="left">Влево по стороне</option><option value="right">Вправо по стороне</option></select></label><label>Форма хвостовика<select data-gate-tail-shape><option value="square">Квадратный</option><option value="triangle">Треугольный</option></select></label><label class="kd3d-inner-frame"><input type="checkbox" data-gate-center-post> Стойка по центру полотна</label><div class="kd3d-slide-position"><strong>Положение ворот в 3D</strong><div role="group" aria-label="Положение откатных ворот"><button type="button" data-gate-slide-position="closed" aria-pressed="true">Закрыто</button><button type="button" data-gate-slide-position="open" aria-pressed="false">Открыто</button></div></div><label class="kd3d-inner-frame kd3d-slide-show-zone"><input type="checkbox" data-gate-show-slide-zone checked> Показывать зону отката в 3D</label><p class="kd3d-slide-geometry" data-gate-slide-geometry></p><p class="kd3d-slide-zone-status" data-gate-zone-status></p><div class="kd3d-obstacle-editor" data-obstacle-editor><strong>Препятствия на пути ворот</strong><p>Укажите дерево, стену, опору или другое препятствие, которое замерщик увидел на участке.</p><label>Расстояние полотна от линии забора, см<input type="number" data-gate-track-offset min="10" max="60" step="1" inputmode="decimal"></label><div data-gate-obstacles></div><button type="button" data-obstacle-add>+ Добавить препятствие</button><small>Расстояние до препятствия измеряется от оси забора внутрь участка до центра объекта. Проверка предварительная, реальные помехи обязательно осматриваются на месте.</small></div></div><label>Профиль каркаса<select data-gate-frame-profile><option value="40x25">40×25 мм</option><option value="40x40">40×40 мм</option><option value="60x40">60×40 мм</option></select></label><label>Обшивка створок<select data-gate-fill><option value="side">Как на стороне забора</option>'+FILL_IDS.map(fill=>'<option value="'+fill+'">'+FILL_LABELS[fill]+'</option>').join('')+'</select></label><label class="kd3d-inner-frame"><input type="checkbox" data-gate-inner-frame> Внутренняя перемычка</label><button type="button" class="kd3d-drawing-action" data-drawing-kind="gate">Чертёж: ворота <span data-drawing-side></span></button></div>',
     '<div class="kd3d-built-in" data-builtin-area hidden><label class="kd3d-gate-toggle"><input type="checkbox" data-builtin-enabled><span><strong>Встроенная калитка в воротах</strong><small>Внутри створки, с переступаемым порогом · без отдельного столба</small></span></label>',
     '<div class="kd3d-gate-fields" data-builtin-fields hidden><label>Расположение<select data-builtin-side><option value="left">В левой створке</option><option value="right">В правой створке</option></select></label><label>Ширина калитки, м<input type="number" data-builtin-width inputmode="decimal" min="0.7" max="1.2" step="0.1"></label></div>',
     '<p class="kd3d-builtin-warning" data-builtin-warning hidden></p></div>',
@@ -367,7 +368,7 @@ export function mount3DCalculator(root) {
   function syncGateInputs(){
     config.openings=normalizeOpenings(config.sides,config.openings,config.gate);
     config.gate=config.openings.A.gate; // Backward-compatible facade draft.
-    const sideLayout=getSiteLayout(config.sides,config.openings);
+    const sideLayout=getSiteLayout(config.sides,config.openings,config.postSize);
     for(const id of SIDE_IDS){
       const {gate,wicket}=config.openings[id];
       const get=selector=>productField(id,selector);
@@ -618,7 +619,7 @@ export function mount3DCalculator(root) {
     }
   }
   function summary() {
-    const layout=getSiteLayout(config.sides,config.openings);
+    const layout=getSiteLayout(config.sides,config.openings,config.postSize);
     const gapPlans=getVerticalGapPlans(layout);
     for(const opening of layout.openings){
       if(opening.kind!=='gate'||opening.type==='sliding'||!opening.builtInWicket)continue;
@@ -807,7 +808,7 @@ export function mount3DCalculator(root) {
     const selected=activeSettings();
     // Legacy keys retained for older locally saved drafts and existing integrations.
     for(const key of ['length','height','step','fill','ral']) config[key]=selected[key];
-    const preliminary=getSiteLayout(config.sides,config.openings);
+    const preliminary=getSiteLayout(config.sides,config.openings,config.postSize);
     // A displaced wicket follows its actual collision-free 3D location.
     for(const opening of preliminary.openings)
       config.openings[opening.sideId][opening.kind].offset=opening.start;
@@ -1026,7 +1027,7 @@ export function mount3DCalculator(root) {
   }
   function fit() {
     if(!webglOk)return;
-    const layout=getSiteLayout(config.sides,config.openings);
+    const layout=getSiteLayout(config.sides,config.openings,config.postSize);
     // Include external parking strips and opened leaf positions in the view.
     const vertices=[];
     for(const edge of layout.edges){
@@ -1306,7 +1307,7 @@ export function mount3DCalculator(root) {
     syncSideInputs();updateModel();
   });
   find('[data-auto-gap]').addEventListener('click',()=>{
-    const plans=getVerticalGapPlans(getSiteLayout(config.sides,config.openings));
+    const plans=getVerticalGapPlans(getSiteLayout(config.sides,config.openings,config.postSize));
     if(!plans.length||plans.some(x=>x.plan.edgeMargin>.0001))return;
     config.gapFit=true;
     updateModel();
@@ -1371,7 +1372,7 @@ export function mount3DCalculator(root) {
       !(config.openings[config.activeSide].gate.enabled&&
         config.openings[config.activeSide].gate.type==='sliding');
     root.querySelector('[data-slide-legend]').hidden=!isScene||
-      !getSiteLayout(config.sides,config.openings).openings.some(o=>
+      !getSiteLayout(config.sides,config.openings,config.postSize).openings.some(o=>
         o.kind==='gate'&&o.type==='sliding'&&o.showSlideZone);
     root.querySelector('.kd3d-scene-controls').hidden=!isScene;
     if(isScene)resize();
