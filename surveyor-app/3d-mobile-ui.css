@@ -228,3 +228,9 @@
     font-size:14px!important;
   }
 }
+
+/* Native [hidden] must beat all display:flex/grid refinements above.
+   Otherwise sliding mode accidentally exposes swing-only selectors. */
+#threeDScreen .kd3d-side-products [hidden]{
+  display:none!important;
+}
