@@ -602,3 +602,82 @@ test('Откатные ворота в сторонах А/Б: хвостови�
   expect(persisted.A.gate.showSlideZone).toBe(true);
   expect(persisted.B.gate.slideOpen).toBe(false);
 });
+
+
+test('Откатные ворота: 3D ролики/фундамент/приёмник и проверка препятствий по сторонам',async ({page})=>{
+  test.setTimeout(120000);
+  await page.goto('/kuznechny-dvorik-gates/zamer-app-v2/');
+  await page.locator('#loginInput').fill('zamer');
+  await page.locator('#passwordInput').fill('1234');
+  await page.locator('#loginForm button[type="submit"]').click();
+  await expect(page.locator('#mainView')).toBeVisible({timeout:10000});
+  await page.locator('#open3DCalcBtn').click();
+  const root=page.locator('#kd3dRoot');
+  await expect(root.locator('[data-stats]')).toContainText('Столбов',{timeout:15000});
+  const has3D=await root.locator('.kd3d-scene canvas').count()>0;
+  const a=root.locator('[data-side-products="A"]');
+  await root.locator('[data-opening-side="A"][data-opening-kind="gate"]').click();
+  await a.locator('[data-gate-mode="sliding"]').click();
+  await a.locator('[data-gate-width]').fill('4');
+  await a.locator('[data-gate-width]').press('Tab');
+  await a.locator('[data-gate-offset]').fill('2');
+  await a.locator('[data-gate-offset]').press('Tab');
+  await a.locator('[data-gate-slide-direction]').selectOption('right');
+  await expect(a.locator('[data-gate-track-offset]')).toHaveValue('22');
+  await expect(root.locator('[data-site-warning]')).toBeHidden();
+  if(has3D){
+    await expect(root).toHaveAttribute('data-scene-sliding-carriages','2');
+    await expect(root).toHaveAttribute('data-scene-sliding-rollers','8');
+    await expect(root).toHaveAttribute('data-scene-sliding-foundations','1');
+    await expect(root).toHaveAttribute('data-scene-sliding-receivers','1');
+    await expect(root).toHaveAttribute('data-scene-sliding-upper-guides','1');
+  }
+  await a.locator('[data-gate-slide-position="open"]').click();
+  if(has3D){
+    await expect(root).toHaveAttribute('data-scene-sliding-shifts','4.000');
+    await expect(root).toHaveAttribute('data-scene-sliding-carriages','2');
+  }
+  await a.locator('[data-gate-slide-position="closed"]').click();
+
+  // Hardware clearance depends on distance from the fence axis; posts are
+  // checked even without any manually entered obstruction.
+  await a.locator('[data-gate-track-offset]').fill('10');
+  await a.locator('[data-gate-track-offset]').press('Tab');
+  await expect(root.locator('[data-site-warning]')).toContainText('столб');
+  await expect(a.locator('[data-gate-zone-status]')).toContainText('Возможное столкновение');
+  await a.locator('[data-gate-track-offset]').fill('22');
+  await a.locator('[data-gate-track-offset]').press('Tab');
+  await expect(root.locator('[data-site-warning]')).toBeHidden();
+
+  await a.locator('[data-obstacle-add]').click();
+  await expect(a.locator('[data-obstacle-row]')).toHaveCount(1);
+  await expect(root.locator('[data-site-warning]')).toContainText('препятствие');
+  if(has3D){
+    await expect(root).toHaveAttribute('data-scene-sliding-obstacles','1');
+    await expect(root).toHaveAttribute('data-scene-sliding-blocked-obstacles','1');
+  }
+  await a.locator('[data-obstacle-key="type"]').selectOption('tree');
+  const distance=a.locator('[data-obstacle-key="distance"]');
+  await distance.fill('120');
+  await distance.press('Tab');
+  await expect(root.locator('[data-site-warning]')).toBeHidden();
+  if(has3D)await expect(root).toHaveAttribute('data-scene-sliding-blocked-obstacles','0');
+  await distance.fill('22');
+  await distance.press('Tab');
+  await expect(root.locator('[data-site-warning]')).toContainText('препятствие');
+  const saved=await page.evaluate(()=>
+    JSON.parse(localStorage.getItem('kd-surveyor-3d-draft-v1')).openings.A.gate);
+  expect(saved.trackOffset).toBe(.22);
+  expect(saved.obstacles[0]).toMatchObject({
+    type:'tree',distance:.22,width:.5,depth:.35,height:1.5
+  });
+  await a.locator('[data-obstacle-remove="0"]').click();
+  await expect(a.locator('[data-obstacle-row]')).toHaveCount(0);
+  await expect(root.locator('[data-site-warning]')).toBeHidden();
+  if(has3D)await expect(root).toHaveAttribute('data-scene-sliding-obstacles','0');
+  // Switching away and back does not lose settings for this side.
+  await a.locator('[data-gate-mode="swing"]').click();
+  await a.locator('[data-gate-mode="sliding"]').click();
+  await expect(a.locator('[data-gate-track-offset]')).toHaveValue('22');
+  await expect(root.locator('[data-parts]')).toContainText('проектное согласование');
+});
