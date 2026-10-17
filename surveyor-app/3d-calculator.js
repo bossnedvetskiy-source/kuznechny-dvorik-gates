@@ -247,7 +247,7 @@ export function mount3DCalculator(root) {
   inlineEditor.className='kd3d-side-inline-editor';
   const inlineParts=[
     root.querySelector('[data-section="type"]'),
-    root.querySelector('[data-side-current]'),
+    root.querySelector('.kd3d-side-current'),
     root.querySelector('.kd3d-fields'),
     root.querySelector('[data-field="postSize"]').closest('label'),
     root.querySelector('[data-post-layout]'),
