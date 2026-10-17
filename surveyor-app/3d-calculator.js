@@ -398,7 +398,6 @@ export function mount3DCalculator(root) {
       get('[data-wicket-inner-frame]').checked=wicket.innerFrame;
       get('.kd3d-product-gate').hidden=!gate.enabled;
       get('.kd3d-product-wicket').hidden=!wicket.enabled;
-      get('[data-side-products-placeholder]')?.remove();
       const zone=find('[data-side-products="'+id+'"]');
       zone.hidden=!gate.enabled&&!wicket.enabled;
       zone.querySelectorAll('[data-drawing-side]').forEach(el=>{
@@ -963,51 +962,66 @@ export function mount3DCalculator(root) {
     renderer.setSize(width,height,false);
     renderer.render(scene,camera);
   }
-  for(const kind of ['gate','wicket']){
-    const name=kind==='gate'?'gate':'wicket';
-    find('[data-'+name+'-enabled]').addEventListener('change',event=>{
-      const id=config.activeSide;
-      config.openings[id][kind].enabled=event.target.checked;
-      if(event.target.checked)config.sides[id].enabled=true;
-      updateModel();syncSideInputs();
-    });
-    for(const [key,min,max] of [['width',kind==='gate'?2:.7,kind==='gate'?6:1.5],
-      ['offset',0,60]]){
-      find('[data-'+name+'-'+key+']').addEventListener('change',event=>{
-        const id=config.activeSide;
-        const item=config.openings[id][kind];
-        item[key]=numeric(event.target.value,min,max,item[key]);
-        config.openings=normalizeOpenings(config.sides,config.openings,config.gate);
-        updateModel();syncSideInputs();
-      });
-    }
+  // Each product editor is permanently bound to its owning perimeter side.
+  function afterProductEdit(id){
+    config.activeSide=id;
+    updateModel();
+    syncSideInputs();
   }
-  for(const kind of ['gate','wicket']){
-    find('[data-'+kind+'-open-direction]').addEventListener('change',event=>{
-      config.openings[config.activeSide][kind].openDirection=
-        event.target.value==='outward'?'outward':'inward';
-      updateModel();syncSideInputs();
-    });
-  }
-  find('[data-wicket-hinge-side]').addEventListener('change',event=>{
-    config.openings[config.activeSide].wicket.hingeSide=
-      event.target.value==='right'?'right':'left';
-    updateModel();syncSideInputs();
-  });
-  for(const kind of ['gate','wicket']){
-    for(const [field,key] of [['frame-profile','frameProfile'],['fill','fill'],['inner-frame','innerFrame']]){
-      find('[data-'+kind+'-'+field+']').addEventListener('change',event=>{
-        config.openings[config.activeSide][kind][key]=field==='inner-frame'?
-          event.target.checked:event.target.value;
-        updateModel();syncSideInputs();
+  for(const id of SIDE_IDS){
+    const get=selector=>productField(id,selector);
+    for(const kind of ['gate','wicket']){
+      get('[data-'+kind+'-enabled]').addEventListener('change',event=>{
+        config.openings[id][kind].enabled=event.target.checked;
+        if(event.target.checked)config.sides[id].enabled=true;
+        afterProductEdit(id);
       });
+      for(const [key,min,max] of [['width',kind==='gate'?2:.7,kind==='gate'?6:1.5],
+        ['offset',0,60]]){
+        get('[data-'+kind+'-'+key+']').addEventListener('change',event=>{
+          const item=config.openings[id][kind];
+          item[key]=numeric(event.target.value,min,max,item[key]);
+          config.openings=normalizeOpenings(config.sides,config.openings,config.gate);
+          afterProductEdit(id);
+        });
+      }
+      get('[data-'+kind+'-open-direction]').addEventListener('change',event=>{
+        config.openings[id][kind].openDirection=
+          event.target.value==='outward'?'outward':'inward';
+        afterProductEdit(id);
+      });
+      for(const [field,key] of [['frame-profile','frameProfile'],['fill','fill'],['inner-frame','innerFrame']]){
+        get('[data-'+kind+'-'+field+']').addEventListener('change',event=>{
+          config.openings[id][kind][key]=field==='inner-frame'?
+            event.target.checked:event.target.value;
+          afterProductEdit(id);
+        });
+      }
     }
+    get('[data-wicket-hinge-side]').addEventListener('change',event=>{
+      config.openings[id].wicket.hingeSide=event.target.value==='right'?'right':'left';
+      afterProductEdit(id);
+    });
+    get('[data-builtin-enabled]').addEventListener('change',event=>{
+      config.openings[id].gate.builtInWicket=event.target.checked;
+      afterProductEdit(id);
+    });
+    get('[data-builtin-side]').addEventListener('change',event=>{
+      config.openings[id].gate.builtInSide=event.target.value==='left'?'left':'right';
+      afterProductEdit(id);
+    });
+    get('[data-builtin-width]').addEventListener('change',event=>{
+      const gate=config.openings[id].gate;
+      gate.builtInWidth=numeric(event.target.value,.7,1.2,gate.builtInWidth);
+      afterProductEdit(id);
+    });
   }
   let pendingDrawing='';
   let pendingDrawingFilename='';
   const drawingDialog=find('[data-drawing-dialog]');
   root.querySelectorAll('[data-drawing-kind]').forEach(button=>button.addEventListener('click',()=>{
-    const kind=button.dataset.drawingKind,sideId=config.activeSide;
+    const kind=button.dataset.drawingKind;
+    const sideId=button.closest('[data-side-products]').dataset.sideProducts;
     const opening=config.openings[sideId][kind];
     if(!opening?.enabled)return;
     const plan=getGateFramePlan({kind,...opening},config.postSize/1000,config.sides[sideId].height);
@@ -1028,19 +1042,6 @@ export function mount3DCalculator(root) {
     link.href=href;link.download=pendingDrawingFilename;
     document.body.appendChild(link);link.click();link.remove();
     window.setTimeout(()=>URL.revokeObjectURL(href),10000);
-  });
-  find('[data-builtin-enabled]').addEventListener('change',event=>{
-    config.openings[config.activeSide].gate.builtInWicket=event.target.checked;
-    updateModel();syncSideInputs();
-  });
-  find('[data-builtin-side]').addEventListener('change',event=>{
-    config.openings[config.activeSide].gate.builtInSide=event.target.value==='left'?'left':'right';
-    updateModel();syncSideInputs();
-  });
-  find('[data-builtin-width]').addEventListener('change',event=>{
-    const gate=config.openings[config.activeSide].gate;
-    gate.builtInWidth=numeric(event.target.value,.7,1.2,gate.builtInWidth);
-    updateModel();syncSideInputs();
   });
   find('[data-sides]').addEventListener('click',event=>{
     const button=event.target.closest('[data-opening-side][data-opening-kind]');
@@ -1095,6 +1096,23 @@ export function mount3DCalculator(root) {
       side.enabled=toggle.checked;
       updateModel();
       resize();fit();
+      return;
+    }
+    const fillInput=event.target.closest('[data-side-quick-fill]');
+    const heightInput=event.target.closest('[data-side-quick-height]');
+    const ralInput=event.target.closest('[data-side-quick-ral]');
+    if(fillInput||heightInput||ralInput){
+      const input=fillInput||heightInput||ralInput;
+      const id=fillInput?.dataset.sideQuickFill||
+        heightInput?.dataset.sideQuickHeight||ralInput.dataset.sideQuickRal;
+      const side=config.sides[id];
+      if(!side)return;
+      if(fillInput)side.fill=FILL_IDS.includes(input.value)?input.value:side.fill;
+      if(heightInput)side.height=numeric(input.value,.8,3,side.height);
+      if(ralInput)side.ral=Object.hasOwn(RAL,input.value)?input.value:side.ral;
+      config.activeSide=id;
+      syncSideInputs();updateModel();
+      if(heightInput)fit();
       return;
     }
     const field=event.target.closest('[data-side-length-input]');
