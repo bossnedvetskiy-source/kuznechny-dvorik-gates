@@ -30,15 +30,48 @@ export function getSlidingGatePlan(opening,postWidth,sideHeight){
     frameOffsetZ:.115
   };
 }
-export function getSlidingParkingWarning(opening,sideLength,otherOpenings=[]){
+// The reservation is the FULL movable frame (opening plus counterweight),
+// not just the tail visible while the gate is shut. Everything is measured
+// in the selected side's LOCAL X direction and is independent of 3D camera.
+export function getSlidingTravelPlan(opening,sideLength,otherOpenings=[],
+  postWidth=.08,sideHeight=1.8){
   if(opening.type!=='sliding')return null;
-  const plan=getSlidingGatePlan(opening,.08,1.8);
-  const sideStart=Number(opening.start);
-  const from=sideStart+plan.tailFrom,to=sideStart+plan.tailTo;
-  if(from<-.0001||to>sideLength+.0001)
-    return 'Недостаточно места для хвостовика в пределах стороны: требуется '+plan.tail.toFixed(2).replace('.',',')+
-      ' м в направлении отката. Проверьте положение ворот.';
-  const overlaps=otherOpenings.some(o=>o!==opening&&o.kind==='wicket'&&
-    Math.max(from,o.start)<Math.min(to,o.end)-.0001);
-  return overlaps?'Хвостовик пересекает проём отдельной калитки. Измените отступ или направление отката.':null;
+  const plan=getSlidingGatePlan(opening,postWidth,sideHeight);
+  const start=Number(opening.start??opening.offset??0);
+  const side=Number(sideLength);
+  if(!Number.isFinite(start)||!Number.isFinite(side)||side<=0)
+    throw new Error('Недопустимая сторона для зоны отката');
+  const toLeft=plan.direction==='left';
+  const boundary=toLeft?start:start+plan.openingWidth;
+  const required=plan.gateLength;
+  const from=toLeft?boundary-required:boundary;
+  const to=toLeft?boundary:boundary+required;
+  const available=Math.max(0,toLeft?boundary:side-boundary);
+  const shortage=Math.max(0,required-available);
+  const wicketCollisions=otherOpenings.filter(o=>o!==opening&&o.kind==='wicket'&&
+    Number.isFinite(Number(o.start))&&Number.isFinite(Number(o.end))&&
+    Math.max(from,Number(o.start))<Math.min(to,Number(o.end))-.0001);
+  const shift=opening.slideOpen===true?
+    (toLeft?-plan.openingWidth:plan.openingWidth):0;
+  const closedFrom=start+Math.min(plan.left,plan.tailFrom);
+  const closedTo=start+Math.max(plan.right,plan.tailTo);
+  const movingFrom=closedFrom+shift,movingTo=closedTo+shift;
+  return {...plan,start,sideLength:side,boundary,required,available,shortage,
+    from,to,shift,isOpen:opening.slideOpen===true,
+    showZone:opening.showSlideZone!==false,
+    wicketCollisions,valid:shortage<.0001&&!wicketCollisions.length,
+    closedFrom,closedTo,movingFrom,movingTo};
+}
+export function getSlidingParkingWarning(opening,sideLength,otherOpenings=[]){
+  const travel=getSlidingTravelPlan(opening,sideLength,otherOpenings);
+  if(!travel)return null;
+  const format=value=>value.toFixed(2).replace('.',',');
+  const errors=[];
+  if(travel.shortage>.0001)
+    errors.push('Недостаточно места для полного открытия откатных ворот: нужно '+
+      format(travel.required)+' м вдоль забора, доступно '+
+      format(travel.available)+' м, не хватает '+format(travel.shortage)+' м.');
+  if(travel.wicketCollisions.length)
+    errors.push('Зона отката пересекает проём отдельной калитки. Измените отступ, место калитки или направление отката.');
+  return errors.length?errors.join(' '):null;
 }
