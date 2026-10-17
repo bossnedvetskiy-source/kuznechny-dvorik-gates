@@ -137,6 +137,11 @@ const withTree=getSlidingInstallationPlan({...gateForCheck,obstacles:[measured]}
 assert.equal(withTree.collisions.filter(c=>c.kind==='obstacle').length,1);
 assert.equal(withTree.valid,false);
 assert(getSlidingInstallationWarnings(withTree).join(' ').includes('препятствие'));
+const withTreeOpened=getSlidingInstallationPlan({...gateForCheck,slideOpen:true,
+  obstacles:[measured]},12,[],{postWidth:.08,posts:[],sections:[]});
+assert.deepEqual(withTreeOpened.swept,withTree.swept,
+  'the entire travel path must be checked even in the closed preview state');
+assert.equal(withTreeOpened.collisions.filter(c=>c.kind==='obstacle').length,1);
 const outside=getSlidingInstallationPlan({...gateForCheck,
   obstacles:[{...measured,distance:1.2}]},12,[],{postWidth:.08});
 assert.equal(outside.collisions.length,0);
