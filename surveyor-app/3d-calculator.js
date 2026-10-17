@@ -370,27 +370,42 @@ export function mount3DCalculator(root) {
     for(const id of SIDE_IDS){
       const {gate,wicket}=config.openings[id];
       const get=selector=>productField(id,selector);
-      get('[data-gate-title]').textContent='Распашные ворота · сторона '+SIDE_NAMES[id];
+      get('[data-gate-title]').textContent=(gate.type==='sliding'?'Откатные ворота':'Распашные ворота')+
+        ' · сторона '+SIDE_NAMES[id];
+      get('[data-gate-type]').hidden=!gate.enabled;
+      get('[data-gate-mode="swing"]').setAttribute('aria-pressed',String(gate.type!=='sliding'));
+      get('[data-gate-mode="sliding"]').setAttribute('aria-pressed',String(gate.type==='sliding'));
       get('[data-wicket-title]').textContent='Калитка · сторона '+SIDE_NAMES[id];
       get('[data-gate-enabled]').checked=gate.enabled;
       get('[data-gate-fields]').hidden=!gate.enabled;
       get('[data-gate-width]').value=gate.width;
+      get('[data-gate-width]').max=gate.type==='sliding'?5:6;
       get('[data-gate-offset]').value=gate.offset;
       get('[data-gate-offset]').max=Math.max(0,config.sides[id].length-gate.width);
+      get('[data-gate-swing-direction]').hidden=gate.type==='sliding';
+      get('[data-gate-sliding-fields]').hidden=gate.type!=='sliding';
       get('[data-gate-open-direction]').value=gate.openDirection;
+      get('[data-gate-slide-direction]').value=gate.slideDirection;
+      get('[data-gate-tail-shape]').value=gate.tailShape;
+      get('[data-gate-center-post]').checked=gate.centerPost;
+      if(gate.type==='sliding'){
+        const model=getSlidingGatePlan(gate,config.postSize/1000,config.sides[id].height);
+        get('[data-gate-slide-geometry]').textContent='Хвостовик '+model.tail.toFixed(2).replace('.',',')+
+          ' м · балка '+model.beam+' м · общая длина '+model.gateLength.toFixed(2).replace('.',',')+' м.';
+      }
       get('[data-gate-frame-profile]').value=gate.frameProfile;
       get('[data-gate-fill]').value=gate.fill;
       get('[data-gate-inner-frame]').checked=gate.innerFrame;
-      get('[data-builtin-area]').hidden=!gate.enabled;
+      get('[data-builtin-area]').hidden=!gate.enabled||gate.type==='sliding';
       get('[data-builtin-enabled]').checked=gate.builtInWicket;
-      get('[data-builtin-fields]').hidden=!gate.enabled||!gate.builtInWicket;
+      get('[data-builtin-fields]').hidden=!gate.enabled||gate.type==='sliding'||!gate.builtInWicket;
       get('[data-builtin-side]').value=gate.builtInSide;
       get('[data-builtin-width]').value=gate.builtInWidth;
-      const geometry=getGateFramePlan({kind:'gate',...gate},config.postSize/1000,
-        config.sides[id].height);
+      const geometry=gate.type==='sliding'?null:
+        getGateFramePlan({kind:'gate',...gate},config.postSize/1000,config.sides[id].height);
       const warning=get('[data-builtin-warning]');
-      warning.hidden=!gate.enabled||!gate.builtInWicket||!geometry.embeddedWarning;
-      warning.textContent=geometry.embeddedWarning||'';
+      warning.hidden=!gate.enabled||gate.type==='sliding'||!gate.builtInWicket||!geometry?.embeddedWarning;
+      warning.textContent=geometry?.embeddedWarning||'';
       get('[data-wicket-enabled]').checked=wicket.enabled;
       get('[data-wicket-fields]').hidden=!wicket.enabled;
       get('[data-wicket-width]').value=wicket.width;
@@ -582,7 +597,7 @@ export function mount3DCalculator(root) {
     const layout=getSiteLayout(config.sides,config.openings);
     const gapPlans=getVerticalGapPlans(layout);
     for(const opening of layout.openings){
-      if(opening.kind!=='gate'||!opening.builtInWicket)continue;
+      if(opening.kind!=='gate'||opening.type==='sliding'||!opening.builtInWicket)continue;
       const side=config.sides[opening.sideId];
       const framePlan=getGateFramePlan(opening,config.postSize/1000,side.height);
       if(framePlan.embeddedWarning)
@@ -612,6 +627,20 @@ export function mount3DCalculator(root) {
           ' · зазор '+format(config.gap*100)+' см')+'.</p>';
     }
     for(const opening of layout.openings){
+      if(opening.kind==='gate'&&opening.type==='sliding'){
+        const plan=getSlidingGatePlan(opening,config.postSize/1000,
+          config.sides[opening.sideId].height);
+        description+='<p><b>Откатные ворота на стороне '+SIDE_NAMES[opening.sideId]+
+          ':</b> проём '+format(opening.width)+' м, отступ '+format(opening.start)+
+          ' м. Откат '+(plan.direction==='left'?'влево':'вправо')+
+          ' · хвостовик '+(plan.tailShape==='square'?'квадратный':'треугольный')+
+          ' '+format2(plan.tail)+' м · балка '+plan.beam+' м · полотно '+
+          format2(plan.gateLength)+' м ·'+(plan.centerPost?' со средней стойкой':' без средней стойки')+
+          ' · рама '+opening.frameProfile.replace('x','×')+
+          (opening.fill!=='side'?' · заполнение '+FILL_LABELS[opening.fill]:' · заполнение как на заборе')+
+          '. Визуальная модель, без расчёта цены и проверки прочности.</p>';
+        continue;
+      }
       description+='<p><b>'+(opening.kind==='gate'?'Распашные ворота':'Калитка')+
         ' на стороне '+SIDE_NAMES[opening.sideId]+':</b> проём '+format(opening.width)+
         ' м, отступ слева '+format(opening.start)+' м. '+
@@ -880,7 +909,9 @@ export function mount3DCalculator(root) {
         instancePickets(group,geo,fillMat,rearPickets,Math.PI);
       }
       for(const opening of edge.openings){
-        renderGateFrame({
+        const renderOpening=opening.kind==='gate'&&opening.type==='sliding'?
+          renderSlidingGate:renderGateFrame;
+        renderOpening({
           group,base,opening,openingStart:start+opening.start,postWidth,
           side,behind,gap:config.gap,postMat,fillMat,frameGeometry,
           buildC10Geometry,buildPicketGeometry,instancePickets,horizontalPicketRows,
@@ -914,6 +945,15 @@ export function mount3DCalculator(root) {
       if(typeof object.userData.kdFrameWidth==='number')
         leafWidths.push(object.userData.kdFrameWidth);
     });
+    let slidingLeaves=0,slidingTails=0,slidingCenters=0;
+    fence.traverse(object=>{
+      if(object.userData.kdSlidingLeaf)slidingLeaves++;
+      if(object.userData.kdSlidingTail)slidingTails++;
+      if(object.userData.kdSlidingCenterPost)slidingCenters++;
+    });
+    root.dataset.sceneSlidingLeaves=String(slidingLeaves);
+    root.dataset.sceneSlidingTails=String(slidingTails);
+    root.dataset.sceneSlidingCenters=String(slidingCenters);
     root.dataset.sceneGateLeaves=String(actualLeaves);
     root.dataset.sceneWicketLeaves=String(wicketLeaves);
     root.dataset.sceneHinges=String(visibleHinges);
