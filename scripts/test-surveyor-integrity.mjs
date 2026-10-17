@@ -64,6 +64,10 @@ if (!threeD.includes('data-opening-side=') || !threeD.includes('data-wicket-enab
   !layout.includes('function normalizeWicket') || !threeDCss.includes('kd3d-opening-actions'))
   throw new Error('Four-side gate/wicket toggles or actual 3D wicket rendering missing');
 if (!threeD.includes('data-gate-enabled') || !threeD.includes('sceneGateLeaves') || !layout.includes('function normalizeSwingGate') || !threeDCss.includes('kd3d-gate-editor')) throw new Error('Swing gate 3D opening or render controls missing');
+if (!threeD.includes('data-gate-mode="sliding"') || !threeD.includes('data-gate-tail-shape') ||
+  !threeD.includes('data-gate-slide-direction') || !threeD.includes('sceneSlidingLeaves') ||
+  !sw.includes('./3d-sliding-frame.js') || !sw.includes('./3d-sliding-render.js'))
+  throw new Error('DEV sliding gate selector, 3D render, or offline assets missing');
 if (!threeD.includes('data-auto-gap') || !layout.includes('function verticalPicketPlan') || !threeDCss.includes('kd3d-gap-alert')) throw new Error('Whole-width steel picket gap warning and quick adjust missing');
 if (!threeD.includes('data-post-mode="behind"') || !threeD.includes('verticalPicketPlan') || !layout.includes('const normalizePostMode=')) throw new Error('Post mode or no-gap picket calculation missing');
 if (!threeD.includes('data-side-toggle') || !threeD.includes("function syncSideButtons"))
