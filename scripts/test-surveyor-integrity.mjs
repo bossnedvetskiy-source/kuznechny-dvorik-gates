@@ -77,6 +77,13 @@ if (!threeD.includes('data-gate-mode="sliding"') || !threeD.includes('data-gate-
   !threeD.includes('data-gate-slide-direction') || !threeD.includes('sceneSlidingLeaves') ||
   !sw.includes('./3d-sliding-frame.js') || !sw.includes('./3d-sliding-render.js'))
   throw new Error('DEV sliding gate selector, 3D render, or offline assets missing');
+if (!threeD.includes('data-tap-editor') ||
+  !threeD.includes('hitRaycaster.intersectObjects(hitTargets,false)') ||
+  !threeD.includes('data-tap-detail') ||
+  !threeD.includes('pointerStart.cancelled') ||
+  !threeDCss.includes('.kd3d-tap-editor'))
+  throw new Error('DEV tap-to-edit or gesture protection missing');
+
 if (!threeD.includes('data-gate-slide-position="open"') ||
   !threeD.includes('data-scene-slide-position="open"') ||
   !threeD.includes('data-gate-show-slide-zone') ||
