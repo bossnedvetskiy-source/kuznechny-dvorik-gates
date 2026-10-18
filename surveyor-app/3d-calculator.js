@@ -190,6 +190,7 @@ export function mount3DCalculator(root) {
     '<div class="kd3d-mode" role="group" aria-label="Вид результата"><button type="button" data-mode="scene" class="active">3D-модель</button><button type="button" data-mode="parts">Комплектация</button></div>',
     '<div class="kd3d-viewport" data-viewport><div class="kd3d-scene" data-scene></div><div class="kd3d-parts" data-parts hidden></div>',
     '<div class="kd3d-scene-controls"><button type="button" data-fit>Показать целиком</button></div><div class="kd3d-scene-slide-controls" data-scene-slide-controls hidden><small data-scene-slide-label>Сторона А</small><div><button type="button" data-scene-slide-position="closed" aria-pressed="true">Закрыто</button><button type="button" data-scene-slide-position="open" aria-pressed="false">Открыто</button></div></div><div class="kd3d-slide-legend" data-slide-legend hidden><span><i class="kd3d-legend-ok"></i> Свободное место</span><span><i class="kd3d-legend-blocked"></i> Не хватает места</span><span><i class="kd3d-legend-wicket"></i> Калитка / препятствие</span></div>',
+    '<div class="kd3d-tap-hint" data-tap-hint>Нажмите на ворота, калитку или секцию забора для настройки</div>',
     '<p class="kd3d-webgl-error" data-error hidden></p></div>',
     '<div class="kd3d-tap-editor" data-tap-editor hidden role="region" aria-label="Быстрое редактирование выбранного элемента"><div class="kd3d-tap-head"><div><small data-tap-subtitle>Выбранный элемент 3D</small><strong data-tap-title>Сторона А</strong></div><button type="button" data-tap-close aria-label="Закрыть панель">✕</button></div><div class="kd3d-tap-fields" data-tap-fields></div><div class="kd3d-tap-actions"><button type="button" data-tap-detail>Все настройки</button><span>Изменения сразу видны в 3D</span></div></div>',
     '<div class="kd3d-form kd3d-editor"><div class="kd3d-editor-head"><h3>Параметры забора</h3><button type="button" data-collapse-params aria-expanded="true">Свернуть <span aria-hidden="true">⌃</span></button></div>',
@@ -816,9 +817,11 @@ export function mount3DCalculator(root) {
     syncSideInputs();
     syncSideButtons();
     refreshTapPanel();
+    find('[data-tap-hint]').hidden=true;
   }
   find('[data-tap-close]').addEventListener('click',()=>{
     tapSelection=null;tapEditor.hidden=true;root.dataset.tapSelection='';
+    find('[data-tap-hint]').hidden=false;
   });
   tapFields.addEventListener('change',event=>{
     const input=event.target.closest('[data-tap-field]');
@@ -1211,6 +1214,7 @@ export function mount3DCalculator(root) {
     root.dataset.sceneRevision=String((Number(root.dataset.sceneRevision)||0)+1);
     root.dataset.sceneTapTargets=hitTargets.map(o=>
       o.userData.kdTapTarget.sideId+':'+o.userData.kdTapTarget.kind).join(';');
+    find('[data-tap-hint]').hidden=Boolean(tapSelection);
     if(tapSelection)refreshTapPanel();
     renderer.render(scene,camera);
   }
