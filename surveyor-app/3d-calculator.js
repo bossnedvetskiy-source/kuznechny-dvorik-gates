@@ -761,6 +761,105 @@ export function mount3DCalculator(root) {
     syncSideButtons();
     return layout;
   }
+  // The bottom sheet is a QUICK editor, not a duplicate of the long form.
+  // Existing config and all four individual side editors remain canonical.
+  const tapEditor=find('[data-tap-editor]');
+  const tapFields=find('[data-tap-fields]');
+  function refreshTapPanel(){
+    if(!tapSelection)return;
+    const {sideId,kind}=tapSelection;
+    const side=config.sides[sideId],opening=config.openings[sideId]?.[kind];
+    if(!side?.enabled||kind!=='fence'&&!opening?.enabled){
+      tapSelection=null;tapEditor.hidden=true;return;
+    }
+    const sideName='Сторона '+SIDE_NAMES[sideId];
+    find('[data-tap-subtitle]').textContent=sideName;
+    find('[data-tap-title]').textContent=kind==='fence'?'Забор · '+sideName:
+      kind==='gate'?(opening.type==='sliding'?'Откатные ворота':'Распашные ворота'):
+        'Калитка';
+    const opts=(values,selected)=>values.map(([value,label])=>
+      '<option value="'+value+'"'+(value===selected?' selected':'')+'>'+label+'</option>').join('');
+    const field=(label,name,value,min,max,step='0.1')=>
+      '<label>'+label+'<input type="number" inputmode="decimal" min="'+min+
+      '" max="'+max+'" step="'+step+'" data-tap-field="'+name+'" value="'+value+'"></label>';
+    const select=(label,name,items,value)=>
+      '<label>'+label+'<select data-tap-field="'+name+'">'+opts(items,value)+'</select></label>';
+    const position=(state)=>'<div class="kd3d-tap-position" role="group" aria-label="Положение изделия">'+
+      '<button type="button" data-tap-position="closed" aria-pressed="'+String(!state)+'">Закрыто</button>'+
+      '<button type="button" data-tap-position="open" aria-pressed="'+String(state)+'">Открыто</button></div>';
+    if(kind==='fence'){
+      tapFields.innerHTML=field('Длина стороны, м','sideLength',side.length,1,60)+
+        field('Высота, м','sideHeight',side.height,.8,3)+
+        select('Материал','sideFill',FILL_IDS.map(id=>[id,FILL_LABELS[id]]),side.fill)+
+        select('Цвет RAL','sideRal',Object.keys(RAL).map(code=>[code,code]),side.ral);
+    }else{
+      const widthMin=kind==='gate'?2:.7,widthMax=kind==='gate'?
+        (opening.type==='sliding'?5:6):1.5;
+      tapFields.innerHTML=field('Ширина, м','width',opening.width,widthMin,widthMax)+
+        field('Отступ, м','offset',opening.offset,0,60)+
+        select('Обшивка','fill',[['side','Как на заборе'],
+          ...FILL_IDS.map(id=>[id,FILL_LABELS[id]])],opening.fill)+
+        (kind==='gate'?
+          select('Тип ворот','type',[['swing','Распашные'],['sliding','Откатные']],opening.type):
+          '')+
+        '<div class="kd3d-tap-position-label">Положение в 3D</div>'+
+        position(kind==='gate'&&opening.type==='sliding'?opening.slideOpen:opening.swingOpen);
+    }
+    tapEditor.hidden=false;
+    root.dataset.tapSelection=sideId+':'+kind;
+  }
+  function select3DItem(sideId,kind){
+    if(!SIDE_IDS.includes(sideId)||!['fence','gate','wicket'].includes(kind))return;
+    if(!config.sides[sideId]?.enabled)return;
+    config.activeSide=sideId;
+    tapSelection={sideId,kind};
+    syncSideInputs();
+    syncSideButtons();
+    refreshTapPanel();
+  }
+  find('[data-tap-close]').addEventListener('click',()=>{
+    tapSelection=null;tapEditor.hidden=true;root.dataset.tapSelection='';
+  });
+  tapFields.addEventListener('change',event=>{
+    const input=event.target.closest('[data-tap-field]');
+    if(!input||!tapSelection)return;
+    const {sideId,kind}=tapSelection,name=input.dataset.tapField;
+    const side=config.sides[sideId],opening=config.openings[sideId]?.[kind];
+    if(kind==='fence'){
+      if(name==='sideLength')side.length=numeric(input.value,1,60,side.length);
+      else if(name==='sideHeight')side.height=numeric(input.value,.8,3,side.height);
+      else if(name==='sideFill'&&FILL_IDS.includes(input.value))side.fill=input.value;
+      else if(name==='sideRal'&&Object.hasOwn(RAL,input.value))side.ral=input.value;
+    }else if(opening){
+      if(name==='width')opening.width=numeric(input.value,kind==='gate'?2:.7,
+        kind==='gate'&&opening.type==='sliding'?5:kind==='gate'?6:1.5,opening.width);
+      else if(name==='offset')opening.offset=numeric(input.value,0,60,opening.offset);
+      else if(name==='fill'&&(input.value==='side'||FILL_IDS.includes(input.value)))
+        opening.fill=input.value;
+      else if(name==='type'&&kind==='gate')
+        opening.type=input.value==='sliding'?'sliding':'swing';
+    }
+    config.openings=normalizeOpenings(config.sides,config.openings,config.gate);
+    updateModel();syncSideInputs();refreshTapPanel();
+  });
+  tapFields.addEventListener('click',event=>{
+    const button=event.target.closest('[data-tap-position]');
+    if(!button||!tapSelection||tapSelection.kind==='fence')return;
+    const {sideId,kind}=tapSelection,opening=config.openings[sideId][kind];
+    if(kind==='gate'&&opening.type==='sliding')
+      opening.slideOpen=button.dataset.tapPosition==='open';
+    else opening.swingOpen=button.dataset.tapPosition==='open';
+    updateModel();syncSideInputs();refreshTapPanel();
+  });
+  find('[data-tap-detail]').addEventListener('click',()=>{
+    if(!tapSelection)return;
+    const {sideId,kind}=tapSelection;
+    const selector=kind==='fence'?'[data-side-entry="'+sideId+'"] [data-side-quick="'+sideId+'"]':
+      '[data-side-products="'+sideId+'"] .kd3d-product-'+kind;
+    const item=root.querySelector(selector);
+    tapEditor.hidden=true;tapSelection=null;root.dataset.tapSelection='';
+    if(item)item.scrollIntoView({behavior:'smooth',block:'center'});
+  });
   function clearGeometry() {
     if (!fence) return;
     hitTargets.length=0;
@@ -1110,6 +1209,9 @@ export function mount3DCalculator(root) {
     root.dataset.sceneActualGaps=getVerticalGapPlans(layout).map(x=>x.id+':'+x.plan.gapUsed.toFixed(6)).join(';');
     root.dataset.sceneFillColors=[...sceneFillColors].sort().join(',');
     root.dataset.sceneRevision=String((Number(root.dataset.sceneRevision)||0)+1);
+    root.dataset.sceneTapTargets=hitTargets.map(o=>
+      o.userData.kdTapTarget.sideId+':'+o.userData.kdTapTarget.kind).join(';');
+    if(tapSelection)refreshTapPanel();
     renderer.render(scene,camera);
   }
   function fit() {
