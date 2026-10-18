@@ -1,5 +1,5 @@
-const CACHE = 'kd-surveyor-v3-card-v3-v26-facade-camera-v27';
-const CORE = ['./index.html','./styles.css','./app.js','./line-builder.js','./calculator-bridge.js','./3d-calculator.js','./3d-layout.js','./3d-gate-frame.js','./3d-gate-render.js','./3d-sliding-frame.js','./3d-sliding-render.js','./3d-sliding-installation.js','./3d-sliding-hardware.js','./3d-drawing.js','./3d-calculator.css?v=mobile-swing-ux-20261017','./3d-mobile-ui.css?v=card-v3-20261017','./manifest.webmanifest','./icon.svg','./sliding-gates/index.html'];
+const CACHE = 'kd-surveyor-v3-tap-editor-v28';
+const CORE = ['./index.html','./styles.css','./app.js','./line-builder.js','./calculator-bridge.js','./3d-calculator.js','./3d-layout.js','./3d-gate-frame.js','./3d-gate-render.js','./3d-sliding-frame.js','./3d-sliding-render.js','./3d-sliding-installation.js','./3d-sliding-hardware.js','./3d-drawing.js','./3d-calculator.css?v=tap-editor-20261018','./3d-mobile-ui.css?v=card-v3-20261017','./manifest.webmanifest','./icon.svg','./sliding-gates/index.html'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(CORE)).then(() => self.skipWaiting()));
 });
