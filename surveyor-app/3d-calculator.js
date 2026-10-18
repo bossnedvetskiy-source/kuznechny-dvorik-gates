@@ -191,6 +191,7 @@ export function mount3DCalculator(root) {
     '<div class="kd3d-viewport" data-viewport><div class="kd3d-scene" data-scene></div><div class="kd3d-parts" data-parts hidden></div>',
     '<div class="kd3d-scene-controls"><button type="button" data-fit>Показать целиком</button></div><div class="kd3d-scene-slide-controls" data-scene-slide-controls hidden><small data-scene-slide-label>Сторона А</small><div><button type="button" data-scene-slide-position="closed" aria-pressed="true">Закрыто</button><button type="button" data-scene-slide-position="open" aria-pressed="false">Открыто</button></div></div><div class="kd3d-slide-legend" data-slide-legend hidden><span><i class="kd3d-legend-ok"></i> Свободное место</span><span><i class="kd3d-legend-blocked"></i> Не хватает места</span><span><i class="kd3d-legend-wicket"></i> Калитка / препятствие</span></div>',
     '<p class="kd3d-webgl-error" data-error hidden></p></div>',
+    '<div class="kd3d-tap-editor" data-tap-editor hidden role="region" aria-label="Быстрое редактирование выбранного элемента"><div class="kd3d-tap-head"><div><small data-tap-subtitle>Выбранный элемент 3D</small><strong data-tap-title>Сторона А</strong></div><button type="button" data-tap-close aria-label="Закрыть панель">✕</button></div><div class="kd3d-tap-fields" data-tap-fields></div><div class="kd3d-tap-actions"><button type="button" data-tap-detail>Все настройки</button><span>Изменения сразу видны в 3D</span></div></div>',
     '<div class="kd3d-form kd3d-editor"><div class="kd3d-editor-head"><h3>Параметры забора</h3><button type="button" data-collapse-params aria-expanded="true">Свернуть <span aria-hidden="true">⌃</span></button></div>',
     '<div class="kd3d-editor-content" data-editor-content>',
     '<details class="kd3d-section" data-section="type"><summary><span>Тип забора</span><small data-type-name>Евроштакетник</small></summary><div class="kd3d-section-inner">',
@@ -566,6 +567,10 @@ export function mount3DCalculator(root) {
   const stats = find('[data-stats]');
   const error = find('[data-error]');
   let renderer, camera, scene, controls, fence, grid, base;
+  const hitTargets=[];
+  const hitRaycaster=new THREE.Raycaster();
+  const hitPointer=new THREE.Vector2();
+  let tapSelection=null;
   let previousMaterials = [];
   let previousLineGeometries = [];
   let previousDimensionTextures = [];
@@ -758,6 +763,7 @@ export function mount3DCalculator(root) {
   }
   function clearGeometry() {
     if (!fence) return;
+    hitTargets.length=0;
     fence.clear();
     previousMaterials.forEach(m => m.dispose());
     previousLineGeometries.forEach(g => g.dispose());
@@ -904,6 +910,25 @@ export function mount3DCalculator(root) {
       group.position.set((edge.start.x+edge.end.x)/2,0,(edge.start.z+edge.end.z)/2);
       fence.add(group);
       const start=-side.length/2;
+      const makeHit=(from,width,kind)=>{
+        const safeWidth=Math.max(.1,width);
+        const geometry=new THREE.BoxGeometry(safeWidth,Math.max(.7,side.height),.15);
+        previousLineGeometries.push(geometry);
+        const material=new THREE.MeshBasicMaterial({
+          visible:false,side:THREE.DoubleSide,depthWrite:false
+        });
+        previousMaterials.push(material);
+        const hit=new THREE.Mesh(geometry,material);
+        hit.position.set(start+from+safeWidth/2,Math.max(.7,side.height)/2,.045);
+        hit.userData.kdTapTarget={sideId:edge.id,kind};
+        group.add(hit);
+        hitTargets.push(hit);
+      };
+      for(const section of edge.sections)
+        for(let i=0;i<section.count;i++)
+          makeHit(section.from+i*section.span,section.span,'fence');
+      for(const opening of edge.openings)
+        makeHit(opening.start,opening.width,opening.kind);
       const behind=side.postMode==='behind'&&!isHorizontalFill(side.fill);
       // Visible posts: run right up to the two post faces.
       // Rear posts: the infill passes across the post centres in front of the steel.
