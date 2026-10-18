@@ -785,3 +785,78 @@ test('3D camera from facade: side Б stays on viewer right, not mirrored',async 
   await root.locator('[data-side-length-input="A"]').press('Tab');
   await expect(root.locator('[data-parts]')).toContainText('Сторона А');
 });
+
+test('3D mobile tap: fence, gate, wicket open contextual editor; drag does not select',async ({page})=>{
+  test.setTimeout(120000);
+  await page.goto('/kuznechny-dvorik-gates/zamer-app-v2/');
+  await page.locator('#loginInput').fill('zamer');
+  await page.locator('#passwordInput').fill('1234');
+  await page.locator('#loginForm button[type="submit"]').click();
+  await expect(page.locator('#mainView')).toBeVisible({timeout:10000});
+  await page.locator('#open3DCalcBtn').click();
+  const root=page.locator('#kd3dRoot'),canvas=root.locator('.kd3d-scene canvas');
+  await expect(root.locator('[data-stats]')).toContainText('Столбов',{timeout:15000});
+  if(await canvas.count()===0)return; // WebGL unsupported device: existing form still usable.
+  const panel=root.locator('[data-tap-editor]');
+  await expect(panel).toBeHidden();
+  const pointFor=async(kind)=>{
+    const points=JSON.parse(await root.getAttribute('data-scene-tap-points')||'[]');
+    const box=await canvas.boundingBox();
+    const point=points.find(p=>p.sideId==='A'&&p.kind===kind&&p.x>15&&p.y>15&&
+      p.x<box.width-15&&p.y<box.height-15);
+    expect(point,'actual projected raycast region '+kind).toBeTruthy();
+    return point;
+  };
+  await root.locator('[data-fit]').click();
+  const fencePoint=await pointFor('fence');
+  await canvas.click({position:{x:fencePoint.x,y:fencePoint.y}});
+  await expect(panel).toBeVisible();
+  await expect(root).toHaveAttribute('data-tap-selection','A:fence');
+  await expect(panel.locator('[data-tap-title]')).toContainText('Забор');
+  await panel.locator('[data-tap-field="sideHeight"]').fill('2.1');
+  await panel.locator('[data-tap-field="sideHeight"]').press('Tab');
+  await expect(root.locator('[data-side-quick-height="A"]')).toHaveValue('2.1');
+  await panel.locator('[data-tap-close]').click();
+  await expect(panel).toBeHidden();
+
+  // Enable one gate and one wicket (including any existing draft defaults).
+  const gate=root.locator('[data-side-products="A"] [data-gate-enabled]');
+  const wicket=root.locator('[data-side-products="A"] [data-wicket-enabled]');
+  if(!await gate.isChecked())await root.locator('[data-opening-side="A"][data-opening-kind="gate"]').click();
+  if(!await wicket.isChecked())await root.locator('[data-opening-side="A"][data-opening-kind="wicket"]').click();
+  await root.locator('[data-fit]').click();
+  const gatePoint=await pointFor('gate');
+  await canvas.click({position:{x:gatePoint.x,y:gatePoint.y}});
+  await expect(root).toHaveAttribute('data-tap-selection','A:gate');
+  await expect(panel.locator('[data-tap-title]')).toContainText('ворота');
+  await panel.locator('[data-tap-position="open"]').click();
+  await expect(root.locator('[data-side-products="A"] [data-gate-swing-state="open"]'))
+    .toHaveAttribute('aria-pressed','true');
+  await panel.locator('[data-tap-detail]').click();
+  await expect(panel).toBeHidden();
+
+  await root.locator('[data-fit]').click();
+  const wicketPoint=await pointFor('wicket');
+  await canvas.click({position:{x:wicketPoint.x,y:wicketPoint.y}});
+  await expect(root).toHaveAttribute('data-tap-selection','A:wicket');
+  await expect(panel.locator('[data-tap-title]')).toContainText('Калитка');
+  await panel.locator('[data-tap-field="width"]').fill('1.1');
+  await panel.locator('[data-tap-field="width"]').press('Tab');
+  await expect(root.locator('[data-side-products="A"] [data-wicket-width]')).toHaveValue('1.1');
+  await panel.locator('[data-tap-close]').click();
+
+  // OrbitControls must keep a drag from opening the quick editor.
+  await root.locator('[data-fit]').click();
+  const p=await pointFor('gate');
+  const rect=await canvas.boundingBox();
+  await page.mouse.move(rect.x+p.x,rect.y+p.y);
+  await page.mouse.down();
+  await page.mouse.move(rect.x+p.x+45,rect.y+p.y+25,{steps:5});
+  await page.mouse.up();
+  await expect(panel).toBeHidden();
+  expect(await root.getAttribute('data-tap-selection')).toBe('');
+  const stored=await page.evaluate(()=>
+    JSON.parse(localStorage.getItem('kd-surveyor-3d-draft-v1')));
+  expect(stored.sides.A.height).toBe(2.1);
+  expect(stored.openings.A.wicket.width).toBe(1.1);
+});
