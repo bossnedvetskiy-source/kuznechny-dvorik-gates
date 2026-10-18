@@ -1267,6 +1267,7 @@ export function mount3DCalculator(root) {
     controls.target.set(b.centerX,maxHeight*.5,b.centerZ);
     controls.maxDistance=500;
     controls.update();
+    publishTapPoints();
     // Browser regression diagnostics: default view must be outside facade.
     root.dataset.sceneCameraX=camera.position.x.toFixed(3);
     root.dataset.sceneCameraZ=camera.position.z.toFixed(3);
@@ -1281,6 +1282,7 @@ export function mount3DCalculator(root) {
     camera.updateProjectionMatrix();
     renderer.setSize(width,height,false);
     renderer.render(scene,camera);
+    publishTapPoints();
   }
   // Each product editor is permanently bound to its owning perimeter side.
   function afterProductEdit(id){
@@ -1640,6 +1642,21 @@ export function mount3DCalculator(root) {
     root.querySelector('.kd3d-scene-controls').hidden=!isScene;
     if(isScene)resize();
   }));
+  // Project the exact raycast regions into canvas coordinates so automated
+  // browser tests can perform genuine pointer clicks instead of invoking
+  // private selection functions or guessing hit locations.
+  function publishTapPoints(){
+    if(!webglOk)return;
+    camera.updateMatrixWorld();
+    fence.updateMatrixWorld(true);
+    const width=renderer.domElement.clientWidth,height=renderer.domElement.clientHeight;
+    const center=new THREE.Vector3();
+    root.dataset.sceneTapPoints=JSON.stringify(hitTargets.map(hit=>{
+      center.set(0,0,0).applyMatrix4(hit.matrixWorld).project(camera);
+      return {...hit.userData.kdTapTarget,x:Math.round((center.x+1)*width/2),
+        y:Math.round((1-center.y)*height/2)};
+    }));
+  }
   // Tap-to-edit uses raycasting only after a short, stationary one-finger tap.
   // Drags/rotations, pinch gestures, scrolls and UI overlays never select items.
   if(webglOk){
