@@ -1636,6 +1636,38 @@ export function mount3DCalculator(root) {
     root.querySelector('.kd3d-scene-controls').hidden=!isScene;
     if(isScene)resize();
   }));
+  // Tap-to-edit uses raycasting only after a short, stationary one-finger tap.
+  // Drags/rotations, pinch gestures, scrolls and UI overlays never select items.
+  if(webglOk){
+    let pointerStart=null;
+    renderer.domElement.addEventListener('pointerdown',event=>{
+      if(event.button!==0||!event.isPrimary){pointerStart=null;return;}
+      pointerStart={id:event.pointerId,x:event.clientX,y:event.clientY,
+        time:performance.now(),cancelled:false};
+    });
+    renderer.domElement.addEventListener('pointermove',event=>{
+      if(pointerStart&&event.pointerId===pointerStart.id&&
+        Math.hypot(event.clientX-pointerStart.x,event.clientY-pointerStart.y)>9)
+        pointerStart.cancelled=true;
+    });
+    renderer.domElement.addEventListener('pointercancel',()=>{pointerStart=null;});
+    renderer.domElement.addEventListener('pointerup',event=>{
+      const down=pointerStart;pointerStart=null;
+      if(!down||down.cancelled||down.id!==event.pointerId||
+        Math.hypot(event.clientX-down.x,event.clientY-down.y)>9||
+        performance.now()-down.time>650||sceneHost.hidden)return;
+      const rect=renderer.domElement.getBoundingClientRect();
+      hitPointer.set((event.clientX-rect.left)/rect.width*2-1,
+        -(event.clientY-rect.top)/rect.height*2+1);
+      camera.updateMatrixWorld();
+      fence.updateMatrixWorld(true);
+      hitRaycaster.setFromCamera(hitPointer,camera);
+      const hits=hitRaycaster.intersectObjects(hitTargets,false);
+      if(!hits.length)return;
+      const {sideId,kind}=hits[0].object.userData.kdTapTarget;
+      select3DItem(sideId,kind);
+    });
+  }
   const observer=new ResizeObserver(resize);
   observer.observe(sceneHost);
   updateModel();
