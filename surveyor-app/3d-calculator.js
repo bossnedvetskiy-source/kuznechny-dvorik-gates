@@ -1017,7 +1017,8 @@ export function mount3DCalculator(root) {
         const geometry=new THREE.BoxGeometry(safeWidth,Math.max(.7,side.height),.15);
         previousLineGeometries.push(geometry);
         const material=new THREE.MeshBasicMaterial({
-          visible:false,side:THREE.DoubleSide,depthWrite:false
+          transparent:true,opacity:0,side:THREE.DoubleSide,
+          depthWrite:false,depthTest:false,colorWrite:false
         });
         previousMaterials.push(material);
         const hit=new THREE.Mesh(geometry,material);
