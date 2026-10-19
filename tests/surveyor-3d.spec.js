@@ -879,6 +879,7 @@ test('3D: gate/wicket offsets are visible and editable under each side heading',
   await a.locator('[data-opening-side="A"][data-opening-kind="gate"]').click();
   await expect(quickA).toBeVisible();
   await expect(quickA).toContainText('Расположение проёмов');
+  await expect(quickA).toContainText('Фасад: слева направо');
   const gateOffset=quickA.locator('[data-quick-offset="A"][data-quick-kind="gate"]');
   await expect(gateOffset).toBeVisible();
   await expect(quickA.locator('[data-quick-offset="A"][data-quick-kind="wicket"]')).toBeHidden();
@@ -915,6 +916,7 @@ test('3D: gate/wicket offsets are visible and editable under each side heading',
   await root.locator('[data-opening-side="B"][data-opening-kind="gate"]').click();
   const quickB=root.locator('[data-position-panel="B"]');
   await expect(quickB).toBeVisible();
+  await expect(quickB).toContainText('от фасада вглубь участка');
   await quickB.locator('[data-quick-offset="B"][data-quick-kind="gate"]').fill('3');
   await quickB.locator('[data-quick-offset="B"][data-quick-kind="gate"]').press('Tab');
   await expect(gateOffset).toHaveValue('2');
