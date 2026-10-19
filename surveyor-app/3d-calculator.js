@@ -27,6 +27,12 @@ function horizontalPicketRows(height, gap, doubleRow=false) {
 }
 const AREA_PRESETS=[{name:'6 соток',x:20,z:30},{name:'10 соток',x:25,z:40},{name:'15 соток',x:30,z:50},{name:'20 соток',x:40,z:50}];
 const SIDE_SUBTITLES={A:'Фасад',B:'Правая',V:'Задняя',G:'Левая'};
+const SIDE_OFFSET_HINT={
+  A:'Фасад: слева направо, если смотреть с улицы.',
+  B:'Правая сторона: от фасада вглубь участка.',
+  V:'Задняя сторона: от правого угла к левому.',
+  G:'Левая сторона: от заднего угла к фасаду.'
+};
 const FILL_LABELS={picket:'Евроштакетник · вертикальный','picket-double':'Евроштакетник · вертикальный шахматка',
   horizontal:'Евроштакетник · горизонтальный','horizontal-double':'Евроштакетник · горизонтальный шахматка',
   sheet:'Профнастил С10',jalousie:'Жалюзи · визуализация'};
@@ -222,7 +228,7 @@ export function mount3DCalculator(root) {
         '<span>'+(kind==='gate'?'Ворота':'Калитка')+' не добавлен'+(kind==='gate'?'ы':'а')+'</span>'+
         '<button type="button" data-quick-add="'+id+'" data-quick-kind="'+kind+'">+ Добавить</button></div>'+
         '</div>').join('')+
-      '<p class="kd3d-position-explain">Отступ отсчитывается вдоль стороны от её начала, не от соседнего проёма.</p>'+
+      '<p class="kd3d-position-explain">Отступ — от начала стороны до ближнего края проёма. '+SIDE_OFFSET_HINT[id]+'</p>'+
       '</div>'+
       '<label class="kd3d-side-inline-length"><span>Длина стороны</span><span class="kd3d-side-input-wrap"><input type="number" inputmode="decimal" min="1" max="60" step="0.1" data-side-length-input="'+id+'" aria-label="Длина стороны '+SIDE_NAMES[id]+', м"><small>м</small></span></label>'+
       '<div class="kd3d-side-quick" data-side-quick="'+id+'"><label>Материал стороны<select data-side-quick-fill="'+id+'" aria-label="Материал стороны '+SIDE_NAMES[id]+'">'+FILL_IDS.map(fill=>'<option value="'+fill+'">'+FILL_LABELS[fill]+'</option>').join('')+'</select></label><label>Высота, м<input type="number" min="0.8" max="3" step="0.1" inputmode="decimal" data-side-quick-height="'+id+'" aria-label="Высота стороны '+SIDE_NAMES[id]+'"></label><label>Цвет RAL<select data-side-quick-ral="'+id+'" aria-label="Цвет стороны '+SIDE_NAMES[id]+'">'+Object.keys(RAL).map(code=>'<option value="'+code+'">'+code+'</option>').join('')+'</select></label></div>'+
