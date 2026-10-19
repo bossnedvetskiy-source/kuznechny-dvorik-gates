@@ -209,6 +209,21 @@ export function mount3DCalculator(root) {
       '<div class="kd3d-opening-actions" role="group" aria-label="Проёмы на стороне '+SIDE_NAMES[id]+'">'+
       '<button type="button" data-opening-side="'+id+'" data-opening-kind="gate" aria-pressed="false" aria-label="Добавить ворота на сторону '+SIDE_NAMES[id]+'" title="Ворота на стороне '+SIDE_NAMES[id]+'"><svg viewBox="0 0 28 22" aria-hidden="true"><path d="M2 20V4h24v16M14 4v16M4 7l8 3v8M24 7l-8 3v8" /></svg><small>Ворота</small></button>'+
       '<button type="button" data-opening-side="'+id+'" data-opening-kind="wicket" aria-pressed="false" aria-label="Добавить калитку на сторону '+SIDE_NAMES[id]+'" title="Калитка на стороне '+SIDE_NAMES[id]+'"><svg viewBox="0 0 28 22" aria-hidden="true"><path d="M6 20V2h16v18M9 5l10 3v12M17 13h1" /></svg><small>Калитка</small></button></div>'+
+      '<div class="kd3d-position-panel" data-position-panel="'+id+'" hidden>'+
+      '<div class="kd3d-position-head"><strong>Расположение проёмов</strong><small>От начала стороны до края проёма</small></div>'+
+      ['gate','wicket'].map(kind=>
+        '<div class="kd3d-position-row" data-position-kind="'+kind+'" data-position-side="'+id+'">'+
+        '<label class="kd3d-position-input" data-position-input-kind="'+kind+'">'+
+        '<span>'+(kind==='gate'?'Ворота':'Калитка')+' · отступ, м</span>'+
+        '<span class="kd3d-position-number"><input type="number" inputmode="decimal" min="0" max="60" step="0.1" '+
+        'data-quick-offset="'+id+'" data-quick-kind="'+kind+'" '+
+        'aria-label="Отступ '+(kind==='gate'?'ворот':'калитки')+' от начала стороны '+SIDE_NAMES[id]+', м"><small>м</small></span></label>'+
+        '<div class="kd3d-position-absent" data-position-absent-kind="'+kind+'" hidden>'+
+        '<span>'+(kind==='gate'?'Ворота':'Калитка')+' не добавлен'+(kind==='gate'?'ы':'а')+'</span>'+
+        '<button type="button" data-quick-add="'+id+'" data-quick-kind="'+kind+'">+ Добавить</button></div>'+
+        '</div>').join('')+
+      '<p class="kd3d-position-explain">Отступ отсчитывается вдоль стороны от её начала, не от соседнего проёма.</p>'+
+      '</div>'+
       '<label class="kd3d-side-inline-length"><span>Длина стороны</span><span class="kd3d-side-input-wrap"><input type="number" inputmode="decimal" min="1" max="60" step="0.1" data-side-length-input="'+id+'" aria-label="Длина стороны '+SIDE_NAMES[id]+', м"><small>м</small></span></label>'+
       '<div class="kd3d-side-quick" data-side-quick="'+id+'"><label>Материал стороны<select data-side-quick-fill="'+id+'" aria-label="Материал стороны '+SIDE_NAMES[id]+'">'+FILL_IDS.map(fill=>'<option value="'+fill+'">'+FILL_LABELS[fill]+'</option>').join('')+'</select></label><label>Высота, м<input type="number" min="0.8" max="3" step="0.1" inputmode="decimal" data-side-quick-height="'+id+'" aria-label="Высота стороны '+SIDE_NAMES[id]+'"></label><label>Цвет RAL<select data-side-quick-ral="'+id+'" aria-label="Цвет стороны '+SIDE_NAMES[id]+'">'+Object.keys(RAL).map(code=>'<option value="'+code+'">'+code+'</option>').join('')+'</select></label></div>'+
       '<div class="kd3d-side-products" data-side-products="'+id+'"></div>'+
@@ -347,6 +362,19 @@ export function mount3DCalculator(root) {
       find('[data-side-quick-fill="'+id+'"]').value=config.sides[id].fill;
       find('[data-side-quick-height="'+id+'"]').value=config.sides[id].height;
       find('[data-side-quick-ral="'+id+'"]').value=config.sides[id].ral;
+      const posPanel=find('[data-position-panel="'+id+'"]');
+      const gateOn=config.openings[id].gate.enabled;
+      const wicketOn=config.openings[id].wicket.enabled;
+      posPanel.hidden=!enabled||(!gateOn&&!wicketOn);
+      for(const kind of ['gate','wicket']){
+        const item=config.openings[id][kind];
+        const row=posPanel.querySelector('[data-position-kind="'+kind+'"]');
+        const input=row.querySelector('[data-quick-offset]');
+        input.value=item.offset;
+        input.max=Math.max(0,config.sides[id].length-item.width);
+        row.querySelector('[data-position-input-kind]').hidden=!item.enabled;
+        row.querySelector('[data-position-absent-kind]').hidden=item.enabled;
+      }
     root.querySelectorAll('[data-opening-side="'+id+'"]').forEach(button=>{
       const active=config.openings[id][button.dataset.openingKind].enabled;
       button.setAttribute('aria-pressed',String(active));
@@ -1469,6 +1497,18 @@ export function mount3DCalculator(root) {
     window.setTimeout(()=>URL.revokeObjectURL(href),10000);
   });
   find('[data-sides]').addEventListener('click',event=>{
+    const addButton=event.target.closest('[data-quick-add]');
+    if(addButton){
+      const id=addButton.dataset.quickAdd,kind=addButton.dataset.quickKind;
+      if(!config.sides[id]||!['gate','wicket'].includes(kind))return;
+      const opening=config.openings[id][kind];
+      if(!opening.enabled){
+        opening.enabled=true;
+        config.sides[id].enabled=true;
+        afterProductEdit(id);
+      }
+      return;
+    }
     const button=event.target.closest('[data-opening-side][data-opening-kind]');
     if(!button)return;
     const id=button.dataset.openingSide,kind=button.dataset.openingKind;
@@ -1521,6 +1561,18 @@ export function mount3DCalculator(root) {
       side.enabled=toggle.checked;
       updateModel();
       resize();fit();
+      return;
+    }
+    const quickOffset=event.target.closest('[data-quick-offset]');
+    if(quickOffset){
+      const id=quickOffset.dataset.quickOffset,kind=quickOffset.dataset.quickKind;
+      if(!config.sides[id]||!['gate','wicket'].includes(kind))return;
+      const opening=config.openings[id][kind];
+      if(!opening.enabled)return;
+      opening.offset=numeric(quickOffset.value,0,
+        Math.max(0,config.sides[id].length-opening.width),opening.offset);
+      config.openings=normalizeOpenings(config.sides,config.openings,config.gate);
+      afterProductEdit(id);
       return;
     }
     const fillInput=event.target.closest('[data-side-quick-fill]');
