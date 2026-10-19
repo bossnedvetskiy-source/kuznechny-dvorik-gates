@@ -860,3 +860,69 @@ test('3D mobile tap: fence, gate, wicket open contextual editor; drag does not s
   expect(stored.sides.A.height).toBe(2.1);
   expect(stored.openings.A.wicket.width).toBe(1.1);
 });
+
+
+test('3D: gate/wicket offsets are visible and editable under each side heading',async ({page})=>{
+  test.setTimeout(120000);
+  await page.setViewportSize({width:390,height:844});
+  await page.goto('/kuznechny-dvorik-gates/zamer-app-v2/');
+  await page.locator('#loginInput').fill('zamer');
+  await page.locator('#passwordInput').fill('1234');
+  await page.locator('#loginForm button[type="submit"]').click();
+  await expect(page.locator('#mainView')).toBeVisible({timeout:10000});
+  await page.locator('#open3DCalcBtn').click();
+  const root=page.locator('#kd3dRoot');
+  await expect(root.locator('[data-stats]')).toContainText('Столбов',{timeout:15000});
+  const a=root.locator('[data-side-entry="A"]');
+  const quickA=a.locator('[data-position-panel="A"]');
+  await expect(quickA).toBeHidden(); // no openings, no spurious offset
+  await a.locator('[data-opening-side="A"][data-opening-kind="gate"]').click();
+  await expect(quickA).toBeVisible();
+  await expect(quickA).toContainText('Расположение проёмов');
+  const gateOffset=quickA.locator('[data-quick-offset="A"][data-quick-kind="gate"]');
+  await expect(gateOffset).toBeVisible();
+  await expect(quickA.locator('[data-quick-offset="A"][data-quick-kind="wicket"]')).toBeHidden();
+  await expect(quickA.locator('[data-quick-add="A"][data-quick-kind="wicket"]')).toBeVisible();
+  const positioning=await quickA.evaluate(panel=>{
+    const rect=panel.getBoundingClientRect();
+    const gate=panel.querySelector('[data-quick-offset][data-quick-kind="gate"]');
+    const inputRect=gate.getBoundingClientRect();
+    const detailed=document.querySelector('[data-side-products="A"]');
+    return {
+      panelWidth:rect.width,screenWidth:window.innerWidth,
+      inputHeight:inputRect.height,
+      aboveDetails:rect.top<detailed.getBoundingClientRect().top
+    };
+  });
+  expect(positioning.panelWidth).toBeLessThanOrEqual(positioning.screenWidth);
+  expect(positioning.inputHeight).toBeGreaterThanOrEqual(42);
+  expect(positioning.aboveDetails).toBe(true);
+
+  await gateOffset.fill('1.7');
+  await gateOffset.press('Tab');
+  await expect(a.locator('[data-side-products="A"] [data-gate-offset]')).toHaveValue('1.7');
+  await quickA.locator('[data-quick-add="A"][data-quick-kind="wicket"]').click();
+  const wicketOffset=quickA.locator('[data-quick-offset="A"][data-quick-kind="wicket"]');
+  await expect(wicketOffset).toBeVisible();
+  await expect(a.locator('[data-side-products="A"] [data-wicket-enabled]')).toBeChecked();
+  await wicketOffset.fill('6.2');
+  await wicketOffset.press('Tab');
+  await expect(a.locator('[data-side-products="A"] [data-wicket-offset]')).toHaveValue('6.2');
+  await a.locator('[data-side-products="A"] [data-gate-offset]').fill('2');
+  await a.locator('[data-side-products="A"] [data-gate-offset]').press('Tab');
+  await expect(gateOffset).toHaveValue('2'); // bidirectional synchronization
+
+  await root.locator('[data-opening-side="B"][data-opening-kind="gate"]').click();
+  const quickB=root.locator('[data-position-panel="B"]');
+  await expect(quickB).toBeVisible();
+  await quickB.locator('[data-quick-offset="B"][data-quick-kind="gate"]').fill('3');
+  await quickB.locator('[data-quick-offset="B"][data-quick-kind="gate"]').press('Tab');
+  await expect(gateOffset).toHaveValue('2');
+  await expect(wicketOffset).toHaveValue('6.2');
+  const saved=await page.evaluate(()=>JSON.parse(
+    localStorage.getItem('kd-surveyor-3d-draft-v1')).openings);
+  expect(saved.A.gate.offset).toBe(2);
+  expect(saved.A.wicket.offset).toBe(6.2);
+  expect(saved.B.gate.offset).toBe(3);
+  expect(saved.B.wicket.enabled).toBe(false);
+});
