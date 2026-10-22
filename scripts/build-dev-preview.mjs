@@ -659,6 +659,14 @@ devSw = devSw
   .replaceAll('kuzdvor-offline-', 'kuzdvor-dev-offline-')
   .replaceAll('__kuzdvor_offline_meta__', '__kuzdvor_dev_offline_meta__')
   .replaceAll(`${BASE}/site-icon.svg`, `${BASE}/${DEV_ICON_NAME}`);
+// The DEV PWA must not reuse old HTTP-cached JS modules after deployment.
+// Keep offline cache fallback unchanged; bypass browser cache only while online.
+const devNetworkFirstSource = "    const response=await fetch(request);\n    await safePut(cache,request,response);";
+const devNetworkFirstFresh = "    const liveRequest=/\\.(?:js|css)$/i.test(new URL(request.url).pathname)"+ 
+  "?new Request(request,{cache:'no-store'}):request;\n" +
+  "    const response=await fetch(liveRequest);\n    await safePut(cache,request,response);";
+if (!devSw.includes(devNetworkFirstSource)) throw new Error('DEV network-first service worker marker missing');
+devSw = devSw.replace(devNetworkFirstSource, devNetworkFirstFresh);
 const surveyorTestFetchNeedle = "self.addEventListener('fetch',event=>{\n  const request=event.request;\n  const url=new URL(request.url);";
 const surveyorTestFetchReplacement = surveyorTestFetchNeedle + `\n  // The un-gated test PWA has its own worker. V2 uses the shared root worker\n  // so its links to gates / fence / canopy remain available without internet.\n  if(url.pathname==='${BASE}/${SURVEYOR_TEST_DIR}'||url.pathname.startsWith('${BASE}/${SURVEYOR_TEST_DIR}/'))return;`;
 if (!devSw.includes(surveyorTestFetchNeedle)) throw new Error('DEV service worker fetch handler not found');
