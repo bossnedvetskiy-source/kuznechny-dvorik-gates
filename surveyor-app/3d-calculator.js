@@ -2,6 +2,7 @@ import * as THREE from '../naves/vendor/three.module.js';
 import { OrbitControls } from '../naves/vendor/OrbitControls.js';
 import { renderGateFrame } from './3d-gate-render.js';
 import { renderSlidingGate } from './3d-sliding-render.js';
+import { createCompactSideEditor } from './3d-compact-editor.js';
 import { getSlidingGatePlan, getSlidingTravelPlan } from './3d-sliding-frame.js';
 import {getSlidingInstallationPlan} from './3d-sliding-installation.js';
 import { getGateFramePlan } from './3d-gate-frame.js';
@@ -347,6 +348,33 @@ export function mount3DCalculator(root) {
   const find = selector => root.querySelector(selector);
   const productField=(id,selector)=>
     root.querySelector('[data-side-products="'+id+'"] '+selector);
+  const compactEditor=createCompactSideEditor({
+    root,config,sideIds:SIDE_IDS,sideNames:SIDE_NAMES,
+    subtitles:SIDE_SUBTITLES,fillIds:FILL_IDS,fillLabels:FILL_LABELS,
+    ral:RAL,normalizeOpenings,
+    onSelectSide:()=>{
+      syncSideInputs();
+      updateModel();
+    },
+    onEdit:(sideId,{geometryChanged=false}={})=>{
+      config.activeSide=sideId;
+      syncSideInputs();
+      updateModel();
+      if(geometryChanged)fit();
+    },
+    onDetails:(sideId,kind)=>{
+      config.activeSide=sideId;
+      syncSideInputs();
+      updateModel();
+      const section=find('[data-editor-content]');
+      if(section.hidden)find('[data-collapse-params]').click();
+      const selector=kind==='fence'?
+        '[data-side-entry="'+sideId+'"] [data-side-quick="'+sideId+'"]':
+        '[data-side-products="'+sideId+'"] .kd3d-product-'+kind;
+      const target=find(selector);
+      if(target)target.scrollIntoView({behavior:'smooth',block:'center'});
+    }
+  });
   function isPicketFill(fill){return ['picket','picket-double','horizontal','horizontal-double'].includes(fill);}
   function syncPicketSettings(){
     const fill=activeSettings().fill;
@@ -433,6 +461,7 @@ export function mount3DCalculator(root) {
       find('[data-preset="'+preset.x+'x'+preset.z+'"]').setAttribute('aria-pressed',String(match));
     }
     syncPicketSettings();
+    compactEditor.refresh();
   }
   function renderObstacleRows(id,gate){
     const target=productField(id,'[data-gate-obstacles]');
@@ -881,6 +910,7 @@ export function mount3DCalculator(root) {
     if(!config.sides[sideId]?.enabled)return;
     config.activeSide=sideId;
     tapSelection={sideId,kind};
+    compactEditor.select(sideId,kind);
     syncSideInputs();
     syncSideButtons();
     refreshTapPanel();
@@ -1774,6 +1804,7 @@ export function mount3DCalculator(root) {
     config.showDimensions=false;
     config.sides=createDefaultSides(DEFAULT);
     config.activeSide='A';
+    compactEditor.select('A','fence');
     syncSideInputs();
     updateModel();
     resize();
