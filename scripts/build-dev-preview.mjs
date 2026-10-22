@@ -541,6 +541,12 @@ devToolsApp = devToolsApp.replace(
   "from './line-builder.js';",
   `from './line-builder.js?v=${devToolsAssetVersion}';`
 );
+// Dynamic import is resolved relative to app.js and was not versioned:
+// an installed DEV PWA could keep executing an old 3D module.
+devToolsApp = devToolsApp.replace(
+  "import('./3d-calculator.js')",
+  `import('./3d-calculator.js?v=${devToolsAssetVersion}')`
+);
 await writeFile(devToolsAppPath, devToolsApp, 'utf8');
 
 await writeFile(path.join(DEV_TOOLS_OUT,'manifest.webmanifest'),JSON.stringify({
