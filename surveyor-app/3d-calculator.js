@@ -1344,20 +1344,16 @@ export function mount3DCalculator(root) {
       // Face the length of whichever single side is enabled, not only side A.
       const edge=layout.edges[0],unitX=(edge.end.x-edge.start.x)/edge.side.length;
       const unitZ=(edge.end.z-edge.start.z)/edge.side.length;
-      // Side A offsets increase left-to-right when viewed from the street.
-      // With camera.up=(0,1,0), viewing A from negative Z reverses screen X.
-      // View from positive Z so increasing A offsets also increase screen X.
-      // For other perimeter sides retain the existing single-side viewpoint.
-      if(edge.id==='A')
-        camera.position.set(b.centerX-unitX*dist*.1,
-          Math.max(3,dist*.38),b.centerZ+dist*.94);
-      else
-        camera.position.set(b.centerX+unitZ*dist*.94+unitX*dist*.1,
-          Math.max(3,dist*.38),b.centerZ-unitX*dist*.94+unitZ*dist*.1);
+      // Three.js camera right = view direction cross camera.up.
+      // For side A (+X), a camera at negative Z looks toward +Z:
+      // screen-right is +X, so 1 m and 4.4 m offsets appear on the left.
+      // Keep the outside view for the other perimeter sides as well.
+      camera.position.set(b.centerX+unitZ*dist*.94+unitX*dist*.1,
+        Math.max(3,dist*.38),b.centerZ-unitX*dist*.94+unitZ*dist*.1);
     }else {
-      // The facade is A (+X); positive Z keeps its start on screen-left
-      // and side B (at A's right endpoint) on screen-right.
-      camera.position.set(b.centerX-dist*.49,Math.max(5,dist*.54),b.centerZ+dist*.85);
+      // View from the street (-Z), so side A increases left-to-right.
+      // Side B remains on the right, matching the site plan.
+      camera.position.set(b.centerX+dist*.49,Math.max(5,dist*.54),b.centerZ-dist*.85);
     }
     const maxHeight=Math.max(1.8,...layout.posts.map(p=>p.height));
     controls.target.set(b.centerX,maxHeight*.5,b.centerZ);
