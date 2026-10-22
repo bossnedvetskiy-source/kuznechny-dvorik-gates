@@ -199,13 +199,6 @@ export function mount3DCalculator(root) {
     '<div class="kd3d-scene-controls"><button type="button" data-fit>Показать целиком</button></div><div class="kd3d-scene-slide-controls" data-scene-slide-controls hidden><small data-scene-slide-label>Сторона А</small><div><button type="button" data-scene-slide-position="closed" aria-pressed="true">Закрыто</button><button type="button" data-scene-slide-position="open" aria-pressed="false">Открыто</button></div></div><div class="kd3d-slide-legend" data-slide-legend hidden><span><i class="kd3d-legend-ok"></i> Свободное место</span><span><i class="kd3d-legend-blocked"></i> Не хватает места</span><span><i class="kd3d-legend-wicket"></i> Калитка / препятствие</span></div>',
     '<div class="kd3d-tap-hint" data-tap-hint>Нажмите на ворота, калитку или секцию забора для настройки</div>',
     '<p class="kd3d-webgl-error" data-error hidden></p></div>',
-    '<div class="kd3d-view-gallery" data-view-gallery role="group" aria-label="Ракурс 3D-модели">'+
-    [['perspective','Перспектива'],['front','Спереди'],['side','Сбоку'],['top','Сверху']].map(([mode,name])=>
-      '<button type="button" data-camera-view="'+mode+'" aria-pressed="'+String(mode==='perspective')+'">'+
-      '<span class="kd3d-view-thumb kd3d-view-thumb-'+mode+'" aria-hidden="true">'+
-      '<span class="kd3d-view-mini-post"></span><span class="kd3d-view-mini-fence"></span>'+
-      '<span class="kd3d-view-mini-post"></span></span><strong>'+name+'</strong></button>').join('')+
-    '</div>',
     '<div class="kd3d-tap-editor" data-tap-editor hidden role="region" aria-label="Быстрое редактирование выбранного элемента"><div class="kd3d-tap-head"><div><small data-tap-subtitle>Выбранный элемент 3D</small><strong data-tap-title>Сторона А</strong></div><button type="button" data-tap-close aria-label="Закрыть панель">✕</button></div><div class="kd3d-tap-fields" data-tap-fields></div><div class="kd3d-tap-actions"><button type="button" data-tap-detail>Все настройки</button><span>Изменения сразу видны в 3D</span></div></div>',
     '<div class="kd3d-form kd3d-editor"><div class="kd3d-editor-head"><h3>Параметры забора</h3><button type="button" data-collapse-params aria-expanded="true">Свернуть <span aria-hidden="true">⌃</span></button></div>',
     '<div class="kd3d-editor-content" data-editor-content>',
@@ -1785,8 +1778,6 @@ export function mount3DCalculator(root) {
       renderer.render(scene,camera);
       publishTapPoints();
     }
-    gallery.querySelectorAll('[data-camera-view]').forEach(button=>
-      button.setAttribute('aria-pressed',String(button.dataset.cameraView===selected)));
     root.dataset.sceneView=selected;
     root.dataset.sceneCameraX=camera.position.x.toFixed(3);
     root.dataset.sceneCameraZ=camera.position.z.toFixed(3);
