@@ -42,7 +42,8 @@ export function createCompactSideEditor({root,config,sideIds,sideNames,subtitles
       '" data-compact-value="'+value+'" aria-pressed="'+String(value===current)+'">'+
       label+'</button>').join('')+'</div></div>';
   function render(){
-    currentSide=sideIds.includes(currentSide)?currentSide:sideIds[0];
+    // External editors and 3D picking can change the active side.
+    currentSide=sideIds.includes(config.activeSide)?config.activeSide:sideIds[0];
     const side=config.sides[currentSide];
     const product=config.openings[currentSide]?.[currentKind];
     sideTabs.innerHTML=sideIds.map(id=>
