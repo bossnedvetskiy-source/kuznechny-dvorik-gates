@@ -1,0 +1,165 @@
+/* Side-first 3D editor. Independent from old long detail cards. DEV only. */
+#threeDScreen .kd3d-compact{
+  box-sizing:border-box;width:100%;min-width:0;
+  margin:15px 0 18px;padding:16px;
+  border:1px solid #e1ded7;border-radius:19px;
+  background:#fff;box-shadow:0 5px 20px #2027300c;
+  display:grid;gap:14px;
+  font-family:system-ui,-apple-system,sans-serif;
+}
+#threeDScreen .kd3d-compact-head{
+  display:flex;justify-content:space-between;align-items:center;gap:10px;min-width:0
+}
+#threeDScreen .kd3d-compact-head>div{display:grid;gap:3px;min-width:0}
+#threeDScreen .kd3d-compact-head strong{
+  color:#252b2f;font-size:17px;line-height:1.25;font-weight:850
+}
+#threeDScreen .kd3d-compact-head small{
+  color:#8a8f90;font-size:11px;line-height:1.35
+}
+#threeDScreen .kd3d-compact-head>button{
+  appearance:none;-webkit-appearance:none;box-shadow:none;
+  padding:10px 12px;min-height:40px;max-width:44%;
+  border:1px solid #e1d1b4;border-radius:11px;
+  background:#fff9ee;color:#86632a;
+  font-size:12px;font-weight:800;line-height:1.3;cursor:pointer
+}
+#threeDScreen .kd3d-compact-side-tabs{
+  display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;min-width:0
+}
+#threeDScreen .kd3d-compact-side-tabs button{
+  appearance:none;-webkit-appearance:none;box-shadow:none;
+  position:relative;box-sizing:border-box;min-width:0;min-height:68px;
+  padding:9px 4px;display:grid;justify-items:center;align-content:center;gap:2px;
+  border:1px solid #e5e7e7;border-radius:13px;background:#f8f9f9;
+  color:#596269;cursor:pointer
+}
+#threeDScreen .kd3d-compact-side-tabs button strong{
+  font-size:18px;line-height:1.2;font-weight:800
+}
+#threeDScreen .kd3d-compact-side-tabs button small{
+  font-size:10px;line-height:1.2;font-weight:600;white-space:nowrap
+}
+#threeDScreen .kd3d-compact-side-tabs button[aria-pressed=true]{
+  border:2px solid #bb8f3d;background:#fff5df;
+  color:#82591d;padding:8px 3px
+}
+#threeDScreen .kd3d-compact-side-dot{
+  display:block;position:absolute;right:7px;top:7px;width:6px;height:6px;
+  border-radius:50%;background:#d2d5d5
+}
+#threeDScreen .kd3d-compact-side-dot.is-on{background:#29966a}
+#threeDScreen .kd3d-compact-kind-tabs{
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:4px;padding:4px;min-width:0;
+  background:#eff1f1;border-radius:14px
+}
+#threeDScreen .kd3d-compact-kind-tabs button{
+  appearance:none;-webkit-appearance:none;box-shadow:none;
+  min-width:0;min-height:44px;margin:0;padding:9px 5px;
+  border:0;border-radius:11px;background:transparent;
+  color:#647076;font-size:13px;line-height:1.2;font-weight:800;
+  cursor:pointer
+}
+#threeDScreen .kd3d-compact-kind-tabs button[aria-pressed=true]{
+  background:#fff;border:1px solid #e5d8be;color:#815b21;
+  box-shadow:0 2px 6px #00000010
+}
+#threeDScreen .kd3d-compact-body{
+  min-width:0;display:grid;gap:12px
+}
+#threeDScreen .kd3d-compact-current{
+  display:flex;align-items:baseline;justify-content:space-between;
+  flex-wrap:wrap;gap:8px;padding:0 2px 9px;
+  border-bottom:1px solid #eeeae4;color:#465157
+}
+#threeDScreen .kd3d-compact-current strong{
+  font-size:13px;font-weight:800;line-height:1.4
+}
+#threeDScreen .kd3d-compact-current span{
+  font-size:12px;font-weight:700;color:#8a7657
+}
+#threeDScreen .kd3d-compact-grid{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:12px 10px;min-width:0
+}
+#threeDScreen .kd3d-compact-field{
+  display:grid;align-content:start;gap:7px;
+  box-sizing:border-box;min-width:0;
+  font-size:11px;line-height:1.35;font-weight:750;color:#606a70
+}
+#threeDScreen .kd3d-compact-field.kd3d-compact-wide{
+  grid-column:1/-1
+}
+#threeDScreen .kd3d-compact-number{
+  box-sizing:border-box;width:100%;min-width:0;
+  display:flex;align-items:center;gap:2px;
+  border:1px solid #dbe0e2;border-radius:12px;
+  padding:0 10px;background:#fff
+}
+#threeDScreen .kd3d-compact-field input{
+  appearance:textfield;-moz-appearance:textfield;
+  box-sizing:border-box;width:100%;min-width:0;height:46px;
+  border:0!important;background:transparent!important;
+  box-shadow:none!important;margin:0!important;padding:10px 2px!important;
+  color:#26313a;font:750 15px/1.2 system-ui,sans-serif
+}
+#threeDScreen .kd3d-compact-field input::-webkit-inner-spin-button{
+  -webkit-appearance:none;margin:0
+}
+#threeDScreen .kd3d-compact-number small{flex:0 0 auto;color:#888f94;font-size:11px}
+#threeDScreen .kd3d-compact-field select{
+  box-sizing:border-box;display:block;width:100%;max-width:100%;
+  min-width:0;height:46px;min-height:46px;padding:10px 12px;
+  appearance:auto;-webkit-appearance:menulist;
+  background:#fff;border:1px solid #dbe0e2;border-radius:12px;
+  color:#26313a;font:700 13px/1.3 system-ui,sans-serif
+}
+#threeDScreen .kd3d-compact-segment{
+  display:grid;gap:7px;min-width:0;
+  color:#606a70;font-size:11px;font-weight:750
+}
+#threeDScreen .kd3d-compact-segment.kd3d-compact-wide{grid-column:1/-1}
+#threeDScreen .kd3d-compact-segment>div{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  padding:4px;gap:4px;background:#eff1f1;border-radius:13px
+}
+#threeDScreen .kd3d-compact-segment button{
+  appearance:none;-webkit-appearance:none;box-shadow:none;
+  box-sizing:border-box;display:grid;place-items:center;min-width:0;
+  min-height:42px;border:0;border-radius:10px;background:transparent;
+  color:#69747b;font:750 13px/1.2 system-ui,sans-serif;cursor:pointer
+}
+#threeDScreen .kd3d-compact-segment button[aria-pressed=true]{
+  background:white;border:1px solid #e4d6ba;color:#79531c;
+  box-shadow:0 2px 6px #00000013
+}
+#threeDScreen .kd3d-compact-help{
+  margin:0;padding:9px 10px;border-radius:10px;
+  background:#f7f8f7;color:#747d81;
+  font-size:11px;line-height:1.5
+}
+#threeDScreen .kd3d-compact-empty{
+  display:grid;gap:12px;padding:14px;
+  background:#f8f9f8;border:1px solid #e9edeb;border-radius:13px
+}
+#threeDScreen .kd3d-compact-empty p{
+  margin:0;color:#727d81;font-size:12px;line-height:1.45
+}
+#threeDScreen .kd3d-compact-empty button{
+  appearance:none;-webkit-appearance:none;box-shadow:none;
+  min-height:45px;padding:10px 14px;
+  background:#fff5df;border:1px solid #dfc596;border-radius:11px;
+  color:#7b5420;font:800 13px/1.2 system-ui,sans-serif;cursor:pointer
+}
+@media(max-width:420px){
+  #threeDScreen .kd3d-compact{padding:13px;gap:12px;border-radius:16px}
+  #threeDScreen .kd3d-compact-side-tabs{gap:5px}
+  #threeDScreen .kd3d-compact-side-tabs button{min-height:63px}
+  #threeDScreen .kd3d-compact-head>button{padding:9px 10px;font-size:11px}
+}
+@media(max-width:340px){
+  #threeDScreen .kd3d-compact{padding:10px}
+  #threeDScreen .kd3d-compact-side-tabs button small{font-size:9px}
+  #threeDScreen .kd3d-compact-grid{gap:9px 7px}
+}
