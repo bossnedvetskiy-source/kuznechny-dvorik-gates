@@ -941,33 +941,15 @@ test('3D reference-style views switch actual cameras and per-side material/colou
   await page.locator('#open3DCalcBtn').click();
   const root=page.locator('#kd3dRoot');
   await expect(root.locator('[data-stats]')).toContainText('Столбов',{timeout:15000});
-  const gallery=root.locator('[data-view-gallery]');
-  await expect(gallery).toBeVisible();
-  await expect(gallery.locator('[data-camera-view]')).toHaveCount(4);
-  const canvasExists=await root.locator('.kd3d-scene canvas').count()>0;
-  if(canvasExists){
-    await gallery.locator('[data-camera-view="front"]').click();
-    await expect(root).toHaveAttribute('data-scene-view','front');
-    await expect(gallery.locator('[data-camera-view="front"]')).toHaveAttribute('aria-pressed','true');
-    let z=Number(await root.getAttribute('data-scene-camera-z'));
-    let tz=Number(await root.getAttribute('data-scene-camera-target-z'));
-    expect(z).toBeLessThan(tz);
-    await gallery.locator('[data-camera-view="side"]').click();
-    await expect(root).toHaveAttribute('data-scene-view','side');
-    let x=Number(await root.getAttribute('data-scene-camera-x'));
-    let tx=Number(await root.getAttribute('data-scene-camera-target-x'));
-    expect(x).toBeGreaterThan(tx);
-    await gallery.locator('[data-camera-view="top"]').click();
-    await expect(root).toHaveAttribute('data-scene-view','top');
-    await gallery.locator('[data-camera-view="perspective"]').click();
-    await expect(root).toHaveAttribute('data-scene-view','perspective');
-    await expect(gallery.locator('[data-camera-view="perspective"]'))
-      .toHaveAttribute('aria-pressed','true');
-  }
+  // Camera thumbnail gallery was deliberately removed to keep mobile UI compact.
+  await expect(root.locator('[data-view-gallery]')).toHaveCount(0);
+  await expect(root.locator('[data-camera-view]')).toHaveCount(0);
+  await expect(root.locator('[data-fit]')).toBeVisible();
+  await root.locator('[data-fit]').click();
+  await expect(root).toHaveAttribute('data-scene-view','perspective');
   await root.locator('[data-mode="parts"]').click();
-  await expect(gallery).toBeHidden();
   await root.locator('[data-mode="scene"]').click();
-  await expect(gallery).toBeVisible();
+  await expect(root.locator('[data-fit]')).toBeVisible();
 
   const sideA=root.locator('[data-side-entry="A"]');
   await sideA.locator('[data-side-style-open="A"]').click();
@@ -1020,14 +1002,14 @@ test('3D compact editor: switch A/B/V/G, edit fence gate wicket above full setti
   await expect(panel.locator('[data-compact-kind]')).toHaveCount(3);
   await expect(panel).toHaveAttribute('data-compact-selection','A:fence');
   const positions=await root.evaluate(el=>{
-    const gallery=el.querySelector('[data-view-gallery]').getBoundingClientRect();
+    const viewport=el.querySelector('[data-viewport]').getBoundingClientRect();
     const panel=el.querySelector('[data-compact-editor]').getBoundingClientRect();
     const detailed=el.querySelector('[data-sides]').getBoundingClientRect();
-    return {galleryBottom:gallery.bottom,panelTop:panel.top,
+    return {viewportBottom:viewport.bottom,panelTop:panel.top,
       panelBottom:panel.bottom,fullEditorTop:detailed.top,
       panelWidth:panel.width,viewportWidth:window.innerWidth};
   });
-  expect(positions.galleryBottom).toBeLessThanOrEqual(positions.panelTop+3);
+  expect(positions.viewportBottom).toBeLessThanOrEqual(positions.panelTop+3);
   expect(positions.panelBottom).toBeLessThan(positions.fullEditorTop);
   expect(positions.panelWidth).toBeLessThanOrEqual(positions.viewportWidth);
 
