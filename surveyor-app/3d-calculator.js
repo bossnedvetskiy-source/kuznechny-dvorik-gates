@@ -1344,16 +1344,21 @@ export function mount3DCalculator(root) {
       // Face the length of whichever single side is enabled, not only side A.
       const edge=layout.edges[0],unitX=(edge.end.x-edge.start.x)/edge.side.length;
       const unitZ=(edge.end.z-edge.start.z)/edge.side.length;
-      // Three.js camera right = view direction cross camera.up.
-      // For side A (+X), a camera at negative Z looks toward +Z:
-      // screen-right is +X, so 1 m and 4.4 m offsets appear on the left.
-      // Keep the outside view for the other perimeter sides as well.
-      camera.position.set(b.centerX+unitZ*dist*.94+unitX*dist*.1,
-        Math.max(3,dist*.38),b.centerZ-unitX*dist*.94+unitZ*dist*.1);
+      // Screen-right is camera's local +X. For A (+world X), viewing from
+      // negative Z produces -world X on screen-right (MIRRORED).
+      // View A from positive Z so increasing opening offsets read left-to-right.
+      if(edge.id==='A'){
+        camera.position.set(b.centerX-unitX*dist*.1,
+          Math.max(3,dist*.38),b.centerZ+dist*.94);
+      }else{
+        // Preserve other sides' current view orientation.
+        camera.position.set(b.centerX+unitZ*dist*.94+unitX*dist*.1,
+          Math.max(3,dist*.38),b.centerZ-unitX*dist*.94+unitZ*dist*.1);
+      }
     }else {
-      // View from the street (-Z), so side A increases left-to-right.
-      // Side B remains on the right, matching the site plan.
-      camera.position.set(b.centerX+dist*.49,Math.max(5,dist*.54),b.centerZ-dist*.85);
+      // For multi-sided layouts keep A at the front of the screen, with
+      // side B at its right endpoint, not on the left.
+      camera.position.set(b.centerX-dist*.49,Math.max(5,dist*.54),b.centerZ+dist*.85);
     }
     const maxHeight=Math.max(1.8,...layout.posts.map(p=>p.height));
     controls.target.set(b.centerX,maxHeight*.5,b.centerZ);
