@@ -928,3 +928,77 @@ test('3D: gate/wicket offsets are visible and editable under each side heading',
   expect(saved.B.gate.offset).toBe(3);
   expect(saved.B.wicket.enabled).toBe(false);
 });
+
+
+test('3D reference-style views switch actual cameras and per-side material/colour independently',async ({page})=>{
+  test.setTimeout(120000);
+  await page.setViewportSize({width:390,height:844});
+  await page.goto('/kuznechny-dvorik-gates/zamer-app-v2/');
+  await page.locator('#loginInput').fill('zamer');
+  await page.locator('#passwordInput').fill('1234');
+  await page.locator('#loginForm button[type="submit"]').click();
+  await expect(page.locator('#mainView')).toBeVisible({timeout:10000});
+  await page.locator('#open3DCalcBtn').click();
+  const root=page.locator('#kd3dRoot');
+  await expect(root.locator('[data-stats]')).toContainText('Столбов',{timeout:15000});
+  const gallery=root.locator('[data-view-gallery]');
+  await expect(gallery).toBeVisible();
+  await expect(gallery.locator('[data-camera-view]')).toHaveCount(4);
+  const canvasExists=await root.locator('.kd3d-scene canvas').count()>0;
+  if(canvasExists){
+    await gallery.locator('[data-camera-view="front"]').click();
+    await expect(root).toHaveAttribute('data-scene-view','front');
+    await expect(gallery.locator('[data-camera-view="front"]')).toHaveAttribute('aria-pressed','true');
+    let z=Number(await root.getAttribute('data-scene-camera-z'));
+    let tz=Number(await root.getAttribute('data-scene-camera-target-z'));
+    expect(z).toBeLessThan(tz);
+    await gallery.locator('[data-camera-view="side"]').click();
+    await expect(root).toHaveAttribute('data-scene-view','side');
+    let x=Number(await root.getAttribute('data-scene-camera-x'));
+    let tx=Number(await root.getAttribute('data-scene-camera-target-x'));
+    expect(x).toBeGreaterThan(tx);
+    await gallery.locator('[data-camera-view="top"]').click();
+    await expect(root).toHaveAttribute('data-scene-view','top');
+    await gallery.locator('[data-camera-view="perspective"]').click();
+    await expect(root).toHaveAttribute('data-scene-view','perspective');
+    await expect(gallery.locator('[data-camera-view="perspective"]'))
+      .toHaveAttribute('aria-pressed','true');
+  }
+  await root.locator('[data-mode="parts"]').click();
+  await expect(gallery).toBeHidden();
+  await root.locator('[data-mode="scene"]').click();
+  await expect(gallery).toBeVisible();
+
+  const sideA=root.locator('[data-side-entry="A"]');
+  await sideA.locator('[data-side-style-open="A"]').click();
+  const paletteA=sideA.locator('[data-side-style-panel="A"]');
+  await expect(paletteA).toBeVisible();
+  await expect(paletteA.locator('[data-visual-fill="A"]')).toHaveCount(6);
+  await expect(paletteA.locator('[data-visual-ral="A"]')).toHaveCount(9);
+  await paletteA.locator('[data-visual-value="horizontal"]').click();
+  await expect(sideA.locator('[data-side-quick-fill="A"]')).toHaveValue('horizontal');
+  await expect(paletteA.locator('[data-visual-value="horizontal"]')).toHaveAttribute('aria-pressed','true');
+  await paletteA.locator('[data-visual-color="8017"]').click();
+  await expect(sideA.locator('[data-side-quick-ral="A"]')).toHaveValue('8017');
+  await expect(paletteA.locator('[data-visual-color="8017"]')).toHaveAttribute('aria-pressed','true');
+
+  const sideB=root.locator('[data-side-entry="B"]');
+  await sideB.locator('[data-side-toggle="B"]').check();
+  await sideB.locator('[data-side-style-open="B"]').click();
+  const paletteB=sideB.locator('[data-side-style-panel="B"]');
+  await paletteB.locator('[data-visual-value="sheet"]').click();
+  await paletteB.locator('[data-visual-color="6005"]').click();
+  await expect(sideB.locator('[data-side-quick-fill="B"]')).toHaveValue('sheet');
+  await expect(sideB.locator('[data-side-quick-ral="B"]')).toHaveValue('6005');
+  await expect(sideA.locator('[data-side-quick-fill="A"]')).toHaveValue('horizontal');
+  await expect(sideA.locator('[data-side-quick-ral="A"]')).toHaveValue('8017');
+  const saved=await page.evaluate(()=>{
+    const x=JSON.parse(localStorage.getItem('kd-surveyor-3d-draft-v1'));
+    return {A:x.sides.A,B:x.sides.B};
+  });
+  expect(saved.A).toMatchObject({fill:'horizontal',ral:'8017'});
+  expect(saved.B).toMatchObject({enabled:true,fill:'sheet',ral:'6005'});
+  // Material preview is synchronized with the old dropdown in both directions.
+  await sideB.locator('[data-side-quick-fill="B"]').selectOption('picket');
+  await expect(paletteB.locator('[data-visual-value="picket"]')).toHaveAttribute('aria-pressed','true');
+});
