@@ -6,9 +6,11 @@ const viewNumber=value=>Number.isFinite(Number(value))?String(Number(value)):'0'
 
 export function createCompactSideEditor({root,config,sideIds,sideNames,subtitles,
   fillIds,fillLabels,ral,normalizeOpenings,onSelectSide,onEdit,onDetails}){
-  const gallery=root.querySelector('[data-view-gallery]');
-  if(!gallery)throw new Error('3D gallery missing for compact controls');
-  gallery.insertAdjacentHTML('afterend',
+  // Compact controls belong immediately after the 3D viewport. Do not depend
+  // on the removed camera thumbnail gallery: it is no longer in the DOM.
+  const viewport=root.querySelector('[data-viewport]');
+  if(!viewport)throw new Error('3D viewport missing for compact controls');
+  viewport.insertAdjacentHTML('afterend',
     '<section class="kd3d-compact" data-compact-editor aria-label="Быстрое редактирование участка">'+
     '<div class="kd3d-compact-head"><div><strong>Настроить участок</strong>'+
     '<small>Сторона → изделие → параметры</small></div>'+
