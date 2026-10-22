@@ -391,6 +391,16 @@ export function mount3DCalculator(root) {
       find('[data-side-quick-fill="'+id+'"]').value=config.sides[id].fill;
       find('[data-side-quick-height="'+id+'"]').value=config.sides[id].height;
       find('[data-side-quick-ral="'+id+'"]').value=config.sides[id].ral;
+      find('[data-side-style-caption="'+id+'"]').textContent=
+        FILL_LABELS[config.sides[id].fill]+' · RAL '+config.sides[id].ral;
+      root.querySelectorAll('[data-visual-fill="'+id+'"]').forEach(button=>{
+        button.setAttribute('aria-pressed',
+          String(button.dataset.visualValue===config.sides[id].fill));
+      });
+      root.querySelectorAll('[data-visual-ral="'+id+'"]').forEach(button=>{
+        button.setAttribute('aria-pressed',
+          String(button.dataset.visualColor===config.sides[id].ral));
+      });
       const posPanel=find('[data-position-panel="'+id+'"]');
       const gateOn=config.openings[id].gate.enabled;
       const wicketOn=config.openings[id].wicket.enabled;
@@ -1576,6 +1586,33 @@ export function mount3DCalculator(root) {
     });
   }
   find('[data-sides]').addEventListener('click',event=>{
+    const trigger=event.target.closest('[data-side-style-open]');
+    if(trigger){
+      const sideId=trigger.dataset.sideStyleOpen;
+      const panel=find('[data-side-style-panel="'+sideId+'"]');
+      panel.hidden=!panel.hidden;
+      trigger.setAttribute('aria-expanded',String(!panel.hidden));
+      trigger.lastElementChild.textContent=panel.hidden?'⌄':'⌃';
+      return;
+    }
+    const fillButton=event.target.closest('[data-visual-fill]');
+    const ralButton=event.target.closest('[data-visual-ral]');
+    if(fillButton||ralButton){
+      const sideId=fillButton?.dataset.visualFill||ralButton.dataset.visualRal;
+      const side=config.sides[sideId];
+      if(!side)return;
+      const fill=fillButton?.dataset.visualValue;
+      const ral=ralButton?.dataset.visualColor;
+      if(fillButton&&FILL_IDS.includes(fill))side.fill=fill;
+      else if(ralButton&&Object.hasOwn(RAL,ral))side.ral=ral;
+      else return;
+      // Only THIS side changes; the user's global colour scope remains intact.
+      side.enabled=true;
+      config.activeSide=sideId;
+      syncSideInputs();
+      updateModel();
+      return;
+    }
     const button=event.target.closest('[data-side]');
     if(!button||!config.sides[button.dataset.side])return;
     config.activeSide=button.dataset.side;
@@ -1697,7 +1734,38 @@ export function mount3DCalculator(root) {
     collapse.innerHTML=body.hidden?'Развернуть <span aria-hidden="true">⌄</span>':
       'Свернуть <span aria-hidden="true">⌃</span>';
   });
-  root.querySelector('[data-fit]').addEventListener('click',fit);
+  const gallery=find('[data-view-gallery]');
+  function setCameraView(mode){
+    if(!webglOk)return;
+    const selected=['perspective','front','side','top'].includes(mode)?mode:'perspective';
+    // Always derive the centre and distance from the CURRENT geometry,
+    // including two or more active sides and a possible sliding parking zone.
+    fit();
+    const distance=camera.position.distanceTo(controls.target);
+    const target=controls.target;
+    if(selected==='front')
+      camera.position.set(target.x,target.y+distance*.11,target.z-distance);
+    else if(selected==='side')
+      camera.position.set(target.x+distance,target.y+distance*.11,target.z);
+    else if(selected==='top')
+      camera.position.set(target.x,target.y+distance*1.08,target.z-distance*.06);
+    if(selected!=='perspective'){
+      camera.lookAt(target);
+      controls.update();
+      renderer.render(scene,camera);
+      publishTapPoints();
+    }
+    gallery.querySelectorAll('[data-camera-view]').forEach(button=>
+      button.setAttribute('aria-pressed',String(button.dataset.cameraView===selected)));
+    root.dataset.sceneView=selected;
+    root.dataset.sceneCameraX=camera.position.x.toFixed(3);
+    root.dataset.sceneCameraZ=camera.position.z.toFixed(3);
+  }
+  gallery.addEventListener('click',event=>{
+    const button=event.target.closest('[data-camera-view]');
+    if(button)setCameraView(button.dataset.cameraView);
+  });
+  root.querySelector('[data-fit]').addEventListener('click',()=>setCameraView('perspective'));
   root.querySelector('[data-reset]').addEventListener('click',()=>{
     Object.assign(config,DEFAULT);
     config.gate=normalizeSwingGate(null,DEFAULT.length);
@@ -1715,6 +1783,7 @@ export function mount3DCalculator(root) {
     const isScene=button.dataset.mode==='scene';
     root.querySelectorAll('[data-mode]').forEach(b=>b.classList.toggle('active',b===button));
     sceneHost.hidden=!isScene;parts.hidden=isScene;
+    gallery.hidden=!isScene;
     root.querySelector('[data-scene-slide-controls]').hidden=!isScene||
       !(config.openings[config.activeSide].gate.enabled&&
         config.openings[config.activeSide].gate.type==='sliding');
