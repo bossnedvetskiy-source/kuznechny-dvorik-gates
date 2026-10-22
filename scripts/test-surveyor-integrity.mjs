@@ -23,13 +23,16 @@ if (!threeD.includes('createCompactSideEditor') ||
     !sw.includes('./3d-compact-editor.js') ||
     !sw.includes('./3d-compact-editor.css?v=side-editor-20261022'))
   throw new Error('3D compact panel, mobile styles or offline cache missing');
-if (!threeD.includes('data-camera-view') ||
+// Mobile camera thumbnails were deliberately removed; keep fit-to-view and
+// per-side material controls, and fail if the obsolete gallery comes back.
+if (threeD.includes('data-view-gallery') ||
+  threeD.includes('data-camera-view') ||
   !threeD.includes('function setCameraView') ||
+  !threeD.includes('data-fit') ||
   !threeD.includes('data-visual-fill') ||
   !threeD.includes('data-visual-ral') ||
-  !threeDCss.includes('.kd3d-view-gallery') ||
   !threeDCss.includes('.kd3d-side-visual-panel'))
-  throw new Error('DEV reference-inspired camera gallery / per-side visual picker missing');
+  throw new Error('DEV compact 3D camera UI or per-side visual picker missing');
 
 if (!threeD.includes('data-position-panel') ||
     !threeD.includes('data-quick-offset') ||
