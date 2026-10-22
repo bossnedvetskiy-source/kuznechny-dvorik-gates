@@ -1002,3 +1002,96 @@ test('3D reference-style views switch actual cameras and per-side material/colou
   await sideB.locator('[data-side-quick-fill="B"]').selectOption('picket');
   await expect(paletteB.locator('[data-visual-value="picket"]')).toHaveAttribute('aria-pressed','true');
 });
+
+test('3D compact editor: switch A/B/V/G, edit fence gate wicket above full settings', async ({page})=>{
+  test.setTimeout(120000);
+  await page.setViewportSize({width:390,height:844});
+  await page.goto('/kuznechny-dvorik-gates/zamer-app-v2/');
+  await page.locator('#loginInput').fill('zamer');
+  await page.locator('#passwordInput').fill('1234');
+  await page.locator('#loginForm button[type="submit"]').click();
+  await expect(page.locator('#mainView')).toBeVisible({timeout:10000});
+  await page.locator('#open3DCalcBtn').click();
+  const root=page.locator('#kd3dRoot');
+  await expect(root.locator('[data-stats]')).toContainText('Столбов',{timeout:15000});
+  const panel=root.locator('[data-compact-editor]');
+  await expect(panel).toBeVisible();
+  await expect(panel.locator('[data-compact-side]')).toHaveCount(4);
+  await expect(panel.locator('[data-compact-kind]')).toHaveCount(3);
+  await expect(panel).toHaveAttribute('data-compact-selection','A:fence');
+  const positions=await root.evaluate(el=>{
+    const gallery=el.querySelector('[data-view-gallery]').getBoundingClientRect();
+    const panel=el.querySelector('[data-compact-editor]').getBoundingClientRect();
+    const detailed=el.querySelector('[data-sides]').getBoundingClientRect();
+    return {galleryBottom:gallery.bottom,panelTop:panel.top,
+      panelBottom:panel.bottom,fullEditorTop:detailed.top,
+      panelWidth:panel.width,viewportWidth:window.innerWidth};
+  });
+  expect(positions.galleryBottom).toBeLessThanOrEqual(positions.panelTop+3);
+  expect(positions.panelBottom).toBeLessThan(positions.fullEditorTop);
+  expect(positions.panelWidth).toBeLessThanOrEqual(positions.viewportWidth);
+
+  await panel.locator('[data-compact-field="height"]').fill('2.2');
+  await panel.locator('[data-compact-field="height"]').press('Tab');
+  await expect(root.locator('[data-side-quick-height="A"]')).toHaveValue('2.2');
+  await panel.locator('[data-compact-field="fill"]').selectOption('sheet');
+  await panel.locator('[data-compact-field="ral"]').selectOption('6005');
+  await expect(root.locator('[data-side-quick-fill="A"]')).toHaveValue('sheet');
+  await expect(root.locator('[data-side-quick-ral="A"]')).toHaveValue('6005');
+
+  await panel.locator('[data-compact-side="B"]').click();
+  await expect(panel).toHaveAttribute('data-compact-selection','B:fence');
+  await expect(panel.locator('[data-compact-action="enable-side"]')).toBeVisible();
+  await panel.locator('[data-compact-action="enable-side"]').click();
+  await expect(root.locator('[data-side-toggle="B"]')).toBeChecked();
+  await panel.locator('[data-compact-kind="gate"]').click();
+  await expect(panel.locator('[data-compact-action="enable-product"]')).toBeVisible();
+  await panel.locator('[data-compact-action="enable-product"]').click();
+  await expect(root.locator('[data-side-products="B"] [data-gate-enabled]')).toBeChecked();
+  await panel.locator('[data-compact-setting="type"][data-compact-value="sliding"]').click();
+  await expect(root.locator('[data-side-products="B"] [data-gate-mode="sliding"]'))
+    .toHaveAttribute('aria-pressed','true');
+  await panel.locator('[data-compact-field="width"]').fill('4');
+  await panel.locator('[data-compact-field="width"]').press('Tab');
+  await panel.locator('[data-compact-field="offset"]').fill('2');
+  await panel.locator('[data-compact-field="offset"]').press('Tab');
+  await expect(root.locator('[data-side-products="B"] [data-gate-offset]')).toHaveValue('2');
+  await panel.locator('[data-compact-setting="preview"][data-compact-value="open"]').click();
+  await expect(root.locator('[data-side-products="B"] [data-gate-slide-position="open"]'))
+    .toHaveAttribute('aria-pressed','true');
+
+  await panel.locator('[data-compact-kind="wicket"]').click();
+  await expect(panel.locator('[data-compact-action="enable-product"]')).toBeVisible();
+  await panel.locator('[data-compact-action="enable-product"]').click();
+  await panel.locator('[data-compact-field="width"]').fill('0.9');
+  await panel.locator('[data-compact-field="width"]').press('Tab');
+  await panel.locator('[data-compact-field="offset"]').fill('0.5');
+  await panel.locator('[data-compact-field="offset"]').press('Tab');
+  await panel.locator('[data-compact-field="hingeSide"]').selectOption('right');
+  await expect(root.locator('[data-side-products="B"] [data-wicket-hinge-side]')).toHaveValue('right');
+  await expect(root.locator('[data-side-products="B"] [data-wicket-width]')).toHaveValue('0.9');
+
+  await panel.locator('[data-compact-side="A"]').click();
+  await expect(panel.locator('[data-compact-kind="wicket"]')).toHaveAttribute('aria-pressed','true');
+  await panel.locator('[data-compact-kind="fence"]').click();
+  await expect(panel.locator('[data-compact-field="height"]')).toHaveValue('2.2');
+  await expect(panel.locator('[data-compact-field="fill"]')).toHaveValue('sheet');
+  await expect(panel.locator('[data-compact-field="ral"]')).toHaveValue('6005');
+  const saved=await page.evaluate(()=>{
+    const x=JSON.parse(localStorage.getItem('kd-surveyor-3d-draft-v1'));
+    return {sides:x.sides,openings:x.openings};
+  });
+  expect(saved.sides.A).toMatchObject({height:2.2,fill:'sheet',ral:'6005'});
+  expect(saved.sides.B.enabled).toBe(true);
+  expect(saved.openings.B.gate).toMatchObject({enabled:true,type:'sliding',width:4,offset:2,slideOpen:true});
+  expect(saved.openings.B.wicket).toMatchObject({enabled:true,width:.9,offset:.5,hingeSide:'right'});
+
+  await panel.locator('[data-compact-side="G"]').click();
+  await expect(panel).toHaveAttribute('data-compact-selection','G:fence');
+  await panel.locator('[data-compact-side="V"]').click();
+  await expect(panel).toHaveAttribute('data-compact-selection','V:fence');
+  await panel.locator('[data-compact-side="B"]').click();
+  await panel.locator('[data-compact-kind="wicket"]').click();
+  await panel.locator('[data-compact-details]').click();
+  await expect(root.locator('[data-side-products="B"] .kd3d-product-wicket')).toBeVisible();
+});
