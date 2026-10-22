@@ -1757,7 +1757,7 @@ export function mount3DCalculator(root) {
     collapse.innerHTML=body.hidden?'Развернуть <span aria-hidden="true">⌄</span>':
       'Свернуть <span aria-hidden="true">⌃</span>';
   });
-  const gallery=find('[data-view-gallery]');
+
   function setCameraView(mode){
     if(!webglOk)return;
     const selected=['perspective','front','side','top'].includes(mode)?mode:'perspective';
@@ -1782,10 +1782,7 @@ export function mount3DCalculator(root) {
     root.dataset.sceneCameraX=camera.position.x.toFixed(3);
     root.dataset.sceneCameraZ=camera.position.z.toFixed(3);
   }
-  gallery.addEventListener('click',event=>{
-    const button=event.target.closest('[data-camera-view]');
-    if(button)setCameraView(button.dataset.cameraView);
-  });
+
   root.querySelector('[data-fit]').addEventListener('click',()=>setCameraView('perspective'));
   root.querySelector('[data-reset]').addEventListener('click',()=>{
     Object.assign(config,DEFAULT);
@@ -1805,7 +1802,7 @@ export function mount3DCalculator(root) {
     const isScene=button.dataset.mode==='scene';
     root.querySelectorAll('[data-mode]').forEach(b=>b.classList.toggle('active',b===button));
     sceneHost.hidden=!isScene;parts.hidden=isScene;
-    gallery.hidden=!isScene;
+
     root.querySelector('[data-scene-slide-controls]').hidden=!isScene||
       !(config.openings[config.activeSide].gate.enabled&&
         config.openings[config.activeSide].gate.type==='sliding');
