@@ -739,3 +739,135 @@
   pointer-events:none;font-size:11px;line-height:1.35;
   box-shadow:0 2px 8px #00000012
 }
+
+
+/* Reference-inspired staged UX: compact live view gallery and optional visual
+   design selector per side. This is DEV-only; existing advanced fields remain. */
+#threeDScreen .kd3d-view-gallery[hidden],
+#threeDScreen .kd3d-side-visual-panel[hidden]{display:none!important}
+#threeDScreen .kd3d-view-gallery{
+  display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;
+  min-width:0;margin-top:-3px
+}
+#threeDScreen .kd3d-view-gallery button{
+  display:grid;align-content:start;justify-items:center;gap:7px;min-width:0;
+  min-height:87px;padding:8px 5px;
+  border:1px solid #e1e4e5;border-radius:14px;background:#fff;
+  color:#5e6b74;box-shadow:none;cursor:pointer;
+  font:700 11px/1.35 system-ui,sans-serif
+}
+#threeDScreen .kd3d-view-gallery button[aria-pressed=true]{
+  background:#fff9eb;border:2px solid #d7a342;
+  color:#80571a;padding:7px 4px
+}
+#threeDScreen .kd3d-view-gallery strong{
+  font-size:11px;line-height:1.2;font-weight:800
+}
+#threeDScreen .kd3d-view-thumb{
+  display:flex;justify-content:center;align-items:center;gap:1px;
+  width:100%;max-width:90px;height:43px;overflow:hidden;
+  border-radius:8px;background:linear-gradient(#f1f4f3 50%,#e3ece9);
+  perspective:90px;position:relative
+}
+#threeDScreen .kd3d-view-mini-post{
+  flex:0 0 4px;height:24px;border-radius:1px;background:#354b49;
+  box-shadow:1px 1px 1px #172a272c
+}
+#threeDScreen .kd3d-view-mini-fence{
+  width:64%;height:20px;display:block;
+  background:repeating-linear-gradient(90deg,#25534a 0 3px,transparent 3px 5px);
+  border-top:2px solid #254840;border-bottom:2px solid #254840
+}
+#threeDScreen .kd3d-view-thumb-perspective>span{transform:rotateY(-25deg) skewY(4deg)}
+#threeDScreen .kd3d-view-thumb-front>span{transform:none}
+#threeDScreen .kd3d-view-thumb-side>span{transform:rotateY(72deg)}
+#threeDScreen .kd3d-view-thumb-top>span{transform:rotateX(74deg) scaleY(1.3)}
+#threeDScreen .kd3d-side-visual-trigger{
+  display:flex;align-items:center;gap:11px;text-align:left;
+  box-sizing:border-box;width:100%;min-height:57px;padding:11px 12px;
+  background:#fff8ea;border:1px solid #e9d7b5;border-radius:13px;
+  color:#795622;box-shadow:none;cursor:pointer
+}
+#threeDScreen .kd3d-side-visual-trigger>span:nth-child(2){
+  display:grid;gap:3px;min-width:0;flex:1
+}
+#threeDScreen .kd3d-side-visual-trigger strong{font:800 13px/1.3 system-ui,sans-serif}
+#threeDScreen .kd3d-side-visual-trigger small{
+  font:500 11px/1.35 system-ui,sans-serif;color:#847b6c;white-space:normal
+}
+#threeDScreen .kd3d-side-visual-trigger>span:last-child{font-size:18px}
+#threeDScreen .kd3d-side-visual-icon{
+  width:34px;height:34px;flex:0 0 34px;display:grid;place-items:center;
+  background:#fae9c9;color:#885e1f;border-radius:10px;font-size:22px
+}
+#threeDScreen .kd3d-side-visual-panel{
+  display:grid;gap:14px;min-width:0;padding:14px;
+  border:1px solid #e4e7e8;border-radius:14px;background:#fcfdfd
+}
+#threeDScreen .kd3d-visual-label{
+  display:flex;align-items:baseline;justify-content:space-between;
+  flex-wrap:wrap;gap:6px;font:800 12px/1.35 system-ui,sans-serif;color:#3d4851
+}
+#threeDScreen .kd3d-visual-label small{
+  color:#8a9196;font:500 10px/1.3 system-ui,sans-serif
+}
+#threeDScreen .kd3d-visual-fills{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px
+}
+#threeDScreen .kd3d-visual-fills button{
+  display:grid;justify-items:center;align-content:start;gap:8px;
+  min-width:0;min-height:99px;padding:10px 7px;
+  background:#fff;color:#59636b;border:1px solid #e0e5e7;
+  border-radius:12px;box-shadow:none;font:700 11px/1.3 system-ui,sans-serif;
+  cursor:pointer
+}
+#threeDScreen .kd3d-visual-fills button[aria-pressed=true]{
+  background:#fff5df;border:2px solid #d6a044;color:#795018;padding:9px 6px
+}
+#threeDScreen .kd3d-material-art{
+  width:92%;max-width:130px;height:45px;display:block;border-radius:3px;
+  box-shadow:inset 0 2px #2f574f,inset 0 -2px #2f574f;
+  background:repeating-linear-gradient(90deg,#27574f 0 5px,transparent 5px 8px)
+}
+#threeDScreen .kd3d-material-art-picket-double{
+  background:repeating-linear-gradient(90deg,#20433d 0 5px,#537368 5px 8px)
+}
+#threeDScreen .kd3d-material-art-horizontal{
+  background:repeating-linear-gradient(0deg,#27574f 0 5px,transparent 5px 8px)
+}
+#threeDScreen .kd3d-material-art-horizontal-double{
+  background:repeating-linear-gradient(0deg,#20433d 0 5px,#537368 5px 8px)
+}
+#threeDScreen .kd3d-material-art-sheet{
+  background:repeating-linear-gradient(90deg,#2d5a52 0 12px,#3b776b 12px 16px,#224a43 16px 20px)
+}
+#threeDScreen .kd3d-material-art-jalousie{
+  background:repeating-linear-gradient(0deg,#1e4640 0 4px,#649186 4px 8px,transparent 8px 10px)
+}
+#threeDScreen .kd3d-visual-colors{
+  display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px 4px
+}
+#threeDScreen .kd3d-visual-colors button{
+  box-sizing:border-box;min-width:0;display:grid;justify-items:center;gap:6px;
+  border:1px solid transparent;border-radius:11px;background:transparent;
+  color:#7e8589;box-shadow:none;padding:7px 2px;cursor:pointer;
+}
+#threeDScreen .kd3d-visual-colors button span{
+  width:29px;height:29px;display:block;border:1px solid #0000001b;
+  border-radius:50%;box-shadow:inset 0 1px 3px #ffffff51
+}
+#threeDScreen .kd3d-visual-colors button small{
+  font:600 10px/1.2 system-ui,sans-serif
+}
+#threeDScreen .kd3d-visual-colors button[aria-pressed=true]{
+  background:#fff8e8;border-color:#d7a13c;color:#80551b
+}
+#threeDScreen .kd3d-visual-colors button[aria-pressed=true] span{
+  outline:2px solid #d7a13c;outline-offset:2px
+}
+@media(max-width:360px){
+ #threeDScreen .kd3d-view-gallery{gap:5px}
+ #threeDScreen .kd3d-view-gallery button{padding:6px 3px;min-height:79px}
+ #threeDScreen .kd3d-view-gallery strong{font-size:10px}
+ #threeDScreen .kd3d-side-visual-panel{padding:10px}
+}
