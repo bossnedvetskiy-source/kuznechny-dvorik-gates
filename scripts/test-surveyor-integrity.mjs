@@ -12,6 +12,14 @@ const slidingRender=await readFile('surveyor-app/3d-sliding-render.js','utf8');
 const layout = await readFile('surveyor-app/3d-layout.js','utf8');
 const threeDCss = await readFile('surveyor-app/3d-calculator.css','utf8');
 const mobileCardsCss = await readFile('surveyor-app/3d-mobile-ui.css','utf8');
+if (!threeD.includes('data-camera-view') ||
+  !threeD.includes('function setCameraView') ||
+  !threeD.includes('data-visual-fill') ||
+  !threeD.includes('data-visual-ral') ||
+  !threeDCss.includes('.kd3d-view-gallery') ||
+  !threeDCss.includes('.kd3d-side-visual-panel'))
+  throw new Error('DEV reference-inspired camera gallery / per-side visual picker missing');
+
 if (!threeD.includes('data-position-panel') ||
     !threeD.includes('data-quick-offset') ||
     !threeD.includes('data-quick-add') ||
