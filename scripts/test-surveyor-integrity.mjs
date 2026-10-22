@@ -12,6 +12,17 @@ const slidingRender=await readFile('surveyor-app/3d-sliding-render.js','utf8');
 const layout = await readFile('surveyor-app/3d-layout.js','utf8');
 const threeDCss = await readFile('surveyor-app/3d-calculator.css','utf8');
 const mobileCardsCss = await readFile('surveyor-app/3d-mobile-ui.css','utf8');
+const compactEditor = await readFile('surveyor-app/3d-compact-editor.js','utf8');
+const compactEditorCss = await readFile('surveyor-app/3d-compact-editor.css','utf8');
+if (!threeD.includes('createCompactSideEditor') ||
+    !compactEditor.includes('data-compact-side') ||
+    !compactEditor.includes('data-compact-kind') ||
+    !compactEditor.includes('data-compact-field') ||
+    !compactEditorCss.includes('.kd3d-compact-kind-tabs') ||
+    !html.includes('3d-compact-editor.css?v=side-editor-20261022') ||
+    !sw.includes('./3d-compact-editor.js') ||
+    !sw.includes('./3d-compact-editor.css?v=side-editor-20261022'))
+  throw new Error('3D compact panel, mobile styles or offline cache missing');
 if (!threeD.includes('data-camera-view') ||
   !threeD.includes('function setCameraView') ||
   !threeD.includes('data-visual-fill') ||
