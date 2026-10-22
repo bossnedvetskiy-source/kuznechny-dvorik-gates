@@ -198,6 +198,13 @@ export function mount3DCalculator(root) {
     '<div class="kd3d-scene-controls"><button type="button" data-fit>Показать целиком</button></div><div class="kd3d-scene-slide-controls" data-scene-slide-controls hidden><small data-scene-slide-label>Сторона А</small><div><button type="button" data-scene-slide-position="closed" aria-pressed="true">Закрыто</button><button type="button" data-scene-slide-position="open" aria-pressed="false">Открыто</button></div></div><div class="kd3d-slide-legend" data-slide-legend hidden><span><i class="kd3d-legend-ok"></i> Свободное место</span><span><i class="kd3d-legend-blocked"></i> Не хватает места</span><span><i class="kd3d-legend-wicket"></i> Калитка / препятствие</span></div>',
     '<div class="kd3d-tap-hint" data-tap-hint>Нажмите на ворота, калитку или секцию забора для настройки</div>',
     '<p class="kd3d-webgl-error" data-error hidden></p></div>',
+    '<div class="kd3d-view-gallery" data-view-gallery role="group" aria-label="Ракурс 3D-модели">'+
+    [['perspective','Перспектива'],['front','Спереди'],['side','Сбоку'],['top','Сверху']].map(([mode,name])=>
+      '<button type="button" data-camera-view="'+mode+'" aria-pressed="'+String(mode==='perspective')+'">'+
+      '<span class="kd3d-view-thumb kd3d-view-thumb-'+mode+'" aria-hidden="true">'+
+      '<span class="kd3d-view-mini-post"></span><span class="kd3d-view-mini-fence"></span>'+
+      '<span class="kd3d-view-mini-post"></span></span><strong>'+name+'</strong></button>').join('')+
+    '</div>',
     '<div class="kd3d-tap-editor" data-tap-editor hidden role="region" aria-label="Быстрое редактирование выбранного элемента"><div class="kd3d-tap-head"><div><small data-tap-subtitle>Выбранный элемент 3D</small><strong data-tap-title>Сторона А</strong></div><button type="button" data-tap-close aria-label="Закрыть панель">✕</button></div><div class="kd3d-tap-fields" data-tap-fields></div><div class="kd3d-tap-actions"><button type="button" data-tap-detail>Все настройки</button><span>Изменения сразу видны в 3D</span></div></div>',
     '<div class="kd3d-form kd3d-editor"><div class="kd3d-editor-head"><h3>Параметры забора</h3><button type="button" data-collapse-params aria-expanded="true">Свернуть <span aria-hidden="true">⌃</span></button></div>',
     '<div class="kd3d-editor-content" data-editor-content>',
@@ -232,6 +239,22 @@ export function mount3DCalculator(root) {
       '</div>'+
       '<label class="kd3d-side-inline-length"><span>Длина стороны</span><span class="kd3d-side-input-wrap"><input type="number" inputmode="decimal" min="1" max="60" step="0.1" data-side-length-input="'+id+'" aria-label="Длина стороны '+SIDE_NAMES[id]+', м"><small>м</small></span></label>'+
       '<div class="kd3d-side-quick" data-side-quick="'+id+'"><label>Материал стороны<select data-side-quick-fill="'+id+'" aria-label="Материал стороны '+SIDE_NAMES[id]+'">'+FILL_IDS.map(fill=>'<option value="'+fill+'">'+FILL_LABELS[fill]+'</option>').join('')+'</select></label><label>Высота, м<input type="number" min="0.8" max="3" step="0.1" inputmode="decimal" data-side-quick-height="'+id+'" aria-label="Высота стороны '+SIDE_NAMES[id]+'"></label><label>Цвет RAL<select data-side-quick-ral="'+id+'" aria-label="Цвет стороны '+SIDE_NAMES[id]+'">'+Object.keys(RAL).map(code=>'<option value="'+code+'">'+code+'</option>').join('')+'</select></label></div>'+
+      '<button type="button" class="kd3d-side-visual-trigger" data-side-style-open="'+id+'" aria-expanded="false"><span class="kd3d-side-visual-icon" aria-hidden="true">▥</span><span><strong>Выбрать материал и цвет</strong><small data-side-style-caption="'+id+'">Наглядные варианты оформления</small></span><span aria-hidden="true">⌄</span></button>'+
+      '<div class="kd3d-side-visual-panel" data-side-style-panel="'+id+'" hidden>'+
+      '<div class="kd3d-visual-label">Тип заполнения</div>'+
+      '<div class="kd3d-visual-fills" role="group" aria-label="Вид заполнения стороны '+SIDE_NAMES[id]+'">'+
+      [['picket','Вертикальный','picket'],['picket-double','Шахматка','picket-double'],
+       ['horizontal','Горизонтальный','horizontal'],['horizontal-double','Гориз. шахматка','horizontal-double'],
+       ['sheet','Профнастил С10','sheet'],['jalousie','Жалюзи · схема','jalousie']].map(([value,name,art])=>
+         '<button type="button" data-visual-fill="'+id+'" data-visual-value="'+value+'" aria-pressed="false">'+
+         '<span class="kd3d-material-art kd3d-material-art-'+art+'" aria-hidden="true"></span>'+
+         '<span>'+name+'</span></button>').join('')+'</div>'+
+      '<div class="kd3d-visual-label">Цвет стороны · RAL <small>Изменится только эта сторона</small></div>'+
+      '<div class="kd3d-visual-colors" role="group" aria-label="Цвет стороны '+SIDE_NAMES[id]+'">'+
+      Object.entries(RAL).map(([code,hex])=>
+        '<button type="button" data-visual-ral="'+id+'" data-visual-color="'+code+'" aria-label="RAL '+code+' '+RAL_LABELS[code]+'" aria-pressed="false">'+
+        '<span style="background:'+hex+'"></span><small>'+code+'</small></button>').join('')+'</div>'+
+      '</div>'+
       '<div class="kd3d-side-products" data-side-products="'+id+'"></div>'+
       '<div class="kd3d-side-edit-slot" data-side-edit-slot="'+id+'"></div></div>').join('')+'</div>',
     '<div class="kd3d-side-current"><strong data-current-side-label>Настройка стороны А</strong><small data-current-side-status>Включена</small></div>',
