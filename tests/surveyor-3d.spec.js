@@ -862,6 +862,49 @@ test('3D mobile tap: fence, gate, wicket open contextual editor; drag does not s
 });
 
 
+test('3D facade offsets project from left to right, with gate and wicket on the left',async ({page})=>{
+  test.setTimeout(120000);
+  await page.setViewportSize({width:390,height:844});
+  await page.goto('/kuznechny-dvorik-gates/zamer-app-v2/');
+  await page.locator('#loginInput').fill('zamer');
+  await page.locator('#passwordInput').fill('1234');
+  await page.locator('#loginForm button[type="submit"]').click();
+  await expect(page.locator('#mainView')).toBeVisible({timeout:10000});
+  await page.locator('#open3DCalcBtn').click();
+  const root=page.locator('#kd3dRoot');
+  await expect(root.locator('[data-stats]')).toContainText('Столбов',{timeout:15000});
+  await expect(root.locator('[data-view-gallery]')).toHaveCount(0);
+  const sideA=root.locator('[data-side-entry="A"]');
+  await sideA.locator('[data-opening-side="A"][data-opening-kind="gate"]').click();
+  const quick=sideA.locator('[data-position-panel="A"]');
+  const gate=quick.locator('[data-quick-offset="A"][data-quick-kind="gate"]');
+  await gate.fill('1');
+  await gate.press('Tab');
+  await quick.locator('[data-quick-add="A"][data-quick-kind="wicket"]').click();
+  const wicket=quick.locator('[data-quick-offset="A"][data-quick-kind="wicket"]');
+  await wicket.fill('4.4');
+  await wicket.press('Tab');
+  const canvasPresent=await root.locator('.kd3d-scene canvas').count()>0;
+  if(canvasPresent){
+    await root.locator('[data-fit]').click();
+    const projection=await root.evaluate(el=>{
+      const points=JSON.parse(el.dataset.sceneTapPoints||'[]');
+      const gate=points.find(p=>p.sideId==='A'&&p.kind==='gate');
+      const wicket=points.find(p=>p.sideId==='A'&&p.kind==='wicket');
+      const width=el.querySelector('.kd3d-scene canvas').clientWidth;
+      return {gateX:gate?.x,wicketX:wicket?.x,width,
+        cameraZ:Number(el.dataset.sceneCameraZ),
+        targetZ:Number(el.dataset.sceneCameraTargetZ)};
+    });
+    expect(projection.gateX).toBeDefined();
+    expect(projection.wicketX).toBeDefined();
+    expect(projection.cameraZ).toBeGreaterThan(projection.targetZ);
+    expect(projection.gateX).toBeLessThan(projection.wicketX);
+    expect(projection.gateX).toBeLessThan(projection.width/2);
+    expect(projection.wicketX).toBeLessThan(projection.width/2);
+  }
+});
+
 test('3D: gate/wicket offsets are visible and editable under each side heading',async ({page})=>{
   test.setTimeout(120000);
   await page.setViewportSize({width:390,height:844});
