@@ -63,6 +63,7 @@ jobs:
           node --check site-sw.js
           node --check surveyor-app/app.js
           node --check surveyor-app/3d-calculator.js
+          node --check surveyor-app/3d-compact-editor.js
           node scripts/test-surveyor-3d-geometry.mjs
           node --check surveyor-app/3d-sliding-frame.js
           node --check surveyor-app/3d-sliding-render.js
