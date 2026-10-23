@@ -32,7 +32,31 @@ export function renderSlidingHardware({group,base,opening,installation,openingSt
   const foundationTop=frame(Math.max(.40,p.tail+.10),.028,
     p.foundation.depth+.03,middle,.070,z,foundationMat);
   foundationTop.userData.kdSlidingFoundationCap=true;
-  const wheelGeometry=new THREE.CylinderGeometry(.038,.038,.036,14);
+  // The CHANNEL is a HORIZONTAL U-profile seated on the concrete cap:
+  // long steel web + two VERTICAL lips, all extending along the gate's X axis.
+  // This is an illustrative cross-section, not a steelwork size calculation.
+  const channel=new THREE.Group();
+  channel.userData.kdSlidingChannel=true;
+  channel.userData.kdSlidingChannelOrientation='horizontal-open-up';
+  fixture.add(channel);
+  const minRollerX=Math.min(...p.rollerPositions);
+  const maxRollerX=Math.max(...p.rollerPositions);
+  const channelFrom=Math.max(p.foundation.from,minRollerX-.20);
+  const channelTo=Math.min(p.foundation.to,maxRollerX+.20);
+  const channelLength=Math.max(.44,channelTo-channelFrom);
+  const channelCenter=(channelFrom+channelTo)/2;
+  const channelWeb=frameGeometry(channel,base,channelLength,.018,.32,
+    baseX+channelCenter,.094,z,steelMat);
+  channelWeb.userData.kdSlidingChannelWeb=true;
+  for(const sign of [-1,1]){
+    const flange=frameGeometry(channel,base,channelLength,.055,.018,
+      baseX+channelCenter,.13,z+sign*.151,steelMat);
+    flange.userData.kdSlidingChannelFlange=true;
+  }
+
+  // Two four-roller cantilever carriages: bolted steel base, raised brackets,
+  // axles transverse to travel and side-by-side wheels INSIDE the guide beam.
+  const wheelGeometry=new THREE.CylinderGeometry(.035,.035,.028,18);
   wheelGeometry.rotateX(Math.PI/2);
   ownedGeometries.push(wheelGeometry);
   for(let i=0;i<p.rollerPositions.length;i++){
@@ -43,16 +67,27 @@ export function renderSlidingHardware({group,base,opening,installation,openingSt
     carriage.userData.kdSlidingCarriage=true;
     carriage.userData.kdSlidingCarriageIndex=i;
     fixture.add(carriage);
-    frameGeometry(carriage,base,.18,.05,.28,0,.108,0,steelMat);
-    for(const dx of [-.065,.065]){
-      for(const dz of [-.094,.094]){
+    const foot=frameGeometry(carriage,base,.22,.022,.255,0,.12,0,steelMat);
+    foot.userData.kdSlidingCarriageBase=true;
+    // Side cheeks keep both wheel axles in a visible rigid carriage frame.
+    for(const dz of [-.106,.106]){
+      const cheek=frameGeometry(carriage,base,.19,.066,.018,0,.147,dz,steelMat);
+      cheek.userData.kdSlidingCarriageBracket=true;
+    }
+    for(const dx of [-.064,.064]){
+      for(const dz of [-.066,.066]){
         const wheel=new THREE.Mesh(wheelGeometry,wheelMat);
-        wheel.position.set(dx,.153,dz);
+        wheel.position.set(dx,.17,dz);
         wheel.userData.kdSlidingRoller=true;
         carriage.add(wheel);
       }
+      const axle=frameGeometry(carriage,base,.016,.016,.19,dx,.17,0,steelMat);
+      axle.userData.kdSlidingCarriageAxle=true;
     }
-    frameGeometry(carriage,base,.08,.030,.16,0,.195,0,steelMat);
+    for(const dx of [-.085,.085]){
+      const bolt=frameGeometry(carriage,base,.025,.015,.025,dx,.138,0,steelMat);
+      bolt.userData.kdSlidingCarriageMount=true;
+    }
   }
   // Receiver/catcher on the jamb opposite the parking pocket.
   const receiver= new THREE.Group();
