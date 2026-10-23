@@ -182,6 +182,7 @@ for(const shape of ['square','triangle']){
           });
           let leaves=0,tail=0,beams=0,centers=0,movers=0,zoneBands=0,arrows=0;
           let carriages=0,rollers=0,footings=0,receivers=0,upperGuides=0;
+          let upperGuideBrackets=0,upperGuideRollers=0,upperGuideUprights=0;
           let channels=0,channelWebs=0,channelFlanges=0;
           let guideWebs=0,guideLips=0;
           let carriageBases=0,carriageBrackets=0,carriageAxles=0;
@@ -208,7 +209,19 @@ for(const shape of ['square','triangle']){
             if(o.userData.kdSlidingRoller)rollers++;
             if(o.userData.kdSlidingFoundation)footings++;
             if(o.userData.kdSlidingReceiver)receivers++;
-            if(o.userData.kdSlidingUpperGuide)upperGuides++;
+            if(o.userData.kdSlidingUpperGuide){
+              upperGuides++;
+              assert.equal(o.userData.kdSlidingUpperGuideMount,'existing-post',
+                'retaining guide must be mounted on the existing opening post');
+              assert(Math.abs(o.position.x-(-2-plan.start+plan.junction))<1e-8,
+                'upper guide bracket must attach at the gate/tail junction');
+              // No simulated full-height auxiliary upright is allowed.
+              for(const part of o.children){
+                if(part.isMesh && part.scale.y>.15)upperGuideUprights++;
+              }
+            }
+            if(o.userData.kdSlidingUpperGuideBracket)upperGuideBrackets++;
+            if(o.userData.kdSlidingUpperRoller)upperGuideRollers++;
             if(o.userData.kdSlidingTailMember)tailMembers.push(o);
             if(o.userData.kdSlidingChannel){
               channels++;
@@ -245,6 +258,9 @@ for(const shape of ['square','triangle']){
             [1,1,1,centerPost?1:0,1]);
           assert.deepEqual([carriages,rollers,footings,receivers,upperGuides],
             [2,8,1,1,1],'hardware remains fixed in both open/closed states');
+          assert.deepEqual([upperGuideBrackets,upperGuideRollers,upperGuideUprights],
+            [1,2,0],
+            'upper roller guide attaches to a real post without any extra tall upright');
           assert.deepEqual([channels,channelWebs,channelFlanges],[1,1,2],
             'fixed horizontal mounting channel is a U section with one web and two lips');
           assert.deepEqual([guideWebs,guideLips],[1,2],
