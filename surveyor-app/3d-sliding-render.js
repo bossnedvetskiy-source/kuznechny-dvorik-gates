@@ -61,13 +61,13 @@ export function renderSlidingGate(options){
   // Unlike a solid rectangular bar, this is a downward-facing C profile:
   // wheels on BOTH carriages are visibly captured between its side lips.
   const guideCenterX=x(Math.min(plan.left,plan.tailFrom)+plan.gateLength/2);
-  const guide=frameGeometry(moving,base,plan.gateLength,.020,.27,
+  const guide=frameGeometry(moving,base,plan.gateLength,.020,.17,
     guideCenterX,yBottom-.003,z,postMat);
   guide.userData.kdSlidingBeam=true;
   guide.userData.kdSlidingGuideWeb=true;
   for(const sign of [-1,1]){
-    const lip=frameGeometry(moving,base,plan.gateLength,.06,.026,
-      guideCenterX,yBottom-.046,z+sign*.122,postMat);
+    const lip=frameGeometry(moving,base,plan.gateLength,.06,.014,
+      guideCenterX,yBottom-.046,z+sign*.077,postMat);
     lip.userData.kdSlidingGuideLip=true;
   }
 
