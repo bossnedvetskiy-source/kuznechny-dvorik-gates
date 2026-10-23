@@ -768,7 +768,7 @@ test('3D product mode shows standalone gate, wicket, pair, embedded and sliding 
   await expect(root.locator('[data-display-mode="product"]')).toHaveAttribute('aria-pressed','true');
   for(const [type,posts,openings] of [
     ['gate',2,['A:gate:0.00']],['wicket',2,['A:wicket:0.00']],
-    ['pair',3,['A:gate:0.00','A:wicket:3.40']],
+    ['pair',3,['A:gate:0.00','A:wicket:3.48']],
     ['embedded',2,['A:gate:0.00']],['sliding',2,['A:gate:']]
   ]){
     await root.locator('[data-product-type]').selectOption(type);
@@ -777,6 +777,11 @@ test('3D product mode shows standalone gate, wicket, pair, embedded and sliding 
     if(await root.locator('.kd3d-scene canvas').count()){
       await expect(root).toHaveAttribute('data-scene-product-type',type);
       await expect(root).toHaveAttribute('data-scene-rendered-fence-spans','0');
+      // The displayed 3400 mm is measured between INSIDE post faces.
+      const dimensionValues=await root.getAttribute('data-scene-dimension-values')||'';
+      if(type==='wicket')expect(dimensionValues).toContain('A:wicket:1000');
+      else expect(dimensionValues).toContain('A:gate:3400');
+      if(type==='pair')expect(dimensionValues).toContain('A:wicket:1000');
       await expect(root).toHaveAttribute('data-scene-rendered-posts',String(posts));
       const openingText=await root.getAttribute('data-scene-openings')||'';
       for(const opening of openings)expect(openingText).toContain(opening);
@@ -785,11 +790,16 @@ test('3D product mode shows standalone gate, wicket, pair, embedded and sliding 
       if(type==='embedded')await expect(root).toHaveAttribute('data-scene-embedded-wickets',/^[1-9]/);
     }
   }
+  await root.locator('[data-product-type]').selectOption('sliding');
+  await root.locator('[data-product-field="postSize"]').selectOption('100');
+  if(await root.locator('.kd3d-scene canvas').count())
+    await expect(root).toHaveAttribute('data-scene-dimension-values',/A:gate:3400/);
+  await root.locator('[data-product-field="postSize"]').selectOption('80');
   await root.locator('[data-product-type]').selectOption('pair');
   await root.locator('[data-product-field="gate.width"]').fill('3.6');
   await root.locator('[data-product-field="gate.width"]').press('Tab');
   if(await root.locator('.kd3d-scene canvas').count())
-    await expect(root).toHaveAttribute('data-scene-openings',/A:wicket:3\.60/);
+    await expect(root).toHaveAttribute('data-scene-openings',/A:wicket:3\.68/);
   await root.locator('[data-display-mode="site"]').click();
   await expect(root.locator('[data-compact-editor]')).toBeVisible();
   await expect(root.locator('[data-product-panel]')).toBeHidden();
