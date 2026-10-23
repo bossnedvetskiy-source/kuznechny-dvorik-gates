@@ -16,17 +16,28 @@ const clamp=(value,min,max,fallback)=>{
 export function normalizeProduct(source=null,fromSide=null,fromOpenings=null){
   const input=source&&typeof source==='object'?source:{};
   const side=fromSide||{};
+  const postSize=[60,80,100].includes(Number(input.postSize))?
+    Number(input.postSize):80;
+  const kind=PRODUCT_TYPES.includes(input.type)?input.type:'pair';
+  // This product-only UI accepts CLEAR widths, measured between inner
+  // post faces. Do not use the axis-to-axis width of the site model.
   const gate=normalizeSwingGate(input.gate||fromOpenings?.gate,60);
   const wicket=normalizeWicket(input.wicket||fromOpenings?.wicket,60);
+  const maxClearSliding=5-postSize/1000;
   return {
-    type:PRODUCT_TYPES.includes(input.type)?input.type:'pair',
+    type:kind,
     height:clamp(input.height,.8,3,side.height||1.8),
     fill:FILL_IDS.includes(input.fill)?input.fill:
       FILL_IDS.includes(side.fill)?side.fill:'sheet',
     ral:/^(9003|8017|7016|7019|7024|9005|6005|3005|5005)$/.test(input.ral)?
       input.ral:side.ral||'7024',
-    postSize:[60,80,100].includes(Number(input.postSize))?Number(input.postSize):80,
-    gate:{...gate,width:clamp(gate.width,2,gate.type==='sliding'?5:6,3.4),
+    postSize,
+    gate:{...gate,
+      type:kind==='sliding'?'sliding':'swing',
+      width:clamp(gate.width,2,kind==='sliding'?maxClearSliding:6-postSize/1000,3.4),
+      // Dedicated product display uses a compact physical 100 mm offset
+      // from the structural posts (the site mode keeps its own setting).
+      trackOffset:kind==='sliding'?.10:gate.trackOffset,
       fill:gate.fill==='side'?'side':gate.fill},
     wicket:{...wicket,width:clamp(wicket.width,.7,1.5,1)}
   };
@@ -37,9 +48,15 @@ export function getProductLayout(productDraft){
   const wicketOn=product.type==='wicket'||product.type==='pair';
   const sliding=product.type==='sliding';
   const embedded=product.type==='embedded';
+  const postWidth=product.postSize/1000;
+  // Existing 3D renderers use post-axis distances. Translate the customer
+  // clear widths to post-axis distances ONLY in this temporary render layout.
+  // Between-post clear = axis width minus one post profile width.
   const gate={...product.gate,enabled:gateOn,type:sliding?'sliding':'swing',
+    width:product.gate.width+postWidth,
     builtInWicket:embedded,offset:0,obstacles:[]};
-  const wicket={...product.wicket,enabled:wicketOn,offset:0};
+  const wicket={...product.wicket,enabled:wicketOn,
+    width:product.wicket.width+postWidth,offset:0};
   let leftParking=0,rightParking=0;
   if(sliding){
     const plan=getSlidingGatePlan(gate,product.postSize/1000,product.height);
@@ -52,7 +69,8 @@ export function getProductLayout(productDraft){
   gate.offset=leftParking;
   wicket.offset=product.type==='pair'?gate.offset+gate.width:0;
   const productWidth=(gateOn?gate.width:0)+(wicketOn?wicket.width:0);
-  const sideLength=Math.max(1,productWidth+leftParking+rightParking);
+  const axisSpan=(gateOn?gate.width:0)+(wicketOn?wicket.width:0);
+  const sideLength=Math.max(1,axisSpan+leftParking+rightParking);
   const sides=createDefaultSides({
     length:sideLength,height:product.height,step:2.5,fill:product.fill,
     ral:product.ral,postMode:'visible'
@@ -82,5 +100,7 @@ export function getProductLayout(productDraft){
   layout.product=true;
   layout.productType=product.type;
   layout.productWidth=productWidth;
+  layout.productOverallWidth=axisSpan+postWidth;
+  layout.productTrackOffset=sliding?gate.trackOffset:null;
   return layout;
 }
