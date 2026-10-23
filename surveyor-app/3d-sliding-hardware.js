@@ -45,12 +45,12 @@ export function renderSlidingHardware({group,base,opening,installation,openingSt
   const channelTo=Math.min(p.foundation.to,maxRollerX+.20);
   const channelLength=Math.max(.44,channelTo-channelFrom);
   const channelCenter=(channelFrom+channelTo)/2;
-  const channelWeb=frameGeometry(channel,base,channelLength,.018,.32,
+  const channelWeb=frameGeometry(channel,base,channelLength,.018,.25,
     baseX+channelCenter,.094,z,steelMat);
   channelWeb.userData.kdSlidingChannelWeb=true;
   for(const sign of [-1,1]){
     const flange=frameGeometry(channel,base,channelLength,.055,.018,
-      baseX+channelCenter,.13,z+sign*.151,steelMat);
+      baseX+channelCenter,.13,z+sign*.115,steelMat);
     flange.userData.kdSlidingChannelFlange=true;
   }
 
@@ -67,21 +67,21 @@ export function renderSlidingHardware({group,base,opening,installation,openingSt
     carriage.userData.kdSlidingCarriage=true;
     carriage.userData.kdSlidingCarriageIndex=i;
     fixture.add(carriage);
-    const foot=frameGeometry(carriage,base,.22,.022,.255,0,.12,0,steelMat);
+    const foot=frameGeometry(carriage,base,.22,.022,.18,0,.12,0,steelMat);
     foot.userData.kdSlidingCarriageBase=true;
     // Side cheeks keep both wheel axles in a visible rigid carriage frame.
-    for(const dz of [-.106,.106]){
-      const cheek=frameGeometry(carriage,base,.19,.066,.018,0,.147,dz,steelMat);
+    for(const dz of [-.058,.058]){
+      const cheek=frameGeometry(carriage,base,.19,.066,.014,0,.147,dz,steelMat);
       cheek.userData.kdSlidingCarriageBracket=true;
     }
     for(const dx of [-.064,.064]){
-      for(const dz of [-.066,.066]){
+      for(const dz of [-.035,.035]){
         const wheel=new THREE.Mesh(wheelGeometry,wheelMat);
         wheel.position.set(dx,.17,dz);
         wheel.userData.kdSlidingRoller=true;
         carriage.add(wheel);
       }
-      const axle=frameGeometry(carriage,base,.016,.016,.19,dx,.17,0,steelMat);
+      const axle=frameGeometry(carriage,base,.016,.016,.12,dx,.17,0,steelMat);
       axle.userData.kdSlidingCarriageAxle=true;
     }
     for(const dx of [-.085,.085]){
