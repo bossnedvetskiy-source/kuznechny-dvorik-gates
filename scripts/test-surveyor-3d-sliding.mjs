@@ -182,6 +182,9 @@ for(const shape of ['square','triangle']){
           });
           let leaves=0,tail=0,beams=0,centers=0,movers=0,zoneBands=0,arrows=0;
           let carriages=0,rollers=0,footings=0,receivers=0,upperGuides=0;
+          let channels=0,channelWebs=0,channelFlanges=0;
+          let carriageBases=0,carriageBrackets=0,carriageAxles=0;
+          const tailMembers=[];
           group.traverse(o=>{
             if(o.userData.kdSlidingLeaf)leaves++;
             if(o.userData.kdSlidingTail)tail++;
@@ -205,11 +208,64 @@ for(const shape of ['square','triangle']){
             if(o.userData.kdSlidingFoundation)footings++;
             if(o.userData.kdSlidingReceiver)receivers++;
             if(o.userData.kdSlidingUpperGuide)upperGuides++;
+            if(o.userData.kdSlidingTailMember)tailMembers.push(o);
+            if(o.userData.kdSlidingChannel){
+              channels++;
+              assert.equal(o.userData.kdSlidingChannelOrientation,
+                'horizontal-open-up');
+            }
+            if(o.userData.kdSlidingChannelWeb){
+              channelWebs++;
+              assert(o.scale.x>o.scale.z*2,'channel must lie LONGITUDINALLY, not stand up');
+              assert(o.scale.y<o.scale.z,'U channel web must lie FLAT');
+            }
+            if(o.userData.kdSlidingChannelFlange){
+              channelFlanges++;
+              assert(o.scale.x>o.scale.y*3,'channel flange must run along X');
+              assert(o.scale.y>o.scale.z*2,'channel flange must stand on horizontal web');
+            }
+            if(o.userData.kdSlidingCarriageBase)carriageBases++;
+            if(o.userData.kdSlidingCarriageBracket)carriageBrackets++;
+            if(o.userData.kdSlidingCarriageAxle)carriageAxles++;
           });
           assert.deepEqual([leaves,tail,beams,centers,movers],
             [1,1,1,centerPost?1:0,1]);
           assert.deepEqual([carriages,rollers,footings,receivers,upperGuides],
             [2,8,1,1,1],'hardware remains fixed in both open/closed states');
+          assert.deepEqual([channels,channelWebs,channelFlanges],[1,1,2],
+            'fixed horizontal mounting channel is a U section with one web and two lips');
+          assert.deepEqual([carriageBases,carriageBrackets,carriageAxles],[2,4,4],
+            'each of the two 4-roller carriages has a base, cheeks and axle shafts');
+
+          const member=kind=>tailMembers.find(o=>o.userData.kdSlidingTailMember===kind);
+          const expected=shape==='square'
+            ?['end-post','top-chord','cross-a','cross-b']
+            :['primary-diagonal','half-diagonal'];
+          assert.deepEqual(tailMembers.map(o=>o.userData.kdSlidingTailMember).sort(),
+            expected.slice().sort(),'both tail modes must have the correct internal bracing');
+          for(const o of tailMembers){
+            assert.equal(o.userData.kdSlidingTailTube,'60x40');
+            assert.equal(o.scale.y,.06,'tail diagonal and chords use 60 mm tube face');
+            assert.equal(o.scale.z,.04,'tail diagonal and chords use 40 mm tube depth');
+            assert.equal(o.userData.kdSlidingTailEndpoints.length,4);
+          }
+          if(shape==='square'){
+            const a=member('cross-a').userData.kdSlidingTailEndpoints;
+            const b=member('cross-b').userData.kdSlidingTailEndpoints;
+            assert.equal(a[0],b[0],'X starts at the same outer end of the tail');
+            assert.equal(a[2],b[2],'X ends at the same frame junction');
+            assert.equal(a[1],b[3],'X braces have opposite Y endpoints');
+            assert.equal(a[3],b[1],'X braces meet in the middle');
+          }else{
+            const a=member('primary-diagonal').userData.kdSlidingTailEndpoints;
+            const b=member('half-diagonal').userData.kdSlidingTailEndpoints;
+            assert(Math.abs(b[2]-(a[0]+a[2])/2)<1e-9,
+              'triangle brace joins main diagonal at its X midpoint');
+            assert(Math.abs(b[3]-(a[1]+a[3])/2)<1e-9,
+              'triangle brace joins main diagonal at its Y midpoint');
+            assert.equal(b[0],a[0],'triangle small brace starts at gate junction');
+            assert(b[1]<a[1],'triangle small brace starts at bottom of gate');
+          }
           assert.equal(zoneBands,showSlideZone?1:0,'valid parking strip stays fixed on ground');
           assert.equal(arrows,showSlideZone?1:0);
           assert.equal(plan.tailShape,shape);
