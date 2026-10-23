@@ -208,8 +208,8 @@ export function mount3DCalculator(root) {
     '<label class="kd3d-product-type">Что заказывает клиент?<select data-product-type>'+
       PRODUCT_TYPES.map(id=>'<option value="'+id+'">'+PRODUCT_LABELS[id]+'</option>').join('')+'</select></label>'+
     '<div class="kd3d-product-fields">'+
-    '<label data-product-for="gate pair embedded sliding">Ширина ворот, м<input type="number" data-product-field="gate.width" min="2" max="6" step="0.1" inputmode="decimal"></label>'+
-    '<label data-product-for="wicket pair">Ширина калитки, м<input type="number" data-product-field="wicket.width" min="0.7" max="1.5" step="0.1" inputmode="decimal"></label>'+
+    '<label data-product-for="gate pair embedded sliding">Проём ворот между столбами, м<input type="number" data-product-field="gate.width" min="2" max="6" step="0.1" inputmode="decimal"></label>'+
+    '<label data-product-for="wicket pair">Проём калитки между столбами, м<input type="number" data-product-field="wicket.width" min="0.7" max="1.5" step="0.1" inputmode="decimal"></label>'+
     '<label>Высота изделия, м<input type="number" data-product-field="height" min="0.8" max="3" step="0.1" inputmode="decimal"></label>'+
     '<label>Заполнение<select data-product-field="fill">'+FILL_IDS.map(id=>'<option value="'+id+'">'+FILL_LABELS[id]+'</option>').join('')+'</select></label>'+
     '<label>Цвет RAL<select data-product-field="ral">'+Object.keys(RAL).map(id=>'<option value="'+id+'">RAL '+id+'</option>').join('')+'</select></label>'+
@@ -398,8 +398,8 @@ export function mount3DCalculator(root) {
     }
     root.querySelector('[data-product-note]').textContent=
       config.product.type==='sliding'
-      ?'3D показывает полотно, хвостовик, ролики и условную зону отката. Свободное место на реальном участке уточняется на замере.'
-      :'Размеры указаны по проёмам. Только изделие и опорные столбы, без забора. Это предварительная 3D-визуализация.';
+      ?'Ширина — чистый проём между столбами. Полотно расположено рядом с опорами с учётом безопасного хода роликов. Реальную зону отката проверяем на замере.'
+      :'Ширина — чистый проём между внутренними гранями столбов. Только изделие и опоры, без забора. Предварительная 3D-визуализация.';
   }
   const find = selector => root.querySelector(selector);
   const productField=(id,selector)=>
@@ -1093,13 +1093,16 @@ export function mount3DCalculator(root) {
     if(!(productMode()&&config.product.type==='sliding')){
     // Complete side length is distinct from the clear openings.
     const sideZ=baselineZ+sign*1.33;
-    segment(-length/2,sideZ,length/2,sideZ);
-    for(const x of [-length/2,length/2]){
+    const extra=productMode()?config.product.postSize/1000:0;
+    const leftEnd=-length/2-extra/2,rightEnd=length/2+extra/2;
+    segment(leftEnd,sideZ,rightEnd,sideZ);
+    for(const x of [leftEnd,rightEnd]){
       segment(x,sideZ-.11,x,sideZ+.11);
     }
-    label((productMode()?'Общая ширина':SIDE_NAMES[id]+':')+' '+
-      Number(length.toFixed(2)).toString().replace('.',',')+' м',
-      0,sideZ+sign*.36,2.1);
+    label(productMode()?
+      'Внешний габарит: '+Math.round((length+extra)*1000)+' мм':
+      SIDE_NAMES[id]+': '+Number(length.toFixed(2)).toString().replace('.',',')+' м',
+      0,sideZ+sign*.36,2.3);
     }
     if(coords.length){
       const geo=new THREE.BufferGeometry();
@@ -1132,7 +1135,7 @@ export function mount3DCalculator(root) {
       stats.innerHTML='<div><small>Изделие</small><b>'+PRODUCT_LABELS[config.product.type]+'</b></div>'+ 
         '<div><small>Столбов</small><b>'+layout.posts.length+'</b></div>';
       parts.innerHTML='<h3>Комплектация · '+PRODUCT_LABELS[config.product.type]+'</h3>'+ 
-        '<p>Высота '+config.product.height+' м · проёмы '+layout.openings.map(o=>o.width+' м').join(' + ')+
+        '<p>Высота '+config.product.height+' м · чистые проёмы '+getClearDimensionPlan(layout,config.product.postSize)[0].spans.filter(d=>d.kind==='gate'||d.kind==='wicket').map(d=>(d.clearMm/1000).toFixed(2).replace('.',',')+' м').join(' + ')+
         ' · '+FILL_LABELS[config.product.fill]+' · RAL '+config.product.ral+'.</p>'+ 
         '<p>Визуализация без секций забора. Цены и производственный раскрой не рассчитываются.</p>';
     }
@@ -1303,6 +1306,7 @@ export function mount3DCalculator(root) {
           side,sideLength:side.length,otherOpenings:edge.openings,
           installationPlan:edge.installation,
           behind,gap:config.gap,postMat,fillMat,frameGeometry,
+          standalone:productMode(),
           buildC10Geometry,buildPicketGeometry,instancePickets,horizontalPicketRows,
           verticalPicketPlan,ownedGeometries:previousLineGeometries,
           ownedMaterials:previousMaterials
