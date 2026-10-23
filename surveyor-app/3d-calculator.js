@@ -1361,13 +1361,18 @@ export function mount3DCalculator(root) {
     root.dataset.sceneSlidingZones=zones.join(';');
     root.dataset.sceneSlidingArrows=arrows.join(';');
     let carriages=0,rollers=0,foundations=0,receivers=0,upperGuides=0,
-      markedObstacles=0,blockedObstacles=0;
+      markedObstacles=0,blockedObstacles=0,channels=0,channelWebs=0;
+    const tailMemberKinds=[];
     fence.traverse(object=>{
       if(object.userData.kdSlidingCarriage)carriages++;
       if(object.userData.kdSlidingRoller)rollers++;
       if(object.userData.kdSlidingFoundation)foundations++;
       if(object.userData.kdSlidingReceiver)receivers++;
       if(object.userData.kdSlidingUpperGuide)upperGuides++;
+      if(object.userData.kdSlidingChannel)channels++;
+      if(object.userData.kdSlidingChannelWeb)channelWebs++;
+      if(object.userData.kdSlidingTailMember)
+        tailMemberKinds.push(object.userData.kdSlidingTailMember);
       if(object.userData.kdSlidingObstacle){
         markedObstacles++;
         if(object.userData.kdSlidingObstacleCollision)blockedObstacles++;
@@ -1378,6 +1383,9 @@ export function mount3DCalculator(root) {
     root.dataset.sceneSlidingFoundations=String(foundations);
     root.dataset.sceneSlidingReceivers=String(receivers);
     root.dataset.sceneSlidingUpperGuides=String(upperGuides);
+    root.dataset.sceneSlidingChannels=String(channels);
+    root.dataset.sceneSlidingChannelWebs=String(channelWebs);
+    root.dataset.sceneSlidingTailMembers=tailMemberKinds.sort().join(',');
     root.dataset.sceneSlidingObstacles=String(markedObstacles);
     root.dataset.sceneSlidingBlockedObstacles=String(blockedObstacles);
     root.dataset.sceneGateLeaves=String(actualLeaves);
