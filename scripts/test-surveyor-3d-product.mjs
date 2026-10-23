@@ -25,8 +25,8 @@ for(const type of PRODUCT_TYPES){
   const expectedClearWidths=type==='wicket'?[1000]:type==='pair'?[3400,1000]:[3400];
   assert.deepEqual(clearOpenings.map(span=>span.clearMm),expectedClearWidths,
     type+' displayed widths MUST be clear inner-post spans, not axis distances');
-  assert.equal(layout.productOverallWidth,
-    layout.productWidth+layout.posts.length*product.postSize/1000,
+  assert(Math.abs(layout.productOverallWidth-
+    (layout.productWidth+layout.posts.length*product.postSize/1000))<1e-8,
     type+' outside span includes every structural post');
   if(type==='pair'){
     assert.equal(layout.openings[0].kind,'gate');
