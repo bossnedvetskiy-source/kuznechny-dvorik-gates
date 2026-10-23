@@ -695,6 +695,11 @@ export function mount3DCalculator(root) {
     grid.position.y = -0.025;
     scene.add(grid);
     fence = new THREE.Group();
+    // The layout engine keeps the site's positive-Z interior for calculations.
+    // Reflect only the rendered scene into negative Z: from the street (+Z),
+    // facade A runs left-to-right and right side B goes BACK into the site.
+    // This also reflects gate swing, sliding clearance and tap targets together.
+    fence.scale.z=-1;
     scene.add(fence);
     base = new THREE.BoxGeometry(1, 1, 1);
     webglOk = true;
@@ -1329,8 +1334,10 @@ export function mount3DCalculator(root) {
     }
     const minX=Math.min(layout.bounds.minX,...vertices.map(p=>p.x));
     const maxX=Math.max(layout.bounds.maxX,...vertices.map(p=>p.x));
-    const minZ=Math.min(layout.bounds.minZ,...vertices.map(p=>p.z));
-    const maxZ=Math.max(layout.bounds.maxZ,...vertices.map(p=>p.z));
+    // fit() must use the same mirrored world coordinates as the fence group.
+    // Otherwise the right/back sides are cropped or appear off-centre.
+    const minZ=Math.min(-layout.bounds.maxZ,...vertices.map(p=>-p.z));
+    const maxZ=Math.max(-layout.bounds.minZ,...vertices.map(p=>-p.z));
     const b={width:maxX-minX,depth:maxZ-minZ,centerX:(minX+maxX)/2,
       centerZ:(minZ+maxZ)/2};
     const aspect=Math.max(.45,camera.aspect||1);
@@ -1341,24 +1348,17 @@ export function mount3DCalculator(root) {
       Math.max(width/(2*halfFov*aspect),depth/(2*halfFov));
     const dist=Math.max(6,needed*(single?1.23:1.43));
     if(single){
-      // Face the length of whichever single side is enabled, not only side A.
-      const edge=layout.edges[0],unitX=(edge.end.x-edge.start.x)/edge.side.length;
+      // Layout directions remain unmirrored; reflect the outside-facing
+      // camera vector into rendered world coordinates for EVERY side.
+      const edge=layout.edges[0];
+      const unitX=(edge.end.x-edge.start.x)/edge.side.length;
       const unitZ=(edge.end.z-edge.start.z)/edge.side.length;
-      // Screen-right is camera's local +X. For A (+world X), viewing from
-      // negative Z produces -world X on screen-right (MIRRORED).
-      // View A from positive Z so increasing opening offsets read left-to-right.
-      if(edge.id==='A'){
-        camera.position.set(b.centerX-unitX*dist*.1,
-          Math.max(3,dist*.38),b.centerZ+dist*.94);
-      }else{
-        // Preserve other sides' current view orientation.
-        camera.position.set(b.centerX+unitZ*dist*.94+unitX*dist*.1,
-          Math.max(3,dist*.38),b.centerZ-unitX*dist*.94+unitZ*dist*.1);
-      }
+      camera.position.set(b.centerX+unitZ*dist*.94+unitX*dist*.1,
+        Math.max(3,dist*.38),b.centerZ+unitX*dist*.94-unitZ*dist*.1);
     }else {
-      // For multi-sided layouts keep A at the front of the screen, with
-      // side B at its right endpoint, not on the left.
-      camera.position.set(b.centerX-dist*.49,Math.max(5,dist*.54),b.centerZ+dist*.85);
+      // Front-right street viewpoint: B (right) recedes into the site,
+      // instead of projecting toward the viewer in front of facade A.
+      camera.position.set(b.centerX+dist*.49,Math.max(5,dist*.54),b.centerZ+dist*.85);
     }
     const maxHeight=Math.max(1.8,...layout.posts.map(p=>p.height));
     controls.target.set(b.centerX,maxHeight*.5,b.centerZ);
