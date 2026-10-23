@@ -1,5 +1,5 @@
-const CACHE = 'kd-surveyor-v3-facade-camera-v32';
-const CORE = ['./index.html','./styles.css','./app.js','./line-builder.js','./calculator-bridge.js','./3d-calculator.js','./3d-compact-editor.js','./3d-layout.js','./3d-gate-frame.js','./3d-gate-render.js','./3d-sliding-frame.js','./3d-sliding-render.js','./3d-sliding-installation.js','./3d-sliding-hardware.js','./3d-drawing.js','./3d-calculator.css?v=reference-ux-20261022','./3d-mobile-ui.css?v=quick-offsets-20261019','./3d-compact-editor.css?v=side-editor-20261022','./manifest.webmanifest','./icon.svg','./sliding-gates/index.html'];
+const CACHE = 'kd-surveyor-v3-standalone-product-20261023';
+const CORE = ['./index.html','./styles.css','./app.js','./line-builder.js','./calculator-bridge.js','./3d-calculator.js','./3d-compact-editor.js','./3d-product-layout.js','./3d-layout.js','./3d-gate-frame.js','./3d-gate-render.js','./3d-sliding-frame.js','./3d-sliding-render.js','./3d-sliding-installation.js','./3d-sliding-hardware.js','./3d-drawing.js','./3d-calculator.css?v=reference-ux-20261022','./3d-mobile-ui.css?v=quick-offsets-20261019','./3d-compact-editor.css?v=side-editor-20261022','./3d-product.css?v=product-view-20261023','./manifest.webmanifest','./icon.svg','./sliding-gates/index.html'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(CORE)).then(() => self.skipWaiting()));
 });
