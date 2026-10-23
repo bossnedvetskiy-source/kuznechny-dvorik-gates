@@ -791,6 +791,19 @@ test('3D product mode shows standalone gate, wicket, pair, embedded and sliding 
     }
   }
   await root.locator('[data-product-type]').selectOption('sliding');
+  if(await root.locator('.kd3d-scene canvas').count()){
+    await expect(root).toHaveAttribute('data-scene-sliding-channels','1');
+    await expect(root).toHaveAttribute('data-scene-sliding-channel-webs','1');
+    await expect(root).toHaveAttribute('data-scene-sliding-carriages','2');
+    await expect(root).toHaveAttribute('data-scene-sliding-rollers','8');
+    await expect(root).toHaveAttribute('data-scene-sliding-tail-members',
+      'cross-a,cross-b,end-post,top-chord');
+  }
+  await root.locator('[data-product-field="gate.tailShape"]').selectOption('triangle');
+  if(await root.locator('.kd3d-scene canvas').count())
+    await expect(root).toHaveAttribute('data-scene-sliding-tail-members',
+      'half-diagonal,primary-diagonal');
+  await root.locator('[data-product-field="gate.tailShape"]').selectOption('square');
   await root.locator('[data-product-field="postSize"]').selectOption('100');
   if(await root.locator('.kd3d-scene canvas').count())
     await expect(root).toHaveAttribute('data-scene-dimension-values',/A:gate:3400/);
