@@ -41,6 +41,8 @@ for(const type of PRODUCT_TYPES){
   if(type==='wicket')assert.equal(layout.openings[0].kind,'wicket');
   if(type==='sliding'){
     assert.equal(layout.gate.type,'sliding');
+    assert.equal(layout.gate.frameProfile,'60x40',
+      'standalone sliding gate outer frame must match 60x40 tail braces');
     const installation=layout.edges[0].installation;
     assert.equal(installation.trackOffset,.14,
       '80mm posts use a compact 140mm sliding offset including clearance');
