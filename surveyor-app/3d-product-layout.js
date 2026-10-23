@@ -24,6 +24,9 @@ export function normalizeProduct(source=null,fromSide=null,fromOpenings=null){
   const gate=normalizeSwingGate(input.gate||fromOpenings?.gate,60);
   const wicket=normalizeWicket(input.wicket||fromOpenings?.wicket,60);
   const maxClearSliding=5-postSize/1000;
+  // Minimum schematic stand-off to clear the guide/cantilever sweep near
+  // posts, including the existing 25 mm visual safety allowance.
+  const slidingTrackOffset=Math.ceil((postSize/2000+.066+.025+.005)*100)/100;
   return {
     type:kind,
     height:clamp(input.height,.8,3,side.height||1.8),
@@ -35,9 +38,10 @@ export function normalizeProduct(source=null,fromSide=null,fromOpenings=null){
     gate:{...gate,
       type:kind==='sliding'?'sliding':'swing',
       width:clamp(gate.width,2,kind==='sliding'?maxClearSliding:6-postSize/1000,3.4),
-      // Dedicated product display uses a compact physical 100 mm offset
-      // from the structural posts (the site mode keeps its own setting).
-      trackOffset:kind==='sliding'?.10:gate.trackOffset,
+      // Keep the isolated gate as close as the modelled carriage corridor
+      // permits; never let the moving frame intersect the support posts.
+      // 80 mm posts => 14 cm centre offset, rather than the previous 22 cm.
+      trackOffset:kind==='sliding'?slidingTrackOffset:gate.trackOffset,
       fill:gate.fill==='side'?'side':gate.fill},
     wicket:{...wicket,width:clamp(wicket.width,.7,1.5,1)}
   };
