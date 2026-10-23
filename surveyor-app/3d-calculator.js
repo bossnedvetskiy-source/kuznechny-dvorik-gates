@@ -369,7 +369,6 @@ export function mount3DCalculator(root) {
   const viewLayout=()=>productMode()?getProductLayout(config.product):
     getSiteLayout(config.sides,config.openings,config.postSize);
   const productPanel=root.querySelector('[data-product-panel]');
-  const productField=(key)=>root.querySelector('[data-product-field="'+key+'"]');
   const productFieldValue=(key)=>{
     const parts=key.split('.');
     return parts.length===2?config.product[parts[0]]?.[parts[1]]:config.product[key];
@@ -966,6 +965,7 @@ export function mount3DCalculator(root) {
     root.dataset.tapSelection=sideId+':'+kind;
   }
   function select3DItem(sideId,kind){
+    if(productMode())return;
     if(!SIDE_IDS.includes(sideId)||!['fence','gate','wicket'].includes(kind))return;
     if(!config.sides[sideId]?.enabled)return;
     config.activeSide=sideId;
@@ -1086,14 +1086,19 @@ export function mount3DCalculator(root) {
       label(piece.clearMm+' мм',(left+right)/2,baselineZ+sign*.36,
         Math.max(.58,Math.min(1.38,(right-left)*.78)));
     }
+    // Product-only sliding zone extends beyond its opening: don't label the
+    // temporary parking corridor as if it were a built fence or gate width.
+    if(!(productMode()&&config.product.type==='sliding')){
     // Complete side length is distinct from the clear openings.
     const sideZ=baselineZ+sign*1.33;
     segment(-length/2,sideZ,length/2,sideZ);
     for(const x of [-length/2,length/2]){
       segment(x,sideZ-.11,x,sideZ+.11);
     }
-    label(SIDE_NAMES[id]+': '+Number(length.toFixed(2)).toString().replace('.',',')+' м',
+    label((productMode()?'Общая ширина':SIDE_NAMES[id]+':')+' '+
+      Number(length.toFixed(2)).toString().replace('.',',')+' м',
       0,sideZ+sign*.36,2.1);
+    }
     if(coords.length){
       const geo=new THREE.BufferGeometry();
       geo.setAttribute('position',new THREE.Float32BufferAttribute(coords,3));
@@ -1843,6 +1848,42 @@ export function mount3DCalculator(root) {
       'Свернуть <span aria-hidden="true">⌃</span>';
   });
 
+  root.querySelectorAll('[data-display-mode]').forEach(button=>
+    button.addEventListener('click',()=>{
+      config.displayMode=button.dataset.displayMode==='product'?'product':'site';
+      tapSelection=null;
+      updateModel();resize();fit();
+    }));
+  root.querySelector('[data-product-type]').addEventListener('change',event=>{
+    config.product.type=PRODUCT_TYPES.includes(event.target.value)?event.target.value:'gate';
+    config.product=normalizeProduct(config.product);
+    if(config.product.type==='sliding')config.product.gate.type='sliding';
+    else config.product.gate.type='swing';
+    updateModel();resize();fit();
+  });
+  productPanel.addEventListener('change',event=>{
+    const input=event.target.closest('[data-product-field]');
+    if(!input)return;
+    const key=input.dataset.productField;
+    const target=key.includes('.')?config.product[key.split('.')[0]]:config.product;
+    const field=key.includes('.')?key.split('.')[1]:key;
+    if(!target)return;
+    const old=target[field];
+    if(typeof old==='boolean')target[field]=input.value==='true';
+    else if(typeof old==='number'){
+      const ranges={
+        width:target===config.product.wicket?[.7,1.5]:[2,config.product.type==='sliding'?5:6],
+        height:[.8,3],builtInWidth:[.7,1.2],postSize:[60,100]
+      };
+      const [min,max]=ranges[field]||[0,60];
+      target[field]=numeric(input.value,min,max,old);
+      if(field==='postSize')target[field]=[60,80,100].includes(target[field])?
+        target[field]:old;
+    }else target[field]=input.value;
+    config.product=normalizeProduct(config.product);
+    updateModel();resize();fit();
+  });
+
   function setCameraView(mode){
     if(!webglOk)return;
     const selected=['perspective','front','side','top'].includes(mode)?mode:'perspective';
@@ -1877,6 +1918,8 @@ export function mount3DCalculator(root) {
     config.showDimensions=false;
     config.sides=createDefaultSides(DEFAULT);
     config.activeSide='A';
+    config.displayMode='site';
+    config.product=normalizeProduct(null,config.sides.A,config.openings.A);
     compactEditor.select('A','fence');
     syncSideInputs();
     updateModel();
