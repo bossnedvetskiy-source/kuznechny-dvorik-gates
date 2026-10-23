@@ -57,14 +57,19 @@ export function renderSlidingGate(options){
     const upright=bar(plan.center,yBottom+tube/2,plan.center,yTop-tube/2);
     upright.userData.kdSlidingCenterPost=true;
   }
-  // The bottom guide runs under both main panel and counterweight tail.
-  const guide=frameGeometry(moving,base,plan.gateLength,.06,.048,
-    x((plan.tailFrom+plan.tailTo+plan.left+plan.right)/4),
-    yBottom-.047,z,postMat);
-  // Use the true full X-extent for the beam; the four-point average above
-  // is not sufficient when the tail extends only to one side.
-  guide.position.x=x(Math.min(plan.left,plan.tailFrom)+plan.gateLength/2);
+  // Continuous cantilever GUIDE runs under the whole leaf and tail.
+  // Unlike a solid rectangular bar, this is a downward-facing C profile:
+  // wheels on BOTH carriages are visibly captured between its side lips.
+  const guideCenterX=x(Math.min(plan.left,plan.tailFrom)+plan.gateLength/2);
+  const guide=frameGeometry(moving,base,plan.gateLength,.020,.27,
+    guideCenterX,yBottom-.003,z,postMat);
   guide.userData.kdSlidingBeam=true;
+  guide.userData.kdSlidingGuideWeb=true;
+  for(const sign of [-1,1]){
+    const lip=frameGeometry(moving,base,plan.gateLength,.06,.026,
+      guideCenterX,yBottom-.046,z+sign*.122,postMat);
+    lip.userData.kdSlidingGuideLip=true;
+  }
 
   const tip=plan.tailTip,junction=plan.junction;
   // Square counterweight has a full-height outer member. Triangular one
