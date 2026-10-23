@@ -751,7 +751,7 @@ test('DEV mobile product controls use final styled CSS, no native stacked button
   await expect(a.locator('[data-wicket-swing-state="closed"]')).toHaveAttribute('aria-pressed','true');
 });
 
-test('3D camera from facade: side Б stays on viewer right, not mirrored',async ({page})=>{
+test('3D facade is left-to-right, and right side Б goes BEHIND facade А',async ({page})=>{
   test.setTimeout(120000);
   await page.goto('/kuznechny-dvorik-gates/zamer-app-v2/');
   await page.locator('#loginInput').fill('zamer');
@@ -761,31 +761,35 @@ test('3D camera from facade: side Б stays on viewer right, not mirrored',async 
   await page.locator('#open3DCalcBtn').click();
   const root=page.locator('#kd3dRoot');
   await expect(root.locator('[data-stats]')).toContainText('Столбов',{timeout:15000});
-  const has3D=(await root.locator('.kd3d-scene canvas').count())>0;
-  if(!has3D)return;
-  // Face A is x=0..10 at z=0. B runs into the yard at x=10,z=0..10.
-  // A positive-Z camera maps growing A offsets to SCREEN-RIGHT (+X).
-  // From negative Z the model was mirrored: gates at x=1 appeared on the right.
-  await root.locator('[data-side-length-input="A"]').fill('10');
+  if(await root.locator('.kd3d-scene canvas').count()===0)return;
+  await root.locator('[data-side-length-input="A"]').fill('12');
   await root.locator('[data-side-length-input="A"]').press('Tab');
   await root.locator('[data-fit]').click();
   await expect(root).toHaveAttribute('data-scene-camera-mode','single');
   let z=Number(await root.getAttribute('data-scene-camera-z'));
   let targetZ=Number(await root.getAttribute('data-scene-camera-target-z'));
-  expect(z).toBeGreaterThan(targetZ);
+  expect(z,'facade view must be from positive Z').toBeGreaterThan(targetZ);
   await root.locator('[data-side-toggle="B"]').check();
   await root.locator('[data-fit]').click();
   await expect(root).toHaveAttribute('data-scene-camera-mode','multi');
   z=Number(await root.getAttribute('data-scene-camera-z'));
   targetZ=Number(await root.getAttribute('data-scene-camera-target-z'));
-  expect(z).toBeGreaterThan(targetZ);
-  expect(Number(await root.getAttribute('data-scene-camera-x'))).toBeLessThan(
+  expect(z,'camera must be in FRONT of facade A').toBeGreaterThan(targetZ);
+  expect(Number(await root.getAttribute('data-scene-camera-x'))).toBeGreaterThan(
     Number(await root.getAttribute('data-scene-camera-target-x')));
-  // Side B is attached at A's right endpoint and must project screen-right.
-  await root.locator('[data-side-length-input="A"]').fill('12');
-  await root.locator('[data-side-length-input="A"]').press('Tab');
+  const points=JSON.parse(await root.getAttribute('data-scene-tap-points')||'[]');
+  const facade=points.filter(p=>p.sideId==='A'&&p.kind==='fence');
+  const right=points.filter(p=>p.sideId==='B'&&p.kind==='fence');
+  expect(facade.length).toBeGreaterThanOrEqual(2);
+  expect(right.length).toBeGreaterThanOrEqual(2);
+  // The first and last fence sections follow the actual model-space order.
+  expect(facade[0].x,'A starts on screen-left').toBeLessThan(facade.at(-1).x);
+  expect(right[0].x,'B starts to the right of A').toBeGreaterThan(facade[0].x);
+  expect(right.at(-1).y,'B must recede toward the horizon, not foreground')
+    .toBeLessThan(right[0].y);
   await expect(root.locator('[data-parts]')).toContainText('Сторона А');
 });
+
 
 test('3D mobile tap: fence, gate, wicket open contextual editor; drag does not select',async ({page})=>{
   test.setTimeout(120000);
