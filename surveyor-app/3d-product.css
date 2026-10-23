@@ -1,0 +1,57 @@
+/* DEV-only standalone product preview. Site editor retains its own styles. */
+#threeDScreen .kd3d-scope{
+  display:grid;grid-template-columns:1fr 1fr;gap:5px;
+  margin:12px 0 10px;padding:5px;background:#e9eae7;border-radius:17px;
+}
+#threeDScreen .kd3d-scope button{
+  min-height:44px;border:1px solid transparent;border-radius:13px;
+  background:transparent;color:#52575a;font:750 14px/1.2 system-ui,sans-serif;
+  padding:9px 5px;cursor:pointer
+}
+#threeDScreen .kd3d-scope button[aria-pressed="true"]{
+  background:#fff7e5;border-color:#d8ae62;color:#75501a;
+  box-shadow:0 2px 6px #0000000d
+}
+#threeDScreen .kd3d-product-panel{
+  display:grid;gap:14px;padding:19px 16px 17px;margin:14px 0;
+  border:1px solid #deddd5;border-radius:22px;background:#fff;
+  box-shadow:0 5px 18px #00000008
+}
+#threeDScreen .kd3d-product-head strong{
+  font:800 19px/1.3 system-ui,sans-serif;color:#242628;display:block
+}
+#threeDScreen .kd3d-product-head small{
+  display:block;margin-top:3px;color:#777d82;font:500 12px/1.35 system-ui,sans-serif
+}
+#threeDScreen .kd3d-product-type,
+#threeDScreen .kd3d-product-fields label{
+  display:grid;gap:8px;min-width:0;color:#515960;
+  font:700 13px/1.3 system-ui,sans-serif
+}
+#threeDScreen .kd3d-product-type select,
+#threeDScreen .kd3d-product-fields select,
+#threeDScreen .kd3d-product-fields input{
+  display:block;box-sizing:border-box;width:100%;min-width:0;
+  min-height:48px;padding:10px 13px;
+  background:#f8f9f7;border:1px solid #dadbd5;border-radius:13px;
+  color:#22272b;font:750 15px/1.3 system-ui,sans-serif
+}
+#threeDScreen .kd3d-product-type select{
+  background:#fff8e9;border-color:#dcb96f;color:#79521b
+}
+#threeDScreen .kd3d-product-fields{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px 10px
+}
+#threeDScreen .kd3d-product-note{
+  margin:0;padding:12px 13px;border-radius:13px;background:#f5f5f0;
+  font:500 12px/1.5 system-ui,sans-serif;color:#697076
+}
+#threeDScreen .kd3d-product-panel[hidden],
+#threeDScreen .kd3d-product-fields label[hidden],
+#threeDScreen .kd3d-editor[hidden],
+#threeDScreen .kd3d-compact[hidden]{display:none!important}
+@media(max-width:365px){
+  #threeDScreen .kd3d-product-panel{padding:15px 12px}
+  #threeDScreen .kd3d-product-fields{gap:11px 7px}
+  #threeDScreen .kd3d-product-fields label{font-size:12px}
+}
