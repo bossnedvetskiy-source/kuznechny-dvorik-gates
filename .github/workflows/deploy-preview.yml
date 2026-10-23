@@ -72,6 +72,8 @@ jobs:
           node scripts/test-surveyor-3d-sliding.mjs
           node --check surveyor-app/3d-layout.js
           node scripts/test-surveyor-3d-layout.mjs
+          node --check surveyor-app/3d-product-layout.js
+          node scripts/test-surveyor-3d-product.mjs
           node --check surveyor-app/sw.js
           node --check worker/site-settings-d1.js
           php -l timeweb/local-api.php
