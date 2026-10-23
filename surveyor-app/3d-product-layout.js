@@ -72,7 +72,8 @@ export function getProductLayout(productDraft){
   }
   gate.offset=leftParking;
   wicket.offset=product.type==='pair'?gate.offset+gate.width:0;
-  const productWidth=(gateOn?gate.width:0)+(wicketOn?wicket.width:0);
+  const productWidth=(gateOn?product.gate.width:0)+
+    (wicketOn?product.wicket.width:0);
   const axisSpan=(gateOn?gate.width:0)+(wicketOn?wicket.width:0);
   const sideLength=Math.max(1,axisSpan+leftParking+rightParking);
   const sides=createDefaultSides({
