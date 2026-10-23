@@ -57,6 +57,8 @@ export function getProductLayout(productDraft){
   // clear widths to post-axis distances ONLY in this temporary render layout.
   // Between-post clear = axis width minus one post profile width.
   const gate={...product.gate,enabled:gateOn,type:sliding?'sliding':'swing',
+    // Workshop cantilever-gate main frame is 60x40, matching tail bracing.
+    frameProfile:sliding?'60x40':product.gate.frameProfile,
     width:product.gate.width+postWidth,
     builtInWicket:embedded,offset:0,obstacles:[]};
   const wicket={...product.wicket,enabled:wicketOn,
