@@ -376,6 +376,8 @@ export function mount3DCalculator(root) {
   function syncProductControls(){
     const enabled=productMode();
     root.dataset.displayMode=config.displayMode;
+    root.querySelector('.kd3d-top strong').textContent=enabled?
+      '3D-чертёж изделия':'Конструктор участка';
     productPanel.hidden=!enabled;
     root.querySelector('[data-compact-editor]').hidden=enabled;
     root.querySelector('.kd3d-editor').hidden=enabled;
@@ -1135,6 +1137,12 @@ export function mount3DCalculator(root) {
         '<p>Визуализация без секций забора. Цены и производственный раскрой не рассчитываются.</p>';
     }
     syncProductControls();
+    if(productMode()){
+      // The old site-side sliding controls must never move a standalone gate.
+      // Product sliding is controlled by its own dedicated editor below.
+      find('[data-scene-slide-controls]').hidden=true;
+      find('[data-slide-legend]').hidden=true;
+    }
     saveDraft(config);
     if(!webglOk)return;
     clearGeometry();
@@ -1931,10 +1939,10 @@ export function mount3DCalculator(root) {
     root.querySelectorAll('[data-mode]').forEach(b=>b.classList.toggle('active',b===button));
     sceneHost.hidden=!isScene;parts.hidden=isScene;
 
-    root.querySelector('[data-scene-slide-controls]').hidden=!isScene||
+    root.querySelector('[data-scene-slide-controls]').hidden=!isScene||productMode()||
       !(config.openings[config.activeSide].gate.enabled&&
         config.openings[config.activeSide].gate.type==='sliding');
-    root.querySelector('[data-slide-legend]').hidden=!isScene||
+    root.querySelector('[data-slide-legend]').hidden=!isScene||productMode()||
       !getSiteLayout(config.sides,config.openings,config.postSize).openings.some(o=>
         o.kind==='gate'&&o.type==='sliding'&&o.showSlideZone);
     root.querySelector('.kd3d-scene-controls').hidden=!isScene;
