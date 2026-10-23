@@ -3,6 +3,7 @@ import { OrbitControls } from '../naves/vendor/OrbitControls.js';
 import { renderGateFrame } from './3d-gate-render.js';
 import { renderSlidingGate } from './3d-sliding-render.js';
 import { createCompactSideEditor } from './3d-compact-editor.js';
+import { PRODUCT_TYPES,PRODUCT_LABELS,normalizeProduct,getProductLayout } from './3d-product-layout.js';
 import { getSlidingGatePlan, getSlidingTravelPlan } from './3d-sliding-frame.js';
 import {getSlidingInstallationPlan} from './3d-sliding-installation.js';
 import { getGateFramePlan } from './3d-gate-frame.js';
@@ -61,7 +62,9 @@ function loadDraft() {
     openings:normalizeOpenings(sides,o.openings,o.gate),
     postSize:[60,80,100].includes(Number(o.postSize))?Number(o.postSize):DEFAULT.postSize,
     sides,
-    activeSide
+    activeSide,
+    displayMode:o.displayMode==='product'?'product':'site',
+    product:normalizeProduct(o.product,sides[activeSide],o.openings?.[activeSide])
   };
 }
 function saveDraft(model) {
@@ -194,11 +197,35 @@ export function mount3DCalculator(root) {
   const activeSettings=()=>config.sides[config.activeSide];
   root.innerHTML = [
     '<div class="kd3d-top"><div><strong>Конструктор участка</strong><small>3D расчёт · DEV</small></div><span>DEV</span></div>',
+    '<div class="kd3d-scope" role="group" aria-label="Режим 3D"><button type="button" data-display-mode="site" aria-pressed="true">Участок</button><button type="button" data-display-mode="product" aria-pressed="false">Изделие без забора</button></div>',
     '<div class="kd3d-mode" role="group" aria-label="Вид результата"><button type="button" data-mode="scene" class="active">3D-модель</button><button type="button" data-mode="parts">Комплектация</button></div>',
     '<div class="kd3d-viewport" data-viewport><div class="kd3d-scene" data-scene></div><div class="kd3d-parts" data-parts hidden></div>',
     '<div class="kd3d-scene-controls"><button type="button" data-fit>Показать целиком</button></div><div class="kd3d-scene-slide-controls" data-scene-slide-controls hidden><small data-scene-slide-label>Сторона А</small><div><button type="button" data-scene-slide-position="closed" aria-pressed="true">Закрыто</button><button type="button" data-scene-slide-position="open" aria-pressed="false">Открыто</button></div></div><div class="kd3d-slide-legend" data-slide-legend hidden><span><i class="kd3d-legend-ok"></i> Свободное место</span><span><i class="kd3d-legend-blocked"></i> Не хватает места</span><span><i class="kd3d-legend-wicket"></i> Калитка / препятствие</span></div>',
     '<div class="kd3d-tap-hint" data-tap-hint>Нажмите на ворота, калитку или секцию забора для настройки</div>',
     '<p class="kd3d-webgl-error" data-error hidden></p></div>',
+    '<section class="kd3d-product-panel" data-product-panel hidden aria-label="Настроить отдельное изделие">'+
+    '<div class="kd3d-product-head"><div><strong>3D-чертёж изделия</strong><small>Без забора · только конструкция и опорные столбы</small></div></div>'+
+    '<label class="kd3d-product-type">Что заказывает клиент?<select data-product-type>'+
+      PRODUCT_TYPES.map(id=>'<option value="'+id+'">'+PRODUCT_LABELS[id]+'</option>').join('')+'</select></label>'+
+    '<div class="kd3d-product-fields">'+
+    '<label data-product-for="gate pair embedded sliding">Ширина ворот, м<input type="number" data-product-field="gate.width" min="2" max="6" step="0.1" inputmode="decimal"></label>'+
+    '<label data-product-for="wicket pair">Ширина калитки, м<input type="number" data-product-field="wicket.width" min="0.7" max="1.5" step="0.1" inputmode="decimal"></label>'+
+    '<label>Высота изделия, м<input type="number" data-product-field="height" min="0.8" max="3" step="0.1" inputmode="decimal"></label>'+
+    '<label>Заполнение<select data-product-field="fill">'+FILL_IDS.map(id=>'<option value="'+id+'">'+FILL_LABELS[id]+'</option>').join('')+'</select></label>'+
+    '<label>Цвет RAL<select data-product-field="ral">'+Object.keys(RAL).map(id=>'<option value="'+id+'">RAL '+id+'</option>').join('')+'</select></label>'+
+    '<label>Столбы<select data-product-field="postSize"><option value="60">60×60 мм</option><option value="80">80×80 мм</option><option value="100">100×100 мм</option></select></label>'+
+    '<label data-product-for="gate pair embedded">Открывание ворот<select data-product-field="gate.openDirection"><option value="inward">Внутрь</option><option value="outward">Наружу</option></select></label>'+
+    '<label data-product-for="gate pair embedded">Створки<select data-product-field="gate.swingOpen"><option value="false">Закрыты</option><option value="true">Открыты</option></select></label>'+
+    '<label data-product-for="wicket pair">Петли калитки<select data-product-field="wicket.hingeSide"><option value="left">Слева</option><option value="right">Справа</option></select></label>'+
+    '<label data-product-for="wicket pair">Открывание калитки<select data-product-field="wicket.openDirection"><option value="inward">Внутрь</option><option value="outward">Наружу</option></select></label>'+
+    '<label data-product-for="wicket pair">Полотно калитки<select data-product-field="wicket.swingOpen"><option value="false">Закрыто</option><option value="true">Открыто</option></select></label>'+
+    '<label data-product-for="embedded">Встроенная калитка<select data-product-field="gate.builtInSide"><option value="left">В левой створке</option><option value="right">В правой створке</option></select></label>'+
+    '<label data-product-for="embedded">Ширина встроенной, м<input type="number" data-product-field="gate.builtInWidth" min="0.7" max="1.2" step="0.1" inputmode="decimal"></label>'+
+    '<label data-product-for="sliding">Направление отката<select data-product-field="gate.slideDirection"><option value="left">Влево</option><option value="right">Вправо</option></select></label>'+
+    '<label data-product-for="sliding">Хвостовик<select data-product-field="gate.tailShape"><option value="square">Квадратный</option><option value="triangle">Треугольный</option></select></label>'+
+    '<label data-product-for="sliding">Стойка в полотне<select data-product-field="gate.centerPost"><option value="false">Без стойки</option><option value="true">Со стойкой</option></select></label>'+
+    '<label data-product-for="sliding">Полотно<select data-product-field="gate.slideOpen"><option value="false">Закрыто</option><option value="true">Открыто</option></select></label>'+
+    '</div><p class="kd3d-product-note" data-product-note>Размеры указаны по проёмам. Модель предварительная, не производственный чертёж.</p></section>',
     '<div class="kd3d-tap-editor" data-tap-editor hidden role="region" aria-label="Быстрое редактирование выбранного элемента"><div class="kd3d-tap-head"><div><small data-tap-subtitle>Выбранный элемент 3D</small><strong data-tap-title>Сторона А</strong></div><button type="button" data-tap-close aria-label="Закрыть панель">✕</button></div><div class="kd3d-tap-fields" data-tap-fields></div><div class="kd3d-tap-actions"><button type="button" data-tap-detail>Все настройки</button><span>Изменения сразу видны в 3D</span></div></div>',
     '<div class="kd3d-form kd3d-editor"><div class="kd3d-editor-head"><h3>Параметры забора</h3><button type="button" data-collapse-params aria-expanded="true">Свернуть <span aria-hidden="true">⌃</span></button></div>',
     '<div class="kd3d-editor-content" data-editor-content>',
@@ -338,6 +365,41 @@ export function mount3DCalculator(root) {
     root.querySelectorAll('[data-side-edit-slot]').forEach(el=>{el.hidden=el!==slot;});
   }
   placeInlineEditor();
+  const productMode=()=>config.displayMode==='product';
+  const viewLayout=()=>productMode()?getProductLayout(config.product):
+    getSiteLayout(config.sides,config.openings,config.postSize);
+  const productPanel=root.querySelector('[data-product-panel]');
+  const productField=(key)=>root.querySelector('[data-product-field="'+key+'"]');
+  const productFieldValue=(key)=>{
+    const parts=key.split('.');
+    return parts.length===2?config.product[parts[0]]?.[parts[1]]:config.product[key];
+  };
+  function syncProductControls(){
+    const enabled=productMode();
+    root.dataset.displayMode=config.displayMode;
+    productPanel.hidden=!enabled;
+    root.querySelector('[data-compact-editor]').hidden=enabled;
+    root.querySelector('.kd3d-editor').hidden=enabled;
+    root.querySelectorAll('[data-display-mode]').forEach(button=>
+      button.setAttribute('aria-pressed',String(button.dataset.displayMode===config.displayMode)));
+    root.querySelector('[data-product-type]').value=config.product.type;
+    root.querySelectorAll('[data-product-for]').forEach(control=>{
+      control.hidden=!control.dataset.productFor.split(' ').includes(config.product.type);
+    });
+    root.querySelectorAll('[data-product-field]').forEach(control=>{
+      const value=productFieldValue(control.dataset.productField);
+      control.value=typeof value==='boolean'?String(value):String(value??'');
+    });
+    root.querySelector('[data-tap-hint]').hidden=enabled;
+    if(enabled){
+      root.querySelector('[data-tap-editor]').hidden=true;
+      root.dataset.tapSelection='';
+    }
+    root.querySelector('[data-product-note]').textContent=
+      config.product.type==='sliding'
+      ?'3D показывает полотно, хвостовик, ролики и условную зону отката. Свободное место на реальном участке уточняется на замере.'
+      :'Размеры указаны по проёмам. Только изделие и опорные столбы, без забора. Это предварительная 3D-визуализация.';
+  }
   const find = selector => root.querySelector(selector);
   const productField=(id,selector)=>
     root.querySelector('[data-side-products="'+id+'"] '+selector);
