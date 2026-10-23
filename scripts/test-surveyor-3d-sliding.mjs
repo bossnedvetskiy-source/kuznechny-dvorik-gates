@@ -218,10 +218,14 @@ for(const shape of ['square','triangle']){
             if(o.userData.kdSlidingGuideWeb){
               guideWebs++;
               assert(o.scale.x>o.scale.z*3,'cantilever guide lies along X');
+              assert(Math.abs(o.position.z-plan.trackOffset)+o.scale.z/2<=.091,
+                'moving guide web must stay INSIDE checked sliding sweep corridor');
             }
             if(o.userData.kdSlidingGuideLip){
               guideLips++;
               assert(o.scale.y>o.scale.z*2,'guide lips retain the wheel carriages');
+              assert(Math.abs(o.position.z-plan.trackOffset)+o.scale.z/2<=.091,
+                'moving guide lips must stay INSIDE checked sliding sweep corridor');
             }
             if(o.userData.kdSlidingChannelWeb){
               channelWebs++;
