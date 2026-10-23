@@ -751,6 +751,53 @@ test('DEV mobile product controls use final styled CSS, no native stacked button
   await expect(a.locator('[data-wicket-swing-state="closed"]')).toHaveAttribute('aria-pressed','true');
 });
 
+test('3D product mode shows standalone gate, wicket, pair, embedded and sliding with no fence',async ({page})=>{
+  test.setTimeout(120000);
+  await page.setViewportSize({width:390,height:844});
+  await page.goto('/kuznechny-dvorik-gates/zamer-app-v2/');
+  await page.locator('#loginInput').fill('zamer');
+  await page.locator('#passwordInput').fill('1234');
+  await page.locator('#loginForm button[type="submit"]').click();
+  await expect(page.locator('#mainView')).toBeVisible({timeout:10000});
+  await page.locator('#open3DCalcBtn').click();
+  const root=page.locator('#kd3dRoot');
+  await expect(root.locator('[data-stats]')).toContainText('Столбов',{timeout:15000});
+  await root.locator('[data-display-mode="product"]').click();
+  await expect(root.locator('[data-product-panel]')).toBeVisible();
+  await expect(root.locator('[data-compact-editor]')).toBeHidden();
+  await expect(root.locator('[data-display-mode="product"]')).toHaveAttribute('aria-pressed','true');
+  for(const [type,posts,openings] of [
+    ['gate',2,['A:gate:0.00']],['wicket',2,['A:wicket:0.00']],
+    ['pair',3,['A:gate:0.00','A:wicket:3.40']],
+    ['embedded',2,['A:gate:0.00']],['sliding',2,['A:gate:']]
+  ]){
+    await root.locator('[data-product-type]').selectOption(type);
+    await expect(root).toHaveAttribute('data-display-mode','product');
+    await expect(root.locator('[data-product-panel]')).toBeVisible();
+    if(await root.locator('.kd3d-scene canvas').count()){
+      await expect(root).toHaveAttribute('data-scene-product-type',type);
+      await expect(root).toHaveAttribute('data-scene-rendered-fence-spans','0');
+      await expect(root).toHaveAttribute('data-scene-rendered-posts',String(posts));
+      const openingText=await root.getAttribute('data-scene-openings')||'';
+      for(const opening of openings)expect(openingText).toContain(opening);
+      await root.locator('[data-fit]').click();
+      if(type==='sliding')await expect(root).toHaveAttribute('data-scene-sliding-tails',/^[1-9]/);
+      if(type==='embedded')await expect(root).toHaveAttribute('data-scene-embedded-wickets',/^[1-9]/);
+    }
+  }
+  await root.locator('[data-product-type]').selectOption('pair');
+  await root.locator('[data-product-field="gate.width"]').fill('3.6');
+  await root.locator('[data-product-field="gate.width"]').press('Tab');
+  if(await root.locator('.kd3d-scene canvas').count())
+    await expect(root).toHaveAttribute('data-scene-openings',/A:wicket:3\.60/);
+  await root.locator('[data-display-mode="site"]').click();
+  await expect(root.locator('[data-compact-editor]')).toBeVisible();
+  await expect(root.locator('[data-product-panel]')).toBeHidden();
+  await expect(root.locator('[data-side-length-input="A"]')).toHaveValue('12');
+  await root.locator('[data-display-mode="product"]').click();
+  await expect(root.locator('[data-product-field="gate.width"]')).toHaveValue('3.6');
+});
+
 test('3D facade is left-to-right, and right side Б goes BEHIND facade А',async ({page})=>{
   test.setTimeout(120000);
   await page.goto('/kuznechny-dvorik-gates/zamer-app-v2/');
