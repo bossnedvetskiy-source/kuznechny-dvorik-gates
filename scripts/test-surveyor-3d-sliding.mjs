@@ -183,6 +183,7 @@ for(const shape of ['square','triangle']){
           let leaves=0,tail=0,beams=0,centers=0,movers=0,zoneBands=0,arrows=0;
           let carriages=0,rollers=0,footings=0,receivers=0,upperGuides=0;
           let channels=0,channelWebs=0,channelFlanges=0;
+          let guideWebs=0,guideLips=0;
           let carriageBases=0,carriageBrackets=0,carriageAxles=0;
           const tailMembers=[];
           group.traverse(o=>{
@@ -214,6 +215,14 @@ for(const shape of ['square','triangle']){
               assert.equal(o.userData.kdSlidingChannelOrientation,
                 'horizontal-open-up');
             }
+            if(o.userData.kdSlidingGuideWeb){
+              guideWebs++;
+              assert(o.scale.x>o.scale.z*3,'cantilever guide lies along X');
+            }
+            if(o.userData.kdSlidingGuideLip){
+              guideLips++;
+              assert(o.scale.y>o.scale.z*2,'guide lips retain the wheel carriages');
+            }
             if(o.userData.kdSlidingChannelWeb){
               channelWebs++;
               assert(o.scale.x>o.scale.z*2,'channel must lie LONGITUDINALLY, not stand up');
@@ -234,6 +243,8 @@ for(const shape of ['square','triangle']){
             [2,8,1,1,1],'hardware remains fixed in both open/closed states');
           assert.deepEqual([channels,channelWebs,channelFlanges],[1,1,2],
             'fixed horizontal mounting channel is a U section with one web and two lips');
+          assert.deepEqual([guideWebs,guideLips],[1,2],
+            'moving cantilever guide has a horizontal web and two wheel-capturing lips');
           assert.deepEqual([carriageBases,carriageBrackets,carriageAxles],[2,4,4],
             'each of the two 4-roller carriages has a base, cheeks and axle shafts');
 
