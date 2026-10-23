@@ -1119,15 +1119,28 @@ export function mount3DCalculator(root) {
     for(const opening of preliminary.openings)
       config.openings[opening.sideId][opening.kind].offset=opening.start;
     config.gate=config.openings.A.gate;
-    const layout=summary();
+    const siteLayout=summary();
+    const layout=productMode()?getProductLayout(config.product):siteLayout;
+    if(productMode()){
+      stats.innerHTML='<div><small>Изделие</small><b>'+PRODUCT_LABELS[config.product.type]+'</b></div>'+ 
+        '<div><small>Столбов</small><b>'+layout.posts.length+'</b></div>';
+      parts.innerHTML='<h3>Комплектация · '+PRODUCT_LABELS[config.product.type]+'</h3>'+ 
+        '<p>Высота '+config.product.height+' м · проёмы '+layout.openings.map(o=>o.width+' м').join(' + ')+
+        ' · '+FILL_LABELS[config.product.fill]+' · RAL '+config.product.ral+'.</p>'+ 
+        '<p>Визуализация без секций забора. Цены и производственный раскрой не рассчитываются.</p>';
+    }
+    syncProductControls();
     saveDraft(config);
     if(!webglOk)return;
     clearGeometry();
-    const postWidth=config.postSize/1000;
-    const clearDimensions=getClearDimensionPlan(layout,config.postSize);
+    const renderPostSize=productMode()?config.product.postSize:config.postSize;
+    const postWidth=renderPostSize/1000;
+    const clearDimensions=getClearDimensionPlan(layout,renderPostSize);
+    const shouldDrawDimensions=config.showDimensions||productMode();
     const postMats=new Map();
     const postMaterialFor=id=>{
-      const code=config.sides[id]?.ral||config.sides.A.ral;
+      const code=productMode()?config.product.ral:
+        (config.sides[id]?.ral||config.sides.A.ral);
       if(!postMats.has(code)){
         const material=new THREE.MeshStandardMaterial({
           color:new THREE.Color(RAL[code]).multiplyScalar(.88),metalness:.19,roughness:.49
@@ -1282,7 +1295,7 @@ export function mount3DCalculator(root) {
           ownedMaterials:previousMaterials
         });
       }
-      if(config.showDimensions){
+      if(shouldDrawDimensions){
         const dimension=clearDimensions.find(d=>d.id===edge.id);
         drawDimensionGuides(group,dimension,edge.side.length,edge.id);
       }
@@ -1291,9 +1304,9 @@ export function mount3DCalculator(root) {
     }
     let renderedPlanks=0;
     fence.traverse(object=>{if(object.isInstancedMesh)renderedPlanks+=object.count;});
-    root.dataset.sceneDimensionCount=String(config.showDimensions?
+    root.dataset.sceneDimensionCount=String(shouldDrawDimensions?
       clearDimensions.reduce((n,d)=>n+d.spans.length,0):0);
-    root.dataset.sceneDimensionValues=config.showDimensions?
+    root.dataset.sceneDimensionValues=shouldDrawDimensions?
       clearDimensions.flatMap(d=>d.spans.map(p=>d.id+':'+p.kind+':'+p.clearMm)).join(';'):'';
     root.dataset.scenePickets=String(renderedPlanks);
     let actualLeaves=0,wicketLeaves=0,visibleHinges=0,diagonalBraces=0,embeddedWickets=0,thresholds=0;
@@ -1358,6 +1371,10 @@ export function mount3DCalculator(root) {
     root.dataset.sceneThresholds=String(thresholds);
     root.dataset.sceneLeafWidths=leafWidths.map(w=>Math.round(w*1000)).join(',');
     root.dataset.sceneOpenings=layout.openings.map(o=>o.sideId+':'+o.kind+':'+o.start.toFixed(2)).join(';');
+    root.dataset.sceneProductType=productMode()?config.product.type:'';
+    root.dataset.sceneIsProduct=String(productMode());
+    root.dataset.sceneRenderedPosts=String(layout.posts.length);
+    root.dataset.sceneRenderedFenceSpans=String(layout.totalSpans);
     const swingPivots=[];
     fence.traverse(object=>{
       if(object.userData.kdSwingPivot)swingPivots.push(object.userData.kdSwingSignature);
@@ -1372,20 +1389,20 @@ export function mount3DCalculator(root) {
     root.dataset.sceneRevision=String((Number(root.dataset.sceneRevision)||0)+1);
     root.dataset.sceneTapTargets=hitTargets.map(o=>
       o.userData.kdTapTarget.sideId+':'+o.userData.kdTapTarget.kind).join(';');
-    find('[data-tap-hint]').hidden=Boolean(tapSelection);
+    find('[data-tap-hint]').hidden=productMode()||Boolean(tapSelection);
     if(tapSelection)refreshTapPanel();
     renderer.render(scene,camera);
   }
   function fit() {
     if(!webglOk)return;
-    const layout=getSiteLayout(config.sides,config.openings,config.postSize);
+    const layout=viewLayout();
     // Include external parking strips and opened leaf positions in the view.
     const vertices=[];
     for(const edge of layout.edges){
       for(const opening of edge.openings){
         if(opening.kind!=='gate'||opening.type!=='sliding')continue;
         const travel=getSlidingTravelPlan(opening,edge.side.length,edge.openings,
-          config.postSize/1000,edge.side.height);
+          (productMode()?config.product.postSize:config.postSize)/1000,edge.side.height);
         if(!travel.showZone&&!travel.isOpen)continue;
         for(const distance of [travel.from,travel.to,travel.movingFrom,travel.movingTo]){
           const ratio=distance/edge.side.length;
