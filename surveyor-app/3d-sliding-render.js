@@ -25,11 +25,15 @@ export function renderSlidingGate(options){
   const depth=opening.frameProfile==='40x25'?.025:.04;
   const x=value=>openingStart+value;
   const z=plan.trackOffset;
-  const yBottom=plan.bottom,yTop=yBottom+plan.leafHeight;
+  // Cantilever beam encloses the carriage rollers at ground level. Keep
+  // enough space for it under the frame without changing its nominal top.
+  const yBottom=Math.max(plan.bottom,.22);
+  const yTop=plan.bottom+plan.leafHeight;
+  const leafHeight=yTop-yBottom;
   const centerY=(yBottom+yTop)/2;
-  function bar(x1,y1,x2,y2,width=tube){
+  function bar(x1,y1,x2,y2,width=tube,barDepth=depth){
     const length=Math.hypot(x2-x1,y2-y1);
-    const obj=frameGeometry(moving,base,length,width,depth,
+    const obj=frameGeometry(moving,base,length,width,barDepth,
       x((x1+x2)/2),(y1+y2)/2,z,postMat);
     obj.rotation.z=Math.atan2(y2-y1,x2-x1);
     return obj;
@@ -65,12 +69,30 @@ export function renderSlidingGate(options){
   const tip=plan.tailTip,junction=plan.junction;
   // Square counterweight has a full-height outer member. Triangular one
   // tapers towards the low end and still retains the horizontal guide.
+  // Tail reinforcement uses the workshop 60x40 tube in BOTH modes,
+  // irrespective of the chosen face-frame profile.
+  const tailTubeW=.06,tailTubeD=.04;
+  const tailBar=(x1,y1,x2,y2,kind)=>{
+    const member=bar(x1,y1,x2,y2,tailTubeW,tailTubeD);
+    member.userData.kdSlidingTailMember=kind;
+    member.userData.kdSlidingTailTube='60x40';
+    member.userData.kdSlidingTailEndpoints=[x1,y1,x2,y2];
+    return member;
+  };
   if(plan.tailShape==='square'){
-    bar(tip,yBottom,tip,yTop);
-    bar(tip,yTop,junction,yTop);
-    bar(tip,yBottom,junction,yTop,.025);
+    // Rectangular tail, two full intersecting 60x40 diagonals (X).
+    // The lower chord is the continuous guiding/structural beam.
+    tailBar(tip,yBottom,tip,yTop,'end-post');
+    tailBar(tip,yTop,junction,yTop,'top-chord');
+    tailBar(tip,yBottom,junction,yTop,'cross-a');
+    tailBar(tip,yTop,junction,yBottom,'cross-b');
   }else{
-    bar(tip,yBottom,junction,yTop,.032);
+    // Triangular tail: primary brace runs from gate top DOWN to tail tip.
+    // Secondary brace runs from the lower gate junction to the MIDPOINT
+    // of the primary diagonal. No square outer vertical or X.
+    const midX=(tip+junction)/2,midY=(yBottom+yTop)/2;
+    tailBar(junction,yTop,tip,yBottom,'primary-diagonal');
+    tailBar(junction,yBottom,midX,midY,'half-diagonal');
   }
   const tailGroup=new THREE.Group();
   tailGroup.userData.kdSlidingTail=true;
@@ -79,7 +101,7 @@ export function renderSlidingGate(options){
 
   // Cover only the useful gateway panel: the counterweight stays unfilled.
   const panelInnerW=Math.max(.12,plan.panelWidth-2*tube-.016);
-  const panelInnerH=Math.max(.18,plan.leafHeight-2*tube-.022);
+  const panelInnerH=Math.max(.18,leafHeight-2*tube-.022);
   const mid=plan.center,baseY=yBottom+tube+.011;
   if(fill==='sheet'){
     const geometry=buildC10Geometry(panelInnerW,panelInnerH);
