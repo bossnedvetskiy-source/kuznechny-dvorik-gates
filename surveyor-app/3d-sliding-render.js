@@ -6,7 +6,7 @@ import {renderSlidingHardware} from './3d-sliding-hardware.js';
 // tail, either square or triangular. This is a visual model, not a cut list.
 export function renderSlidingGate(options){
   const {group,base,opening,openingStart,postWidth,side,sideLength,otherOpenings,
-    installationPlan,postMat,fillMat,gap,
+    installationPlan,postMat,fillMat,gap,standalone=false,
     frameGeometry,buildC10Geometry,buildPicketGeometry,instancePickets,
     horizontalPicketRows,verticalPicketPlan,ownedGeometries,ownedMaterials}=options;
   const plan=installationPlan||getSlidingInstallationPlan(opening,sideLength,otherOpenings,{
@@ -123,6 +123,9 @@ export function renderSlidingGate(options){
   renderSlidingHardware({group,base,opening,installation:plan,openingStart,
     postWidth,postMat,frameGeometry,ownedGeometries,ownedMaterials});
   if(plan.showZone){
+    // Product mode has no fence line; place the free-travel markings beneath
+    // the actual track rather than 440 mm away from the structure.
+    const zoneZ=standalone?plan.trackOffset:.44;
     // plan.from/to are SIDE-LOCAL positions; openingStart is relative to
     // the centre of the side and already contains opening.start.
     // Subtract the opening offset once or the ground band drifts from the
@@ -143,7 +146,7 @@ export function renderSlidingGate(options){
       ownedMaterials.push(material);
       const band=new THREE.Mesh(geometry,material);
       band.rotation.x=-Math.PI/2;
-      band.position.set(sideBaseX+(from+to)/2,level,.44);
+      band.position.set(sideBaseX+(from+to)/2,level,zoneZ);
       band.renderOrder=9;
       band.userData.kdSlidingParkingZone=kind;
       band.userData.kdSlidingParkingSide=opening.sideId;
@@ -168,9 +171,9 @@ export function renderSlidingGate(options){
     const wing=Math.min(.23,plan.required*.12);
     const ax=distance=>sideBaseX+distance;
     const vertices=[
-      ax(origin),.087,.44,ax(end),.087,.44,
-      ax(end),.087,.44,ax(end-sign*wing),.087,.44-wing*.50,
-      ax(end),.087,.44,ax(end-sign*wing),.087,.44+wing*.50
+      ax(origin),.087,zoneZ,ax(end),.087,zoneZ,
+      ax(end),.087,zoneZ,ax(end-sign*wing),.087,zoneZ-wing*.50,
+      ax(end),.087,zoneZ,ax(end-sign*wing),.087,zoneZ+wing*.50
     ];
     const arrowGeo=new THREE.BufferGeometry();
     arrowGeo.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));
