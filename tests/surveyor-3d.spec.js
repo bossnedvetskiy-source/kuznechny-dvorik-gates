@@ -638,8 +638,8 @@ test('Откатные ворота: 3D ролики/фундамент/приё
     await expect(root).toHaveAttribute('data-scene-sliding-rollers','8');
     await expect(root).toHaveAttribute('data-scene-sliding-foundations','1');
     await expect(root).toHaveAttribute('data-scene-sliding-receivers','1');
-    await expect(root).toHaveAttribute('data-scene-sliding-upper-guides','1');
-    await expect(root).toHaveAttribute('data-scene-sliding-upper-guide-brackets','1');
+    await expect(root).toHaveAttribute('data-scene-sliding-upper-guides','0');
+    await expect(root).toHaveAttribute('data-scene-sliding-upper-guide-brackets','0');
     await expect(root).toHaveAttribute('data-scene-sliding-upper-guide-uprights','0');
   }
   await a.locator('[data-gate-slide-position="open"]').click();
@@ -800,8 +800,9 @@ test('3D product mode shows standalone gate, wicket, pair, embedded and sliding 
     await expect(root).toHaveAttribute('data-scene-sliding-rollers','8');
     await expect(root).toHaveAttribute('data-scene-sliding-tail-members',
       'cross-a,cross-b,end-post,top-chord');
+    await expect(root).toHaveAttribute('data-scene-sliding-upper-guides','0');
     await expect(root).toHaveAttribute('data-scene-sliding-upper-guide-uprights','0');
-    await expect(root).toHaveAttribute('data-scene-sliding-upper-guide-brackets','1');
+    await expect(root).toHaveAttribute('data-scene-sliding-upper-guide-brackets','0');
   }
   await root.locator('[data-product-field="gate.tailShape"]').selectOption('triangle');
   if(await root.locator('.kd3d-scene canvas').count())
