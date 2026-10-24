@@ -99,26 +99,11 @@ export function renderSlidingHardware({group,base,opening,installation,openingSt
     frameGeometry(receiver,base,.024,.17,.034,-.067,y,0,steelMat);
     frameGeometry(receiver,base,.024,.17,.034,.067,y,0,steelMat);
   }
-  // Upper retaining rollers attach to the EXISTING opening support post.
-  // The former full-height standalone upright inside the tail was fictitious
-  // and made the counterweight look as if it had an extra structural post.
-  // At the junction the bracket overlaps the existing post's face, without
-  // adding another ground-to-frame support.
-  const guide=new THREE.Group();
-  guide.position.set(baseX+p.junction,0,0);
-  guide.userData.kdSlidingUpperGuide=true;
-  guide.userData.kdSlidingUpperGuideMount='existing-post';
-  fixture.add(guide);
-  const upperY=Math.max(.55,p.leafHeight*.75);
-  const bracket=frameGeometry(guide,base,.18,.036,Math.max(.20,z+.08),
-    0,upperY,z/2,steelMat);
-  bracket.userData.kdSlidingUpperGuideBracket=true;
-  for(const dz of [z-.052,z+.052]){
-    const roller=new THREE.Mesh(wheelGeometry,wheelMat);
-    roller.position.set(0,upperY+.03,dz);
-    roller.userData.kdSlidingUpperRoller=true;
-    guide.add(roller);
-  }
+  // Do not draw an additional upper guide assembly in the client 3D preview.
+  // Previously its side-local coordinates were offset twice for standalone
+  // gates, leaving a detached black part in the empty parking area.
+  // Real-world upper guidance remains a mounting/detailing decision, not a
+  // visible fabricated extra post or loose component in this visualization.
   // User-measured obstacles are STATIC, independent from the moving frame.
   // Red indicates overlap with the swept corridor, gray is an outside marker.
   const obstacles=new THREE.Group();
