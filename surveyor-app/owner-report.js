@@ -40,8 +40,10 @@ export function buildOwnerReport(survey, estimate, overrides = {}) {
     // Public quote configurations never contain cost settings. For newly saved
     // quotes, the owner sees a deterministic *current-price estimate*, not
     // a falsely asserted historical purchase price.
-    const sourceSettings = null; // Public snapshots do not contain private tariffs.
-    issues.push('Цены материалов забора пересчитаны по текущим настройкам калькулятора, не по закупочным накладным.');
+    // The persisted client quote has no private tariffs. Use only the public
+    // geometry and show the current engine's costs as a rough estimate.
+    const sourceSettings = null;
+    issues.push('Расходы на забор — оценка по настройкам калькулятора, а не фактическая закупочная себестоимость.');
     const delivery = config.delivery || {};
     const deliveryCost = delivery.manual ? nonnegative(delivery.manualPrice) : nonnegative(delivery.price);
     const input = {
