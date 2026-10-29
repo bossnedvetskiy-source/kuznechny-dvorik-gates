@@ -1,4 +1,11 @@
 import {buildOwnerReport, ownerReportHtml} from './owner-report.js';
+const ownerCostsCache = Object.create(null);
+async function loadOwnerCosts(surveyId) {
+  if (currentUser?.role !== 'owner') return;
+  try { const result = await apiRequest('/owner-costs?surveyId='+encodeURIComponent(surveyId)); ownerCostsCache[surveyId]=result.costs||{}; }
+  catch (error) { console.warn('Owner costs unavailable',error); }
+}
+
 import {PLAN_ITEM_TYPES,MATERIAL_LABELS,ensureSitePlan,newItem,newLine,lineWidth,itemDescription,trimNumber,planFromCalculations,planDifferences,updateLinkedPlanSizes,splitFenceWithPost,removePostFromLine,postMoveRange,movePlanPost,inspectPlanLine,divideFenceIntoSpans} from './line-builder.js';
 
 const APP_VERSION = '0.4.0-v3-stage1';
@@ -1755,6 +1762,7 @@ function v3ProductTools(survey) {
 }
 
 async function openSurveyDetails(id) {
+  if (currentUser?.role === 'owner' && API_ENABLED) await loadOwnerCosts(id);
   const survey = await idbGet('surveys', id);
   if (!survey) return;
   $('#detailsNumber').textContent = displaySurveyNumber(survey);
@@ -1767,7 +1775,7 @@ async function openSurveyDetails(id) {
     </section>
     ${v3ProductTools(survey)}
     ${calculationsHtml(survey)}
-    ${currentUser?.role === 'owner' && unifiedEstimate(survey).selected.length ? ownerReportHtml(buildOwnerReport(survey,unifiedEstimate(survey),survey.configuration?.ownerCosts),unifiedEstimate(survey)) : ''}
+    ${currentUser?.role === 'owner' && unifiedEstimate(survey).selected.length ? ownerReportHtml(buildOwnerReport(survey,unifiedEstimate(survey),ownerCostsCache[survey.id]),unifiedEstimate(survey)) : ''}
     ${unifiedEstimate(survey).selected.length ? `<section class="v3-preview-bar">
       <div><small>Предварительно по заказу</small><b>${formatMoney(unifiedEstimate(survey).total)}</b></div>
       <button type="button" class="btn btn-primary" data-v3-preview>Показать клиенту →</button>
@@ -1832,7 +1840,7 @@ async function openSurveyDetails(id) {
     if (currentUser?.role !== 'owner') return;
     const fresh = await idbGet('surveys',survey.id);
     if (!fresh) return;
-    const next = {...(fresh.configuration?.ownerCosts || {})};
+    const next = {...(ownerCostsCache[survey.id] || {})};
     for (const input of $('[data-owner-cost]',detailsRoot)) {
       const raw = input.value.trim();
       if (raw && (!Number.isFinite(Number(raw)) || Number(raw) < 0)) return showToast('Расходы должны быть неотрицательными');
@@ -1840,16 +1848,13 @@ async function openSurveyDetails(id) {
       if (raw) next[input.dataset.ownerCost] = Number(raw);
       else delete next[input.dataset.ownerCost];
     }
-    fresh.configuration = fresh.configuration || {};
-    fresh.configuration.ownerCosts = next;
-    fresh.updatedAt = new Date().toISOString();
-    fresh.syncState = API_ENABLED ? 'pending' : 'local';
-    await idbPut('surveys',fresh);
-    await renderSurveys();
+    try { await apiRequest('/owner-costs',{method:'POST',body:JSON.stringify({surveyId:survey.id,costs:next})}); }
+    catch (error) { return showToast(error.message || 'Не удалось сохранить расходы'); }
+    ownerCostsCache[survey.id]=next;
     if ($('#surveyDetailsDialog').open) $('#surveyDetailsDialog').close();
     await openSurveyDetails(survey.id);
     showToast('Внутренние расходы сохранены');
-    if (API_ENABLED && navigator.onLine) syncNow({silent:true});
+
   });
 }
 
