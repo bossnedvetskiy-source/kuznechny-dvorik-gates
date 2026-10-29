@@ -515,11 +515,16 @@ async function syncNow({ silent = false } = {}) {
         if (currentUser?.id === cached.id) currentUser = cached;
       }
     }
+    if (currentUser?.role !== 'owner') {
+      for (const id of Object.keys(ownerCostsCache)) delete ownerCostsCache[id];
+    }
+    applyRoleUi();
     const conflicts = (data.conflicts || []).length;
     lastSyncMessage = conflicts ? `Есть конфликтов: ${conflicts}` : 'Все изменения синхронизированы';
     if (!silent) showToast(conflicts ? 'Синхронизация завершена с конфликтом' : 'Синхронизация завершена');
     await renderSurveys();
     await renderClients($('#clientSearch')?.value || '');
+    if (currentUser?.role==='owner' && $('#ownerScreen')?.classList.contains('active')) await renderOwnerDashboard();
     updateSyncUi();
     return true;
   } catch (error) {
