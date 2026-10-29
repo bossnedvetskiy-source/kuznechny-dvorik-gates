@@ -144,12 +144,15 @@ test('owner hands off a canopy survey into fabrication and reissues after a chan
   await page.locator('#passwordInput').fill('1234');
   await page.locator('#loginForm button[type="submit"]').click();
   await expect(page.locator('#mainView')).toBeVisible();
+  await expect(page.locator('#ownerScreen')).toBeVisible();
+  await page.locator('[data-screen="surveys"]').click();
 
   await page.locator('#newSurveyBtn').click();
   await page.locator('#surveyAddress').fill('Мелеуз, производство арочного навеса');
   await page.locator('#surveyNote').fill('Проверить фундамент перед установкой');
   await page.locator('#saveSurveyBtn').click();
   await expect(page.locator('#surveyDetailsDialog')).toBeVisible();
+  await page.locator('[data-owner-detail-tab="quote"]').click();
 
   await page.locator('[data-v3-calc="canopy"]').click();
   await expect(page.locator('#kdSurveyorBridge')).toBeVisible({timeout:15000});
@@ -159,11 +162,13 @@ test('owner hands off a canopy survey into fabrication and reissues after a chan
   await page.locator('#kdSurveyorBridgeSave').click();
   await page.waitForURL(/\/dev-tools\/\?resumeSurvey=/,{waitUntil:'domcontentloaded',timeout:45000});
   await expect(page.locator('#surveyDetailsDialog')).toBeVisible();
+  await page.locator('[data-owner-detail-tab="quote"]').click();
   await expect(page.locator('[data-send-canopy-production]')).toHaveText('Передать в производство');
   await expect(page.locator('[data-open-canopy-production]')).toHaveCount(0);
 
   await page.locator('[data-send-canopy-production]').click();
   await expect(page.locator('#toast')).toContainText('ТЗ навеса подготовлено');
+  await page.locator('[data-owner-detail-tab="quote"]').click();
   await expect(page.locator('.canopy-production-state')).toContainText('ТЗ сформировано');
   await expect(page.locator('[data-open-canopy-production]')).toBeVisible();
   const initial=await page.evaluate(async()=>{
@@ -198,6 +203,7 @@ test('owner hands off a canopy survey into fabrication and reissues after a chan
 
   await page.goto('/kuznechny-dvorik-gates/dev-tools/?resumeSurvey='+encodeURIComponent(initial.surveyId));
   await expect(page.locator('#surveyDetailsDialog')).toBeVisible({timeout:15000});
+  await page.locator('[data-owner-detail-tab="quote"]').click();
   await page.locator('.calculation-card-copy').click();
   await expect(page).toHaveURL(/edit=calc_/);
   await page.locator('#lengthPosts').fill('6.2');
@@ -207,6 +213,7 @@ test('owner hands off a canopy survey into fabrication and reissues after a chan
   await expect(page.locator('[data-open-canopy-production]')).toHaveCount(0);
   await expect(page.locator('[data-send-canopy-production]')).toHaveText('Обновить ТЗ');
   await page.locator('[data-send-canopy-production]').click();
+  await page.locator('[data-owner-detail-tab="quote"]').click();
   await expect(page.locator('.canopy-production-state')).toContainText('ТЗ сформировано');
   const refreshed=await page.evaluate(async(id)=>{
     const db=await new Promise((resolve,reject)=>{
