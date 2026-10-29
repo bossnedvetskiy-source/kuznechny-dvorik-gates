@@ -643,7 +643,7 @@ async function renderOwnerDashboard() {
   if (currentUser?.role !== 'owner') return;
   const model=buildOwnerDashboard(surveys,unifiedEstimate,row=>ownerCostsCache[row.id]||{});
   container.innerHTML=ownerDashboardHtml(model,{preview:IS_PREVIEW});
-  $('[data-owner-open]',container).forEach(button=>button.addEventListener('click',()=>openSurveyDetails(button.dataset.ownerOpen)));
+  $$('[data-owner-open]',container).forEach(button=>button.addEventListener('click',()=>openSurveyDetails(button.dataset.ownerOpen)));
   $('[data-owner-go-surveys]',container)?.addEventListener('click',()=>switchScreen('surveys'));
 }
 
@@ -1854,14 +1854,14 @@ async function openSurveyDetails(id) {
   $$('[data-v3-calc]', $('#surveyDetailsContent')).forEach(button =>
     button.addEventListener('click', () => launchCalculation(button.dataset.v3Calc, {surveyId:survey.id})));
   const detailsRoot = $('#surveyDetailsContent');
-  $('[data-owner-detail-tab]',detailsRoot).forEach(tab=>tab.addEventListener('click',()=>{
+  $$('[data-owner-detail-tab]',detailsRoot).forEach(tab=>tab.addEventListener('click',()=>{
     const selected=tab.dataset.ownerDetailTab;
-    $('[data-owner-detail-tab]',detailsRoot).forEach(button=>{
+    $$('[data-owner-detail-tab]',detailsRoot).forEach(button=>{
       const active=button.dataset.ownerDetailTab===selected;
       button.classList.toggle('active',active);
       button.setAttribute('aria-selected',String(active));
     });
-    $('[data-owner-pane]',detailsRoot).forEach(pane=>pane.hidden=pane.dataset.ownerPane!==selected);
+    $$('[data-owner-pane]',detailsRoot).forEach(pane=>pane.hidden=pane.dataset.ownerPane!==selected);
   }));
   $$('[data-edit-calculation]', detailsRoot).forEach(card => {
     const openEdit = event => {
@@ -1899,7 +1899,7 @@ async function openSurveyDetails(id) {
     const fresh = await idbGet('surveys',survey.id);
     if (!fresh) return;
     const next = {...(ownerCostsCache[survey.id] || {})};
-    for (const input of $('[data-owner-cost]',detailsRoot)) {
+    for (const input of $$('[data-owner-cost]',detailsRoot)) {
       const raw = input.value.trim();
       if (raw && (!Number.isFinite(Number(raw)) || Number(raw) < 0)) return showToast('Расходы должны быть неотрицательными');
       if (!input.dataset.ownerCost) continue;
