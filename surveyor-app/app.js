@@ -1775,7 +1775,7 @@ async function openSurveyDetails(id) {
     </section>
     ${v3ProductTools(survey)}
     ${calculationsHtml(survey)}
-    ${currentUser?.role === 'owner' && unifiedEstimate(survey).selected.length ? ownerReportHtml(buildOwnerReport(survey,unifiedEstimate(survey),ownerCostsCache[survey.id]),unifiedEstimate(survey)) : ''}
+    ${currentUser?.role === 'owner' && unifiedEstimate(survey).selected.length ? `<div class="owner-panel-title">📊 КД Управление · экономика объекта</div>`+ownerReportHtml(buildOwnerReport(survey,unifiedEstimate(survey),ownerCostsCache[survey.id]),unifiedEstimate(survey)) : ''}
     ${unifiedEstimate(survey).selected.length ? `<section class="v3-preview-bar">
       <div><small>Предварительно по заказу</small><b>${formatMoney(unifiedEstimate(survey).total)}</b></div>
       <button type="button" class="btn btn-primary" data-v3-preview>Показать клиенту →</button>
