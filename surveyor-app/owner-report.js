@@ -77,7 +77,7 @@ export function buildOwnerReport(survey, estimate, overrides = {}) {
   const income = nonnegative(estimate.total);
   const totalCost = knownCost + extra;
   const profit = incomplete ? null : income - totalCost;
-  return {income, knownCost, extra, totalCost, profit, incomplete, materials, lines, fenceRows, issues:[...new Set(issues)]};
+  return {income, knownCost, extra, totalCost, profit, incomplete, materials, lines, fenceRows, overrides:costs, issues:[...new Set(issues)]};
 }
 
 export function ownerReportHtml(report, estimate) {
@@ -132,7 +132,7 @@ export function ownerReportHtml(report, estimate) {
     ${fence || '<p class="owner-finance-note">Для ведомости евроштакетника добавьте расчёт забора в общий заказ.</p>'}
     <details class="owner-expenses" open><summary>Расходы по остальным изделиям и объекту</summary>
       <p class="owner-finance-note">Укажите полную себестоимость ворот, навеса и откатных ворот: материалы, зарплаты, покраска, расходники, доставка и монтаж. Значения сохраняются отдельно от клиентской цены.</p>
-      ${estimate.selected.map(item=>{const l=report.lines.find(x=>x.id===item.id)||{title:item.title||item.type,cost:null};return `<div class="owner-expense-field"><label>${h(l.title)} · себестоимость, ₽<input data-owner-cost="${h(item.id)}" type="number" min="0" step="100" inputmode="decimal" value="${l.cost == null ? '' : l.cost}" placeholder="Расходы пока не указаны"></label></div>`}).join('')}
+      ${estimate.selected.map(item=>{const l=report.lines.find(x=>x.id===item.id)||{title:item.title||item.type,cost:null};return `<div class="owner-expense-field"><label>${h(l.title)} · себестоимость, ₽<input data-owner-cost="${h(item.id)}" type="number" min="0" step="100" inputmode="decimal" value="${Object.prototype.hasOwnProperty.call(report.overrides,item.id) ? report.overrides[item.id] : ''}" placeholder="${item.type==='fence'?'Необязательно · используется расчёт':'Расходы пока не указаны'}"></label></div>`}).join('')}
       <div class="owner-expense-field"><label>Дополнительные расходы, ₽<input data-owner-cost="extra" type="number" min="0" step="100" inputmode="decimal" value="${report.extra||''}" placeholder="Топливо, брак, накладные…"></label></div>
       <button data-owner-save-expenses class="btn btn-secondary btn-block" type="button">Сохранить расходы</button>
     </details>
