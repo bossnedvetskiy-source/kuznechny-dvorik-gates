@@ -56,6 +56,10 @@
       </header>
 
       <main class="content">
+        <section id="ownerScreen" class="screen" aria-label="КД Управление: панель собственника">
+          <div id="ownerDashboardRoot" class="owner-dashboard-root"></div>
+        </section>
+
         <section id="surveysScreen" class="screen active">
           <div class="hero-card v3-hero">
             <div>
@@ -150,6 +154,7 @@
       </main>
 
       <nav class="bottom-nav" aria-label="Основная навигация">
+        <button id="ownerNavBtn" class="nav-btn hidden" data-screen="owner" type="button"><span>▦</span><b>Управление</b></button>
         <button class="nav-btn active" data-screen="surveys" type="button"><span>▤</span><b>Замеры</b></button>
         <button class="nav-btn" data-screen="clients" type="button"><span>♙</span><b>Клиенты</b></button>
         <button id="teamNavBtn" class="nav-btn" data-screen="team" type="button"><span>♟</span><b>Сотрудники</b></button>
