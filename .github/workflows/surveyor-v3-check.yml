@@ -17,6 +17,7 @@ on:
       - feature/surveyor-visual-post-controls
       - feature/kd-surveyor-offline-first-android
       - feature/sliding-gates-surveyor-dev-20261015
+      - feature/owner-materials-finance-dev-20261029
       - feature/sliding-frame-card-schematics-20261015
       - fix/sliding-jalousie-empty-frame-centerpost-20261015
   workflow_dispatch:
@@ -42,6 +43,10 @@ jobs:
       - name: Check source and integrity
         run: |
           node --check surveyor-app/app.js
+          node --check surveyor-app/owner-report.js
+          node --check surveyor-app/owner-dashboard.js
+          node scripts/test-owner-materials.mjs
+          php -l timeweb/backend/surveyor.php
           node --check surveyor-app/sw.js
           node --check surveyor-app/offline-readiness.js
           node --check scripts/build-dev-preview.mjs
@@ -60,6 +65,9 @@ jobs:
       - name: Verify calculated dimensions flow into the scheme without double counting
         if: github.ref != 'refs/heads/feature/kd-surveyor-offline-first-android' && github.ref != 'refs/heads/feature/sliding-gates-surveyor-dev-20261015' && github.ref != 'refs/heads/feature/sliding-frame-card-schematics-20261015' && github.ref != 'refs/heads/fix/sliding-jalousie-empty-frame-centerpost-20261015'
         run: npx playwright test tests/surveyor-plan-from-estimate.spec.js tests/surveyor-mobile.spec.js --workers=1
+      - name: Verify owner dashboard and surveyor role separation
+        if: github.ref == 'refs/heads/feature/owner-materials-finance-dev-20261029'
+        run: npx playwright test tests/surveyor-owner-dashboard.spec.js --workers=1
       - name: Verify offline controls and real cross-calculator navigation
         if: github.ref == 'refs/heads/feature/kd-surveyor-offline-first-android'
         run: npx playwright test tests/dev-pwa.spec.js tests/surveyor-offline-readiness.spec.js --workers=1
