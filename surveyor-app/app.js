@@ -1,9 +1,21 @@
 import {buildOwnerReport, ownerReportHtml} from './owner-report.js';
+import {buildOwnerDashboard, ownerDashboardHtml} from './owner-dashboard.js';
 const ownerCostsCache = Object.create(null);
 async function loadOwnerCosts(surveyId) {
   if (currentUser?.role !== 'owner') return;
-  try { const result = await apiRequest('/owner-costs?surveyId='+encodeURIComponent(surveyId)); ownerCostsCache[surveyId]=result.costs||{}; }
-  catch (error) { console.warn('Owner costs unavailable',error); }
+  if (IS_PREVIEW) {
+    // Test-only demo. Never send this to a live site; no protected backend here.
+    try { ownerCostsCache[surveyId]=JSON.parse(sessionStorage.getItem('kd-owner-demo-'+surveyId)||'{}'); }
+    catch { ownerCostsCache[surveyId]={}; }
+    return;
+  }
+  try {
+    const result=await apiRequest('/owner-costs?surveyId='+encodeURIComponent(surveyId));
+    ownerCostsCache[surveyId]=result.costs||{};
+  } catch (error) {
+    delete ownerCostsCache[surveyId];
+    console.warn('Owner costs unavailable',error);
+  }
 }
 
 import {PLAN_ITEM_TYPES,MATERIAL_LABELS,ensureSitePlan,newItem,newLine,lineWidth,itemDescription,trimNumber,planFromCalculations,planDifferences,updateLinkedPlanSizes,splitFenceWithPost,removePostFromLine,postMoveRange,movePlanPost,inspectPlanLine,divideFenceIntoSpans} from './line-builder.js';
@@ -575,9 +587,10 @@ function updateNetworkState() {
 
 function applyRoleUi() {
   const isOwner = currentUser?.role === 'owner';
+  $('#ownerNavBtn')?.classList.toggle('hidden', !isOwner);
   $('#teamNavBtn')?.classList.toggle('hidden', !isOwner);
   $('#openTeamBtn')?.classList.toggle('hidden', !isOwner);
-  if (!isOwner && $('#teamScreen')?.classList.contains('active')) switchScreen('surveys');
+  if (!isOwner && ($('#teamScreen')?.classList.contains('active') || $('#ownerScreen')?.classList.contains('active'))) switchScreen('surveys');
   $('#profileBtn').textContent = (currentUser?.name || 'КД').split(/\s+/).slice(0,2).map(x => x[0]).join('').toUpperCase();
 }
 let threeDImport = null;
@@ -596,15 +609,35 @@ async function open3DCalculator() {
   }
 }
 function switchScreen(name) {
-  const titles = { surveys: 'Замеры', threeD: '3D расчёт', clients: 'Клиенты', team: 'Сотрудники', settings: 'Ещё' };
+  if (name==='owner' && currentUser?.role!=='owner') name='surveys';
+  const titles = { owner: 'КД Управление', surveys: 'Замеры', threeD: '3D расчёт', clients: 'Клиенты', team: 'Сотрудники', settings: 'Ещё' };
   $$('.screen').forEach(el => el.classList.remove('active'));
   $(`#${name}Screen`)?.classList.add('active');
   $$('.nav-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.screen === name));
   $('#screenTitle').textContent = titles[name] || 'КД Замерщик';
+  if (name === 'owner') renderOwnerDashboard();
   if (name === 'surveys') renderSurveys();
   if (name === 'clients') renderClients();
   if (name === 'team') renderEmployees();
   if (name === 'settings') updateSyncUi();
+}
+
+async function renderOwnerDashboard() {
+  if (currentUser?.role !== 'owner') return;
+  const container=$('#ownerDashboardRoot');
+  if (!container) return;
+  const surveys=(await idbGetAll('surveys')).filter(row=>!row.archived);
+  // Load the private ledger separately: it must never join synced survey JSON.
+  if (API_ENABLED && navigator.onLine) {
+    await Promise.all(surveys.slice(0,35).map(row=>loadOwnerCosts(row.id)));
+  } else if (IS_PREVIEW) {
+    for (const row of surveys) await loadOwnerCosts(row.id);
+  }
+  if (currentUser?.role !== 'owner') return;
+  const model=buildOwnerDashboard(surveys,unifiedEstimate,row=>ownerCostsCache[row.id]||{});
+  container.innerHTML=ownerDashboardHtml(model,{preview:IS_PREVIEW});
+  $('[data-owner-open]',container).forEach(button=>button.addEventListener('click',()=>openSurveyDetails(button.dataset.ownerOpen)));
+  $('[data-owner-go-surveys]',container)?.addEventListener('click',()=>switchScreen('surveys'));
 }
 
 async function renderSurveys() {
@@ -1773,13 +1806,22 @@ async function openSurveyDetails(id) {
       <button type="button" class="v3-edit-link" data-edit-survey-data="${escapeHtml(survey.id)}">${survey.address ? 'Изменить' : 'Добавить'}</button>
       <div class="v3-survey-meta"><span>${survey.clientPhone ? '☎ ' + escapeHtml(survey.clientPhone) : (survey.address ? 'Телефон не указан' : 'Контакты не заполнены')}</span>${survey.clientName ? `<span>${escapeHtml(survey.clientName)}</span>` : ''}<span class="v3-save-status">${escapeHtml(surveySyncText(survey))}</span></div>
     </section>
-    ${v3ProductTools(survey)}
-    ${calculationsHtml(survey)}
-    ${currentUser?.role === 'owner' && unifiedEstimate(survey).selected.length ? `<div class="owner-panel-title">📊 КД Управление · экономика объекта</div>`+ownerReportHtml(buildOwnerReport(survey,unifiedEstimate(survey),ownerCostsCache[survey.id]),unifiedEstimate(survey)) : ''}
-    ${unifiedEstimate(survey).selected.length ? `<section class="v3-preview-bar">
-      <div><small>Предварительно по заказу</small><b>${formatMoney(unifiedEstimate(survey).total)}</b></div>
-      <button type="button" class="btn btn-primary" data-v3-preview>Показать клиенту →</button>
-    </section>` : ''}
+    ${currentUser?.role === 'owner' ? `<div class="owner-detail-tabs" role="tablist" aria-label="Раздел заказа">
+        <button type="button" data-owner-detail-tab="finance" class="active" aria-selected="true">📊 Материалы и прибыль</button>
+        <button type="button" data-owner-detail-tab="quote" aria-selected="false">📐 Расчёты клиента</button>
+      </div>
+      <div data-owner-pane="finance">
+        <div class="owner-panel-title">КД Управление · экономика объекта</div>
+        ${ownerReportHtml(buildOwnerReport(survey,unifiedEstimate(survey),ownerCostsCache[survey.id]),unifiedEstimate(survey))}
+      </div>` : ''}
+    <div data-owner-pane="quote" ${currentUser?.role === 'owner' ? 'hidden' : ''}>
+      ${v3ProductTools(survey)}
+      ${calculationsHtml(survey)}
+      ${unifiedEstimate(survey).selected.length ? `<section class="v3-preview-bar">
+        <div><small>Предварительно по заказу</small><b>${formatMoney(unifiedEstimate(survey).total)}</b></div>
+        <button type="button" class="btn btn-primary" data-v3-preview>Показать клиенту →</button>
+      </section>` : ''}
+    </div>
     ${survey.syncState === 'conflict' ? '<div class="details-section"><div class="notice notice-lock">На сервере есть новая версия этого замера. Данные на телефоне не перезаписаны.</div></div>' : ''}
     <details class="v3-extra">
       <summary>Схема участка и заметки <span>⌄</span></summary>
@@ -1805,6 +1847,15 @@ async function openSurveyDetails(id) {
   $$('[data-v3-calc]', $('#surveyDetailsContent')).forEach(button =>
     button.addEventListener('click', () => launchCalculation(button.dataset.v3Calc, {surveyId:survey.id})));
   const detailsRoot = $('#surveyDetailsContent');
+  $('[data-owner-detail-tab]',detailsRoot).forEach(tab=>tab.addEventListener('click',()=>{
+    const selected=tab.dataset.ownerDetailTab;
+    $('[data-owner-detail-tab]',detailsRoot).forEach(button=>{
+      const active=button.dataset.ownerDetailTab===selected;
+      button.classList.toggle('active',active);
+      button.setAttribute('aria-selected',String(active));
+    });
+    $('[data-owner-pane]',detailsRoot).forEach(pane=>pane.hidden=pane.dataset.ownerPane!==selected);
+  }));
   $$('[data-edit-calculation]', detailsRoot).forEach(card => {
     const openEdit = event => {
       if (event?.target?.closest?.('[data-delete-calculation],[data-estimate-choice],[data-send-canopy-production],[data-open-canopy-production],[data-show-calculation]')) return;
@@ -1848,12 +1899,18 @@ async function openSurveyDetails(id) {
       if (raw) next[input.dataset.ownerCost] = Number(raw);
       else delete next[input.dataset.ownerCost];
     }
-    try { await apiRequest('/owner-costs',{method:'POST',body:JSON.stringify({surveyId:survey.id,costs:next})}); }
-    catch (error) { return showToast(error.message || 'Не удалось сохранить расходы'); }
+    if (IS_PREVIEW) {
+      try { sessionStorage.setItem('kd-owner-demo-'+survey.id,JSON.stringify(next)); }
+      catch { return showToast('Не удалось сохранить тестовые расходы'); }
+    } else {
+      if (!navigator.onLine) return showToast('Для безопасного сохранения расходов требуется интернет');
+      try { await apiRequest('/owner-costs',{method:'POST',body:JSON.stringify({surveyId:survey.id,costs:next})}); }
+      catch (error) { return showToast(error.message || 'Не удалось сохранить расходы'); }
+    }
     ownerCostsCache[survey.id]=next;
     if ($('#surveyDetailsDialog').open) $('#surveyDetailsDialog').close();
     await openSurveyDetails(survey.id);
-    showToast('Внутренние расходы сохранены');
+    showToast(IS_PREVIEW ? 'Тестовые расходы сохранены до закрытия приложения' : 'Внутренние расходы сохранены');
 
   });
 }
@@ -2136,7 +2193,7 @@ function showMain() {
     try { localStorage.setItem(DEV_ACCESS_KEY, '1'); } catch {}
   }
   applyRoleUi();
-  switchScreen('surveys');
+  switchScreen(currentUser?.role === 'owner' ? 'owner' : 'surveys');
 }
 async function logout() {
   if (API_ENABLED && navigator.onLine && await metaGet('serverToken','')) {
@@ -2146,6 +2203,7 @@ async function logout() {
   await clearSession();
   try { localStorage.removeItem(DEV_ACCESS_KEY); } catch {}
   currentUser = null;
+  for (const key of Object.keys(ownerCostsCache)) delete ownerCostsCache[key];
   showLogin();
 }
 
