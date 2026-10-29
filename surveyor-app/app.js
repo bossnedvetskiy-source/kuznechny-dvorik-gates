@@ -592,6 +592,8 @@ function updateNetworkState() {
 
 function applyRoleUi() {
   const isOwner = currentUser?.role === 'owner';
+  const heading=$('#mainView .topbar .eyebrow');
+  if (heading) heading.textContent=(isOwner?'КД УПРАВЛЕНИЕ':'КД ЗАМЕРЩИК')+(IS_PREVIEW?' · DEV':'');
   $('#ownerNavBtn')?.classList.toggle('hidden', !isOwner);
   $('#teamNavBtn')?.classList.toggle('hidden', !isOwner);
   $('#openTeamBtn')?.classList.toggle('hidden', !isOwner);
