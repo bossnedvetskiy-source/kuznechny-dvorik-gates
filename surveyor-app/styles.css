@@ -1123,3 +1123,29 @@
 @media(min-width:650px){.owner-finance-grid{grid-template-columns:repeat(4,minmax(0,1fr))}.owner-material-stats{grid-template-columns:repeat(4,minmax(0,1fr))}}
 
 .owner-panel-title{background:#211b12;color:#efcb83;border:1px solid #8b6c35;padding:14px 16px;border-radius:14px;font-weight:900;font-size:15px;margin-top:20px}
+
+/* Owner-only mobile workspace — no change to the surveyor's selling workflow. */
+.owner-dashboard{display:grid;gap:16px}
+.owner-dashboard-hero{background:linear-gradient(135deg,#171714,#2b251b);padding:24px;border-radius:22px;border:1px solid #806438;color:#f6ead4}
+.owner-dashboard-hero h2{font-size:30px;margin:5px 0 7px;font-weight:900}
+.owner-dashboard-hero p{margin:0;font-size:13px;color:#cbbd9d;line-height:1.45}
+.owner-dashboard-kpis,.owner-dashboard-materials{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.owner-kpi{background:var(--surface);border:1px solid var(--line);border-radius:15px;padding:14px 12px;display:grid;gap:7px;min-width:0}
+.owner-kpi small{font-size:11px;color:var(--muted);line-height:1.4}
+.owner-kpi b{font-size:19px;font-weight:900;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.owner-kpi span{font-size:10px;color:var(--muted);line-height:1.35}
+.owner-dashboard-section{background:#fff;padding:15px;border-radius:19px;border:1px solid var(--line);display:grid;gap:11px}
+.owner-section-heading{display:grid;gap:3px}.owner-section-heading h3{font-size:18px;margin:0}.owner-section-heading small{font-size:11px;color:var(--muted)}
+.owner-dashboard-materials .owner-kpi{background:#f9f7f1;padding:10px}.owner-dashboard-materials .owner-kpi b{font-size:16px}
+.owner-order-link{border:1px solid #e9e4d7;border-radius:14px;padding:13px;background:#fff;width:100%;display:flex;align-items:center;gap:10px;justify-content:space-between;text-align:left;color:var(--text)}
+.owner-order-link:active{background:#fff8e9}
+.owner-order-main{display:grid;gap:4px;min-width:0;flex:1}.owner-order-main b{color:#92702f;font-size:16px}
+.owner-order-main small{font-size:11px;color:var(--muted);overflow-wrap:anywhere}
+.owner-order-figures{display:grid;gap:5px;text-align:right;max-width:45%}
+.owner-order-figures b{font-size:13px;font-variant-numeric:tabular-nums}
+.owner-order-figures small{font-size:10px;color:var(--muted)}
+.owner-detail-tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:#eceae5;padding:4px;border-radius:15px;margin:16px 0 3px}
+.owner-detail-tabs button{border:0;border-radius:11px;padding:12px 8px;background:transparent;font-weight:850;color:#706c63;font-size:12px;line-height:1.3}
+.owner-detail-tabs button.active{background:#262019;color:#f8d18b;box-shadow:0 2px 8px rgba(0,0,0,.16)}
+.owner-report{margin:10px 0 15px}.owner-panel-title{margin-top:4px}
+@media(min-width:690px){.owner-dashboard-kpis{grid-template-columns:repeat(4,minmax(0,1fr))}.owner-dashboard-materials{grid-template-columns:repeat(4,minmax(0,1fr))}}
