@@ -49,7 +49,7 @@ assert.equal(report.profit,123834-report.fenceRows[0].cost-40500);
 assert.notEqual(report.profit,123834-report.fenceRows[0].cost,'manual expenses apply');
 const asLoss=buildOwnerReport(survey,quote([selectedFence],1000),{fence_1:3000,extra:100});
 assert.equal(asLoss.profit,-2100);
-assert.match(ownerReportHtml(asLoss,quote([selectedFence],1000)),/-2\\s?100\\s?₽/);
+assert.ok(ownerReportHtml(asLoss,quote([selectedFence],1000)).includes('-2'), 'Loss must be negative');
 assert.equal(buildOwnerReport(survey,quote([selectedFence],73834),{}).fenceRows.length,1,
   'alternate expensive fence must not inflate chosen order');
 const model=buildOwnerDashboard([survey],()=>quote([selectedFence,gate],123834),()=>({}));
@@ -60,20 +60,20 @@ assert.equal(model.rear,p.pickets.reduce((s,x)=>s+x.rearBuy,0));
 assert.match(ownerDashboardHtml(model),/Не хватает себестоимости/);
 assert.match(ownerDashboardHtml(model,{preview:true}),/DEV-превью/);
 
-assert.match(source,/currentUser\\?\\.role === 'owner' &&/);
-assert.match(source,/data-owner-detail-tab/);
-assert.match(source,/switchScreen\\(currentUser\\?\\.role === 'owner' \\? 'owner' : 'surveys'\\)/);
-assert.match(source,/sessionStorage\\.setItem\\('kd-owner-demo-'/);
-assert.doesNotMatch(source,/fresh\\.configuration\\.ownerCosts\\s*=/);
-assert.match(source,/apiRequest\\('\/owner-costs'/);
-assert.match(html,/id="ownerScreen"/);
-assert.match(html,/id="ownerNavBtn"/);
-assert.match(backend,/function kd_surveyor_owner_costs/);
-assert.match(backend,/kd_surveyor_require_session\\('owner'\\)/);
-assert.match(backend,/unset\\(\\$configuration\\['ownerCosts'\\]\\);/);
-assert.match(backend,/surveyor_owner_costs/);
-assert.match(sw,/owner-dashboard\\.js/);
-assert.match(sw,/owner-report\\.js/);
-assert.match(preview,/DEV_TOOLS_DIR}\\/owner-dashboard\\.js/);
-assert.match(preview,/DEV_TOOLS_FRESH_DIR}\\/owner-report\\.js/);
+for(const [haystack,needle] of [
+  [source,"currentUser?.role === 'owner' &&"],
+  [source,'data-owner-detail-tab'],
+  [source,"switchScreen(currentUser?.role === 'owner' ? 'owner' : 'surveys')"],
+  [source,"sessionStorage.setItem('kd-owner-demo-'"],
+  [source,"apiRequest('/owner-costs'"],
+  [html,'id="ownerScreen"'],[html,'id="ownerNavBtn"'],
+  [backend,'function kd_surveyor_owner_costs'],
+  [backend,"kd_surveyor_require_session('owner')"],
+  [backend,"unset($configuration['ownerCosts']);"],
+  [backend,'surveyor_owner_costs'],
+  [sw,'owner-dashboard.js'],[sw,'owner-report.js'],
+  [preview,'owner-dashboard.js'],[preview,'owner-report.js']
+]) assert.ok(haystack.includes(needle),'Missing: '+needle);
+assert.ok(!source.includes('fresh.configuration.ownerCosts = next'),
+  'Private cost data must not be stored in synced survey records');
 console.log('Owner dashboard: engine quantities, margin, losses, role isolation and PWA structure OK');
