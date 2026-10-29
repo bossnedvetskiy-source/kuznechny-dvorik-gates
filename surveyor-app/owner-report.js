@@ -43,7 +43,7 @@ export function buildOwnerReport(survey, estimate, overrides = {}) {
     // The persisted client quote has no private tariffs. Use only the public
     // geometry and show the current engine's costs as a rough estimate.
     const sourceSettings = null;
-    issues.push('Расходы на забор — оценка по настройкам калькулятора, а не фактическая закупочная себестоимость.');
+    issues.push('Материалы и количество рассчитаны по сохранённым размерам. Стоимость по умолчанию оценочная, пока не введены фактические расходы.');
     const delivery = config.delivery || {};
     const deliveryCost = delivery.manual ? nonnegative(delivery.manualPrice) : nonnegative(delivery.price);
     const input = {
