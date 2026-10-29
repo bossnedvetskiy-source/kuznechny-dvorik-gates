@@ -76,8 +76,9 @@ export function buildOwnerReport(survey, estimate, overrides = {}) {
   const extra = nonnegative(costs.extra);
   const income = nonnegative(estimate.total);
   const totalCost = knownCost + extra;
+  const estimated = fenceRows.some(row=>!row.hasOverride);
   const profit = incomplete ? null : income - totalCost;
-  return {income, knownCost, extra, totalCost, profit, incomplete, materials, lines, fenceRows, overrides:costs, issues:[...new Set(issues)]};
+  return {income, knownCost, extra, totalCost, profit, incomplete, estimated, materials, lines, fenceRows, overrides:costs, issues:[...new Set(issues)]};
 }
 
 export function ownerReportHtml(report, estimate) {
@@ -86,7 +87,7 @@ export function ownerReportHtml(report, estimate) {
     <div><small>Цена клиенту</small><strong>${money(report.income)}</strong></div>
     <div><small>Материалы забора¹</small><strong>${money(report.materials)}</strong></div>
     <div><small>Расходы по расчёту²</small><strong>${money(report.totalCost)}</strong></div>
-    <div><small>Остаток / прибыль³</small><strong>${report.profit == null ? 'Не определена' : money(report.profit)}</strong></div>
+    <div><small>${report.estimated ? 'Оценка прибыли³' : 'Остаток / прибыль³'}</small><strong>${report.profit == null ? 'Не определена' : money(report.profit)}</strong></div>
   </div>
   <p class="owner-finance-note">¹ Штакетник, профтрубы, столбы и саморезы. ² Включая введённые расходы по другим изделиям и дополнительные траты. ³ Предварительная прибыль до неучтённых расходов и налогов, не бухгалтерская чистая прибыль.</p>`;
   const fence = report.fenceRows.map(f => {
