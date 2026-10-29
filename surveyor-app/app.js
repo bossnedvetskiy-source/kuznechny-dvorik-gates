@@ -1,3 +1,4 @@
+import {buildOwnerReport, ownerReportHtml} from './owner-report.js';
 import {PLAN_ITEM_TYPES,MATERIAL_LABELS,ensureSitePlan,newItem,newLine,lineWidth,itemDescription,trimNumber,planFromCalculations,planDifferences,updateLinkedPlanSizes,splitFenceWithPost,removePostFromLine,postMoveRange,movePlanPost,inspectPlanLine,divideFenceIntoSpans} from './line-builder.js';
 
 const APP_VERSION = '0.4.0-v3-stage1';
@@ -1766,6 +1767,7 @@ async function openSurveyDetails(id) {
     </section>
     ${v3ProductTools(survey)}
     ${calculationsHtml(survey)}
+    ${currentUser?.role === 'owner' && unifiedEstimate(survey).selected.length ? ownerReportHtml(buildOwnerReport(survey,unifiedEstimate(survey),survey.configuration?.ownerCosts),unifiedEstimate(survey)) : ''}
     ${unifiedEstimate(survey).selected.length ? `<section class="v3-preview-bar">
       <div><small>Предварительно по заказу</small><b>${formatMoney(unifiedEstimate(survey).total)}</b></div>
       <button type="button" class="btn btn-primary" data-v3-preview>Показать клиенту →</button>
@@ -1826,6 +1828,29 @@ async function openSurveyDetails(id) {
     setEstimateRole(survey.id,button.dataset.estimateChoice,button.getAttribute('aria-pressed')!=='true');
   }));
   $('#estimateAdjustment')?.addEventListener('change',event=>setEstimateAdjustment(survey.id,event.target.value));
+  $('[data-owner-save-expenses]', detailsRoot)?.addEventListener('click', async () => {
+    if (currentUser?.role !== 'owner') return;
+    const fresh = await idbGet('surveys',survey.id);
+    if (!fresh) return;
+    const next = {...(fresh.configuration?.ownerCosts || {})};
+    for (const input of $('[data-owner-cost]',detailsRoot)) {
+      const raw = input.value.trim();
+      if (raw && (!Number.isFinite(Number(raw)) || Number(raw) < 0)) return showToast('Расходы должны быть неотрицательными');
+      if (!input.dataset.ownerCost) continue;
+      if (raw) next[input.dataset.ownerCost] = Number(raw);
+      else delete next[input.dataset.ownerCost];
+    }
+    fresh.configuration = fresh.configuration || {};
+    fresh.configuration.ownerCosts = next;
+    fresh.updatedAt = new Date().toISOString();
+    fresh.syncState = API_ENABLED ? 'pending' : 'local';
+    await idbPut('surveys',fresh);
+    await renderSurveys();
+    if ($('#surveyDetailsDialog').open) $('#surveyDetailsDialog').close();
+    await openSurveyDetails(survey.id);
+    showToast('Внутренние расходы сохранены');
+    if (API_ENABLED && navigator.onLine) syncNow({silent:true});
+  });
 }
 
 function showCustomerView(survey, onlyCalculationId = '') {
