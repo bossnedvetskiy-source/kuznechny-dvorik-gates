@@ -65,10 +65,13 @@ export function buildOwnerReport(survey, estimate, overrides = {}) {
     const c = result.costs;
     const materialCost = c.materials + c.screws;
     materials += materialCost;
-    const cost = materialCost + c.paint + c.work + c.postInstall + c.measurer + c.delivery;
+    const calculatedCost = materialCost + c.paint + c.work + c.postInstall + c.measurer + c.delivery;
+    const hasOverride = Object.prototype.hasOwnProperty.call(costs,calc.id) &&
+      Number.isFinite(Number(costs[calc.id])) && Number(costs[calc.id]) >= 0;
+    const cost = hasOverride ? Number(costs[calc.id]) : calculatedCost;
     knownCost += cost;
-    lines.push({title,cost,source:'Расчётная себестоимость (не факт)'});
-    fenceRows.push({id:calc.id,title, result, materialCost, cost, income:nonnegative(calc.total)});
+    lines.push({id:calc.id,title,cost,source:hasOverride?'Указанные фактические расходы':'Расчётная себестоимость (не факт)'});
+    fenceRows.push({id:calc.id,title, result, materialCost, cost, calculatedCost, hasOverride, income:nonnegative(calc.total)});
   }
   const extra = nonnegative(costs.extra);
   const income = nonnegative(estimate.total);
@@ -115,7 +118,8 @@ export function ownerReportHtml(report, estimate) {
       ${row('Установка столбов',money(c.postInstall))}
       ${row('Замерщик (из калькулятора)',money(c.measurer))}
       ${row('Доставка',money(c.delivery))}
-      ${row('Всего расчётных затрат',money(f.cost))}
+      ${row('Всего расчётных затрат',money(f.calculatedCost))}
+      ${f.hasOverride ? row('Фактические расходы (введены владельцем)',money(f.cost)) : ''}
       ${row('Цена клиенту',money(f.income))}
       ${row('Разница до дополнительных расходов',money(f.income-f.cost))}
     </details></div>`;
@@ -128,7 +132,7 @@ export function ownerReportHtml(report, estimate) {
     ${fence || '<p class="owner-finance-note">Для ведомости евроштакетника добавьте расчёт забора в общий заказ.</p>'}
     <details class="owner-expenses" open><summary>Расходы по остальным изделиям и объекту</summary>
       <p class="owner-finance-note">Укажите полную себестоимость ворот, навеса и откатных ворот: материалы, зарплаты, покраска, расходники, доставка и монтаж. Значения сохраняются отдельно от клиентской цены.</p>
-      ${estimate.selected.filter(item=>item.type!=='fence').map(item=>{const l=report.lines.find(x=>x.id===item.id)||{title:item.title||item.type,cost:null};return `<div class="owner-expense-field"><label>${h(l.title)} · себестоимость, ₽<input data-owner-cost="${h(item.id)}" type="number" min="0" step="100" inputmode="decimal" value="${l.cost == null ? '' : l.cost}" placeholder="Расходы пока не указаны"></label></div>`}).join('')}
+      ${estimate.selected.map(item=>{const l=report.lines.find(x=>x.id===item.id)||{title:item.title||item.type,cost:null};return `<div class="owner-expense-field"><label>${h(l.title)} · себестоимость, ₽<input data-owner-cost="${h(item.id)}" type="number" min="0" step="100" inputmode="decimal" value="${l.cost == null ? '' : l.cost}" placeholder="Расходы пока не указаны"></label></div>`}).join('')}
       <div class="owner-expense-field"><label>Дополнительные расходы, ₽<input data-owner-cost="extra" type="number" min="0" step="100" inputmode="decimal" value="${report.extra||''}" placeholder="Топливо, брак, накладные…"></label></div>
       <button data-owner-save-expenses class="btn btn-secondary btn-block" type="button">Сохранить расходы</button>
     </details>
