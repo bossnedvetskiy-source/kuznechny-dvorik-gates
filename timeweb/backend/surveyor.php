@@ -113,7 +113,7 @@ function kd_surveyor_ensure_schema(): void
       KEY idx_surveyor_order_archived (archived)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
-    $db->exec('CREATE TABLE IF NOT EXISTS surveyor_owner_costs (survey_uuid VARCHAR(64) PRIMARY KEY, costs_json MEDIUMTEXT NOT NULL, updated_at DATETIME NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+    $db->exec('CREATE TABLE IF NOT EXISTS surveyor_owner_costs (survey_uuid VARCHAR(80) PRIMARY KEY, costs_json MEDIUMTEXT NOT NULL, updated_at DATETIME NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
     $column = $db->query("SHOW COLUMNS FROM surveyor_orders LIKE 'configuration_json'")->fetch();
     if (!$column) {
         $db->exec("ALTER TABLE surveyor_orders ADD COLUMN configuration_json MEDIUMTEXT NOT NULL AFTER work_types_json");
@@ -263,7 +263,6 @@ function kd_surveyor_work_types(mixed $value): array
 
 function kd_surveyor_row_to_client(array $row): array
 {
-    if (is_array($configuration)) unset($configuration['ownerCosts']);
     return [
         'id' => (string)$row['uuid'], 'name' => (string)$row['name'], 'phone' => (string)$row['phone'],
         'address' => (string)$row['address'], 'serverRevision' => (int)$row['revision'],
@@ -275,6 +274,8 @@ function kd_surveyor_row_to_order(array $row): array
 {
     $types = json_decode((string)$row['work_types_json'], true);
     $configuration = json_decode((string)($row['configuration_json'] ?? '{}'), true);
+    // Never send private owner expenses with the shared survey payload.
+    if (is_array($configuration)) unset($configuration['ownerCosts']);
     return [
         'id' => (string)$row['uuid'], 'number' => (string)($row['order_number'] ?? ''),
         'clientId' => (string)($row['client_uuid'] ?? ''), 'clientName' => (string)$row['client_name'],
@@ -486,7 +487,8 @@ function kd_surveyor_users(string $method, string $suffix): never
 
 function kd_surveyor_owner_costs(string $method): never
 {
-    $session = kd_surveyor_require_session('owner');
+    kd_surveyor_require_session('owner');
+    header('Cache-Control: no-store, private');
     if ($method === 'GET') {
         $id = kd_surveyor_valid_uuid($_GET['surveyId'] ?? '');
         $stmt = kd_db()->prepare('SELECT costs_json FROM surveyor_owner_costs WHERE survey_uuid=?');
