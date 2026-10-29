@@ -1091,3 +1091,33 @@
     padding-top:6px!important;
   }
 }
+
+/* Internal owner operations: isolated from the customer-facing quote. */
+.owner-report{margin:18px 0;padding:16px;border:1px solid #d8c9a6;background:#fcfbf6;border-radius:18px;display:grid;gap:13px}
+.owner-report-head{display:flex;justify-content:space-between;gap:8px;align-items:center}.owner-report-head h3{margin:4px 0;font-size:18px}
+.owner-private{font-size:11px;background:#171717;color:#eacb88;border-radius:30px;padding:7px 10px;white-space:nowrap}
+.owner-finance-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.owner-finance-grid>div{display:grid;gap:5px;background:#fff;border:1px solid #eee8d9;padding:13px;border-radius:12px;min-width:0}
+.owner-finance-grid small,.owner-material-stats small{font-size:11px;color:#6b675c}
+.owner-finance-grid strong{font-size:17px;overflow-wrap:anywhere}
+.owner-finance-note{color:#736b5e;font-size:12px;line-height:1.5;margin:0}
+.owner-warning{background:#fff3d9;border:1px solid #ead6a7;padding:10px;border-radius:11px;font-size:12px;line-height:1.45;margin:0}
+.owner-material-card{display:grid;gap:10px;padding:13px;border:1px solid #e8e1d1;border-radius:14px;background:#fff}
+.owner-material-card h4{margin:0;font-size:15px}
+.owner-material-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.owner-material-stats>div{display:grid;gap:5px;padding:10px;background:#f6f4ed;border-radius:10px}
+.owner-material-stats b{font-size:15px}
+.owner-material-card details,.owner-expenses{border:1px solid #eee9de;border-radius:11px;padding:11px;background:#fff}
+.owner-material-card summary,.owner-expenses summary{cursor:pointer;font-weight:800;font-size:13px}
+.owner-table-scroll{max-width:100%;overflow-x:auto;margin-top:9px}
+.owner-table-scroll table{border-collapse:collapse;width:100%;font-size:11px;min-width:720px}
+.owner-table-scroll th,.owner-table-scroll td{border:1px solid #e9e6dc;padding:7px 5px;text-align:right;white-space:nowrap}
+.owner-table-scroll th:first-child,.owner-table-scroll td:first-child{text-align:left}
+.owner-table-scroll th{background:#f6f4ed}
+.owner-finance-row{display:flex;justify-content:space-between;gap:12px;align-items:baseline;padding:9px 0;border-bottom:1px solid #efede7;font-size:12px}
+.owner-finance-row strong{text-align:right}
+.owner-expenses{display:grid;gap:12px}
+.owner-expenses>summary{display:list-item}
+.owner-expense-field label{display:grid;gap:5px;font-size:12px;font-weight:800}
+.owner-expense-field input{border:1px solid #ddd5c4;border-radius:10px;padding:11px;width:100%;background:#fff}
+@media(min-width:650px){.owner-finance-grid{grid-template-columns:repeat(4,minmax(0,1fr))}.owner-material-stats{grid-template-columns:repeat(4,minmax(0,1fr))}}
