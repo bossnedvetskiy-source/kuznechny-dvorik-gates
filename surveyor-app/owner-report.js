@@ -22,7 +22,7 @@ export function buildOwnerReport(survey, estimate, overrides = {}) {
     const publicConfig = calc.payload?.configuration || {};
     if (calc.type !== 'fence') {
       const cost = Number(costs[calc.id]);
-      if (Number.isFinite(cost) && cost >= 0 && Object.hasOwn(costs,calc.id)) {
+      if (Number.isFinite(cost) && cost >= 0 && Object.prototype.hasOwnProperty.call(costs,calc.id)) {
         knownCost += cost;
         lines.push({id:calc.id,title, cost, source:'Введённая себестоимость'});
       } else {
@@ -40,8 +40,8 @@ export function buildOwnerReport(survey, estimate, overrides = {}) {
     // Public quote configurations never contain cost settings. For newly saved
     // quotes, the owner sees a deterministic *current-price estimate*, not
     // a falsely asserted historical purchase price.
-    const sourceSettings = config.ownerCostSettings;
-    if (!sourceSettings || typeof sourceSettings !== 'object') issues.push('Цены материалов забора пересчитаны по текущим настройкам калькулятора, не по закупочным накладным.');
+    const sourceSettings = null; // Public snapshots do not contain private tariffs.
+    issues.push('Цены материалов забора пересчитаны по текущим настройкам калькулятора, не по закупочным накладным.');
     const delivery = config.delivery || {};
     const deliveryCost = delivery.manual ? nonnegative(delivery.manualPrice) : nonnegative(delivery.price);
     const input = {
