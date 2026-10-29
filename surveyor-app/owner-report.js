@@ -5,7 +5,7 @@
 import { calculateFence } from '../evroshtaketnik/engine.js';
 
 const nonnegative = x => Number.isFinite(Number(x)) ? Math.max(0, Number(x)) : 0;
-const money = x => new Intl.NumberFormat('ru-RU').format(Math.round(nonnegative(x))) + ' ₽';
+const money = x => new Intl.NumberFormat('ru-RU').format(Math.round(Number(x) || 0)) + ' ₽';
 const num = x => new Intl.NumberFormat('ru-RU',{maximumFractionDigits:2}).format(nonnegative(x));
 const h = x => String(x ?? '').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 
@@ -130,7 +130,7 @@ export function ownerReportHtml(report, estimate) {
     ${report.issues.map(issue=>`<p class="owner-warning">⚠ ${h(issue)}</p>`).join('')}
     ${fence || '<p class="owner-finance-note">Для ведомости евроштакетника добавьте расчёт забора в общий заказ.</p>'}
     <details class="owner-expenses" open><summary>Расходы по остальным изделиям и объекту</summary>
-      <p class="owner-finance-note">Укажите полную себестоимость ворот, навеса и откатных ворот: материалы, зарплаты, покраска, расходники, доставка и монтаж. Значения сохраняются отдельно от клиентской цены.</p>
+      <p class="owner-finance-note">Фактическая себестоимость изделия: материалы, зарплаты, покраска, расходники и подрядчики. Для забора можно оставить поле пустым — будет оценка калькулятора. Суммы не показываются замерщику.</p>
       ${estimate.selected.map(item=>{const l=report.lines.find(x=>x.id===item.id)||{title:item.title||item.type,cost:null};return `<div class="owner-expense-field"><label>${h(l.title)} · себестоимость, ₽<input data-owner-cost="${h(item.id)}" type="number" min="0" step="100" inputmode="decimal" value="${Object.prototype.hasOwnProperty.call(report.overrides,item.id) ? report.overrides[item.id] : ''}" placeholder="${item.type==='fence'?'Необязательно · используется расчёт':'Расходы пока не указаны'}"></label></div>`}).join('')}
       <div class="owner-expense-field"><label>Дополнительные расходы, ₽<input data-owner-cost="extra" type="number" min="0" step="100" inputmode="decimal" value="${report.extra||''}" placeholder="Топливо, брак, накладные…"></label></div>
       <button data-owner-save-expenses class="btn btn-secondary btn-block" type="button">Сохранить расходы</button>
