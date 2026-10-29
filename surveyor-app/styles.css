@@ -1121,3 +1121,5 @@
 .owner-expense-field label{display:grid;gap:5px;font-size:12px;font-weight:800}
 .owner-expense-field input{border:1px solid #ddd5c4;border-radius:10px;padding:11px;width:100%;background:#fff}
 @media(min-width:650px){.owner-finance-grid{grid-template-columns:repeat(4,minmax(0,1fr))}.owner-material-stats{grid-template-columns:repeat(4,minmax(0,1fr))}}
+
+.owner-panel-title{background:#211b12;color:#efcb83;border:1px solid #8b6c35;padding:14px 16px;border-radius:14px;font-weight:900;font-size:15px;margin-top:20px}
