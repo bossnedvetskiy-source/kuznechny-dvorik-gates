@@ -7,6 +7,11 @@ import { calculateFence } from '../evroshtaketnik/engine.js';
 const nonnegative = x => Number.isFinite(Number(x)) ? Math.max(0, Number(x)) : 0;
 const money = x => new Intl.NumberFormat('ru-RU').format(Math.round(Number(x) || 0)) + ' ₽';
 const num = x => new Intl.NumberFormat('ru-RU',{maximumFractionDigits:2}).format(nonnegative(x));
+const PROFILE_NAMES = Object.freeze([
+  ['40x25x2','40×25×2'],['40x40x2','40×40×2'],['60x40x2','60×40×2'],
+  ['25x25x15','25×25×1,5'],['20x20x15','20×20×1,5'],['40x20x2','40×20×2'],
+  ['60x60x3','60×60×3'],['80x80x3','80×80×3'],['100x100x3','100×100×3']
+]);
 const h = x => String(x ?? '').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 
 export function buildOwnerReport(survey, estimate, overrides = {}) {
@@ -71,12 +76,20 @@ export function buildOwnerReport(survey, estimate, overrides = {}) {
     lines.push({id:calc.id,title,cost,source:hasOverride?'Указанные фактические расходы':'Расчётная себестоимость (не факт)'});
     fenceRows.push({id:calc.id,title, result, materialCost, cost, calculatedCost, hasOverride, income:nonnegative(calc.total)});
   }
+  // Manually entered additional pipe purchase plan for gates and canopies.
+  // Reference only: may already be included in the entered item cost.
+  const profiles=PROFILE_NAMES.map(([id,label])=>{
+    const qty=nonnegative(costs['tube_'+id+'_qty']);
+    const unitPrice=nonnegative(costs['tube_'+id+'_price']);
+    return {id,label,qty,unitPrice,total:Math.round(qty*unitPrice)};
+  });
+  const profilesTotal=profiles.reduce((sum,x)=>sum+x.total,0);
   const extra = nonnegative(costs.extra);
   const income = nonnegative(estimate.total);
   const totalCost = knownCost + extra;
   const estimated = fenceRows.some(row=>!row.hasOverride);
   const profit = incomplete ? null : income - totalCost;
-  return {income, knownCost, extra, totalCost, profit, incomplete, estimated, materials, lines, fenceRows, overrides:costs, issues:[...new Set(issues)]};
+  return {income, knownCost, extra, totalCost, profit, incomplete, estimated, materials, profiles, profilesTotal, lines, fenceRows, overrides:costs, issues:[...new Set(issues)]};
 }
 
 export function ownerReportHtml(report, estimate) {
@@ -129,7 +142,15 @@ export function ownerReportHtml(report, estimate) {
     ${report.incomplete ? '<p class="owner-warning">⚠ Не хватает данных о себестоимости некоторых изделий. Итоговая прибыль не рассчитана — заполните расходы ниже.</p>' : ''}
     ${report.issues.map(issue=>`<p class="owner-warning">⚠ ${h(issue)}</p>`).join('')}
     ${fence || '<p class="owner-finance-note">Для ведомости евроштакетника добавьте расчёт забора в общий заказ.</p>'}
-    <details class="owner-expenses" open><summary>Расходы по остальным изделиям и объекту</summary>
+    <details class="owner-expenses"><summary>Дополнительные профтрубы · ворота, навесы</summary>
+      <p class="owner-finance-note">Вводите закупку материала, не рассчитанного автоматически. Количество — хлысты 6 м, цена — за один хлыст. Это справочная детализация: её стоимость не прибавляется к расходам второй раз. Укажите полную себестоимость изделия в поле ниже.</p>
+      <div class="owner-profile-summary"><b>Введённая стоимость доп. профтрубы:</b> <strong>${money(report.profilesTotal)}</strong></div>
+      <div class="owner-profile-grid">
+        ${report.profiles.map(p=>`<div class="owner-profile-row"><b>${h(p.label)}</b><label>Хлысты, шт<input data-owner-cost="tube_${p.id}_qty" type="number" min="0" step="1" inputmode="numeric" value="${p.qty||''}" placeholder="0"></label><label>Цена за 6 м, ₽<input data-owner-cost="tube_${p.id}_price" type="number" min="0" step="1" inputmode="decimal" value="${p.unitPrice||''}" placeholder="0"></label><small>${money(p.total)}</small></div>`).join('')}
+      </div>
+      <p class="owner-finance-note">После ввода данных нажмите «Сохранить расходы» ниже.</p>
+    </details>
+    <details class="owner-expenses" open><summary>Фактическая себестоимость изделий и объекта</summary>
       <p class="owner-finance-note">Фактическая себестоимость изделия: материалы, зарплаты, покраска, расходники и подрядчики. Для забора можно оставить поле пустым — будет оценка калькулятора. Суммы не показываются замерщику.</p>
       ${estimate.selected.map(item=>{const l=report.lines.find(x=>x.id===item.id)||{title:item.title||item.type,cost:null};return `<div class="owner-expense-field"><label>${h(l.title)} · себестоимость, ₽<input data-owner-cost="${h(item.id)}" type="number" min="0" step="100" inputmode="decimal" value="${Object.prototype.hasOwnProperty.call(report.overrides,item.id) ? report.overrides[item.id] : ''}" placeholder="${item.type==='fence'?'Необязательно · используется расчёт':'Расходы пока не указаны'}"></label></div>`}).join('')}
       <div class="owner-expense-field"><label>Дополнительные расходы, ₽<input data-owner-cost="extra" type="number" min="0" step="100" inputmode="decimal" value="${report.extra||''}" placeholder="Топливо, брак, накладные…"></label></div>
