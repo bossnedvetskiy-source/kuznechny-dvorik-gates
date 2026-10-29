@@ -34,7 +34,7 @@ export function buildOwnerReport(survey, estimate, overrides = {}) {
     const config = publicConfig;
     if (!Array.isArray(config.sections) || !config.sections.length) {
       incomplete = true;
-      lines.push({title, cost:null, source:'Нет размеров для пересчёта'});
+      lines.push({id:calc.id,title, cost:null, source:'Нет размеров для пересчёта'});
       continue;
     }
     // Public quote configurations never contain cost settings. For newly saved
@@ -42,7 +42,6 @@ export function buildOwnerReport(survey, estimate, overrides = {}) {
     // a falsely asserted historical purchase price.
     // The persisted client quote has no private tariffs. Use only the public
     // geometry and show the current engine's costs as a rough estimate.
-    const sourceSettings = null;
     issues.push('Материалы и количество рассчитаны по сохранённым размерам. Стоимость по умолчанию оценочная, пока не введены фактические расходы.');
     const delivery = config.delivery || {};
     const deliveryCost = delivery.manual ? nonnegative(delivery.manualPrice) : nonnegative(delivery.price);
@@ -51,14 +50,13 @@ export function buildOwnerReport(survey, estimate, overrides = {}) {
       includeNewPosts:config.includeNewPosts !== false,
       existingPostsCount:nonnegative(config.existingPostsCount),
       sections:config.sections,
-      deliveryCost,
-      ...(sourceSettings ? {settings:sourceSettings} : {})
+      deliveryCost
     };
     let result;
     try { result = calculateFence(input); } catch { result = null; }
     if (!result || result.summary.check !== 'ГОТОВО' || !result.summary.activeSections) {
       incomplete = true;
-      lines.push({title, cost:null, source:'Проверьте параметры забора'});
+      lines.push({id:calc.id,title, cost:null, source:'Проверьте параметры забора'});
       continue;
     }
     const p = result.purchase;
