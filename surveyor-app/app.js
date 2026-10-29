@@ -593,7 +593,7 @@ function updateNetworkState() {
 function applyRoleUi() {
   const isOwner = currentUser?.role === 'owner';
   const heading=$('#mainView .topbar .eyebrow');
-  if (heading) heading.textContent=(isOwner?'КД УПРАВЛЕНИЕ':'КД ЗАМЕРЩИК')+(IS_PREVIEW?' · DEV':'');
+  if (heading) heading.textContent=(isOwner?'КД УПРАВЛЕНИЕ':'КД ЗАМЕРЩИК')+(IS_PREVIEW?' · DEV':'')+(location.pathname.includes('/dev-tools-v4/')?' · НОВАЯ СБОРКА':'');
   $('#ownerNavBtn')?.classList.toggle('hidden', !isOwner);
   $('#teamNavBtn')?.classList.toggle('hidden', !isOwner);
   $('#openTeamBtn')?.classList.toggle('hidden', !isOwner);
@@ -1920,6 +1920,11 @@ async function openSurveyDetails(id) {
     showToast(IS_PREVIEW ? 'Тестовые расходы сохранены до закрытия приложения' : 'Внутренние расходы сохранены');
 
   });
+  // Return from a staff calculator to the visible quote (not hidden owner finance).
+  if (currentUser?.role === 'owner' &&
+      new URLSearchParams(location.search).get('resumeSurvey') === id) {
+    $('[data-owner-detail-tab="quote"]',detailsRoot)?.click();
+  }
 }
 
 function showCustomerView(survey, onlyCalculationId = '') {
