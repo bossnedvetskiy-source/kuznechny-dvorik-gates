@@ -24,10 +24,10 @@ export function buildOwnerReport(survey, estimate, overrides = {}) {
       const cost = Number(costs[calc.id]);
       if (Number.isFinite(cost) && cost >= 0 && Object.hasOwn(costs,calc.id)) {
         knownCost += cost;
-        lines.push({title, cost, source:'Введённая себестоимость'});
+        lines.push({id:calc.id,title, cost, source:'Введённая себестоимость'});
       } else {
         incomplete = true;
-        lines.push({title, cost:null, source:'Укажите фактические расходы'});
+        lines.push({id:calc.id,title, cost:null, source:'Укажите фактические расходы'});
       }
       continue;
     }
@@ -118,7 +118,6 @@ export function ownerReportHtml(report, estimate) {
       ${row('Разница до дополнительных расходов',money(f.income-f.cost))}
     </details></div>`;
   }).join('');
-  const other = report.lines.filter(l=>l.cost===null||!report.fenceRows.some(f=>f.title===l.title));
   return `<section class="owner-report" aria-label="Внутренние финансы и материалы">
     <div class="owner-report-head"><div><span class="eyebrow">Только собственник</span><h3>Материалы и прибыль заказа</h3></div><span class="owner-private">🔒 Внутреннее</span></div>
     ${finance}
@@ -127,7 +126,7 @@ export function ownerReportHtml(report, estimate) {
     ${fence || '<p class="owner-finance-note">Для ведомости евроштакетника добавьте расчёт забора в общий заказ.</p>'}
     <details class="owner-expenses" open><summary>Расходы по остальным изделиям и объекту</summary>
       <p class="owner-finance-note">Укажите полную себестоимость ворот, навеса и откатных ворот: материалы, зарплаты, покраска, расходники, доставка и монтаж. Значения сохраняются отдельно от клиентской цены.</p>
-      ${report.lines.filter(l=>!report.fenceRows.some(f=>f.title===l.title)).map((l,i)=>`<div class="owner-expense-field"><label>${h(l.title)} · себестоимость, ₽<input data-owner-cost="${h(estimate.selected.filter(item=>item.type!=='fence')[i]?.id||'')}" type="number" min="0" step="100" inputmode="decimal" value="${l.cost == null ? '' : l.cost}" placeholder="Расходы пока не указаны"></label></div>`).join('')}
+      ${estimate.selected.filter(item=>item.type!=='fence').map(item=>{const l=report.lines.find(x=>x.id===item.id)||{title:item.title||item.type,cost:null};return `<div class="owner-expense-field"><label>${h(l.title)} · себестоимость, ₽<input data-owner-cost="${h(item.id)}" type="number" min="0" step="100" inputmode="decimal" value="${l.cost == null ? '' : l.cost}" placeholder="Расходы пока не указаны"></label></div>`}).join('')}
       <div class="owner-expense-field"><label>Дополнительные расходы, ₽<input data-owner-cost="extra" type="number" min="0" step="100" inputmode="decimal" value="${report.extra||''}" placeholder="Топливо, брак, накладные…"></label></div>
       <button data-owner-save-expenses class="btn btn-secondary btn-block" type="button">Сохранить расходы</button>
     </details>
