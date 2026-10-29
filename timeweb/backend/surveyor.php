@@ -113,6 +113,7 @@ function kd_surveyor_ensure_schema(): void
       KEY idx_surveyor_order_archived (archived)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
+    $db->exec('CREATE TABLE IF NOT EXISTS surveyor_owner_costs (survey_uuid VARCHAR(80) PRIMARY KEY, costs_json MEDIUMTEXT NOT NULL, updated_at DATETIME NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
     $column = $db->query("SHOW COLUMNS FROM surveyor_orders LIKE 'configuration_json'")->fetch();
     if (!$column) {
         $db->exec("ALTER TABLE surveyor_orders ADD COLUMN configuration_json MEDIUMTEXT NOT NULL AFTER work_types_json");
@@ -273,6 +274,8 @@ function kd_surveyor_row_to_order(array $row): array
 {
     $types = json_decode((string)$row['work_types_json'], true);
     $configuration = json_decode((string)($row['configuration_json'] ?? '{}'), true);
+    // Never send private owner expenses with the shared survey payload.
+    if (is_array($configuration)) unset($configuration['ownerCosts']);
     return [
         'id' => (string)$row['uuid'], 'number' => (string)($row['order_number'] ?? ''),
         'clientId' => (string)($row['client_uuid'] ?? ''), 'clientName' => (string)$row['client_name'],
@@ -326,6 +329,7 @@ function kd_surveyor_sync_order(array $item, array $session): array
     $note = mb_substr(trim((string)($item['note'] ?? '')),0,5000);
     $types = kd_surveyor_work_types($item['workTypes'] ?? []);
     $configuration = is_array($item['configuration'] ?? null) ? $item['configuration'] : [];
+    unset($configuration['ownerCosts']);
     $configurationJson = json_encode($configuration, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     if ($configurationJson === false || strlen($configurationJson) > 120000) kd_surveyor_json(['error' => 'Схема объекта слишком большая'],413);
     $status = in_array((string)($item['status'] ?? ''), ['draft','ready'], true) ? (string)$item['status'] : 'draft';
@@ -481,6 +485,36 @@ function kd_surveyor_users(string $method, string $suffix): never
     kd_surveyor_json(['error'=>'Маршрут не найден'],404);
 }
 
+function kd_surveyor_owner_costs(string $method): never
+{
+    kd_surveyor_require_session('owner');
+    header('Cache-Control: no-store, private');
+    if ($method === 'GET') {
+        $id = kd_surveyor_valid_uuid($_GET['surveyId'] ?? '');
+        $stmt = kd_db()->prepare('SELECT costs_json FROM surveyor_owner_costs WHERE survey_uuid=?');
+        $stmt->execute([$id]);
+        $costs = json_decode((string)($stmt->fetchColumn() ?: '{}'), true);
+        kd_surveyor_json(['ok'=>true,'costs'=>is_array($costs)?$costs:[]]);
+    }
+    if ($method === 'POST') {
+        $body = kd_json_body(32768);
+        $id = kd_surveyor_valid_uuid($body['surveyId'] ?? '');
+        $exists = kd_db()->prepare('SELECT 1 FROM surveyor_orders WHERE uuid=?');
+        $exists->execute([$id]);
+        if (!$exists->fetchColumn()) kd_surveyor_json(['error'=>'Заказ не найден'],404);
+        $input = $body['costs'] ?? [];
+        if (!is_array($input) || count($input)>100) kd_surveyor_json(['error'=>'Неверные расходы'],400);
+        $costs=[];
+        foreach ($input as $key=>$value) {
+            if (!is_string($key) || !preg_match('/^[a-zA-Z0-9_-]{1,90}$/',$key) || !is_numeric($value) || (float)$value<0 || (float)$value>100000000) kd_surveyor_json(['error'=>'Неверная сумма'],400);
+            $costs[$key]=(float)$value;
+        }
+        kd_db()->prepare('INSERT INTO surveyor_owner_costs (survey_uuid,costs_json,updated_at) VALUES (?, ?, UTC_TIMESTAMP()) ON DUPLICATE KEY UPDATE costs_json=VALUES(costs_json),updated_at=UTC_TIMESTAMP()')->execute([$id,json_encode($costs)]);
+        kd_surveyor_json(['ok'=>true]);
+    }
+    kd_surveyor_json(['error'=>'Метод не поддерживается'],405);
+}
+
 function kd_surveyor_handle(string $route, string $method): never
 {
     if ($method === 'OPTIONS') kd_surveyor_preflight();
@@ -495,6 +529,7 @@ function kd_surveyor_handle(string $route, string $method): never
         kd_surveyor_json(['user'=>['id'=>kd_surveyor_principal_key($session),'name'=>(string)$session['display_name'],'role'=>(string)$session['role']]]);
     }
     if ($suffix === 'sync' && $method === 'POST') kd_surveyor_sync();
+    if ($suffix === 'owner-costs') kd_surveyor_owner_costs($method);
     if ($suffix === 'users' || str_starts_with($suffix,'users/')) {
         kd_surveyor_users($method, $suffix === 'users' ? '' : substr($suffix,strlen('users/')));
     }
