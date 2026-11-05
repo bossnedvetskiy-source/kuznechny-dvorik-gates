@@ -160,10 +160,15 @@ function calculate(){
  }
  const rail=beam===7?17000:16000,stand=state.stand?12000:0,bolts=state.bolts?500:0,install=state.install?7000:0,automatic=state.auto?30000:0,delivery=Math.max(0,Number(state.distance)||0)*90,discount=Math.max(0,Number(state.discount)||0);
  const wicketQuote=wicketEstimate(wicket,hf,state.paint,state.frame);
- // Approved fixed customer price for a built-in wicket. Internal component estimates
- // remain for geometry/production planning; do not add them again to the client total.
- const BUILT_IN_WICKET_PRICE=13000;
- const rows=[["Встроенная калитка (комплект)",wicket?BUILT_IN_WICKET_PRICE:0],["Каркас",frame],["Покраска",paint],["Заполнение",fill],["Балка и ролики",rail],["Станина",stand],["Болты",bolts],["Монтаж",install],["Автоматика",automatic],["Доставка",delivery],["Скидка",-discount]];
+ // Calibrate once against a 1.00 m wicket in 1.80 m high gates, with painting.
+ // The same fixed supplement is retained when width/height or paint option changes.
+ // Standard retail price is 13 000 ₽; size-dependent material/paint changes are dynamic.
+ const STANDARD_WICKET_PRICE=13000;
+ const standardWicket={width:1};
+ const standardQuote=wicketEstimate(standardWicket,1.8-.06,true,state.frame);
+ const fixedSupplement=STANDARD_WICKET_PRICE-standardQuote.total;
+ const wicketPrice=wicketQuote?round100(wicketQuote.total+fixedSupplement):0;
+ const rows=[["Встроенная калитка (по размерам)",wicketPrice],["Каркас",frame],["Покраска",paint],["Заполнение",fill],["Балка и ролики",rail],["Станина",stand],["Болты",bolts],["Монтаж",install],["Автоматика",automatic],["Доставка",delivery],["Скидка",-discount]];
  const total=errors.length?null:Math.max(0,Math.round(rows.reduce((s,r)=>s+r[1],0)));
  return {errors,total,rows,geometry:{beam,tail,full,hf,post,station},wicket,wicketQuote,fillDescription};
 }
