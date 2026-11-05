@@ -64,7 +64,17 @@
 <label class="toggle" id="fillToggle">Заполнение <input type="checkbox" id="fill"></label><label class="toggle">Покраска <input type="checkbox" id="paint"></label>
 <label class="toggle">Автоматика <input type="checkbox" id="auto"></label><label class="toggle">Монтаж <input type="checkbox" id="install"></label>
 <label class="toggle">Станина <input type="checkbox" id="stand"></label><label class="toggle">Болты <input type="checkbox" id="bolts"></label>
-</div><div id="picketRow" hidden style="margin-top:13px"><div style="font-size:12px;font-weight:800;margin-bottom:7px">Вертикальный евроштакетник</div><div class="chips"><button class="chip active" data-picket="single">Односторонний</button><button class="chip" data-picket="double">Двусторонний</button></div></div><div class="dims" style="margin-top:12px"><label class="field"><span>Доставка от Мелеуза, км</span><input id="distance" type="number" min="0" step="1" inputmode="numeric"></label><label class="field"><span>Скидка, ₽</span><input id="discount" type="number" min="0" step="100" inputmode="numeric"></label></div></section>
+</div>
+<div class="block" style="margin:12px 0;background:#faf8f2">
+<label class="toggle">Встроенная калитка <input type="checkbox" id="builtInWicket"></label>
+<div id="builtInFields" hidden style="margin-top:12px">
+<div class="dims"><label class="field"><span>Ширина калитки, м</span><input id="builtInWidth" type="number" min=".7" max="1.2" step=".01" inputmode="decimal"></label><label class="field"><span>Доплата клиенту, ₽</span><input id="builtInSurcharge" type="number" min="0" step="100" inputmode="numeric" placeholder="Уточнить"></label></div>
+<p class="sub">Каркас 60×40×2 мм, переступаемый порог. Доплата клиенту вводится после расчёта материалов и фурнитуры; зарплата сварщика 2 000 ₽ учитывается отдельно в производстве.</p>
+<div style="font-size:12px;font-weight:800;margin:12px 0 7px">Расположение относительно прямоугольного полотна</div>
+<div class="chips" id="builtInModes"><button type="button" class="chip" data-wicket-mode="center">По центру</button><button type="button" class="chip" data-wicket-mode="left">От левого края</button><button type="button" class="chip" data-wicket-mode="right">От правого края</button></div>
+<label class="field" id="builtInOffsetRow" style="margin-top:10px"><span id="builtInOffsetLabel">Расстояние от края, м</span><input id="builtInOffset" type="number" min="0" step=".01" inputmode="decimal"></label>
+<p class="sub" id="builtInPlacement"></p>
+</div></div><div id="picketRow" hidden style="margin-top:13px"><div style="font-size:12px;font-weight:800;margin-bottom:7px">Вертикальный евроштакетник</div><div class="chips"><button class="chip active" data-picket="single">Односторонний</button><button class="chip" data-picket="double">Двусторонний</button></div></div><div class="dims" style="margin-top:12px"><label class="field"><span>Доставка от Мелеуза, км</span><input id="distance" type="number" min="0" step="1" inputmode="numeric"></label><label class="field"><span>Скидка, ₽</span><input id="discount" type="number" min="0" step="100" inputmode="numeric"></label></div></section>
 <section class="block"><h2 class="heading">3. Схема ворот</h2><div class="schemabox" id="diagram"></div><div class="facts" id="facts"></div></section>
 <section class="block"><h2 class="heading">4. Состав цены</h2><div id="breakdown"></div><div id="warning"></div><div class="btn-row"><button id="clientBtn" class="btn secondary">Показать клиенту</button><button id="saveBtn" class="btn">Добавить в замер</button></div><p class="sub" id="saveNote">Черновик сохраняется на телефоне.</p></section>
 </div>
@@ -74,8 +84,8 @@
 (function(){
 "use strict";
 const $=id=>document.getElementById(id), money=v=>Number.isFinite(v)?new Intl.NumberFormat("ru-RU").format(Math.round(v))+" ₽":"Цена не готова", round100=v=>Math.ceil((v-1e-9)/100)*100;
-const def={width:4.5,height:2,frame:"prof",tail:"square",fill:true,paint:true,auto:false,install:true,stand:true,bolts:true,picket:"single",distance:0,discount:0};
-const keys=["width","height","frame","tail","fill","paint","auto","install","stand","bolts","picket","distance","discount"];
+const def={width:4.5,height:2,frame:"prof",tail:"square",fill:true,paint:true,auto:false,install:true,stand:true,bolts:true,picket:"single",distance:0,discount:0,builtInWicket:false,builtInWidth:1,builtInMode:"center",builtInOffset:0,builtInSurcharge:""};
+const keys=["width","height","frame","tail","fill","paint","auto","install","stand","bolts","picket","distance","discount","builtInWicket","builtInWidth","builtInMode","builtInOffset","builtInSurcharge"];
 const qp=new URLSearchParams(location.search),surveyId=qp.get("survey")||"",editId=qp.get("edit")||"";
 const requested=qp.get("returnTo")||"",returnTo=requested.startsWith("/")&&!requested.startsWith("//")?requested:"../";
 $("back").href=returnTo;
@@ -87,11 +97,23 @@ try{const saved=JSON.parse(localStorage.getItem(storeKey)||"null");if(saved&&typ
 if(editSource)state={...def,...editSource.payload.configuration};
 function escape(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 const frameNames={prof:"Профнастил",vertical:"Евроштакетник вертикальный",horizontal:"Евроштакетник горизонтальный",jalousie:"Каркас под жалюзи"};
+function wicketPlan(w){
+ if(!state.builtInWicket)return null;
+ const width=Number(state.builtInWidth),offset=Number(state.builtInOffset);
+ const left=state.builtInMode==="left"?offset:state.builtInMode==="right"?w-width-offset:(w-width)/2;
+ const right=w-width-left;
+ return {width,left,right,valid:Number.isFinite(width)&&width>=.7&&width<=1.2&&Number.isFinite(left)&&left>=.08&&right>=.08};
+}
 function calculate(){
  const w=Number(state.width),h=Number(state.height);const errors=[];
  if(!(w>=.5&&w<=5))errors.push("Ширина проёма: от 0,5 до 5 м.");
  if(!(h>=.5&&h<=3.5))errors.push("Высота: от 0,5 до 3,5 м.");
- if(errors.length)return {errors,total:null};
+ const wicket=wicketPlan(w);
+ if(wicket&&!wicket.valid)errors.push("Калитка не помещается: оставьте минимум 8 см от каждого края полотна и проверьте ширину/отступ.");
+ if(wicket&&state.frame==="jalousie")errors.push("Каркас под жалюзи со встроенной калиткой пока требует согласования.");
+ if(wicket&&state.auto)errors.push("Для автоматики необходим датчик закрытия калитки и блокировка движения. Комплектация требует согласования.");
+ if(errors.length)return {errors,total:null,geometry:null,wicket};
+
  const hf=h-.06,beam=w>=4.5?7:6,tail=Math.min(w/2,beam-w),full=w+tail,cv=Math.max(0,hf-.08),station=state.frame==="jalousie"?2:Math.ceil(w),post=station-1;
  let a=full+w+cv*2,b=0;
  if(state.tail==="square"){a+=tail+cv+2*Math.hypot(tail,hf);}
@@ -116,9 +138,12 @@ function calculate(){
    }
  }
  const rail=beam===7?17000:16000,stand=state.stand?12000:0,bolts=state.bolts?500:0,install=state.install?7000:0,automatic=state.auto?30000:0,delivery=Math.max(0,Number(state.distance)||0)*90,discount=Math.max(0,Number(state.discount)||0);
- const rows=[["Каркас",frame],["Покраска",paint],["Заполнение",fill],["Балка и ролики",rail],["Станина",stand],["Болты",bolts],["Монтаж",install],["Автоматика",automatic],["Доставка",delivery],["Скидка",-discount]];
+ const surcharge=Number(state.builtInSurcharge);
+ const surchargeReady=!wicket||(String(state.builtInSurcharge).trim()!==""&&Number.isFinite(surcharge)&&surcharge>0);
+ if(!surchargeReady)errors.push("Укажите согласованную доплату клиенту за встроенную калитку, включая трубы, петли, замок, покраску и работу. Базовая цена ворот не является окончательной.");
+ const rows=[["Встроенная калитка (согласованная доплата)",wicket&&surchargeReady?surcharge:0],["Каркас",frame],["Покраска",paint],["Заполнение",fill],["Балка и ролики",rail],["Станина",stand],["Болты",bolts],["Монтаж",install],["Автоматика",automatic],["Доставка",delivery],["Скидка",-discount]];
  const total=errors.length?null:Math.max(0,Math.round(rows.reduce((s,r)=>s+r[1],0)));
- return {errors,total,rows,geometry:{beam,tail,full,hf,post,station},fillDescription};
+ return {errors,total,rows,geometry:{beam,tail,full,hf,post,station},wicket,fillDescription};
 }
 function lineSvg(q){
  const g=q.geometry;if(!g)return "";
@@ -127,11 +152,20 @@ function lineSvg(q){
  let s=p(x,yb,end,yb)+p(m,yt,end,yt)+p(m,yt,m,yb)+p(end,yt,end,yb);
  if(state.tail==="square")s+=p(x,yt,m,yt)+p(x,yt,x,yb)+p(x,yt,m,yb,"brace")+p(x,yb,m,yt,"brace");
  else{const upper=m-Math.min(.3,g.tail)*k;s+=p(upper,yt,m,yt)+p(x,yb,upper,yt,"brace")+p(m,yb,(x+upper)/2,(yt+yb)/2,"brace");}
- for(let i=1;i<g.station;i++){const px=m+(end-m)*i/g.station;s+=p(px,yt+3,px,yb-3,state.frame==="jalousie"?"pipe":"inner");}
+ const wk=q.wicket;
+ for(let i=1;i<g.station;i++){const px=m+(end-m)*i/g.station;
+ if(wk&&px>m+wk.left*k-2&&px<m+(wk.left+wk.width)*k+2)continue;
+ s+=p(px,yt+3,px,yb-3,state.frame==="jalousie"?"pipe":"inner");}
  if(state.frame==="horizontal")s+='<rect x="'+(m+5).toFixed(1)+'" y="'+(yt+6)+'" width="'+Math.max(0,end-m-10).toFixed(1)+'" height="85" fill="none" stroke="#8b8e8e" stroke-width="2"/>';
  if(state.fill&&state.frame==="prof")for(let px=m+9;px<end-4;px+=11)s+=p(px,yt+8,px,yb-6,"fill");
  else if(state.fill&&state.frame==="vertical")for(let px=m+9;px<end-4;px+=13)s+=p(px,yt+8,px,yb-6,"fill");
  else if(state.fill&&state.frame!=="jalousie")for(let yy=yt+13;yy<yb-6;yy+=13)s+=p(m+7,yy,end-7,yy,"fill");
+ if(wk&&wk.valid){
+ const wx=m+wk.left*k,ww=wk.width*k;
+ s+='<rect x="'+wx.toFixed(1)+'" y="'+(yt+5)+'" width="'+ww.toFixed(1)+'" height="'+(yb-yt-10)+'" fill="#f9f6ed" stroke="#a97d25" stroke-width="3"/>';
+ s+=p(wx+ww-5,yt+49,wx+ww-2,yt+49,"brace");
+ s+='<text x="'+(wx+ww/2).toFixed(1)+'" y="104" text-anchor="middle" font-size="9" fill="#6c541f">'+wk.width.toFixed(2)+' м</text>';
+ }
  return '<svg viewBox="0 0 385 159" role="img" aria-label="Вид спереди: откатные ворота"><style>.pipe{fill:none;stroke:#393939;stroke-width:3.3}.brace{fill:none;stroke:#b78b32;stroke-width:2.8}.inner{fill:none;stroke:#878989;stroke-width:1.8}.fill{fill:none;stroke:#cfbf98;stroke-width:2;opacity:.65}</style><path d="M'+x+' 120H'+end+'" stroke="#999" stroke-width="8"/>'+s+'<text x="'+((x+m)/2).toFixed(1)+'" y="145" font-size="10" text-anchor="middle" fill="#6c6760">Хвост '+g.tail.toFixed(2)+' м</text><text x="'+((m+end)/2).toFixed(1)+'" y="145" font-size="10" text-anchor="middle" fill="#6c6760">Проём '+Number(state.width).toFixed(2)+' м</text></svg>';
 }
 let current=null;
@@ -142,7 +176,13 @@ function render(){
  $("fill").checked=!!state.fill;
  $("fill").disabled=state.frame==="jalousie";
  $("fillToggle").hidden=state.frame==="jalousie";
+ $("builtInWicket").checked=!!state.builtInWicket;
+ $("builtInFields").hidden=!state.builtInWicket;
+ $("builtInOffsetRow").hidden=state.builtInMode==="center";
+ $("builtInOffsetLabel").textContent=state.builtInMode==="right"?"От правого края полотна до калитки, м":"От левого края полотна до калитки, м";
+ document.querySelectorAll("[data-wicket-mode]").forEach(b=>b.classList.toggle("active",b.dataset.wicketMode===state.builtInMode));
  current=calculate();const q=current;
+ $("builtInPlacement").textContent=q.wicket?(q.wicket.valid?"От левого края: "+q.wicket.left.toFixed(2)+" м · от правого: "+q.wicket.right.toFixed(2)+" м":"Проверьте расположение калитки"):"";
  $("price").textContent=money(q.total);$("footerTotal").textContent=money(q.total);
  $("priceMeta").textContent=q.geometry?"Проём "+Number(state.width)+" м · высота "+Number(state.height)+" м · балка "+q.geometry.beam+" м":"Проверь размеры";
  document.querySelectorAll("[data-frame]").forEach(b=>{const ok=b.dataset.frame===state.frame;b.classList.toggle("active",ok);b.setAttribute("aria-pressed",String(ok));});
@@ -155,13 +195,17 @@ function render(){
  $("breakdown").innerHTML=rowsHtml(q.rows||[]);$("clientRows").innerHTML=$("breakdown").innerHTML;
  $("warning").innerHTML=(q.errors||[]).map(x=>'<div class="alert">'+escape(x)+"</div>").join("");
  $("clientTotal").textContent=money(q.total);
- $("clientDescription").textContent=frameNames[state.frame]+" · "+state.width+" × "+state.height+" м · "+(state.tail==="square"?"квадратный":"треугольный")+" хвостовик · "+(state.fill?"с заполнением":"без заполнения")+(state.paint?" · окрашен":" · без покраски");
+ $("clientBtn").disabled=$("footerClient").disabled=q.total===null;
+ $("clientDescription").textContent=(state.builtInWicket?"Со встроенной калиткой · ":"")+frameNames[state.frame]+" · "+state.width+" × "+state.height+" м · "+(state.tail==="square"?"квадратный":"треугольный")+" хвостовик · "+(state.fill?"с заполнением":"без заполнения")+(state.paint?" · окрашен":" · без покраски");
  $("saveBtn").disabled=!(surveyId&&q.total!==null&&q.total>0);
  try{localStorage.setItem(storeKey,JSON.stringify(state));$("saveNote").textContent=surveyId?"Можно добавить в текущий замер. Черновик сохранён на телефоне.":"Откройте из карточки замера, чтобы сохранить в заказ.";}catch{$("saveNote").textContent="Не удалось сохранить черновик: память устройства недоступна.";}
 }
-for(const k of ["width","height","distance","discount"]){$(k).value=state[k];$(k).addEventListener("input",()=>{state[k]=Number($(k).value);render();});}
-for(const k of ["fill","paint","auto","install","stand","bolts"]){$(k).checked=!!state[k];$(k).addEventListener("change",()=>{state[k]=$(k).checked;render();});}
-document.querySelectorAll("[data-frame]").forEach(b=>b.addEventListener("click",()=>{state.frame=b.dataset.frame;if(state.frame==="jalousie")state.fill=false;render();}));
+for(const k of ["width","height","distance","discount","builtInWidth","builtInOffset"]){$(k).value=state[k];$(k).addEventListener("input",()=>{state[k]=Number($(k).value);render();});}
+for(const k of ["fill","paint","auto","install","stand","bolts","builtInWicket"]){$(k).checked=!!state[k];$(k).addEventListener("change",()=>{state[k]=$(k).checked;render();});}
+$("builtInSurcharge").value=state.builtInSurcharge;
+ $("builtInSurcharge").addEventListener("input",()=>{state.builtInSurcharge=$("builtInSurcharge").value;render();});
+ document.querySelectorAll("[data-wicket-mode]").forEach(b=>b.addEventListener("click",()=>{state.builtInMode=b.dataset.wicketMode;render();}));
+ document.querySelectorAll("[data-frame]").forEach(b=>b.addEventListener("click",()=>{state.frame=b.dataset.frame;if(state.frame==="jalousie")state.fill=false;render();}));
 document.querySelectorAll("[data-tail]").forEach(b=>b.addEventListener("click",()=>{state.tail=b.dataset.tail;render();}));
 document.querySelectorAll("[data-picket]").forEach(b=>b.addEventListener("click",()=>{state.picket=b.dataset.picket;render();}));
 $("clientBtn").onclick=$("footerClient").onclick=()=>{$("clientModal").classList.add("open");document.body.style.overflow="hidden";};
@@ -169,10 +213,11 @@ $("closeClient").onclick=()=>{$("clientModal").classList.remove("open");document
 $("saveBtn").addEventListener("click",()=>{
  if(!surveyId||!current||current.total===null)return;
  const config={};for(const k of keys)config[k]=state[k];
+ config.builtInFrameProfile=state.builtInWicket?"60x40x2":null;config.builtInThreshold=state.builtInWicket?"step-over":null;
  config.deliveryCost=Math.max(0,Number(state.distance)||0)*90;
  if(config.frame==="jalousie")config.fill=false;
  const id=editSource?.id||"sliding_"+Date.now().toString(36)+"_"+Math.random().toString(36).slice(2,8);
- const item={id,type:"sliding",title:"Откатные ворота",total:current.total,summary:frameNames[state.frame]+" · "+state.width+" × "+state.height+" м · "+(state.tail==="square"?"квадратный":"треугольный")+" хвостовик",updatedAt:new Date().toISOString(),
+ const item={id,type:"sliding",title:"Откатные ворота",total:current.total,summary:(state.builtInWicket?"Встроенная калитка "+state.builtInWidth+" м · ":"")+frameNames[state.frame]+" · "+state.width+" × "+state.height+" м · "+(state.tail==="square"?"квадратный":"треугольный")+" хвостовик",updatedAt:new Date().toISOString(),
    payload:{category:"sliding-gates",productTitle:"Откатные ворота",total:current.total,deliveryPending:false,configuration:config}};
  // Only customer-facing figures and geometry are stored. No cost, wage, margin or rate table.
  try{localStorage.setItem("kd-surveyor-transfer-v1",JSON.stringify({version:1,surveyId,calculation:item}));}catch{alert("Не удалось сохранить расчёт — проверьте память браузера.");return;}
