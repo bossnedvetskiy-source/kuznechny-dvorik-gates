@@ -68,8 +68,8 @@
 <div class="block" style="margin:12px 0;background:#faf8f2">
 <label class="toggle">Встроенная калитка <input type="checkbox" id="builtInWicket"></label>
 <div id="builtInFields" hidden style="margin-top:12px">
-<div class="dims"><label class="field"><span>Ширина калитки, м</span><input id="builtInWidth" type="number" min=".7" max="1.2" step=".01" inputmode="decimal"></label><label class="field"><span>Доплата клиенту, ₽</span><input id="builtInSurcharge" type="number" min="0" step="100" inputmode="numeric" placeholder="Уточнить"></label></div>
-<p class="sub">Каркас 60×40×2 мм, переступаемый порог. Доплата клиенту вводится после расчёта материалов и фурнитуры; зарплата сварщика 2 000 ₽ учитывается отдельно в производстве.</p>
+<div class="dims"><label class="field"><span>Ширина калитки, м</span><input id="builtInWidth" type="number" min=".7" max="1.2" step=".01" inputmode="decimal"></label></div>
+<p class="sub">Каркас 60×40×2 мм, переступаемый порог. Стоимость рассчитывается автоматически по дополнительному металлу, фурнитуре, сварке и покраске. Цена предварительная до проверки узлов на производстве.</p>
 <div style="font-size:12px;font-weight:800;margin:12px 0 7px">Расположение относительно прямоугольного полотна</div>
 <div class="chips" id="builtInModes"><button type="button" class="chip" data-wicket-mode="center">По центру</button><button type="button" class="chip" data-wicket-mode="left">От левого края</button><button type="button" class="chip" data-wicket-mode="right">От правого края</button></div>
 <label class="field" id="builtInOffsetRow" style="margin-top:10px"><span id="builtInOffsetLabel">Расстояние от края, м</span><input id="builtInOffset" type="number" min="0" step=".01" inputmode="decimal"></label>
@@ -84,8 +84,8 @@
 (function(){
 "use strict";
 const $=id=>document.getElementById(id), money=v=>Number.isFinite(v)?new Intl.NumberFormat("ru-RU").format(Math.round(v))+" ₽":"Цена не готова", round100=v=>Math.ceil((v-1e-9)/100)*100;
-const def={width:4.5,height:2,frame:"prof",tail:"square",fill:true,paint:true,auto:false,install:true,stand:true,bolts:true,picket:"single",distance:0,discount:0,builtInWicket:false,builtInWidth:1,builtInMode:"center",builtInOffset:0,builtInSurcharge:""};
-const keys=["width","height","frame","tail","fill","paint","auto","install","stand","bolts","picket","distance","discount","builtInWicket","builtInWidth","builtInMode","builtInOffset","builtInSurcharge"];
+const def={width:4.5,height:2,frame:"prof",tail:"square",fill:true,paint:true,auto:false,install:true,stand:true,bolts:true,picket:"single",distance:0,discount:0,builtInWicket:false,builtInWidth:1,builtInMode:"center",builtInOffset:0};
+const keys=["width","height","frame","tail","fill","paint","auto","install","stand","bolts","picket","distance","discount","builtInWicket","builtInWidth","builtInMode" ,"builtInOffset"];
 const qp=new URLSearchParams(location.search),surveyId=qp.get("survey")||"",editId=qp.get("edit")||"";
 const requested=qp.get("returnTo")||"",returnTo=requested.startsWith("/")&&!requested.startsWith("//")?requested:"../";
 $("back").href=returnTo;
@@ -103,6 +103,21 @@ function wicketPlan(w){
  const left=state.builtInMode==="left"?offset:state.builtInMode==="right"?w-width-offset:(w-width)/2;
  const right=w-width-left;
  return {width,left,right,valid:Number.isFinite(width)&&width>=.7&&width<=1.2&&Number.isFinite(left)&&left>=.08&&right>=.08};
+}
+// Customer retail tariff estimates for a 60×40 wicket. These are not cost or wage records.
+const WICKET_RETAIL={tubePerMetre:330,hingesPair:300,lockSet:1950,stopAndFasteners:450,welding:3400,paintPerSqM:850};
+function wicketEstimate(wicket,hf,paintEnabled){
+ if(!wicket)return null;
+ // Two fixed uprights around the opening and a four-sided door frame.
+ // The continuous bottom rail remains a step-over threshold.
+ const clearHeight=Math.max(0,hf-.12);
+ const tubeLength=2*clearHeight+2*(clearHeight+wicket.width);
+ const metal=round100(tubeLength*WICKET_RETAIL.tubePerMetre);
+ const hardware=WICKET_RETAIL.hingesPair+WICKET_RETAIL.lockSet+WICKET_RETAIL.stopAndFasteners;
+ const welding=WICKET_RETAIL.welding;
+ const paintArea=tubeLength*.2;
+ const paint=paintEnabled?round100(paintArea*WICKET_RETAIL.paintPerSqM):0;
+ return {tubeLength,paintArea,metal,hardware,welding,paint,total:round100(metal+hardware+welding+paint)};
 }
 function calculate(){
  const w=Number(state.width),h=Number(state.height);const errors=[];
@@ -138,12 +153,10 @@ function calculate(){
    }
  }
  const rail=beam===7?17000:16000,stand=state.stand?12000:0,bolts=state.bolts?500:0,install=state.install?7000:0,automatic=state.auto?30000:0,delivery=Math.max(0,Number(state.distance)||0)*90,discount=Math.max(0,Number(state.discount)||0);
- const surcharge=Number(state.builtInSurcharge);
- const surchargeReady=!wicket||(String(state.builtInSurcharge).trim()!==""&&Number.isFinite(surcharge)&&surcharge>0);
- if(!surchargeReady)errors.push("Укажите согласованную доплату клиенту за встроенную калитку, включая трубы, петли, замок, покраску и работу. Базовая цена ворот не является окончательной.");
- const rows=[["Встроенная калитка (согласованная доплата)",wicket&&surchargeReady?surcharge:0],["Каркас",frame],["Покраска",paint],["Заполнение",fill],["Балка и ролики",rail],["Станина",stand],["Болты",bolts],["Монтаж",install],["Автоматика",automatic],["Доставка",delivery],["Скидка",-discount]];
+ const wicketQuote=wicketEstimate(wicket,hf,state.paint);
+ const rows=[["Калитка · профиль 60×40",wicketQuote?.metal||0],["Калитка · петли, замок, фурнитура",wicketQuote?.hardware||0],["Калитка · сварка",wicketQuote?.welding||0],["Калитка · покраска",wicketQuote?.paint||0],["Каркас",frame],["Покраска",paint],["Заполнение",fill],["Балка и ролики",rail],["Станина",stand],["Болты",bolts],["Монтаж",install],["Автоматика",automatic],["Доставка",delivery],["Скидка",-discount]];
  const total=errors.length?null:Math.max(0,Math.round(rows.reduce((s,r)=>s+r[1],0)));
- return {errors,total,rows,geometry:{beam,tail,full,hf,post,station},wicket,fillDescription};
+ return {errors,total,rows,geometry:{beam,tail,full,hf,post,station},wicket,wicketQuote,fillDescription};
 }
 function lineSvg(q){
  const g=q.geometry;if(!g)return "";
@@ -182,7 +195,7 @@ function render(){
  $("builtInOffsetLabel").textContent=state.builtInMode==="right"?"От правого края полотна до калитки, м":"От левого края полотна до калитки, м";
  document.querySelectorAll("[data-wicket-mode]").forEach(b=>b.classList.toggle("active",b.dataset.wicketMode===state.builtInMode));
  current=calculate();const q=current;
- $("builtInPlacement").textContent=q.wicket?(q.wicket.valid?"От левого края: "+q.wicket.left.toFixed(2)+" м · от правого: "+q.wicket.right.toFixed(2)+" м":"Проверьте расположение калитки"):"";
+ $("builtInPlacement").textContent=q.wicket?(q.wicket.valid?"От левого края: "+q.wicket.left.toFixed(2)+" м · от правого: "+q.wicket.right.toFixed(2)+" м · доп. профиль: "+q.wicketQuote.tubeLength.toFixed(2)+" м":"Проверьте расположение калитки"):"";
  $("price").textContent=money(q.total);$("footerTotal").textContent=money(q.total);
  $("priceMeta").textContent=q.geometry?"Проём "+Number(state.width)+" м · высота "+Number(state.height)+" м · балка "+q.geometry.beam+" м":"Проверь размеры";
  document.querySelectorAll("[data-frame]").forEach(b=>{const ok=b.dataset.frame===state.frame;b.classList.toggle("active",ok);b.setAttribute("aria-pressed",String(ok));});
@@ -193,7 +206,7 @@ function render(){
  const svg=lineSvg(q);$("diagram").innerHTML=svg;$("clientDiagram").innerHTML=svg;
  $("facts").innerHTML=q.geometry?["Балка "+q.geometry.beam+" м","Хвост "+q.geometry.tail.toFixed(2)+" м","Длина "+q.geometry.full.toFixed(2)+" м","Стоек "+q.geometry.post].map(v=>"<span>"+escape(v)+"</span>").join(""):"";
  $("breakdown").innerHTML=rowsHtml(q.rows||[]);$("clientRows").innerHTML=$("breakdown").innerHTML;
- $("warning").innerHTML=(q.errors||[]).map(x=>'<div class="alert">'+escape(x)+"</div>").join("");
+ $("warning").innerHTML=(q.errors||[]).map(x=>'<div class="alert">'+escape(x)+"</div>").join("")+(state.builtInWicket?'<div class="alert">Предварительный расчёт: фурнитура и дополнительные стойки рассчитаны по типовой схеме. Перед производством уточните петли, замок, зазоры, усиление и блокировку автоматики.</div>':"");
  $("clientTotal").textContent=money(q.total);
  $("clientBtn").disabled=$("footerClient").disabled=q.total===null;
  $("clientDescription").textContent=(state.builtInWicket?"Со встроенной калиткой · ":"")+frameNames[state.frame]+" · "+state.width+" × "+state.height+" м · "+(state.tail==="square"?"квадратный":"треугольный")+" хвостовик · "+(state.fill?"с заполнением":"без заполнения")+(state.paint?" · окрашен":" · без покраски");
@@ -202,8 +215,7 @@ function render(){
 }
 for(const k of ["width","height","distance","discount","builtInWidth","builtInOffset"]){$(k).value=state[k];$(k).addEventListener("input",()=>{state[k]=Number($(k).value);render();});}
 for(const k of ["fill","paint","auto","install","stand","bolts","builtInWicket"]){$(k).checked=!!state[k];$(k).addEventListener("change",()=>{state[k]=$(k).checked;render();});}
-$("builtInSurcharge").value=state.builtInSurcharge;
- $("builtInSurcharge").addEventListener("input",()=>{state.builtInSurcharge=$("builtInSurcharge").value;render();});
+
  document.querySelectorAll("[data-wicket-mode]").forEach(b=>b.addEventListener("click",()=>{state.builtInMode=b.dataset.wicketMode;render();}));
  document.querySelectorAll("[data-frame]").forEach(b=>b.addEventListener("click",()=>{state.frame=b.dataset.frame;if(state.frame==="jalousie")state.fill=false;render();}));
 document.querySelectorAll("[data-tail]").forEach(b=>b.addEventListener("click",()=>{state.tail=b.dataset.tail;render();}));
