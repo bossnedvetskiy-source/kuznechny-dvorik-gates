@@ -115,7 +115,10 @@ function wicketEstimate(wicket,hf,paintEnabled,frameType){
  const door60Length=2*(clearHeight+wicket.width);
  const fixed60Length=fixedPosts60*clearHeight;
  const innerPosts20=frameType==="jalousie"?0:2;
- const inner20Length=innerPosts20*clearHeight;
+ // Inside the wicket door: one middle crossbar for profiled sheet and
+ // vertical pickets; a full inner 20×20 frame for horizontal pickets.
+ const innerDoor20Length=frameType==="prof"||frameType==="vertical"?Math.max(0,wicket.width-.08):frameType==="horizontal"?2*(Math.max(0,wicket.width-.08)+Math.max(0,clearHeight-.08)):0;
+ const inner20Length=innerPosts20*clearHeight+innerDoor20Length;
  const tube60Length=door60Length+fixed60Length;
  const metal60=round100(tube60Length*WICKET_RETAIL.tube60PerMetre);
  const metal20=round100(inner20Length*WICKET_RETAIL.tube20PerMetre);
@@ -123,7 +126,7 @@ function wicketEstimate(wicket,hf,paintEnabled,frameType){
  const welding=WICKET_RETAIL.welding;
  const paintArea=tube60Length*.2+inner20Length*.08;
  const paint=paintEnabled?round100(paintArea*WICKET_RETAIL.paintPerSqM):0;
- return {clearHeight,fixedPosts60,innerPosts20,hinges,locks,door60Length,fixed60Length,inner20Length,tube60Length,tubeLength:tube60Length+inner20Length,paintArea,metal60,metal20,hardware,welding,paint,total:metal60+metal20+hardware+welding+paint};
+ return {clearHeight,fixedPosts60,innerPosts20,innerDoor20Length,hinges,locks,door60Length,fixed60Length,inner20Length,tube60Length,tubeLength:tube60Length+inner20Length,paintArea,metal60,metal20,hardware,welding,paint,total:metal60+metal20+hardware+welding+paint};
 }
 function calculate(){
  const w=Number(state.width),h=Number(state.height);const errors=[];
@@ -209,7 +212,7 @@ function render(){
  $("builtInOffsetLabel").textContent=state.builtInMode==="right"?"От правого края полотна до калитки, м":"От левого края полотна до калитки, м";
  document.querySelectorAll("[data-wicket-mode]").forEach(b=>b.classList.toggle("active",b.dataset.wicketMode===state.builtInMode));
  current=calculate();const q=current;
- $("builtInPlacement").textContent=q.wicket?(q.wicket.valid?"От левого края: "+q.wicket.left.toFixed(2)+" м · от правого: "+q.wicket.right.toFixed(2)+" м · 60×40: "+q.wicketQuote.tube60Length.toFixed(2)+" м · 20×20: "+q.wicketQuote.inner20Length.toFixed(2)+" м":"Проверьте расположение калитки"):"";
+ $("builtInPlacement").textContent=q.wicket?(q.wicket.valid?"От левого края: "+q.wicket.left.toFixed(2)+" м · от правого: "+q.wicket.right.toFixed(2)+" м · 60×40: "+q.wicketQuote.tube60Length.toFixed(2)+" м · 20×20: "+q.wicketQuote.inner20Length.toFixed(2)+" м (в дверце "+q.wicketQuote.innerDoor20Length.toFixed(2)+" м)":"Проверьте расположение калитки"):"";
  $("price").textContent=money(q.total);$("footerTotal").textContent=money(q.total);
  $("priceMeta").textContent=q.geometry?"Проём "+Number(state.width)+" м · высота "+Number(state.height)+" м · балка "+q.geometry.beam+" м":"Проверь размеры";
  document.querySelectorAll("[data-frame]").forEach(b=>{const ok=b.dataset.frame===state.frame;b.classList.toggle("active",ok);b.setAttribute("aria-pressed",String(ok));});
