@@ -157,7 +157,7 @@ export function ownerReportHtml(report, estimate) {
         '<p class="owner-finance-note">Тарифы сохраняются отдельно от клиентской сметы. Пустое обязательное поле блокирует расчёт прибыли; ноль означает отсутствие расхода. Для проверки итогов нажмите «Сохранить расходы» внизу карточки.</p>'+
         '<div class="owner-profile-grid">'+rates+'</div>'+
       '</details>'+
-      (p.missing.length?'<p class="owner-warning">⚠ Не заполнены тарифы: '+h(p.missing.join(', '))+'. До заполнения всех обязательных ставок прибыль не определена.</p>':'')+
+      (p.missing.length?'<p class="owner-warning">⚠ Не заполнены тарифы: '+h(p.missing.join(', '))+(entry.hasManual?'. Автоматическая себестоимость неполная; в итог включена введённая вручную сумма.</p>':'. До заполнения всех обязательных ставок прибыль не определена.</p>'):'' )+
     '</div>';
   }).join('');
   const fence = report.fenceRows.map(f => {
