@@ -80,6 +80,7 @@ test('sliding gates: owner sees automatic BOM, can set wage rates, surveyor cann
   await page.locator('#newSurveyBtn').click();
   await page.locator('#saveSurveyBtn').click();
   await expect(page.locator('#surveyDetailsDialog')).toBeVisible();
+  await page.locator('[data-owner-detail-tab="quote"]').click();
   await page.locator('[data-v3-calc="sliding"]').click();
   await expect(page).toHaveURL(/sliding-gates\/index\.html/);
   await page.locator('#width').fill('4');
