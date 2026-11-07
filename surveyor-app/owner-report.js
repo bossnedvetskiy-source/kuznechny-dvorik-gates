@@ -126,8 +126,8 @@ export function ownerReportHtml(report, estimate) {
       const key=slidingRateKey(entry.id,field.key);
       const raw=Object.prototype.hasOwnProperty.call(report.overrides,key)?report.overrides[key]:field.initial;
       const displayed=raw===undefined?'':raw;
-      return '<label class="owner-expense-field">'+h(field.label)+
-        '<input data-owner-cost="'+h(key)+'" type="number" min="0" step="any" inputmode="decimal" value="'+h(displayed)+'" placeholder="Укажите тариф"></label>';
+      return '<div class="owner-expense-field"><label>'+h(field.label)+
+        '<input data-owner-cost="'+h(key)+'" type="number" min="0" step="any" inputmode="decimal" value="'+h(displayed)+'" placeholder="Укажите тариф"></label></div>';
     }).join('');
     return '<div class="owner-material-card"><h4>'+h(entry.title)+' · '+num(p.width)+' × '+num(p.height)+' м</h4>'+
       '<p class="owner-finance-note">Ведомость рассчитана из сохранённых размеров. Хлысты по 6 м округлены вверх отдельно по профилям; это предварительная закупка без карты раскроя. Тарифы ниже — ориентиры до сверки с фактическими закупками.</p>'+
