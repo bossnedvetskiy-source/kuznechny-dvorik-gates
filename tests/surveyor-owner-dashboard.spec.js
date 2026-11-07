@@ -97,6 +97,7 @@ test('sliding gates: owner sees automatic BOM, can set wage rates, surveyor cann
   await expect(pane).toContainText('Зарплата маляра');
   await expect(pane).toContainText('Не заполнены тарифы');
   await expect(pane).toContainText('Прибыль по изделию');
+  await pane.locator('summary').filter({hasText:'Закупочные тарифы и зарплаты'}).click();
   await pane.locator('[data-owner-cost$="_weldGate"]').fill('5000');
   await pane.locator('[data-owner-cost$="_painter"]').fill('200');
   await pane.locator('[data-owner-cost$="_paintMaterial"]').fill('100');
