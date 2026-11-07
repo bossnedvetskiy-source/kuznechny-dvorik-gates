@@ -3,6 +3,7 @@ import {readFileSync} from 'node:fs';
 import {calculateFence} from '../evroshtaketnik/engine.js';
 import {buildOwnerReport, ownerReportHtml} from '../surveyor-app/owner-report.js';
 import {buildOwnerDashboard, ownerDashboardHtml} from '../surveyor-app/owner-dashboard.js';
+import {buildSlidingProduction, SLIDING_RATE_FIELDS, slidingRateKey} from '../surveyor-app/owner-sliding.js';
 
 const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 const source=read('surveyor-app/app.js');
@@ -59,6 +60,52 @@ assert.equal(model.front,p.pickets.reduce((s,x)=>s+x.frontBuy,0));
 assert.equal(model.rear,p.pickets.reduce((s,x)=>s+x.rearBuy,0));
 assert.match(ownerDashboardHtml(model),/Не хватает себестоимости/);
 assert.match(ownerDashboardHtml(model,{preview:true}),/DEV-превью/);
+
+// Sliding-gate production planning is built from the saved customer-safe geometry.
+const sliding={
+  id:'sliding_abc',type:'sliding',title:'Откатные ворота',total:115000,
+  payload:{configuration:{width:4,height:1.8,frame:'prof',tail:'square',
+    fill:true,paint:true,stand:true,bolts:true,install:true,distance:0,
+    builtInWicket:true,builtInWidth:1,builtInMode:'center',builtInOffset:0}}
+};
+const plan=buildSlidingProduction(sliding,{});
+assert.equal(plan.valid,true);
+assert.equal(plan.stocks60,Math.ceil(plan.tube60/6));
+assert.equal(plan.stocks20,Math.ceil(plan.tube20/6));
+assert.equal(plan.wicket60>0,true);
+assert.equal(plan.wicketInner20,0.92,'wicket door has 20×20 midspan crossbar');
+assert.equal(plan.sheets,4);
+assert.equal(plan.missing.includes('Зарплата маляра'),true);
+assert.equal(plan.calculatedCost,null,'missing supplier and wage rates must block profit');
+let ownerSlidingReport=buildOwnerReport(survey,quote([sliding],115000),{});
+assert.equal(ownerSlidingReport.incomplete,true);
+assert.equal(ownerSlidingReport.profit,null);
+assert.match(ownerReportHtml(ownerSlidingReport,quote([sliding],115000)),/Зарплата сварщика/);
+assert.match(ownerReportHtml(ownerSlidingReport,quote([sliding],115000)),/хлыстов/);
+const privateRates=Object.fromEntries(SLIDING_RATE_FIELDS.map(field=>[
+  slidingRateKey(sliding.id,field.key),field.initial??500
+]));
+const priced=buildSlidingProduction(sliding,privateRates);
+assert.equal(priced.missing.length,0);
+assert.equal(priced.calculatedCost>0,true);
+assert.equal(priced.wage,privateRates[slidingRateKey(sliding.id,'weldGate')]+
+  privateRates[slidingRateKey(sliding.id,'weldWicket')]+
+  priced.area*privateRates[slidingRateKey(sliding.id,'painter')]+
+  privateRates[slidingRateKey(sliding.id,'cladding')]);
+ownerSlidingReport=buildOwnerReport(survey,quote([sliding],115000),privateRates);
+assert.equal(ownerSlidingReport.incomplete,false);
+assert.equal(ownerSlidingReport.profit,115000-priced.calculatedCost);
+const manual=buildOwnerReport(survey,quote([sliding],115000),{...privateRates,[sliding.id]:40000});
+assert.equal(manual.profit,75000,'manual full cost replaces estimate; never double counts');
+const horizontal={...sliding,payload:{configuration:{...sliding.payload.configuration,frame:'horizontal'}}};
+const horizontalPlan=buildSlidingProduction(horizontal,{});
+assert.equal(horizontalPlan.valid,true);
+assert.ok(horizontalPlan.wicketInner20>plan.wicketInner20,'horizontal fill requires full 20×20 inner wicket frame');
+const withoutWicket={...sliding,payload:{configuration:{...sliding.payload.configuration,builtInWicket:false}}};
+assert.equal(buildSlidingProduction(withoutWicket,{}).wicket20,0);
+assert.equal(buildSlidingProduction({...sliding,payload:{configuration:{width:99,height:2,frame:'prof',tail:'square'}}},{}).valid,false);
+const swModule=read('surveyor-app/sw.js');
+assert.match(swModule,/owner-sliding\.js/);
 
 for(const [haystack,needle] of [
   [source,"currentUser?.role === 'owner' &&"],
