@@ -1,5 +1,6 @@
 import {buildOwnerReport, ownerReportHtml} from './owner-report.js';
 import {buildOwnerDashboard, ownerDashboardHtml} from './owner-dashboard.js';
+import {mountOwnerQuickCalculator} from './owner-quick.js';
 const ownerCostsCache = Object.create(null);
 async function loadOwnerCosts(surveyId) {
   if (currentUser?.role !== 'owner') return;
@@ -597,7 +598,7 @@ function applyRoleUi() {
   $('#ownerNavBtn')?.classList.toggle('hidden', !isOwner);
   $('#teamNavBtn')?.classList.toggle('hidden', !isOwner);
   $('#openTeamBtn')?.classList.toggle('hidden', !isOwner);
-  if (!isOwner && ($('#teamScreen')?.classList.contains('active') || $('#ownerScreen')?.classList.contains('active'))) switchScreen('surveys');
+  if (!isOwner && ($('#teamScreen')?.classList.contains('active') || $('#ownerScreen')?.classList.contains('active') || $('#ownerQuickScreen')?.classList.contains('active'))) switchScreen('surveys');
   $('#profileBtn').textContent = (currentUser?.name || 'КД').split(/\s+/).slice(0,2).map(x => x[0]).join('').toUpperCase();
 }
 let threeDImport = null;
@@ -616,13 +617,14 @@ async function open3DCalculator() {
   }
 }
 function switchScreen(name) {
-  if (name==='owner' && currentUser?.role!=='owner') name='surveys';
-  const titles = { owner: 'КД Управление', surveys: 'Замеры', threeD: '3D расчёт', clients: 'Клиенты', team: 'Сотрудники', settings: 'Ещё' };
+  if (['owner','ownerQuick'].includes(name) && currentUser?.role!=='owner') name='surveys';
+  const titles = { owner: 'КД Управление', ownerQuick:'Быстрый расчёт', surveys: 'Замеры', threeD: '3D расчёт', clients: 'Клиенты', team: 'Сотрудники', settings: 'Ещё' };
   $$('.screen').forEach(el => el.classList.remove('active'));
   $(`#${name}Screen`)?.classList.add('active');
-  $$('.nav-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.screen === name));
+  $$('.nav-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.screen === name || (name==='ownerQuick' && btn.dataset.screen==='owner')));
   $('#screenTitle').textContent = titles[name] || 'КД Замерщик';
   if (name === 'owner') renderOwnerDashboard();
+  if (name === 'ownerQuick' && currentUser?.role==='owner') mountOwnerQuickCalculator($('#ownerQuickRoot'),{onBack:()=>switchScreen('owner')});
   if (name === 'surveys') renderSurveys();
   if (name === 'clients') renderClients();
   if (name === 'team') renderEmployees();
@@ -645,6 +647,8 @@ async function renderOwnerDashboard() {
   container.innerHTML=ownerDashboardHtml(model,{preview:IS_PREVIEW});
   $$('[data-owner-open]',container).forEach(button=>button.addEventListener('click',()=>openSurveyDetails(button.dataset.ownerOpen)));
   $('[data-owner-go-surveys]',container)?.addEventListener('click',()=>switchScreen('surveys'));
+  $('[data-owner-quick]',container)?.addEventListener('click',()=>switchScreen('ownerQuick'));
+  $('[data-owner-show-orders]',container)?.addEventListener('click',()=>container.querySelector('[data-owner-orders]')?.scrollIntoView({behavior:'smooth',block:'start'}));
 }
 
 async function renderSurveys() {
