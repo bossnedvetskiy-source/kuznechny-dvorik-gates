@@ -128,7 +128,7 @@ export function mountOwnerQuickCalculator(root,{onBack}={}){
       '<span>'+qty(Number(state.width))+' × '+qty(Number(state.height))+' м · '+safe(state.frame==='prof'?'Профнастил':state.frame==='jalousie'?'Каркас под жалюзи':'Евроштакетник')+'</span></div>';
     quoteView.innerHTML='<section class="ownerq-panel"><h3>Состав цены · клиенту</h3>'+
       (price===null?'<p>Проверь размеры и комплектацию.</p>':q.rows.filter(x=>x[1]!==0).map(x=>row(x[0],money(x[1]))).join(''))+
-      '<p class="ownerq-note">Клиент видит только итог и состав предложения. Себестоимость и зарплаты не показываются.</p></section>';
+      '<p class="ownerq-note">Предварительное предложение. Итоговые размеры и комплектацию согласуем перед договором.</p></section>';
     const cost=p.valid?p.calculatedCost:null;
     const profit=price!==null&&cost!==null?price-cost:null;
     ownerView.querySelector('[data-oq-finance]').innerHTML=
