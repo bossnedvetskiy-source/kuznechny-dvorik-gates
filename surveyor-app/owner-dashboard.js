@@ -34,11 +34,20 @@ export function ownerDashboardHtml(model,{preview=false}={}) {
    </button>`).join('');
   const coverage=model.quoted.length-model.quoted.filter(x=>x.report.incomplete).length;
   return `<section class="owner-dashboard" aria-label="Панель собственника">
-    <div class="owner-dashboard-hero">
+    <div class="owner-dashboard-hero owner-home-hero">
       <div class="eyebrow">КУЗНЕЧНЫЙ ДВОРИКЪ · СОБСТВЕННИК</div>
-      <h2>КД Управление</h2><p>Заказы, материалы и экономика производства в одном месте</p>
+      <h2>Что будем делать?</h2><p>Расчёт цены и прибыли — без оформления заказа. Заказы и учёт доступны отдельно.</p>
+    </div>
+    <div class="owner-home-actions">
+      <button type="button" data-owner-quick class="owner-home-action owner-home-action-primary">
+        <span class="owner-home-icon" aria-hidden="true">▣</span><span><strong>Быстрый расчёт</strong><small>Размеры → цена клиенту → материалы и прибыль</small><em>Без создания заказа</em></span><span class="owner-home-arrow">›</span>
+      </button>
+      <button type="button" data-owner-show-orders class="owner-home-action">
+        <span class="owner-home-icon" aria-hidden="true">▤</span><span><strong>Мои заказы</strong><small>Открыть замеры, расходы и производство</small></span><span class="owner-home-arrow">›</span>
+      </button>
     </div>
     ${preview?'<p class="owner-warning">DEV-превью: нет защищённого сервера. Внутренние расходы здесь тестовые и сохраняются только в текущей сессии. Не вводите реальные конфиденциальные суммы.</p>':''}
+    <details class="owner-home-overview"><summary>📈 Общая сводка и материалы по заказам</summary>
     <div class="owner-dashboard-kpis">
       ${stat('Выручка по выбранным сметам',money(model.revenue),model.quoted.length+' с расчётами')}
       ${stat('Расчётные и введённые затраты',money(model.knownCosts),'Не все расходы могут быть известны')}
@@ -55,8 +64,9 @@ export function ownerDashboardHtml(model,{preview=false}={}) {
       </div>
       <p class="owner-finance-note">Сумма по заказам — справочная. Разные длины штакетника и профиль необходимо проверять по ведомости каждого объекта. Заказы с неизвестными размерами не включены в количества.</p>
     </section>
-    <section class="owner-dashboard-section">
-      <div class="owner-section-heading"><h3>Заказы</h3><small>${model.rows.length} записей</small></div>
+    </details>
+    <section class="owner-dashboard-section" data-owner-orders>
+      <div class="owner-section-heading"><h3>Последние заказы</h3><small>${model.rows.length} записей</small></div>
       ${orderRows||'<p class="owner-finance-note">Замеров пока нет. Создайте первый замер в разделе «Замеры».</p>'}
       <button class="btn btn-secondary btn-block" type="button" data-owner-go-surveys>Перейти ко всем замерам</button>
     </section>
