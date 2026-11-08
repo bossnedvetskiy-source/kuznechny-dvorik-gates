@@ -5,7 +5,7 @@ import {calculateSlidingQuote} from './sliding-gates/pricing.js';
 import {buildSlidingProduction,SLIDING_RATE_FIELDS,slidingRateKey} from './owner-sliding.js';
 
 const STATE_KEY='kd-owner-quick-calculation-v1';
-const RATE_KEY='kd-owner-quick-rates-v1';
+const RATE_KEY='kd-owner-quick-rates-v2';
 const ID='owner_quick';
 const BASE={
   width:4,height:2,frame:'prof',tail:'square',picket:'single',
