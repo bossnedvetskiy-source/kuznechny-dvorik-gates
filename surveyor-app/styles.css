@@ -1179,3 +1179,66 @@
 .owner-detail-tabs{background:#262529}
 .owner-detail-tabs button{color:#bdb4a8}
 .owner-detail-tabs button.active{background:#664b25;color:#fce4b4}
+
+
+/* Owner home: task-first flow matching the surveyor's simple work cards. */
+.owner-home-actions{display:grid;gap:10px}
+.owner-home-action{display:grid;grid-template-columns:46px minmax(0,1fr) 18px;align-items:center;gap:12px;text-align:left;width:100%;padding:16px;border-radius:17px;border:1px solid #665136;background:#242326;color:#f0ece4;cursor:pointer}
+.owner-home-action-primary{border-color:#af8a43;background:linear-gradient(125deg,#352817,#201e21)}
+.owner-home-action strong,.owner-home-action small,.owner-home-action em{display:block}
+.owner-home-action strong{font-size:16px}
+.owner-home-action small{font-size:12px;color:#d0c3aa;line-height:1.45;margin-top:4px}
+.owner-home-action em{font-size:11px;color:#f2cd7d;font-weight:750;font-style:normal;margin-top:7px}
+.owner-home-icon{font-size:25px;color:#e0b45a;text-align:center}
+.owner-home-arrow{font-size:27px;color:#d7b675}
+.owner-home-overview{padding:14px;background:#282628;border:1px solid #514638;border-radius:16px;color:#f5ead6}
+.owner-home-overview>summary{cursor:pointer;font-size:13px;font-weight:800}
+.owner-home-overview>.owner-dashboard-kpis{margin:14px 0}
+.owner-home-overview>.owner-dashboard-section{margin-top:12px}
+.ownerq{max-width:800px;display:grid;gap:13px;padding-bottom:24px}
+.ownerq [hidden]{display:none!important}
+.ownerq-head{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.ownerq-back{border:0;background:transparent;color:#e8ca8f;padding:9px 0;font-weight:850;font-size:13px;cursor:pointer}
+.ownerq-tag{font-size:10px;color:#c3b79c;border:1px solid #5f5037;border-radius:10px;padding:7px}
+.ownerq-heading{background:linear-gradient(135deg,#29231c,#111114);border-radius:18px;padding:18px;border:1px solid #71603f;color:#eee6d8}
+.ownerq-heading h2{font-size:24px;margin:5px 0}
+.ownerq-heading p{margin:0;font-size:12px;line-height:1.5;color:#cbbfa8}
+.ownerq-modes{display:grid;grid-template-columns:1fr 1fr;gap:7px;padding:5px;border:1px solid #544637;border-radius:14px;background:#222124}
+.ownerq-modes button{border:0;background:transparent;color:#c8c2b8;padding:12px 7px;font-size:12px;font-weight:850;border-radius:10px;cursor:pointer}
+.ownerq-modes button.active{background:#c29b4f;color:#20190e}
+.ownerq-price{display:grid;gap:5px;padding:16px 19px;background:#302718;border-radius:16px;border:1px solid #a98043;color:#f1d49b}
+.ownerq-price small{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#d4c6ae}
+.ownerq-price strong{font-size:29px;line-height:1.15;letter-spacing:-.02em}
+.ownerq-price span{font-size:12px;color:#d3c5ac}
+.ownerq-panel{background:#222224;border:1px solid #584b3b;border-radius:16px;padding:15px;color:#f1e9df}
+.ownerq-panel h3{font-size:14px;margin:0 0 12px;font-weight:850;color:#f1d49b}
+.ownerq-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px;margin:8px 0}
+.ownerq-field{display:grid;gap:5px;min-width:0;font-weight:650;font-size:11px;color:#d4c8b5}
+.ownerq-field input,.ownerq-field select{width:100%;height:43px;min-width:0;background:#161618;color:#f1e8d8;border:1px solid #726146;border-radius:10px;padding:8px 10px;font:inherit;font-size:14px;outline-offset:2px}
+.ownerq-field input:focus-visible,.ownerq-field select:focus-visible{outline:2px solid #c09b53}
+.ownerq-checks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:10px 0}
+.ownerq-check{display:flex;align-items:center;gap:9px;font-size:12px;font-weight:700;background:#302b24;border-radius:10px;padding:9px;cursor:pointer}
+.ownerq-check input{width:17px;height:17px;accent-color:#c19b4d;flex:none}
+.ownerq-sketch{background:#f8f6ee;color:#6b6558;border-radius:12px;padding:9px}
+.ownerq-sketch svg{width:100%;height:auto;max-height:230px}
+.ownerq-sketch .frame{fill:none;stroke:#48443d;stroke-width:3.1;stroke-linecap:round}
+.ownerq-sketch .thin{stroke:#9b968e;stroke-width:1.8}
+.ownerq-sketch .wicket{stroke:#ba8d39;stroke-width:3;fill:#eee4d2}
+.ownerq-sketch text{fill:#6a6154;font-size:11px;stroke:none}
+.ownerq-error{background:#473020;color:#ffe2a4;padding:11px 13px;border:1px solid #86613b;border-radius:10px;font-size:12px;line-height:1.45;margin:8px 0}
+.ownerq-row{display:flex;justify-content:space-between;align-items:baseline;gap:12px;border-bottom:1px solid #484139;padding:10px 0;font-size:12px}
+.ownerq-row strong{text-align:right;white-space:nowrap;color:#f1d49b}
+.ownerq-note{font-size:11px;line-height:1.5;color:#c6bba8;margin:12px 0 3px}
+.ownerq-finance-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.ownerq-finance-grid>div{background:#282628;border:1px solid #594c39;border-radius:12px;padding:13px;display:grid;gap:7px;min-width:0}
+.ownerq-finance-grid small{font-size:11px;color:#c9bda9;line-height:1.3}
+.ownerq-finance-grid strong{font-size:20px;color:#f2d18e;line-height:1.2}
+.ownerq-pills{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:13px}
+.ownerq-pill{display:inline-block;border:1px solid #65543e;border-radius:9px;padding:8px;font-size:11px;color:#d3c8b4}
+.ownerq-pill b{color:#f2dbac}
+.ownerq-rate-editor summary{cursor:pointer;font-size:13px;font-weight:850;color:#f1d49b}
+.ownerq-rate-editor>.ownerq-rates{margin-top:12px}
+.ownerq-rates{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.ownerq-demo{border:1px solid #b18e53;background:#342b20;color:#f2d18e;padding:11px;border-radius:10px;font-size:12px;font-weight:850;margin:8px 0;cursor:pointer}
+@media(max-width:380px){.ownerq-fields,.ownerq-rates{grid-template-columns:1fr}.ownerq-finance-grid strong{font-size:17px}.ownerq-modes button{font-size:11px}}
+@media(min-width:700px){.owner-home-actions{grid-template-columns:1fr 1fr}.ownerq-finance-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
