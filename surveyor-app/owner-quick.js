@@ -15,7 +15,7 @@ const BASE={
 };
 const SAMPLE={
   rollers:12000,sheet:600,picket:130,weldGate:5000,
-  paintMaterial:200,painter:200,cladding:3000,bolts:500,delivery:0,
+  paintMaterial:200,painter:200,cladding:3000,bolts:500,
   automation:20000
 };
 const money=n=>Number.isFinite(n)?new Intl.NumberFormat('ru-RU').format(Math.round(n))+' ₽':'—';
@@ -50,13 +50,37 @@ function sketch(c,p){
   return '<svg viewBox="0 0 385 150" role="img" aria-label="Предварительный вид откатных ворот">'+
     '<g class="frame">'+svg+'</g><text x="'+((head+right)/2)+'" y="139" text-anchor="middle">Проём '+qty(Number(c.width))+' м</text></svg>';
 }
+
+// Apply provisional benchmarks where the owner hasn't confirmed a rate.
+// Such values remain estimates, not actual booked purchase or wage costs.
+export function calculateOwnerQuick(config,confirmedRates={}){
+  const rates={...confirmedRates};
+  for(const field of SLIDING_RATE_FIELDS){
+    const key=slidingRateKey(ID,field.key);
+    if(Object.hasOwn(rates,key))continue;
+    const estimated=field.key==='delivery'?
+      Math.max(0,Number(config.distance)||0)*90:
+      (field.initial??SAMPLE[field.key]);
+    if(Number.isFinite(estimated))rates[key]=estimated;
+  }
+  const quote=calculateSlidingQuote(config);
+  const production=buildSlidingProduction({
+    id:ID,type:'sliding',payload:{configuration:config}
+  },rates);
+  const cost=production.valid?production.calculatedCost:null;
+  const profit=quote.total!==null&&cost!==null?quote.total-cost:null;
+  const unverified=production.valid?
+    production.rows.filter(row=>!Object.hasOwn(confirmedRates,slidingRateKey(ID,row.key))).map(row=>row.label):[];
+  return {quote,production,cost,profit,unverified};
+}
+
 function tryRead(key){try{const x=JSON.parse(sessionStorage.getItem(key)||'null');return x&&typeof x==='object'?x:null;}catch{return null;}}
 function tryWrite(key,x){try{sessionStorage.setItem(key,JSON.stringify(x));}catch{}}
 export function mountOwnerQuickCalculator(root,{onBack}={}){
   if(!root)return;
   const draft=tryRead(STATE_KEY)||{}, rates=tryRead(RATE_KEY)||{};
   let state={...BASE,...Object.fromEntries(Object.entries(draft).filter(([key])=>Object.hasOwn(BASE,key)))};
-  let view='owner',usingSamples=false;
+  let view='owner';
   root.innerHTML=[
     '<section class="ownerq" aria-label="Быстрый расчёт собственника">',
     '<div class="ownerq-head"><button type="button" class="ownerq-back" data-oq-back>← Управление</button><span class="ownerq-tag">Без создания заказа</span></div>',
@@ -107,9 +131,10 @@ export function mountOwnerQuickCalculator(root,{onBack}={}){
   function buildRates(){
     return '<details class="ownerq-panel ownerq-rate-editor"><summary>✏️ Настроить закупочные цены и зарплаты</summary>'+
       '<p class="ownerq-note">Тарифы сохраняются только на время текущей сессии в этом браузере. DEV не предназначен для реальных конфиденциальных закупочных данных.</p>'+
-      '<button type="button" class="ownerq-demo" data-oq-demo>Подставить примерные ставки для оценки</button>'+
+      '<button type="button" class="ownerq-demo" data-oq-demo>Сбросить к ориентировочным тарифам</button>'+
       '<div class="ownerq-rates">'+SLIDING_RATE_FIELDS.map(field=>{
-        const key=slidingRateKey(ID,field.key),value=Object.hasOwn(rates,key)?rates[key]:(field.initial??'');
+        const key=slidingRateKey(ID,field.key),value=Object.hasOwn(rates,key)?rates[key]:
+          (field.key==='delivery'?Math.max(0,Number(state.distance)||0)*90:(field.initial??SAMPLE[field.key]??''));
         return '<label class="ownerq-field"><span>'+safe(field.label)+'</span><input data-oq-rate="'+safe(field.key)+'" type="number" min="0" step="any" inputmode="decimal" value="'+safe(value)+'" placeholder="Указать"></label>';
       }).join('')+'</div></details>';
   }
@@ -119,8 +144,8 @@ export function mountOwnerQuickCalculator(root,{onBack}={}){
     root.querySelector('[data-oq-wicket]').hidden=!state.builtInWicket;
     root.querySelector('[data-oq-field="builtInOffset"]').closest('.ownerq-field').hidden=state.builtInMode==='center';
     root.querySelector('[data-oq-field="picket"]').closest('.ownerq-field').hidden=state.frame!=='vertical';
-    const q=calculateSlidingQuote(state);
-    const p=buildSlidingProduction({id:ID,type:'sliding',payload:{configuration:state}},rates);
+    const estimate=calculateOwnerQuick(state,rates);
+    const q=estimate.quote,p=estimate.production;
     root.querySelector('[data-oq-sketch]').innerHTML=sketch(state,q);
     root.querySelector('[data-oq-warning]').innerHTML=(q.errors||[]).concat(p.valid?[]:[p.reason||'Проверь размеры']).map(x=>'<div class="ownerq-error">'+safe(x)+'</div>').join('');
     const price=q.total;
@@ -129,16 +154,15 @@ export function mountOwnerQuickCalculator(root,{onBack}={}){
     quoteView.innerHTML='<section class="ownerq-panel"><h3>Состав цены · клиенту</h3>'+
       (price===null?'<p>Проверь размеры и комплектацию.</p>':q.rows.filter(x=>x[1]!==0).map(x=>row(x[0],money(x[1]))).join(''))+
       '<p class="ownerq-note">Предварительное предложение. Итоговые размеры и комплектацию согласуем перед договором.</p></section>';
-    const cost=p.valid?p.calculatedCost:null;
-    const profit=price!==null&&cost!==null?price-cost:null;
+    const cost=estimate.cost,profit=estimate.profit;
     ownerView.querySelector('[data-oq-finance]').innerHTML=
       '<section class="ownerq-finance-grid">'+
       '<div><small>Цена клиенту</small><strong>'+money(price)+'</strong></div>'+
       '<div><small>Себестоимость</small><strong>'+money(cost)+'</strong></div>'+
-      '<div><small>Предварительная прибыль</small><strong>'+money(profit)+'</strong></div>'+
+      '<div><small>Прибыль · предварительно</small><strong>'+money(profit)+'</strong></div>'+
       '<div><small>Рентабельность продаж</small><strong>'+(profit!==null&&price>0?(100*profit/price).toFixed(1)+' %':'—')+'</strong></div></section>'+
-      (usingSamples?'<p class="ownerq-error">Использованы ПРИМЕРНЫЕ ставки, а не проверенные закупочные цены. Результат только для оценки.</p>':'')+
-      (p.valid&&p.missing.length?'<p class="ownerq-error">Для прибыли не хватает тарифов: '+safe(p.missing.join(', '))+'. Открой «Настроить цены и зарплаты» ниже.</p>':'')+
+      (estimate.unverified.length?'<p class="ownerq-error">⚠ Оценка по ориентировочным тарифам: '+safe(estimate.unverified.join(', '))+'. Чтобы уточнить прибыль, проверь цены закупки и зарплаты ниже.</p>':'')+
+      (p.valid&&p.missing.length?'<p class="ownerq-error">Не хватает данных: '+safe(p.missing.join(', '))+'.</p>':'')+
       '<section class="ownerq-panel"><h3>Материалы и производство</h3>'+
       (p.valid?'<div class="ownerq-pills">'+[
         pill('60×40×2',qty(p.tube60)+' м / '+p.stocks60+' хлыстов'),
@@ -176,7 +200,7 @@ export function mountOwnerQuickCalculator(root,{onBack}={}){
       const key=slidingRateKey(ID,el.dataset.oqRate);
       if(el.value.trim()==='')delete rates[key];
       else rates[key]=Number(el.value);
-      usingSamples=false;
+      // Confirmed rate overrides provisional benchmarks without changing customer price.
     }
     refresh();
   });
@@ -188,11 +212,14 @@ export function mountOwnerQuickCalculator(root,{onBack}={}){
     if(mode){setView(mode.dataset.oqMode);return;}
     if(event.target.closest('[data-oq-back]')){onBack?.();return;}
     if(event.target.closest('[data-oq-demo]')){
-      for(const [key,value] of Object.entries(SAMPLE)){
-        rates[slidingRateKey(ID,key)]=value;
-        const node=root.querySelector('[data-oq-rate="'+key+'"]');if(node)node.value=value;
+      for(const field of SLIDING_RATE_FIELDS){
+        const key=slidingRateKey(ID,field.key);
+        delete rates[key];
+        const node=root.querySelector('[data-oq-rate="'+field.key+'"]');
+        if(node)node.value=field.key==='delivery'?
+          Math.max(0,Number(state.distance)||0)*90:(field.initial??SAMPLE[field.key]??'');
       }
-      usingSamples=true;refresh();
+      refresh();
     }
   });
   setView('owner');
