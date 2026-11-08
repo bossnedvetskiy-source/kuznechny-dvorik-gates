@@ -606,6 +606,8 @@ const devShellCore = [
   `${BASE}/${SURVEYOR_V2_DIR}/app.js`,
   `${BASE}/${SURVEYOR_V2_DIR}/owner-report.js`,
   `${BASE}/${SURVEYOR_V2_DIR}/owner-sliding.js`,
+  `${BASE}/${SURVEYOR_V2_DIR}/owner-quick.js`,
+  `${BASE}/${SURVEYOR_V2_DIR}/sliding-gates/pricing.js`,
   `${BASE}/${SURVEYOR_V2_DIR}/owner-dashboard.js`,
 `${BASE}/${SURVEYOR_V2_DIR}/3d-calculator.js`,
   `${BASE}/${SURVEYOR_V2_DIR}/3d-layout.js`,
@@ -634,6 +636,8 @@ const devShellCore = [
   `${BASE}/${DEV_TOOLS_FRESH_DIR}/app.js`,
   `${BASE}/${DEV_TOOLS_FRESH_DIR}/owner-report.js`,
   `${BASE}/${DEV_TOOLS_FRESH_DIR}/owner-sliding.js`,
+  `${BASE}/${DEV_TOOLS_FRESH_DIR}/owner-quick.js`,
+  `${BASE}/${DEV_TOOLS_FRESH_DIR}/sliding-gates/pricing.js`,
   `${BASE}/${DEV_TOOLS_FRESH_DIR}/owner-dashboard.js`,
 `${BASE}/${DEV_TOOLS_FRESH_DIR}/3d-calculator.js`,
   `${BASE}/${DEV_TOOLS_FRESH_DIR}/3d-layout.js`,
@@ -653,6 +657,8 @@ const devShellCore = [
   `${BASE}/${DEV_TOOLS_DIR}/app.js`,
   `${BASE}/${DEV_TOOLS_DIR}/owner-report.js`,
   `${BASE}/${DEV_TOOLS_DIR}/owner-sliding.js`,
+  `${BASE}/${DEV_TOOLS_DIR}/owner-quick.js`,
+  `${BASE}/${DEV_TOOLS_DIR}/sliding-gates/pricing.js`,
   `${BASE}/${DEV_TOOLS_DIR}/owner-dashboard.js`,
 `${BASE}/${DEV_TOOLS_DIR}/3d-calculator.js`,
   `${BASE}/${DEV_TOOLS_DIR}/3d-layout.js`,
@@ -813,7 +819,7 @@ for (const required of ['admin-canopy.js','admin-tabs','editor-shell']) {
   if (!navesAdminIndex.includes(required)) throw new Error(`DEV canopy admin missing: ${required}`);
 }
 
-for (const required of ['index.html','styles.css','app.js','owner-report.js','owner-sliding.js','owner-dashboard.js','manifest.webmanifest','sw.js','icon.svg']) {
+for (const required of ['index.html','styles.css','app.js','owner-report.js','owner-sliding.js','owner-quick.js','owner-dashboard.js','manifest.webmanifest','sw.js','icon.svg']) {
   try { await readFile(path.join(OUT, 'surveyor-app', required)); }
   catch { throw new Error(`DEV surveyor app missing: ${required}`); }
 }
