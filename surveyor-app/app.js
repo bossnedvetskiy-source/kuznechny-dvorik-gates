@@ -1818,14 +1818,14 @@ async function openSurveyDetails(id) {
       <div class="v3-survey-meta"><span>${survey.clientPhone ? '☎ ' + escapeHtml(survey.clientPhone) : (survey.address ? 'Телефон не указан' : 'Контакты не заполнены')}</span>${survey.clientName ? `<span>${escapeHtml(survey.clientName)}</span>` : ''}<span class="v3-save-status">${escapeHtml(surveySyncText(survey))}</span></div>
     </section>
     ${currentUser?.role === 'owner' ? `<div class="owner-detail-tabs" role="tablist" aria-label="Раздел заказа">
-        <button type="button" data-owner-detail-tab="finance" class="active" aria-selected="true">📊 Материалы и прибыль</button>
-        <button type="button" data-owner-detail-tab="quote" aria-selected="false">📐 Расчёты клиента</button>
+        <button type="button" data-owner-detail-tab="quote" class="active" aria-selected="true">📐 Клиент / расчёт</button>
+        <button type="button" data-owner-detail-tab="finance" aria-selected="false">📊 Собственник / прибыль</button>
       </div>
-      <div data-owner-pane="finance">
+      <div data-owner-pane="finance" hidden>
         <div class="owner-panel-title">КД Управление · экономика объекта</div>
         ${ownerReportHtml(buildOwnerReport(survey,unifiedEstimate(survey),ownerCostsCache[survey.id]),unifiedEstimate(survey))}
       </div>` : ''}
-    <div data-owner-pane="quote" ${currentUser?.role === 'owner' ? 'hidden' : ''}>
+    <div data-owner-pane="quote">
       ${v3ProductTools(survey)}
       ${calculationsHtml(survey)}
       ${unifiedEstimate(survey).selected.length ? `<section class="v3-preview-bar">
@@ -1921,6 +1921,7 @@ async function openSurveyDetails(id) {
     ownerCostsCache[survey.id]=next;
     if ($('#surveyDetailsDialog').open) $('#surveyDetailsDialog').close();
     await openSurveyDetails(survey.id);
+    $('[data-owner-detail-tab="finance"]', $('#surveyDetailsContent'))?.click();
     showToast(IS_PREVIEW ? 'Тестовые расходы сохранены до закрытия приложения' : 'Внутренние расходы сохранены');
 
   });
