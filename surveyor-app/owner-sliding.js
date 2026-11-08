@@ -26,6 +26,7 @@ export const SLIDING_RATE_FIELDS=Object.freeze([
   {key:'stand',label:'Станина · расход подрядчику, ₽',initial:12000},
   {key:'bolts',label:'Болты и крепёж к станине, ₽'},
   {key:'install',label:'Монтаж · расход подрядчику, ₽',initial:7000},
+  {key:'automation',label:'Автоматика · закупочная стоимость комплекта, ₽'},
   {key:'delivery',label:'Фактическая доставка, ₽'}
 ]);
 const fields=Object.fromEntries(SLIDING_RATE_FIELDS.map(f=>[f.key,f]));
@@ -125,6 +126,7 @@ export function buildSlidingProduction(calc,costs={}){
   expense+=take(get('stand'),c.stand===false?0:1,missing,rows,'stand','Станина от подрядчика');
   expense+=take(get('bolts'),c.bolts===false?0:1,missing,rows,'bolts','Болты');
   expense+=take(get('install'),c.install===false?0:1,missing,rows,'install','Монтаж подрядчика');
+  expense+=take(get('automation'),c.auto===true?1:0,missing,rows,'automation','Автоматика');
   expense+=take(get('delivery'),extraNonnegative(c.distance)>0?1:0,missing,rows,'delivery','Доставка');
   return {valid:true,beam,tail,full,width:w,height:h,frame,wicket,wicketWidth:wicket?ww:0,
     tube60:round2(tube60),tube20:round2(tube20),stocks60,stocks20,area,
