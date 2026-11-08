@@ -16,7 +16,8 @@ test('owner sees separate business home, material economics, editable private de
   await signIn(page,'admin');
   await expect(page.locator('#ownerScreen')).toBeVisible();
   await expect(page.locator('#ownerNavBtn')).toBeVisible();
-  await expect(page.locator('#ownerDashboardRoot')).toContainText('КД Управление');
+  await expect(page.locator('#ownerDashboardRoot')).toContainText('Что будем делать?');
+  await expect(page.locator('[data-owner-quick]')).toBeVisible();
   await page.locator('[data-screen="surveys"]').click();
   await page.locator('#newSurveyBtn').click();
   await page.locator('#surveyAddress').fill('Мелеуз, тест собственника');
