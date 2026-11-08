@@ -23,8 +23,8 @@ test('owner sees separate business home, material economics, editable private de
   await page.locator('#surveyAddress').fill('Мелеуз, тест собственника');
   await page.locator('#saveSurveyBtn').click();
   await expect(page.locator('#surveyDetailsDialog')).toBeVisible();
-  await expect(page.locator('[data-owner-pane="finance"]')).toBeVisible();
-  await expect(page.locator('[data-owner-pane="quote"]')).toBeHidden();
+  await expect(page.locator('[data-owner-pane="finance"]')).toBeHidden();
+  await expect(page.locator('[data-owner-pane="quote"]')).toBeVisible();
   await page.evaluate(async()=>{
     const db=await new Promise((resolve,reject)=>{const r=indexedDB.open('kd-surveyor-stage1');r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)});
     await new Promise((resolve,reject)=>{
@@ -46,6 +46,7 @@ test('owner sees separate business home, material economics, editable private de
   });
   await page.locator('#closeDetailsBtn').click();
   await page.locator('.survey-card').first().click();
+  await page.locator('[data-owner-detail-tab="finance"]').click();
   await expect(page.locator('[data-owner-pane="finance"]')).toContainText('Перед / купить');
   await expect(page.locator('[data-owner-pane="finance"]')).toContainText('Зад / купить');
   await expect(page.locator('[data-owner-pane="finance"]')).toContainText('40×20×2');
