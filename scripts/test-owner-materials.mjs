@@ -4,6 +4,7 @@ import {calculateFence} from '../evroshtaketnik/engine.js';
 import {buildOwnerReport, ownerReportHtml} from '../surveyor-app/owner-report.js';
 import {buildOwnerDashboard, ownerDashboardHtml} from '../surveyor-app/owner-dashboard.js';
 import {buildSlidingProduction, SLIDING_RATE_FIELDS, slidingRateKey} from '../surveyor-app/owner-sliding.js';
+import {calculateSlidingQuote} from '../surveyor-app/sliding-gates/pricing.js';
 
 const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 const source=read('surveyor-app/app.js');
@@ -106,6 +107,27 @@ assert.equal(buildSlidingProduction(withoutWicket,{}).wicket20,0);
 assert.equal(buildSlidingProduction({...sliding,payload:{configuration:{width:99,height:2,frame:'prof',tail:'square'}}},{}).valid,false);
 const swModule=read('surveyor-app/sw.js');
 assert.match(swModule,/owner-sliding\.js/);
+
+
+const quickCfg={...sliding.payload.configuration};
+const quote4=calculateSlidingQuote(quickCfg);
+assert.ok(quote4.total>0);
+assert.equal(quote4.rows.find(r=>r[0]==='Встроенная калитка (по размерам)')[1],13000,
+  'standard 1m built-in wicket at 1.8m high must cost 13 000');
+const quote5=calculateSlidingQuote({...quickCfg,width:5});
+assert.notEqual(quote4.total,quote5.total);
+assert.ok(buildSlidingProduction({...sliding,payload:{configuration:{...quickCfg,width:5}}},privateRates).calculatedCost!==
+  priced.calculatedCost, 'owner production expense changes with size');
+const ownerQuickSource=read('surveyor-app/owner-quick.js');
+assert.match(ownerQuickSource,/calculateSlidingQuote\(state\)/);
+assert.match(ownerQuickSource,/buildSlidingProduction/);
+assert.match(ownerQuickSource,/sessionStorage/);
+assert.ok(!ownerQuickSource.includes('idbPut('),'fast quote must not create a survey');
+assert.match(source,/if \(name === 'ownerQuick' && currentUser\?\.role==='owner'\)/);
+assert.match(html,/id="ownerQuickScreen"/);
+assert.match(swModule,/owner-quick\.js/);
+assert.match(swModule,/sliding-gates\/pricing\.js/);
+assert.match(preview,/owner-quick\.js/);
 
 for(const [haystack,needle] of [
   [source,"currentUser?.role === 'owner' &&"],
