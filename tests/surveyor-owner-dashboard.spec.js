@@ -115,3 +115,34 @@ test('sliding gates: owner sees automatic BOM, can set wage rates, surveyor cann
   await expect(page.locator('[data-owner-pane="finance"]')).toBeHidden();
   await expect(page.locator('[data-owner-pane="quote"]')).not.toContainText('Зарплата маляра');
 });
+
+test('owner quick sliding estimate: customer/owner modes, live profit and zero saved orders',async ({page})=>{
+  test.setTimeout(75000);
+  await signIn(page,'admin');
+  await expect(page.locator('#ownerScreen')).toBeVisible();
+  await expect(page.locator('[data-owner-quick]')).toBeVisible();
+  await page.locator('[data-owner-quick]').click();
+  await expect(page.locator('#ownerQuickScreen')).toBeVisible();
+  await expect(page.locator('.ownerq-price strong')).toContainText('₽');
+  await expect(page.locator('[data-oq-owner]')).toBeVisible();
+  await page.locator('.ownerq-rate-editor summary').click();
+  await page.locator('[data-oq-demo]').click();
+  const cost=page.locator('.ownerq-finance-grid strong').nth(1);
+  const profit=page.locator('.ownerq-finance-grid strong').nth(2);
+  await expect(cost).toContainText('₽');
+  await expect(profit).toContainText('₽');
+  const prior=await profit.innerText();
+  await page.locator('[data-oq-field="width"]').fill('5');
+  await expect(profit).not.toHaveText(prior);
+  await page.locator('[data-oq-field="builtInWicket"]').check();
+  await expect(page.locator('.ownerq-sketch svg .wicket')).toHaveCount(1);
+  await page.locator('[data-oq-mode="client"]').click();
+  await expect(page.locator('[data-oq-client]')).toBeVisible();
+  await expect(page.locator('[data-oq-owner]')).toBeHidden();
+  await expect(page.locator('[data-oq-client]')).not.toContainText(/себестоимость|зарплата|прибыль/i);
+  await page.locator('[data-oq-mode="owner"]').click();
+  await expect(page.locator('[data-oq-owner]')).toBeVisible();
+  await page.locator('[data-oq-back]').click();
+  await expect(page.locator('#ownerScreen')).toBeVisible();
+  await expect(page.locator('[data-owner-open]')).toHaveCount(0);
+});
