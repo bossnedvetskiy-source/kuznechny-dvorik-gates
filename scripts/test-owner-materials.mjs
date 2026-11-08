@@ -5,6 +5,7 @@ import {buildOwnerReport, ownerReportHtml} from '../surveyor-app/owner-report.js
 import {buildOwnerDashboard, ownerDashboardHtml} from '../surveyor-app/owner-dashboard.js';
 import {buildSlidingProduction, SLIDING_RATE_FIELDS, slidingRateKey} from '../surveyor-app/owner-sliding.js';
 import {calculateSlidingQuote} from '../surveyor-app/sliding-gates/pricing.js';
+import {calculateOwnerQuick} from '../surveyor-app/owner-quick.js';
 
 const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 const source=read('surveyor-app/app.js');
@@ -118,8 +119,26 @@ const quote5=calculateSlidingQuote({...quickCfg,width:5});
 assert.notEqual(quote4.total,quote5.total);
 assert.ok(buildSlidingProduction({...sliding,payload:{configuration:{...quickCfg,width:5}}},privateRates).calculatedCost!==
   priced.calculatedCost, 'owner production expense changes with size');
+
+const immediate=calculateOwnerQuick(quickCfg);
+assert.ok(Number.isFinite(immediate.profit),'profit must appear on the first quick calculation');
+assert.ok(immediate.production.missing.length===0,'starter benchmarks fill all required production rates');
+assert.equal(immediate.quote.total,quote4.total,'customer and owner use exactly the same retail calculation');
+assert.ok(immediate.unverified.length>0,'default costs must never be presented as confirmed actuals');
+const withAutomation=calculateOwnerQuick({...quickCfg,builtInWicket:false,auto:true});
+assert.ok(Number.isFinite(withAutomation.profit),'automation option must have a provisional procurement rate');
+const withDelivery=calculateOwnerQuick({...quickCfg,distance:25});
+assert.ok(Number.isFinite(withDelivery.profit),'distance option must not blank the profit');
+assert.ok(withDelivery.production.rows.some(x=>x.key==='delivery'&&x.cost===2250),
+ 'delivery benchmark follows distance, not misleading free delivery');
+const updated=calculateOwnerQuick(quickCfg,{[slidingRateKey('owner_quick','weldGate')]:8000});
+assert.equal(updated.profit,immediate.profit-3000,
+ 'confirmed owner wages replace benchmark rate without changing retail prices');
+assert.equal(updated.quote.total,immediate.quote.total);
+assert.equal(updated.unverified.length,immediate.unverified.length-1);
+
 const ownerQuickSource=read('surveyor-app/owner-quick.js');
-assert.match(ownerQuickSource,/calculateSlidingQuote\(state\)/);
+assert.match(ownerQuickSource,/calculateSlidingQuote\(config\)/);
 assert.match(ownerQuickSource,/buildSlidingProduction/);
 assert.match(ownerQuickSource,/sessionStorage/);
 assert.ok(!ownerQuickSource.includes('idbPut('),'fast quote must not create a survey');
