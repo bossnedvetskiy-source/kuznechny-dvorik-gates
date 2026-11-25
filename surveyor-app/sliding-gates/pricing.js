@@ -1,6 +1,38 @@
 // Single customer-price calculation used by surveyor and owner quick preview.
 // Customer-facing retail tariffs only. Never put private costs or employee wages here.
 const round100=v=>Math.ceil((v-1e-9)/100)*100;
+// Shared workshop geometry for customer price, owner cost and diagram.
+// Outer 60×40 frame, inner 20×20 perimeter, verticals <=1 m and middle rail.
+export function getSlidingFrameMaterials(state,wicket=null){
+  const w=Number(state.width),h=Number(state.height),hf=h-.06,beam=w>=4.5?7:6;
+  const tail=Math.min(w/2,beam-w),full=w+tail,cv=Math.max(0,hf-.08);
+  const centerPost=state.centerPost==null?state.frame==='jalousie':state.centerPost===true;
+  const station=Math.ceil(w),clearLeft=.04,clearRight=w-.04,innerSegments=[],mid=w/2;
+  let tube60=full+w+cv*2;
+  if(state.tail==='square')tube60+=tail+cv+2*Math.hypot(tail,hf);
+  else {const top=Math.min(.3,tail);tube60+=top+Math.hypot(tail-top,hf)+Math.hypot((tail+top)/2,hf/2);}
+  if(centerPost)tube60+=cv;
+  let removedPosts=0;
+  const blocked=wicket?.valid?[[wicket.left,wicket.left+wicket.width]]:[];
+  if(centerPost)blocked.push([mid-.03,mid+.03]);
+  if(state.frame!=='jalousie'){
+    const panels=centerPost?[[clearLeft,mid-.04],[mid+.04,clearRight]]:[[clearLeft,clearRight]];
+    for(const [a,b] of panels){
+      if(b<=a)continue;
+      const bays=centerPost?Math.ceil(w/2):station;
+      for(let i=0;i<=bays;i++){
+        const x=a+(b-a)*i/bays;
+        if(wicket?.valid&&x>=wicket.left-.02&&x<=wicket.left+wicket.width+.02){removedPosts++;continue;}
+        innerSegments.push({x1:x,y1:.04,x2:x,y2:hf-.04});
+      }
+    }
+    let spans=[[clearLeft,clearRight]];
+    for(const [a,b] of blocked)spans=spans.flatMap(([l,r])=>b<=l||a>=r?[[l,r]]:[[l,Math.max(l,a)],[Math.min(r,b),r]].filter(([x,y])=>y>x));
+    for(const [l,r] of spans)for(const y of [.04,hf/2,hf-.04])innerSegments.push({x1:l,y1:y,x2:r,y2:y});
+  }
+  const tube20=innerSegments.reduce((sum,s)=>sum+Math.hypot(s.x2-s.x1,s.y2-s.y1),0);
+  return {beam,tail,full,hf,cv,station,post:state.frame==='jalousie'?(centerPost?1:0):station-1,centerPost,tube60,tube20,innerSegments,removedPosts};
+}
 export function calculateSlidingQuote(state){
 function wicketPlan(w){
  if(!state.builtInWicket)return null;
@@ -39,16 +71,13 @@ function calculate(){
  if(!(h>=.5&&h<=3.5))errors.push("Высота: от 0,5 до 3,5 м.");
  const wicket=wicketPlan(w);
  if(wicket&&!wicket.valid)errors.push("Калитка не помещается: оставьте минимум 8 см от каждого края полотна и проверьте ширину/отступ.");
+ if(wicket?.valid&&state.centerPost===true&&w/2>=wicket.left-.03&&w/2<=wicket.left+wicket.width+.03)errors.push("Центральная стойка пересекает калитку: отключите стойку или сместите калитку.");
  if(wicket&&state.frame==="jalousie")errors.push("Каркас под жалюзи со встроенной калиткой пока требует согласования.");
  if(wicket&&state.auto)errors.push("Для автоматики необходим датчик закрытия калитки и блокировка движения. Комплектация требует согласования.");
  if(errors.length)return {errors,total:null,geometry:null,wicket};
 
- const hf=h-.06,beam=w>=4.5?7:6,tail=Math.min(w/2,beam-w),full=w+tail,cv=Math.max(0,hf-.08),station=state.frame==="jalousie"?2:Math.ceil(w),post=station-1;
- let a=full+w+cv*2,b=0;
- if(state.tail==="square"){a+=tail+cv+2*Math.hypot(tail,hf);}
- else{const top=Math.min(.3,tail),dx=tail-top;a+=top+Math.hypot(dx,hf)+Math.hypot((tail+top)/2,hf/2);}
- if(state.frame==="jalousie")a+=cv*post;else b+=cv*post;
- if(state.frame==="horizontal")b+=cv*2+Math.max(0,w-.08)*2;
+ const geometry=getSlidingFrameMaterials(state,wicket);
+ const {hf,beam,tail,full,post,station,tube60:a,tube20:b}=geometry;
  // All values below are CUSTOMER RETAIL TARIFFS; no supplier costs, employee wages,
  // margin coefficients, profit, or internal accounting data are shipped to surveyors.
  const frame=round100(Math.ceil(a/6)*2560.2+Math.ceil(b/6)*816+7650*Math.max(1,w/4)+510);
@@ -78,7 +107,7 @@ function calculate(){
  const wicketPrice=wicketQuote?round100(wicketQuote.total+fixedSupplement):0;
  const rows=[["Встроенная калитка (по размерам)",wicketPrice],["Каркас",frame],["Покраска",paint],["Заполнение",fill],["Балка и ролики",rail],["Станина",stand],["Болты",bolts],["Монтаж",install],["Автоматика",automatic],["Доставка",delivery],["Скидка",-discount]];
  const total=errors.length?null:Math.max(0,Math.round(rows.reduce((s,r)=>s+r[1],0)));
- return {errors,total,rows,geometry:{beam,tail,full,hf,post,station},wicket,wicketQuote,fillDescription};
+ return {errors,total,rows,geometry,wicket,wicketQuote,fillDescription};
 }
 
 return calculate();
