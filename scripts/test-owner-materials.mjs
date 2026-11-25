@@ -72,6 +72,25 @@ const sliding={
 };
 const plan=buildSlidingProduction(sliding,{});
 assert.equal(plan.valid,true);
+const baseFrame={...sliding.payload.configuration,builtInWicket:false};
+const baseProduction=c=>buildSlidingProduction({id:'inner_frame',payload:{configuration:c}});
+const simple=baseProduction(baseFrame);
+assert.equal(simple.tube20,20.06,'4×1.8: full inner perimeter, three middle verticals, middle horizontal');
+assert.equal(simple.stocks20,4);
+assert.equal(simple.area,6.06);
+const geometry=calculateSlidingQuote(baseFrame).geometry;
+assert.equal(geometry.innerSegments.filter(x=>x.x1===x.x2).length,5);
+assert.equal(geometry.innerSegments.filter(x=>x.y1===x.y2).length,3);
+assert.equal(baseProduction({...baseFrame,height:2}).tube20,21.06);
+assert.equal(baseProduction({...baseFrame,fill:false}).tube20,simple.tube20);
+assert.equal(baseProduction({...baseFrame,frame:'vertical'}).tube20,simple.tube20);
+assert.equal(baseProduction({...baseFrame,frame:'horizontal'}).tube20,simple.tube20);
+assert.equal(baseProduction({...baseFrame,frame:'jalousie'}).tube20,0);
+assert.ok(baseProduction({...baseFrame,centerPost:true}).tube20>simple.tube20);
+assert.ok(baseProduction({...baseFrame,centerPost:true}).tube60>simple.tube60);
+assert.ok(calculateSlidingQuote({...sliding.payload.configuration,centerPost:true}).errors.length);
+assert.ok(baseProduction({...baseFrame,tail:'triangle'}).tube20===simple.tube20);
+
 assert.equal(plan.stocks60,Math.ceil(plan.tube60/6));
 assert.equal(plan.stocks20,Math.ceil(plan.tube20/6));
 assert.equal(plan.wicket60>0,true);
