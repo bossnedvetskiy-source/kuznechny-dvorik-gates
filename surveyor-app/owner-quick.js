@@ -8,7 +8,7 @@ const STATE_KEY='kd-owner-quick-calculation-v1';
 const RATE_KEY='kd-owner-quick-rates-v2';
 const ID='owner_quick';
 const BASE={
-  width:4,height:2,frame:'prof',tail:'square',picket:'single',
+  width:4,height:2,frame:'prof',tail:'square',picket:'single',centerPost:null,
   fill:true,paint:true,auto:false,install:true,stand:true,bolts:true,
   distance:0,discount:0,builtInWicket:false,builtInWidth:1,
   builtInMode:'center',builtInOffset:0
@@ -35,13 +35,9 @@ function sketch(c,p){
   let svg=bar(left,bottom,right,bottom)+bar(head,top,right,top)+bar(right,top,right,bottom)+bar(head,top,head,bottom);
   if(c.tail==='square')svg+=bar(left,top,left,bottom)+bar(left,top,head,bottom)+bar(left,bottom,head,top)+bar(left,top,head,top);
   else svg+=bar(left,bottom,head,top)+bar(left,bottom,(left+head)/2,top+50);
-  const station=c.frame==='jalousie'?2:Math.ceil(Number(c.width));
-  for(let i=1;i<station;i++){
-    const dx=head+i*Number(c.width)*scale/station;
-    const l=p.wicket?.left,wr=p.wicket?.width;
-    if(p.wicket && Number.isFinite(l)&&dx>head+l*scale-2&&dx<head+(l+wr)*scale+2)continue;
-    svg+=bar(dx,top+6,dx,bottom-6,'thin');
-  }
+  const sy=y=>bottom-y/g.hf*(bottom-top);
+  if(g.centerPost)svg+=bar(head+Number(c.width)*scale/2,top,head+Number(c.width)*scale/2,bottom);
+  for(const s of g.innerSegments)svg+=bar(head+s.x1*scale,sy(s.y1),head+s.x2*scale,sy(s.y2),'thin');
   if(p.wicket?.valid){
     const wx=head+p.wicket.left*scale,wx2=wx+p.wicket.width*scale;
     svg+='<rect class="wicket" x="'+wx+'" y="'+(top+6)+'" width="'+(wx2-wx)+'" height="'+(bottom-top-12)+'"/>';
@@ -101,7 +97,7 @@ export function mountOwnerQuickCalculator(root,{onBack}={}){
       '<div class="ownerq-checks">'+
         check('Заполнение','fill')+check('Покраска','paint')+
         check('Станина','stand')+check('Монтаж','install')+
-        check('Болты','bolts')+check('Автоматика','auto')+
+        check('Болты','bolts')+check('Автоматика','auto')+check('Центральная стойка 60×40','centerPost')+
       '</div>',
     '</section>',
     '<section class="ownerq-panel"><h3>2. Дополнительные параметры</h3>',
@@ -142,6 +138,7 @@ export function mountOwnerQuickCalculator(root,{onBack}={}){
     tryWrite(STATE_KEY,state);
     tryWrite(RATE_KEY,rates);
     root.querySelector('[data-oq-wicket]').hidden=!state.builtInWicket;
+    root.querySelector('[data-oq-field="centerPost"]').checked=state.centerPost==null?state.frame==='jalousie':state.centerPost;
     root.querySelector('[data-oq-field="builtInOffset"]').closest('.ownerq-field').hidden=state.builtInMode==='center';
     root.querySelector('[data-oq-field="picket"]').closest('.ownerq-field').hidden=state.frame!=='vertical';
     const estimate=calculateOwnerQuick(state,rates);
@@ -171,7 +168,11 @@ export function mountOwnerQuickCalculator(root,{onBack}={}){
         pill('Профнастил',p.sheets+' листов'),
         pill('Штакетник',p.pickets+' + '+p.sparePickets+' запас')
       ].join('')+'</div>'+
-      p.rows.map(x=>row(x.label+' · '+qty(x.qty),x.cost===null?'Нет тарифа':money(x.cost))).join('')+
+      (q.geometry?'<details><summary>Раскладка внутренней рамки 20×20</summary>'+['Вертикальные элементы','Горизонтальные элементы'].map((label,i)=>{
+          const segments=q.geometry.innerSegments.filter(s=>i===0?s.x1===s.x2:s.y1===s.y2);
+          return row(label+' · '+segments.length+' шт.',qty(segments.reduce((sum,s)=>sum+Math.hypot(s.x2-s.x1,s.y2-s.y1),0))+' м');
+        }).join('')+(p.wicket?row('Дополнительные элементы калитки',qty(p.wicket20)+' м'):'')+'</details>':'')+
+       p.rows.map(x=>row(x.label+' · '+qty(x.qty),x.cost===null?'Нет тарифа':money(x.cost))).join('')+
       '<p class="ownerq-note">Металл в шестиметровых хлыстах округлён по видам профиля, без оптимизированной карты раскроя. Прибыль предварительная, до налогов и непредвиденных затрат.</p>':'Проверь исходные размеры.')+
       '</section>';
   }
