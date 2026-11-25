@@ -1,6 +1,7 @@
 // Internal production planning for sliding-gate quotes.
 // Geometry comes only from the customer-safe saved configuration.
 // Unit rates are editable owner-only expenses; never transfer them in quote payloads.
+import {getSlidingFrameMaterials} from './sliding-gates/pricing.js';
 const real=(x)=>Number.isFinite(Number(x))?Number(x):NaN;
 const round2=x=>Math.round(x*100)/100;
 const extraNonnegative=x=>Math.max(0,real(x)||0);
@@ -59,24 +60,13 @@ export function buildSlidingProduction(calc,costs={}){
   const left=mode==='left'?offset:mode==='right'?w-ww-offset:(w-ww)/2;
   if(wicket&&(!(ww>=.7&&ww<=1.2)||!(left>=.08&&w-ww-left>=.08)||frame==='jalousie'||c.auto))
     return {valid:false,reason:'Проверьте размеры, заполнение или автоматику встроенной калитки.'};
-  const beam=w>=4.5?7:6,tail=Math.min(w/2,beam-w),full=w+tail,hf=h-.06,cv=Math.max(0,hf-.08);
-  const stations=frame==='jalousie'?2:Math.ceil(w),postCount=stations-1;
-  let tube60=full+w+cv*2,tube20=0;
-  if(tailShape==='square')tube60+=tail+cv+2*Math.hypot(tail,hf);
-  else {
-    const top=Math.min(.3,tail),dx=tail-top;
-    tube60+=top+Math.hypot(dx,hf)+Math.hypot((tail+top)/2,hf/2);
-  }
-  if(frame==='jalousie')tube60+=cv*postCount;
-  else tube20+=cv*postCount;
-  if(frame==='horizontal')tube20+=cv*2+Math.max(0,w-.08)*2;
-  let removedPosts=0,wicket60=0,wicket20=0,wicketInner20=0;
+  if(wicket&&c.centerPost===true&&w/2>=left-.03&&w/2<=left+ww+.03)
+    return {valid:false,reason:'Центральная стойка пересекает калитку.'};
+  const geometry=getSlidingFrameMaterials(c,wicket?{valid:true,left,width:ww}:null);
+  const {beam,tail,full,hf,removedPosts,centerPost}=geometry;
+  let {tube60,tube20}=geometry;
+  let wicket60=0,wicket20=0,wicketInner20=0;
   if(wicket){
-    for(let i=1;i<stations;i++){
-      const x=w*i/stations;
-      if(x>left-.02&&x<left+ww+.02)removedPosts++;
-    }
-    tube20=Math.max(0,tube20-removedPosts*cv);
     const clearHeight=Math.max(0,hf-.12);
     wicket60=2*(clearHeight+ww)+2*clearHeight;
     wicketInner20=frame==='horizontal'?
@@ -128,7 +118,7 @@ export function buildSlidingProduction(calc,costs={}){
   expense+=take(get('install'),c.install===false?0:1,missing,rows,'install','Монтаж подрядчика');
   expense+=take(get('automation'),c.auto===true?1:0,missing,rows,'automation','Автоматика');
   expense+=take(get('delivery'),extraNonnegative(c.distance)>0?1:0,missing,rows,'delivery','Доставка');
-  return {valid:true,beam,tail,full,width:w,height:h,frame,wicket,wicketWidth:wicket?ww:0,
+  return {valid:true,beam,tail,full,width:w,height:h,frame,wicket,wicketWidth:wicket?ww:0,centerPost,
     tube60:round2(tube60),tube20:round2(tube20),stocks60,stocks20,area,
     wicket60:round2(wicket60),wicket20:round2(wicket20),wicketInner20:round2(wicketInner20),
     removedPosts,sheets,materialArea,pickets,sparePickets,picketLength:round2(picketLength),screws,
