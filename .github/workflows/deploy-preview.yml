@@ -4,9 +4,16 @@ on:
   push:
     branches: [dev]
   workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Full regression or automatic targeted DEV checks'
+        type: choice
+        options: [full, auto]
+        default: full
 
 permissions:
   contents: read
+  actions: read
   pages: write
   id-token: write
 
@@ -18,13 +25,51 @@ concurrency:
 
 jobs:
   build:
+    if: github.ref == 'refs/heads/dev'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - name: Checkout dev
         uses: actions/checkout@v6
         with:
-          ref: dev
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+
+      - name: Select DEV regression scope
+        id: scope
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REQUESTED_MODE: ${{ inputs.mode || 'auto' }}
+        run: |
+          set -euo pipefail
+          mode=full
+          if [[ "$REQUESTED_MODE" == auto && "$GITHUB_REF" == refs/heads/dev ]]; then
+            # Compare with the last successful deployment, not github.event.before.
+            # Failed or cancelled builds must not hide untested changes.
+            base=$(gh api --method GET "repos/$GITHUB_REPOSITORY/actions/workflows/deploy-preview.yml/runs" -f branch=dev -f status=success -F per_page=1 --jq '.workflow_runs[0].head_sha // empty' 2>/dev/null || true)
+            if [[ "$base" =~ ^[0-9a-f]{40}$ ]] && { git cat-file -e "$base^{commit}" 2>/dev/null || git fetch --no-tags --depth=1 origin "$base"; }; then
+              if git diff --no-renames --name-only -z "$base" "$GITHUB_SHA" > /tmp/kd-dev-changed; then
+                mode=targeted
+                sliding=false; fence=false; canopy=false
+                while IFS= read -r -d '' file; do
+                  case "$file" in
+                    surveyor-app/sliding-gates/pricing.js|surveyor-app/sliding-gates/index.html|surveyor-app/owner-sliding.js|surveyor-app/owner-quick.js|tests/surveyor-sliding-gates.spec.js|scripts/test-owner-materials.mjs) sliding=true ;;
+                    evroshtaketnik/engine.js|evroshtaketnik/evroshtaketnik.js|evroshtaketnik/evroshtaketnik.css|evroshtaketnik/index.html|tests/evroshtaketnik-mobile.spec.js|scripts/test-picket-calculator.mjs) fence=true ;;
+                    naves/geometry.js|naves/pricing.js|naves/canopy-3d.js|naves/canopy-three.js|naves/drawing.js|naves/export.js|naves/naves.js|naves/naves.css|naves/index.html|tests/naves-mobile.spec.js|scripts/test-canopy-calculator.mjs) canopy=true ;;
+                    *) mode=full ;;
+                  esac
+                done < /tmp/kd-dev-changed
+                if [[ "$sliding$fence$canopy" == falsefalsefalse ]]; then mode=full; fi
+              fi
+            fi
+          fi
+          echo "mode=$mode" >> "$GITHUB_OUTPUT"
+          echo "sliding=${sliding:-false}" >> "$GITHUB_OUTPUT"
+          echo "fence=${fence:-false}" >> "$GITHUB_OUTPUT"
+          echo "canopy=${canopy:-false}" >> "$GITHUB_OUTPUT"
+          echo "### DEV checks: $mode" >> "$GITHUB_STEP_SUMMARY"
+          echo "Sliding: ${sliding:-false}; fence: ${fence:-false}; canopy: ${canopy:-false}" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Set up Node.js
         uses: actions/setup-node@v6
@@ -124,17 +169,27 @@ jobs:
           console.log('Fence card WebP files are valid');
           NODE
 
+      - name: Cache Playwright Chromium
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('package-lock.json') }}
+
       - name: Install Chromium for mobile UX test
         run: npx playwright install --with-deps chromium
 
-      - name: Test euro picket mobile UX
-        run: npx playwright test tests/evroshtaketnik-mobile.spec.js
-
-      - name: Test canopy calculator mobile UX
-        run: npx playwright test tests/naves-mobile.spec.js
-
-      - name: Test surveyor app mobile/offline
-        run: npx playwright test tests/surveyor-mobile.spec.js
+      - name: Test base mobile UX
+        shell: bash
+        env:
+          MODE: ${{ steps.scope.outputs.mode }}
+          FENCE: ${{ steps.scope.outputs.fence }}
+          CANOPY: ${{ steps.scope.outputs.canopy }}
+        run: |
+          set -euo pipefail
+          suites=(tests/surveyor-mobile.spec.js)
+          if [[ "$MODE" == full || "$FENCE" == true ]]; then suites+=(tests/evroshtaketnik-mobile.spec.js); fi
+          if [[ "$MODE" == full || "$CANOPY" == true ]]; then suites+=(tests/naves-mobile.spec.js); fi
+          npx playwright test "${suites[@]}" --workers=2
 
       - name: Snapshot current production data
         continue-on-error: true
@@ -156,36 +211,31 @@ jobs:
           DEV_SURVEYOR_API_URL: ${{ vars.DEV_SURVEYOR_API_URL }}
         run: node scripts/build-dev-preview.mjs
 
-      - name: Test standalone 3D calculator in surveyor DEV
-        run: npx playwright test tests/surveyor-3d.spec.js
-
-      - name: Test surveyor test PWA installability
-        run: npx playwright test tests/surveyor-test-pwa.spec.js
-
-      - name: Test clean surveyor V2
-        run: npx playwright test tests/surveyor-v2.spec.js
-
-      - name: Test DEV calculators PWA install start
-        run: npx playwright test tests/dev-pwa.spec.js
-
-      - name: Test persistent surveyor sign-in and logout
-        run: npx playwright test tests/surveyor-persistent-session.spec.js --workers=1
-
-      - name: Test separate owner management and protected economics
-        run: npx playwright test tests/surveyor-owner-dashboard.spec.js --workers=1
-
-      # Keep the DEV preview deployable when the live Timeweb catalog cannot
-      # be reached. The quote-transfer integration is still run and reported,
-      # but does not block unrelated, fully-tested 3D UI changes.
-      - name: Test surveyor DEV calculator bridge
-        run: npx playwright test tests/surveyor-dev-calculator-bridge.spec.js --grep-invert 'gate calculator result returns into the same survey card'
+      # Keep role isolation, offline installation and changed calculator
+      # integration mandatory. Playwright uses isolated browser contexts.
+      - name: Test protected DEV app and changed calculators
+        shell: bash
+        env:
+          MODE: ${{ steps.scope.outputs.mode }}
+          SLIDING: ${{ steps.scope.outputs.sliding }}
+          FENCE: ${{ steps.scope.outputs.fence }}
+          CANOPY: ${{ steps.scope.outputs.canopy }}
+        run: |
+          set -euo pipefail
+          suites=(tests/dev-pwa.spec.js tests/surveyor-owner-dashboard.spec.js)
+          if [[ "$MODE" == full ]]; then
+            suites+=(tests/surveyor-3d.spec.js tests/surveyor-test-pwa.spec.js tests/surveyor-v2.spec.js tests/surveyor-persistent-session.spec.js)
+          fi
+          if [[ "$MODE" == full || "$SLIDING" == true ]]; then suites+=(tests/surveyor-sliding-gates.spec.js); fi
+          npx playwright test "${suites[@]}" --workers=2
+          if [[ "$MODE" == full || "$FENCE" == true || "$CANOPY" == true ]]; then
+            npx playwright test tests/surveyor-dev-calculator-bridge.spec.js --grep-invert 'gate calculator result returns into the same survey card'
+          fi
 
       - name: Diagnose gate quote transfer separately
+        if: steps.scope.outputs.mode == 'full'
         continue-on-error: true
         run: npx playwright test tests/surveyor-dev-calculator-bridge.spec.js --grep 'gate calculator result returns into the same survey card'
-
-      - name: Test sliding gates PWA calculation and survey integration
-        run: npx playwright test tests/surveyor-sliding-gates.spec.js --workers=1
 
       - name: Verify dev mirrors production frontend
         shell: bash
@@ -237,6 +287,7 @@ jobs:
           path: _site
 
   deploy:
+    if: github.ref == 'refs/heads/dev'
     runs-on: ubuntu-24.04
     needs: build
     steps:
