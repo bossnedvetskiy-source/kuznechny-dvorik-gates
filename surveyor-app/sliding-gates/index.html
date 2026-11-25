@@ -63,7 +63,7 @@
 <section class="block"><h2 class="heading">2. Размеры и конструкция</h2><div class="dims"><label class="field"><span>Ширина проёма, м</span><input id="width" type="number" min=".5" max="5" step=".01" inputmode="decimal"></label><label class="field"><span>Высота с балкой, м</span><input id="height" type="number" min=".5" max="3.5" step=".01" inputmode="decimal"></label></div><p class="sub">Высота включает направляющую балку 60 мм.</p><div style="font-size:12px;font-weight:800;margin:12px 0 7px">Форма хвостовика</div><div class="chips"><button class="chip active" data-tail="square">Квадратный</button><button class="chip" data-tail="triangle">Треугольный</button></div><div class="toggles">
 <label class="toggle" id="fillToggle">Заполнение <input type="checkbox" id="fill"></label><label class="toggle">Покраска <input type="checkbox" id="paint"></label>
 <label class="toggle">Автоматика <input type="checkbox" id="auto"></label><label class="toggle">Монтаж <input type="checkbox" id="install"></label>
-<label class="toggle">Станина <input type="checkbox" id="stand"></label><label class="toggle">Болты <input type="checkbox" id="bolts"></label>
+<label class="toggle">Станина <input type="checkbox" id="stand"></label><label class="toggle">Болты <input type="checkbox" id="bolts"></label><label class="toggle">Центральная стойка 60×40 <input type="checkbox" id="centerPost"></label>
 </div>
 <div class="block" style="margin:12px 0;background:#faf8f2">
 <label class="toggle">Встроенная калитка <input type="checkbox" id="builtInWicket"></label>
@@ -85,8 +85,8 @@ import {calculateSlidingQuote} from './pricing.js';
 (function(){
 "use strict";
 const $=id=>document.getElementById(id), money=v=>Number.isFinite(v)?new Intl.NumberFormat("ru-RU").format(Math.round(v))+" ₽":"Цена не готова", round100=v=>Math.ceil((v-1e-9)/100)*100;
-const def={width:4.5,height:2,frame:"prof",tail:"square",fill:true,paint:true,auto:false,install:true,stand:true,bolts:true,picket:"single",distance:0,discount:0,builtInWicket:false,builtInWidth:1,builtInMode:"center",builtInOffset:0};
-const keys=["width","height","frame","tail","fill","paint","auto","install","stand","bolts","picket","distance","discount","builtInWicket","builtInWidth","builtInMode" ,"builtInOffset"];
+const def={width:4.5,height:2,frame:"prof",tail:"square",centerPost:null,fill:true,paint:true,auto:false,install:true,stand:true,bolts:true,picket:"single",distance:0,discount:0,builtInWicket:false,builtInWidth:1,builtInMode:"center",builtInOffset:0};
+const keys=["width","height","frame","tail","centerPost","fill","paint","auto","install","stand","bolts","picket","distance","discount","builtInWicket","builtInWidth","builtInMode" ,"builtInOffset"];
 const qp=new URLSearchParams(location.search),surveyId=qp.get("survey")||"",editId=qp.get("edit")||"";
 const requested=qp.get("returnTo")||"",returnTo=requested.startsWith("/")&&!requested.startsWith("//")?requested:"../";
 $("back").href=returnTo;
@@ -107,10 +107,9 @@ function lineSvg(q){
  if(state.tail==="square")s+=p(x,yt,m,yt)+p(x,yt,x,yb)+p(x,yt,m,yb,"brace")+p(x,yb,m,yt,"brace");
  else{const upper=m-Math.min(.3,g.tail)*k;s+=p(upper,yt,m,yt)+p(x,yb,upper,yt,"brace")+p(m,yb,(x+upper)/2,(yt+yb)/2,"brace");}
  const wk=q.wicket;
- for(let i=1;i<g.station;i++){const px=m+(end-m)*i/g.station;
- if(wk&&px>m+wk.left*k-2&&px<m+(wk.left+wk.width)*k+2)continue;
- s+=p(px,yt+3,px,yb-3,state.frame==="jalousie"?"pipe":"inner");}
- if(state.frame==="horizontal")s+='<rect x="'+(m+5).toFixed(1)+'" y="'+(yt+6)+'" width="'+Math.max(0,end-m-10).toFixed(1)+'" height="85" fill="none" stroke="#8b8e8e" stroke-width="2"/>';
+ const sy=y=>yb-y/g.hf*(yb-yt);
+ if(g.centerPost)s+=p(m+Number(state.width)*k/2,yt,m+Number(state.width)*k/2,yb);
+ for(const v of g.innerSegments)s+=p(m+v.x1*k,sy(v.y1),m+v.x2*k,sy(v.y2),"inner");
  if(state.fill&&state.frame==="prof")for(let px=m+9;px<end-4;px+=11)s+=p(px,yt+8,px,yb-6,"fill");
  else if(state.fill&&state.frame==="vertical")for(let px=m+9;px<end-4;px+=13)s+=p(px,yt+8,px,yb-6,"fill");
  else if(state.fill&&state.frame!=="jalousie")for(let yy=yt+13;yy<yb-6;yy+=13)s+=p(m+7,yy,end-7,yy,"fill");
@@ -128,6 +127,7 @@ function render(){
  // This variant is ONLY an empty welded frame, including for restored old drafts.
  if(state.frame==="jalousie")state.fill=false;
  $("fill").checked=!!state.fill;
+ $("centerPost").checked=state.centerPost==null?state.frame==="jalousie":state.centerPost;
  $("fill").disabled=state.frame==="jalousie";
  $("fillToggle").hidden=state.frame==="jalousie";
  $("builtInWicket").checked=!!state.builtInWicket;
@@ -136,14 +136,14 @@ function render(){
  $("builtInOffsetLabel").textContent=state.builtInMode==="right"?"От правого края полотна до калитки, м":"От левого края полотна до калитки, м";
  document.querySelectorAll("[data-wicket-mode]").forEach(b=>b.classList.toggle("active",b.dataset.wicketMode===state.builtInMode));
  current=calculate();const q=current;
- $("builtInPlacement").textContent=q.wicket?(q.wicket.valid?"От левого края: "+q.wicket.left.toFixed(2)+" м · от правого: "+q.wicket.right.toFixed(2)+" м · 60×40: "+q.wicketQuote.tube60Length.toFixed(2)+" м · 20×20: "+q.wicketQuote.inner20Length.toFixed(2)+" м (в дверце "+q.wicketQuote.innerDoor20Length.toFixed(2)+" м)":"Проверьте расположение калитки"):"";
+ $("builtInPlacement").textContent=q.wicket?(q.wicket.valid&&q.wicketQuote?"От левого края: "+q.wicket.left.toFixed(2)+" м · от правого: "+q.wicket.right.toFixed(2)+" м · 60×40: "+q.wicketQuote.tube60Length.toFixed(2)+" м · 20×20: "+q.wicketQuote.inner20Length.toFixed(2)+" м (в дверце "+q.wicketQuote.innerDoor20Length.toFixed(2)+" м)":"Проверьте расположение калитки"):"";
  $("price").textContent=money(q.total);$("footerTotal").textContent=money(q.total);
  $("priceMeta").textContent=q.geometry?"Проём "+Number(state.width)+" м · высота "+Number(state.height)+" м · балка "+q.geometry.beam+" м":"Проверь размеры";
  document.querySelectorAll("[data-frame]").forEach(b=>{const ok=b.dataset.frame===state.frame;b.classList.toggle("active",ok);b.setAttribute("aria-pressed",String(ok));});
  document.querySelectorAll("[data-tail]").forEach(b=>b.classList.toggle("active",b.dataset.tail===state.tail));
  document.querySelectorAll("[data-picket]").forEach(b=>b.classList.toggle("active",b.dataset.picket===state.picket));
  $("picketRow").hidden=state.frame!=="vertical"||!state.fill;
- $("frameNote").textContent=state.frame==="horizontal"?"Рамка 20×20 с обеих сторон.":state.frame==="jalousie"?"Только каркас 60×40×2: одна центральная стойка, без труб 20×20 и без заполнения.":"Наружный каркас 60×40, промежуточные стойки 20×20.";
+ $("frameNote").textContent=state.frame==="horizontal"?"Рамка 20×20 с обеих сторон.":state.frame==="jalousie"?"Только каркас 60×40×2 без труб 20×20 и без заполнения; центральная стойка по выбору.":"Наружный каркас 60×40, внутренняя рамка и перемычки 20×20.";
  const svg=lineSvg(q);$("diagram").innerHTML=svg;$("clientDiagram").innerHTML=svg;
  $("facts").innerHTML=q.geometry?["Балка "+q.geometry.beam+" м","Хвост "+q.geometry.tail.toFixed(2)+" м","Длина "+q.geometry.full.toFixed(2)+" м","Стоек "+q.geometry.post].map(v=>"<span>"+escape(v)+"</span>").join(""):"";
  $("breakdown").innerHTML=rowsHtml(q.rows||[]);$("clientRows").innerHTML=$("breakdown").innerHTML;
@@ -155,7 +155,7 @@ function render(){
  try{localStorage.setItem(storeKey,JSON.stringify(state));$("saveNote").textContent=surveyId?"Можно добавить в текущий замер. Черновик сохранён на телефоне.":"Откройте из карточки замера, чтобы сохранить в заказ.";}catch{$("saveNote").textContent="Не удалось сохранить черновик: память устройства недоступна.";}
 }
 for(const k of ["width","height","distance","discount","builtInWidth","builtInOffset"]){$(k).value=state[k];$(k).addEventListener("input",()=>{state[k]=Number($(k).value);render();});}
-for(const k of ["fill","paint","auto","install","stand","bolts","builtInWicket"]){$(k).checked=!!state[k];$(k).addEventListener("change",()=>{state[k]=$(k).checked;render();});}
+for(const k of ["fill","paint","auto","install","stand","bolts","builtInWicket","centerPost"]){$(k).checked=!!state[k];$(k).addEventListener("change",()=>{state[k]=$(k).checked;render();});}
 
  document.querySelectorAll("[data-wicket-mode]").forEach(b=>b.addEventListener("click",()=>{state.builtInMode=b.dataset.wicketMode;render();}));
  document.querySelectorAll("[data-frame]").forEach(b=>b.addEventListener("click",()=>{state.frame=b.dataset.frame;if(state.frame==="jalousie")state.fill=false;render();}));
