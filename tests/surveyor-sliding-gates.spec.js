@@ -19,17 +19,22 @@ test('sliding gates: mobile quote, customer view, survey transfer, edit without 
   test.setTimeout(90000);
   await newQuote(page);
   await expect(page.locator('#frames .card')).toHaveCount(4);
-  await expect(page.locator('#price')).toHaveText('76 300 ₽');
+  await expect(page.locator('#price')).toHaveText('79 900 ₽');
+  await expect(page.locator('#diagram svg .inner')).toHaveCount(9);
+  await page.locator('#centerPost').check();
+  await expect(page.locator('#price')).not.toHaveText('79 900 ₽');
+  await page.locator('#centerPost').uncheck();
+  await expect(page.locator('#price')).toHaveText('79 900 ₽');
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBeTruthy();
   await page.locator('[data-frame="horizontal"]').click();
   await expect(page.locator('[data-frame="horizontal"]')).toHaveAttribute('aria-pressed','true');
-  await expect(page.locator('#price')).not.toHaveText('76 300 ₽');
+  await expect(page.locator('#price')).not.toHaveText('79 900 ₽');
   await page.locator('[data-frame="prof"]').click();
   await page.locator('#auto').check();
-  await expect(page.locator('#price')).toHaveText('106 300 ₽');
+  await expect(page.locator('#price')).toHaveText('109 900 ₽');
   await page.locator('#clientBtn').click();
   await expect(page.locator('#clientModal')).toHaveClass(/open/);
-  await expect(page.locator('#clientTotal')).toHaveText('106 300 ₽');
+  await expect(page.locator('#clientTotal')).toHaveText('109 900 ₽');
   const customerText=await page.locator('#clientModal').innerText();
   expect(customerText).not.toMatch(/себестоимость|зарплата|прибыль|закупка/i);
   await page.locator('#closeClient').click();
@@ -38,7 +43,7 @@ test('sliding gates: mobile quote, customer view, survey transfer, edit without 
   await expect(page.locator('#surveyDetailsDialog')).toBeVisible();
   await expect(page.locator('.calculation-card')).toHaveCount(1);
   await expect(page.locator('.calculation-card')).toContainText('Откатные ворота');
-  await expect(page.locator('.calculation-card-price')).toContainText('106 300 ₽');
+  await expect(page.locator('.calculation-card-price')).toContainText('109 900 ₽');
   await page.locator('[data-edit-calculation-button]').click();
   await expect(page).toHaveURL(/\/sliding-gates\/index\.html\?.*edit=sliding_/);
   await expect(page.locator('#auto')).toBeChecked();
@@ -61,7 +66,7 @@ test('sliding gates: rail sizes, empty 60×40 frame with one central post and 5m
   await expect(page.locator('#fill')).not.toBeChecked();
   await expect(page.locator('#fill')).toBeDisabled();
   await expect(page.locator('#fillToggle')).toBeHidden();
-  await expect(page.locator('#frameNote')).toContainText('одна центральная стойка');
+  await expect(page.locator('#frameNote')).toContainText('центральная стойка по выбору');
   await expect(page.locator('#facts')).toContainText('Стоек 1');
   await expect(page.locator('#price')).not.toHaveText('Цена не готова');
   await expect(page.locator('#warning')).toBeEmpty();
@@ -109,7 +114,7 @@ test('four compact technical frame drawings are distinct and selectable at phone
   await page.locator('[data-frame="horizontal"]').click();
   await expect(page.locator('#frameNote')).toContainText('обеих сторон');
   await page.locator('[data-frame="jalousie"]').click();
-  await expect(page.locator('#frameNote')).toContainText('одна центральная стойка');
+  await expect(page.locator('#frameNote')).toContainText('центральная стойка по выбору');
   await expect(page.locator('#facts')).toContainText('Стоек 1');
 });
 
