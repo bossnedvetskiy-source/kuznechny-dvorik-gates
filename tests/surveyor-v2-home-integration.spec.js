@@ -658,3 +658,48 @@ test('synthetic swing quotes separate owner economics and save only an allowlist
   expect(snapshot.payload.prices.wage).toBeUndefined();
   expect(snapshot.owner).toBeUndefined();
 });
+
+test('sliding materials and built-in wicket variants agree with existing engine and persist customer-only quote',async({page})=>{
+  await login(page,'zamer');
+  const result=await page.evaluate(async()=>{
+    const {slidingQuoteMm,slidingMaterialSummary,buildSlidingCalculation}=await import('./v2-product-editor.js');
+    const {calculateSlidingQuote}=await import('./sliding-gates/pricing.js');
+    const rows=[];
+    for(const frame of ['prof','vertical','horizontal','jalousie'])for(const tail of ['square','triangle'])for(const widthMm of [3600,4500,5000])for(const paint of [true,false]){
+      const q=slidingQuoteMm({frame,tail,widthMm,paint,fill:frame!=='jalousie'});
+      const m=slidingMaterialSummary(q);
+      rows.push(q.total!==null&&q.total===calculateSlidingQuote(q.configuration).total&&m.fullMm===Math.round(q.geometry.full*1000)&&m.stock60===Math.ceil(q.geometry.tube60/6)&&m.stock20===Math.ceil(q.geometry.tube20/6));
+    }
+    const base={builtInWicket:true,heightMm:1800,builtInWidthMm:1000};
+    const variants=['prof','vertical','horizontal'].flatMap(frame=>['center','left','right'].map(builtInMode=>{
+      const q=slidingQuoteMm({...base,frame,builtInMode,builtInOffsetMm:200});
+      const m=slidingMaterialSummary(q);
+      return {price:q.rows[0][1],left:m.wicket.leftMm,right:m.wicket.rightMm,hinges:m.wicket.hinges,locks:m.wicket.locks};
+    }));
+    const invalid=[{auto:true},{frame:'jalousie'},{centerPost:'yes'},{builtInWidthMm:1300},{builtInMode:'left',builtInOffsetMm:0}].map(s=>slidingQuoteMm({...base,...s}).total);
+    return {rows,variants,invalid,snapshot:buildSlidingCalculation({...base,builtInMode:'right',builtInOffsetMm:200},'test')};
+  });
+  expect(result.rows).toHaveLength(48);
+  expect(result.rows.every(Boolean)).toBe(true);
+  expect(result.variants).toHaveLength(9);
+  for(const v of result.variants){expect(v.price).toBe(13000);expect(v.left+v.right).toBe(3000);expect(v.hinges).toBe(2);expect(v.locks).toBe(1)}
+  expect(result.invalid).toEqual([null,null,null,null,null]);
+  expect(result.snapshot.payload.configuration.builtInThreshold).toBe('step-over');
+  expect(result.snapshot.payload.configuration.builtInOffset).toBe(.2);
+  const home=page.locator('#v2HomeScreen');
+  await home.locator('[data-v2-action="quick"]').click();
+  await home.locator('[data-v2-action="sliding"]').click();
+  await home.locator('[data-product-field="heightMm"]').fill('1800');
+  await home.locator('[data-product-field="builtInWicket"]').check();
+  await expect(home.locator('[data-product-field="builtInOffsetMm"]')).toBeHidden();
+  await home.locator('[data-product-field="builtInMode"]').selectOption('right');
+  await home.locator('[data-product-field="builtInOffsetMm"]').fill('200');
+  await expect(home.locator('[data-product-materials]')).toContainText('Калитка: петли, шт');
+  await home.locator('[data-product-field="auto"]').check();
+  await expect(home.locator('[data-product-add]')).toBeDisabled();
+  await home.locator('[data-product-field="auto"]').uncheck();
+  await home.locator('[data-product-add]').click();
+  await home.locator('[data-product-confirm]').click();
+  await expect(page.locator('#surveyDetailsDialog')).toBeVisible();
+  await expect(page.locator('.calculation-card')).toContainText('Встроенная калитка 1 м · справа');
+});
