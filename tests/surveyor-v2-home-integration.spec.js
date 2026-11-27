@@ -1124,3 +1124,49 @@ test('basket validates all seven editor inputs and never restores a supplied quo
  expect(data.bad).toEqual([]);
  expect(JSON.stringify(data.restored)).not.toMatch(/privateCost|profit|referenceRub|"total"/);
 });
+
+test('basket saves a single local survey linked to a test client and restores without final price',async({page})=>{
+ await login(page,'zamer');
+ const home=page.locator('#v2HomeScreen');
+ await page.evaluate(async()=>{
+  const db=await new Promise((resolve,reject)=>{const q=indexedDB.open('kd-surveyor-stage1');q.onsuccess=()=>resolve(q.result);q.onerror=()=>reject(q.error)});
+  await new Promise((resolve,reject)=>{const tx=db.transaction('clients','readwrite');tx.objectStore('clients').put({id:'basket-test-client',name:'Тестовый клиент',phone:'',address:'Тестовый объект',syncState:'local',updatedAt:new Date().toISOString()});tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)});
+  db.close();
+ });
+ await home.locator('[data-v2-action="catalog"]').click();
+ await home.locator('[data-v2-action="frames"]').click();
+ await home.locator('[data-basket-add]').click();
+ await home.locator('[data-basket-back]').click();
+ await home.locator('[data-v2-action="sliding"]').click();
+ await home.locator('[data-basket-add]').click();
+ await home.locator('[data-basket-client]').selectOption('basket-test-client');
+ await home.locator('[data-basket-save]').click();
+ const dialog=page.locator('#surveyDetailsDialog');
+ await expect(dialog).toBeVisible();
+ await expect(dialog).toContainText('Тестовый клиент');
+ await expect(dialog.locator('[data-saved-basket-line]')).toHaveCount(2);
+ await expect(dialog).toContainText('Итог сметы не рассчитан');
+ await expect(dialog.locator('[data-complete-survey],[data-v3-preview],[data-add-calculation],[data-edit-survey-data]')).toHaveCount(0);
+ await dialog.locator('[data-restore-basket]').click();
+ await expect(home.locator('[data-basket-line]')).toHaveCount(2);
+ await expect(home.locator('[data-basket-client]')).toHaveValue('basket-test-client');
+ await home.locator('[data-basket-edit]').first().click();
+ await home.locator('[data-swing-field="gateWidthMm"]').fill('3700');
+ await home.locator('[data-basket-add]').click();
+ await home.locator('[data-basket-save]').click();
+ await expect(dialog.locator('[data-saved-basket-line]').first()).toContainText('3700');
+ const data=await page.evaluate(async()=>{
+  const db=await new Promise((resolve,reject)=>{const q=indexedDB.open('kd-surveyor-stage1');q.onsuccess=()=>resolve(q.result);q.onerror=()=>reject(q.error)});
+  const all=store=>new Promise((resolve,reject)=>{const q=db.transaction(store).objectStore(store).getAll();q.onsuccess=()=>resolve(q.result);q.onerror=()=>reject(q.error)});
+  const [surveys,clients]=await Promise.all([all('surveys'),all('clients')]);db.close();return {surveys,clients};
+ });
+ expect(data.surveys).toHaveLength(1);
+ const survey=data.surveys[0];
+ expect(survey.clientId).toBe('basket-test-client');
+ expect(survey.status).toBe('draft');
+ expect(survey.syncState).toBe('local');
+ expect(survey.configuration.calculations).toBeUndefined();
+ expect(survey.configuration.basketDraft.items).toHaveLength(2);
+ expect(JSON.stringify(survey.configuration)).not.toMatch(/"total"|"referenceRub"|"profit"/);
+ expect(data.clients).toHaveLength(1);
+});
