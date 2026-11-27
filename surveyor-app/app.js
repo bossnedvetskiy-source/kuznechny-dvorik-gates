@@ -616,9 +616,40 @@ async function open3DCalculator() {
     if (host) host.textContent = 'Не удалось загрузить 3D. Проверьте подключение или обновите DEV.';
   }
 }
+// Opt-in development shell is unavailable on production and staging APIs.
+let v2Home = null;
+function v2LocalPreviewEnabled() {
+  if (!['localhost','127.0.0.1'].includes(location.hostname) || API_ENABLED) return false;
+  const requested = new URLSearchParams(location.search).get('ui');
+  try {
+    if(requested==='legacy') sessionStorage.removeItem('kd-v2-local-preview');
+    if(requested==='v2') sessionStorage.setItem('kd-v2-local-preview','1');
+    return sessionStorage.getItem('kd-v2-local-preview')==='1';
+  } catch { return requested==='v2'; }
+}
+async function prepareV2Home() {
+  if(!v2LocalPreviewEnabled() || !currentUser || v2Home) return;
+  const user=currentUser;
+  try {
+    const {mountV2Home}=await import('./v2-home.js');
+    if(currentUser!==user || v2Home) return;
+    v2Home=mountV2Home({
+      role:user.role,
+      navigate:switchScreen,
+      newSurvey:()=>$('#newSurveyBtn').click(),
+      open3D:open3DCalculator
+    });
+    const resume=new URLSearchParams(location.search).has('resumeSurvey');
+    if(!resume && !document.querySelector('dialog[open]') &&
+        document.querySelector(user.role==='owner'?'#ownerScreen.active':'#surveysScreen.active')){
+      switchScreen('v2Home');
+    }
+  } catch(error) { console.warn('V2 local preview unavailable',error); }
+}
 function switchScreen(name) {
+  if(name==='v2Home'&&!v2Home) name=currentUser?.role==='owner'?'owner':'surveys';
   if (['owner','ownerQuick'].includes(name) && currentUser?.role!=='owner') name='surveys';
-  const titles = { owner: 'КД Управление', ownerQuick:'Быстрый расчёт', surveys: 'Замеры', threeD: '3D расчёт', clients: 'Клиенты', team: 'Сотрудники', settings: 'Ещё' };
+  const titles = { v2Home:'Главная · DEV', owner: 'КД Управление', ownerQuick:'Быстрый расчёт', surveys: 'Замеры', threeD: '3D расчёт', clients: 'Клиенты', team: 'Сотрудники', settings: 'Ещё' };
   $$('.screen').forEach(el => el.classList.remove('active'));
   $(`#${name}Screen`)?.classList.add('active');
   $$('.nav-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.screen === name || (name==='ownerQuick' && btn.dataset.screen==='owner')));
@@ -2211,6 +2242,7 @@ function showMain() {
   }
   applyRoleUi();
   switchScreen(currentUser?.role === 'owner' ? 'owner' : 'surveys');
+  void prepareV2Home();
 }
 async function logout() {
   if (API_ENABLED && navigator.onLine && await metaGet('serverToken','')) {
@@ -2220,6 +2252,7 @@ async function logout() {
   await clearSession();
   try { localStorage.removeItem(DEV_ACCESS_KEY); } catch {}
   currentUser = null;
+  if(v2Home){v2Home.destroy();v2Home=null;}
   for (const key of Object.keys(ownerCostsCache)) delete ownerCostsCache[key];
   showLogin();
 }
