@@ -237,6 +237,28 @@ jobs:
         continue-on-error: true
         run: npx playwright test tests/surveyor-dev-calculator-bridge.spec.js --grep 'gate calculator result returns into the same survey card'
 
+      # Owner-authorized phone acceptance route. Keep all existing DEV pages;
+      # publish only a synthetic, local-only copy from an explicitly pinned SHA.
+      - name: Build and test isolated KD 2.0 phone preview
+        shell: bash
+        env:
+          KD_V2_SOURCE_SHA: '8f4c0d9e0abffcd6d995a53e87ac0eee75b49a80'
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = refs/heads/dev
+          git fetch --no-tags --depth=1 origin "$KD_V2_SOURCE_SHA"
+          preview="$RUNNER_TEMP/kd-v2-phone-src"
+          mkdir -p "$preview"
+          git archive "$KD_V2_SOURCE_SHA" surveyor-app scripts/build-kd-v2-phone.mjs tests/surveyor-v2-phone.spec.js | tar -x -C "$preview"
+          node "$preview/scripts/build-kd-v2-phone.mjs" "$preview/surveyor-app" _site
+          test -s _site/kd-v2/index.html
+          grep -Fq "const DB_NAME = 'kd-v2-phone-demo-v1';" _site/kd-v2/app.js
+          grep -Fq 'const API_ENABLED = false;' _site/kd-v2/app.js
+          grep -Fq 'connect-src' _site/kd-v2/index.html
+          cp "$preview/tests/surveyor-v2-phone.spec.js" tests/surveyor-v2-phone.spec.js
+          npx playwright test tests/surveyor-v2-phone.spec.js --workers=1
+          echo '### KD 2.0 phone preview: /kd-v2/ (synthetic local data only)' >> "$GITHUB_STEP_SUMMARY"
+
       - name: Verify dev mirrors production frontend
         shell: bash
         run: |
