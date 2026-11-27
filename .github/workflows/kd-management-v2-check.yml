@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: kd-management-v2-regression-with-navigation
+  group: kd-management-v2-${{ contains(github.event.head_commit.message, '[v2-focused]') && 'focused' || 'full' }}
   cancel-in-progress: true
 
 jobs:
