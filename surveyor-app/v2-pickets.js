@@ -31,7 +31,7 @@ export function picketPlan(input={}){
  }
  const sum=k=>segments.reduce((n,g)=>n+g[k],0),max=k=>Math.max(...segments.map(g=>g[k]));
  const front=sum('front'),back=sum('back'),reserve=[...batches.values()].reduce((n,b)=>n+b.reserve,0);
- const p={spans:sum('spans'),clearSpanMm:max('clearSpanMm'),posts:q.summary.postsByScheme,newPosts:q.summary.newPosts,existingPosts:q.summary.existingPostsUsed,openingPosts:source.openingSupportPosts,openingNodeMm:source.openingNodeWidth*1000,openingBeforeMm:source.openingStartFence*1000,openingAfterMm:source.openingEndFence*1000,front,back,reserve,frontPerSpan:max('frontPerSpan'),backPerSpan:max('backPerSpan'),picketLengthMm:segments[0].picketLengthMm,picketPurchaseM:[...batches.values()].reduce((n,b)=>n+b.actualM+b.reserve*b.lengthMm/1000,0),screws:(front+back)*(horizontal?6:4),tubeUsed:q.purchase.tubeUsed,tubeStocks:q.purchase.tubeStocks,gapMm:max('gapMm'),recommendedGapMm:segments[0].recommendedGapMm,edgeMarginMm:max('edgeMarginMm'),approved:segments.every(g=>g.approved),needsFit:segments.some(g=>g.needsFit),canFit:segments.every(g=>g.canFit),warning:[...new Set(segments.map(g=>g.warning).filter(Boolean))].join(' '),segments,batches:[...batches.values()]};
+ const p={spans:sum('spans'),clearSpanMm:max('clearSpanMm'),posts:q.summary.postsByScheme,newPosts:q.summary.newPosts,existingPosts:q.summary.existingPostsUsed,fenceLengthM:source.fenceLength,openingPosts:source.openingSupportPosts,openingNodeMm:source.openingNodeWidth*1000,openingBeforeMm:source.openingStartFence*1000,openingAfterMm:source.openingEndFence*1000,front,back,reserve,frontPerSpan:max('frontPerSpan'),backPerSpan:max('backPerSpan'),picketLengthMm:segments[0].picketLengthMm,picketPurchaseM:[...batches.values()].reduce((n,b)=>n+b.actualM+b.reserve*b.lengthMm/1000,0),screws:(front+back)*(horizontal?6:4),tubeUsed:q.purchase.tubeUsed,tubeStocks:q.purchase.tubeStocks,gapMm:max('gapMm'),recommendedGapMm:segments[0].recommendedGapMm,edgeMarginMm:max('edgeMarginMm'),approved:segments.every(g=>g.approved),needsFit:segments.some(g=>g.needsFit),canFit:segments.every(g=>g.canFit),warning:[...new Set(segments.map(g=>g.warning).filter(Boolean))].join(' '),segments,batches:[...batches.values()]};
  // Do not present the legacy price for modified counts or outdated input rates.
  return {errors,plan:p,total:null};
 }
@@ -69,7 +69,7 @@ export function picketSitePlan(sides={},corners={}){
  if(!rows.length||errors.length)return {rows,errors:errors.length?errors:['Добавьте сторону'],summary:null,total:null};
  // Both side lengths must include the full width of the same physical corner post.
  // Geometry on each side stays unchanged; only procurement quantity is deduplicated.
- const shared={newPosts:0,existingPosts:0,count:0},cornerIssues=[];
+ const shared={newPosts:0,existingPosts:0,count:0},sharedNewByProfile={},cornerIssues=[];
  const byId=new Map(rows.map(row=>[row.id,row.plan]));
  for(const [a,b] of PICKET_CORNERS){
   if(corners[a+b]!==true)continue;
@@ -81,7 +81,7 @@ export function picketSitePlan(sides={},corners={}){
   const status=p=>p.newPosts===p.posts?'newPosts':p.existingPosts===p.posts?'existingPosts':null;
   const u=status(x),v=status(y);
   if(!u||u!==v){fail('смешанные или разные состояния опор, уточните вручную');continue}
-  shared[u]++;shared.count++;
+  shared[u]++;shared.count++;if(u==='newPosts')sharedNewByProfile[sx.post]=(sharedNewByProfile[sx.post]||0)+1;
  }
  if(cornerIssues.length)return {rows,errors:cornerIssues,summary:null,total:null};
  const batches=new Map(),sum=k=>rows.reduce((n,row)=>n+row.plan[k],0);
@@ -93,7 +93,10 @@ export function picketSitePlan(sides={},corners={}){
   old.front+=b.front;old.back+=b.back;old.actualM+=b.actualM;old.reserve=Math.max(old.reserve,b.reserve);batches.set(key,old);
  }
  const stock=[...batches.values()];
- return {rows,errors:[],total:null,summary:{sides:rows.length,spans:sum('spans'),posts:sum('posts')-shared.count,sharedCorners:shared.count,openingPosts:sum('openingPosts'),newPosts:sum('newPosts')-shared.newPosts,existingPosts:sum('existingPosts')-shared.existingPosts,front:sum('front'),back:sum('back'),reserve:stock.reduce((n,b)=>n+b.reserve,0),screws:sum('screws'),tubeUsed:sum('tubeUsed'),tubeStocks:sum('tubeStocks'),picketPurchaseM:stock.reduce((n,b)=>n+b.actualM+b.reserve*b.lengthMm/1000,0),approved:rows.every(row=>row.plan.approved),batches:stock}};
+ const newPostsByProfile={},laborLengthByType={};
+ for(const row of rows){const s={...PICKET_DEFAULTS,...sides[row.id]};newPostsByProfile[s.post]=(newPostsByProfile[s.post]||0)+row.plan.newPosts;laborLengthByType[s.type]=(laborLengthByType[s.type]||0)+row.plan.fenceLengthM;}
+ for(const [key,n] of Object.entries(sharedNewByProfile))newPostsByProfile[key]-=n;
+ return {rows,errors:[],total:null,summary:{sides:rows.length,spans:sum('spans'),posts:sum('posts')-shared.count,sharedCorners:shared.count,newPostsByProfile,laborLengthByType,openingPosts:sum('openingPosts'),newPosts:sum('newPosts')-shared.newPosts,existingPosts:sum('existingPosts')-shared.existingPosts,front:sum('front'),back:sum('back'),reserve:stock.reduce((n,b)=>n+b.reserve,0),screws:sum('screws'),tubeUsed:sum('tubeUsed'),tubeStocks:sum('tubeStocks'),picketPurchaseM:stock.reduce((n,b)=>n+b.actualM+b.reserve*b.lengthMm/1000,0),approved:rows.every(row=>row.plan.approved),batches:stock}};
 }
 export function mountPicketSiteEditor(root,{draft,onDraft,onBack,onReset}={}){
  const sides={},corners={};
