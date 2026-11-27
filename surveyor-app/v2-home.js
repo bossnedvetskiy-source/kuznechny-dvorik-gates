@@ -297,7 +297,7 @@ html.kd-v2-local[data-kd-theme=light]{--kd-bg:#f1f5f9;--kd-card:#fff;--kd-soft:#
           try{await openSavedQuote?.(id)}catch(error){console.warn('Saved quote could not open',error);navigate('surveys')}
         }:null,
         onBack:backToCatalogue,
-        onLegacy:()=>{productOpen=false;catalogOpen=false;render();navigate('surveys');newSurvey()}
+        onLegacy:()=>{if(editId){backToCatalogue();return}productOpen=false;catalogOpen=false;render();navigate('surveys');newSurvey()}
       });
     }
   }
@@ -329,7 +329,7 @@ html.kd-v2-local[data-kd-theme=light]{--kd-bg:#f1f5f9;--kd-card:#fff;--kd-soft:#
     if(action==='estimateEconomy'&&owner){navigate('owner');return}
     if(action==='quick'&&owner){navigate('ownerQuick');return}
     if(action==='quick'){productOpen=false;catalogOpen=true;render();return}
-    if(action==='measure'){navigate('surveys');newSurvey();return}
+    if(action==='measure'){if(editId){backToCatalogue();return}navigate('surveys');newSurvey();return}
     if(action==='threeD'){open3D();return}
     pending('Раздел пока не подключён. Его реализация предусмотрена утверждённой дорожной картой.');
   });
