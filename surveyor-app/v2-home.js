@@ -61,6 +61,28 @@ html.kd-v2-local[data-kd-theme=light]{--kd-bg:#f1f5f9;--kd-card:#fff;--kd-soft:#
 .kd-v2-local #surveyDetailsDialog .v3-product-label small{font-size:12px!important}
 .kd-v2-local #surveyDetailsDialog .v3-product-section h3{font-size:19px!important;font-weight:700!important}
 .kd-v2-local #surveyDetailsDialog .v3-complete-action .btn{min-height:48px!important;font-size:15px!important}
+
+/* Management and plan controls share the shell palette. Preserve geometry,
+   preview drawings, status/warning colours and customer-facing presentation. */
+.kd-v2-local :is(#ownerScreen,#ownerQuickScreen,#surveyDetailsDialog) :is(.owner-dashboard-hero,.owner-dashboard-section,.owner-kpi,.owner-order-link,.owner-report,.owner-panel-title,.owner-material-card,.owner-material-card details,.owner-expenses,.owner-finance-grid>div,.owner-material-stats>div,.owner-profile-summary,.ownerq-heading,.ownerq-panel,.ownerq-price,.ownerq-finance-grid>div,.ownerq-modes,.ownerq-check){background:var(--kd-card)!important;color:var(--kd-text)!important;border-color:var(--kd-line)!important;box-shadow:none!important}
+.kd-v2-local :is(#ownerScreen,#ownerQuickScreen,#surveyDetailsDialog) :is(.owner-kpi b,.owner-order-figures b,.owner-order-main b,.ownerq-row strong,.ownerq-finance-grid strong,.ownerq-price strong,.ownerq-back,.ownerq-rate-editor summary,.ownerq-pill b){color:var(--kd-accent)!important}
+.kd-v2-local :is(#ownerScreen,#ownerQuickScreen,#surveyDetailsDialog) :is(.owner-dashboard-hero p,.owner-kpi small,.owner-kpi span,.owner-finance-note,.owner-finance-grid small,.owner-material-stats small,.owner-expense-field label,.owner-profile-row label,.ownerq-heading p,.ownerq-price small,.ownerq-price span,.ownerq-field,.ownerq-note,.ownerq-finance-grid small,.ownerq-tag){color:var(--kd-muted)!important}
+.kd-v2-local :is(#ownerQuickScreen,#surveyDetailsDialog) :is(.ownerq-field input,.ownerq-field select,.owner-expense-field input,.owner-profile-row input){background:var(--kd-bg)!important;color:var(--kd-text)!important;border-color:var(--kd-line)!important}
+.kd-v2-local :is(#ownerQuickScreen,#surveyDetailsDialog) :is(.owner-detail-tabs,.ownerq-modes){background:var(--kd-soft)!important}
+.kd-v2-local :is(#ownerQuickScreen,#surveyDetailsDialog) :is(.owner-detail-tabs button,.ownerq-modes button){color:var(--kd-muted)!important}
+.kd-v2-local :is(#ownerQuickScreen,#surveyDetailsDialog) :is(.owner-detail-tabs button.active,.ownerq-modes button.active){background:var(--kd-primary)!important;color:white!important}
+.kd-v2-local #surveyDetailsDialog .owner-table-scroll th{background:var(--kd-soft)!important;color:var(--kd-text)!important}
+.kd-v2-local #surveyDetailsDialog .owner-table-scroll :is(th,td){border-color:var(--kd-line)!important}
+.kd-v2-local #planDialog,.kd-v2-local #planDialog .plan-sheet{background:var(--kd-bg)!important;color:var(--kd-text)!important;border-color:var(--kd-line)!important}
+.kd-v2-local #planDialog .sheet-head{background:var(--kd-bg)!important;border-color:var(--kd-line)!important}
+.kd-v2-local #planDialog :is(.sheet-head h2,.plan-elements-head h3,.plan-inline-head b,.plan-quick-head b,.plan-fast-add-caption b,.plan-bottom-sheet h3){color:var(--kd-text)!important;font-family:system-ui,sans-serif!important}
+.kd-v2-local #planDialog :is(.plan-mode-switch,.plan-line-tab,.plan-item-row,.plan-inline-editor,.plan-quick-post,.plan-quick-distance,.plan-bottom-sheet,.plan-fast-add-toggle,.plan-fast-add-items,.plan-fast-add-items button,.plan-line-settings){background:var(--kd-card)!important;color:var(--kd-text)!important;border-color:var(--kd-line)!important}
+.kd-v2-local #planDialog :is(.plan-line-tab.active,.plan-mode-switch button.active,.plan-item-row.selected){background:var(--kd-soft)!important;color:var(--kd-accent)!important;border-color:var(--kd-accent)!important}
+.kd-v2-local #planDialog :is(.plan-summary span,.plan-item-main span,.plan-elements-head p,.plan-inline-head small,.plan-quick-head small,.plan-quick-distance small,.plan-line-settings>summary,.plan-bottom-sheet .field>span){color:var(--kd-muted)!important}
+.kd-v2-local #planDialog :is(.plan-summary b,.plan-fast-add-plus,.plan-fast-add-chevron){color:var(--kd-accent)!important}
+.kd-v2-local #planDialog :is(.plan-inline-measure input,.plan-inline-material select,.plan-quick-distance input,.plan-line-settings-body input,.plan-bottom-sheet input,.plan-bottom-sheet select){background:var(--kd-bg)!important;color:var(--kd-text)!important;border-color:var(--kd-line)!important}
+.kd-v2-local #planDialog .plan-footer{background:var(--kd-bg)!important}
+.kd-v2-local #planDialog #savePlanBtn{background:var(--kd-primary)!important;border-color:var(--kd-primary)!important;color:white!important;box-shadow:none!important}
 @media(min-width:700px){.kd-v2-grid{grid-template-columns:repeat(4,minmax(0,1fr))}.kd-v2-grid.two{grid-template-columns:repeat(4,minmax(0,1fr))}.kd-v2-tile{min-height:105px!important}}
 `;
   host.append(style);
