@@ -5,6 +5,7 @@ test.use({viewport:{width:390,height:844}});
 async function startNewSurvey(page) {
   await page.addInitScript(() => localStorage.setItem('kuzdvor-dev-access-v1','1'));
   await page.goto('/kuznechny-dvorik-gates/dev-tools/');
+  await expect(page.locator('#loginForm button[type="submit"]')).toBeEnabled({timeout:20000});
   await page.locator('#loginInput').fill('zamer');
   await page.locator('#passwordInput').fill('1234');
   await page.locator('#loginForm button[type="submit"]').click();
@@ -16,14 +17,14 @@ async function startNewSurvey(page) {
   await expect(page.locator('#surveyDetailsDialog')).toBeVisible();
 }
 
-test('V3: begin survey, show 3 direct calculators, gate saves back to same survey, client view returns', async ({page}) => {
+test('V3: begin survey, show 4 direct calculators, gate saves back to same survey, client view returns', async ({page}) => {
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
   await startNewSurvey(page);
   await expect(page.locator('.v3-product-tile')).toHaveCount(4);
-  await expect(page.locator('.v3-product-tile').nth(0)).toContainText('Ворота и калитки');
+  await expect(page.locator('.v3-product-tile').nth(0)).toContainText('Ворота с калиткой');
   await expect(page.locator('.v3-product-tile').nth(1)).toContainText('Забор');
-  await expect(page.locator('.v3-product-tile').nth(2)).toContainText('Навес');
+  await expect(page.locator('.v3-product-tile').nth(2)).toContainText('навес');
   await expect(page.locator('.v3-extra')).not.toHaveAttribute('open');
   await page.locator('[data-v3-calc="gates"]').click();
   await expect(page).toHaveURL(/surveyor=1/);
@@ -84,6 +85,7 @@ test('V3: find surveys instantly by phone, address or number without losing loca
 async function loginWithoutNewSurvey(page) {
   await page.addInitScript(() => localStorage.setItem('kuzdvor-dev-access-v1','1'));
   await page.goto('/kuznechny-dvorik-gates/dev-tools-v4/');
+  await expect(page.locator('#loginForm button[type="submit"]')).toBeEnabled({timeout:20000});
   await page.locator('#loginInput').fill('zamer');
   await page.locator('#passwordInput').fill('1234');
   await page.locator('#loginForm button[type="submit"]').click();
@@ -117,8 +119,8 @@ test('empty phone and address: two independent numbered surveys, open and edit l
     await page.locator('#saveSurveyBtn').click();
     await expect(page.locator('#surveyDetailsDialog')).toBeVisible();
     await expect(page.locator('#detailsNumber')).toHaveText('ЗМ-'+String(n).padStart(4,'0'));
-    await expect(page.locator('#surveyDetailsContent')).toContainText('Адрес пока не указан');
-    await expect(page.locator('#surveyDetailsContent')).toContainText('Телефон пока не указан');
+    await expect(page.locator('#surveyDetailsContent')).toContainText('Адрес не указан');
+    await expect(page.locator('#surveyDetailsContent')).toContainText('Контакты не заполнены');
     await expect(page.locator('.v3-product-tile')).toHaveCount(4);
     await page.locator('#closeDetailsBtn').click();
   }
@@ -171,7 +173,7 @@ test('phone-only survey saves, and incomplete phone is rejected without creating
   await page.locator('#saveSurveyBtn').click();
   await expect(page.locator('#surveyDetailsDialog')).toBeVisible();
   await expect(page.locator('#surveyDetailsContent')).toContainText('+7 937 123-45-67');
-  await expect(page.locator('#surveyDetailsContent')).toContainText('Адрес пока не указан');
+  await expect(page.locator('#surveyDetailsContent')).toContainText('Адрес не указан');
   const result=await savedRows(page);
   expect(result.clients).toHaveLength(1);
   expect(result.surveys[0].address).toBe('');
