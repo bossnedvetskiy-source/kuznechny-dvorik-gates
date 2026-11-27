@@ -109,3 +109,16 @@ test('v2 catalogue separates forged gate and fence articles and preserves existi
   await page.locator('#saveSurveyBtn').click();
   await expect(page.locator('#surveyDetailsDialog [data-v3-calc="gates"]')).toBeVisible();
 });
+
+test('v2 catalogue keeps corrugated sheet fencing separate from pickets and forged sections',async({page})=>{
+  await login(page,'zamer');
+  const home=page.locator('#v2HomeScreen');
+  await expect(home).toBeVisible();
+  await home.locator('[data-v2-action="catalog"]').click();
+  await expect(home.locator('[data-v2-action="profileFence"]')).toContainText('Забор из профнастила');
+  await expect(home.locator('[data-v2-action="pickets"]')).toBeVisible();
+  await expect(home.locator('[data-v2-action="artFences"]')).toBeVisible();
+  await home.locator('[data-v2-action="profileFence"]').click();
+  await expect(home.locator('[role="status"]')).toContainText('стоимость не рассчитывается');
+  await expect(page.locator('#surveyDialog')).not.toBeVisible();
+});
