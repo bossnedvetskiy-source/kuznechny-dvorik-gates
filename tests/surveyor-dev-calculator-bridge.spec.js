@@ -41,8 +41,12 @@ test('gate calculator result returns into the same survey card', async ({page}) 
   await page.waitForFunction(() => Boolean(window.KUZDVOR_GATE_APP?.snapshot), null, {timeout:15000});
 
   await page.locator('#kdSurveyorBridgeSave').click();
-  await expect(page.locator('#kdSurveyorBridgeMessage')).not.toHaveClass(/is-error/, {timeout:5000});
-  await page.waitForURL(/\/dev-tools\/\?resumeSurvey=/, {waitUntil:'domcontentloaded', timeout:45000});
+  try {
+    await page.waitForURL(/\/dev-tools\/\?resumeSurvey=/, {waitUntil:'domcontentloaded', timeout:45000});
+  } catch (error) {
+    const message = await page.locator('#kdSurveyorBridgeMessage').textContent({timeout:1000}).catch(()=>null);
+    throw new Error('Gate return failed; visible calculator message: '+(message||'unavailable'),{cause:error});
+  }
 
   await expect(page.locator('#surveyDetailsDialog')).toBeVisible({timeout:15000});
   await expect(page.locator('.calculation-card')).toHaveCount(1);
@@ -64,8 +68,12 @@ test('gate calculator result returns into the same survey card', async ({page}) 
   await expect(page.locator('#heightInput')).toHaveValue('1.8');
   await page.locator('#widthInput').fill('3.6');
   await page.locator('#kdSurveyorBridgeSave').click();
-  await expect(page.locator('#kdSurveyorBridgeMessage')).not.toHaveClass(/is-error/, {timeout:5000});
-  await page.waitForURL(/\/dev-tools\/\?resumeSurvey=/, {waitUntil:'domcontentloaded', timeout:45000});
+  try {
+    await page.waitForURL(/\/dev-tools\/\?resumeSurvey=/, {waitUntil:'domcontentloaded', timeout:45000});
+  } catch (error) {
+    const message = await page.locator('#kdSurveyorBridgeMessage').textContent({timeout:1000}).catch(()=>null);
+    throw new Error('Gate return failed; visible calculator message: '+(message||'unavailable'),{cause:error});
+  }
   await expect(page.locator('.calculation-card')).toHaveCount(1);
   await expect(page.locator('.calculation-card-lines')).toContainText('Ворота 3,6 × 1,8 м');
 });
@@ -117,8 +125,12 @@ test('fence calculator result returns into the same survey card', async ({page})
   await page.waitForFunction(() => Boolean(window.KUZDVOR_FENCE_APP?.snapshot), null, {timeout:15000});
 
   await page.locator('#kdSurveyorBridgeSave').click();
-  await expect(page.locator('#kdSurveyorBridgeMessage')).not.toHaveClass(/is-error/, {timeout:5000});
-  await page.waitForURL(/\/dev-tools\/\?resumeSurvey=/, {waitUntil:'domcontentloaded', timeout:45000});
+  try {
+    await page.waitForURL(/\/dev-tools\/\?resumeSurvey=/, {waitUntil:'domcontentloaded', timeout:45000});
+  } catch (error) {
+    const message = await page.locator('#kdSurveyorBridgeMessage').textContent({timeout:1000}).catch(()=>null);
+    throw new Error('Gate return failed; visible calculator message: '+(message||'unavailable'),{cause:error});
+  }
   await expect(page.locator('#surveyDetailsDialog')).toBeVisible({timeout:15000});
   await expect(page.locator('.calculation-card')).toHaveCount(1);
   await expect(page.locator('.calculation-card')).toContainText('Забор из евроштакетника');
@@ -134,8 +146,12 @@ test('fence calculator result returns into the same survey card', async ({page})
   await expect(page.locator('[data-field="length"][data-index="0"]')).toHaveValue('10');
   await page.locator('[data-field="length"][data-index="0"]').fill('12');
   await page.locator('#kdSurveyorBridgeSave').click();
-  await expect(page.locator('#kdSurveyorBridgeMessage')).not.toHaveClass(/is-error/, {timeout:5000});
-  await page.waitForURL(/\/dev-tools\/\?resumeSurvey=/, {waitUntil:'domcontentloaded', timeout:45000});
+  try {
+    await page.waitForURL(/\/dev-tools\/\?resumeSurvey=/, {waitUntil:'domcontentloaded', timeout:45000});
+  } catch (error) {
+    const message = await page.locator('#kdSurveyorBridgeMessage').textContent({timeout:1000}).catch(()=>null);
+    throw new Error('Gate return failed; visible calculator message: '+(message||'unavailable'),{cause:error});
+  }
   await expect(page.locator('.calculation-card')).toHaveCount(1);
   await expect(page.locator('.calculation-card-lines')).toContainText('Длина 12 м');
 });
@@ -270,8 +286,12 @@ test('canopy calculator result returns into the same survey card', async ({page}
   await page.waitForFunction(() => Boolean(window.TrussApp?.snapshot), null, {timeout:15000});
 
   await page.locator('#kdSurveyorBridgeSave').click();
-  await expect(page.locator('#kdSurveyorBridgeMessage')).not.toHaveClass(/is-error/, {timeout:5000});
-  await page.waitForURL(/\/dev-tools\/\?resumeSurvey=/, {waitUntil:'domcontentloaded', timeout:45000});
+  try {
+    await page.waitForURL(/\/dev-tools\/\?resumeSurvey=/, {waitUntil:'domcontentloaded', timeout:45000});
+  } catch (error) {
+    const message = await page.locator('#kdSurveyorBridgeMessage').textContent({timeout:1000}).catch(()=>null);
+    throw new Error('Gate return failed; visible calculator message: '+(message||'unavailable'),{cause:error});
+  }
   await expect(page.locator('#surveyDetailsDialog')).toBeVisible({timeout:15000});
   await expect(page.locator('.calculation-card')).toHaveCount(1);
   await expect(page.locator('.calculation-card')).toContainText('Навес');
@@ -289,8 +309,12 @@ test('canopy calculator result returns into the same survey card', async ({page}
   await expect(page.locator('#lengthPosts')).toHaveValue('5.9');
   await page.locator('#lengthPosts').fill('6.2');
   await page.locator('#kdSurveyorBridgeSave').click();
-  await expect(page.locator('#kdSurveyorBridgeMessage')).not.toHaveClass(/is-error/, {timeout:5000});
-  await page.waitForURL(/\/dev-tools\/\?resumeSurvey=/, {waitUntil:'domcontentloaded', timeout:45000});
+  try {
+    await page.waitForURL(/\/dev-tools\/\?resumeSurvey=/, {waitUntil:'domcontentloaded', timeout:45000});
+  } catch (error) {
+    const message = await page.locator('#kdSurveyorBridgeMessage').textContent({timeout:1000}).catch(()=>null);
+    throw new Error('Gate return failed; visible calculator message: '+(message||'unavailable'),{cause:error});
+  }
   await expect(page.locator('.calculation-card')).toHaveCount(1);
   await expect(page.locator('.calculation-card-lines')).toContainText('Размер 3 × 6,2 м');
 });
