@@ -1020,3 +1020,43 @@ test('continuous profile sheets cover regular posts but do not cross gate or wic
  await home.locator('[data-v2-action="profileFence"]').click();
  await expect(field).toHaveValue('continuous');
 });
+
+test('canopy editor reuses geometry and purchase reference with no cost disclosure',async({page})=>{
+ await login(page,'zamer');
+ const data=await page.evaluate(async()=>{
+  const {canopyPlan}=await import('./v2-canopy.js');
+  return {base:canopyPlan(),prof:canopyPlan({coverage:'Профнастил'}),none:canopyPlan({coverage:'Без покрытия'}),vertical:canopyPlan({trussType:'Вертикальная'}),strong:canopyPlan({trussType:'Усиленная'}),existing:canopyPlan({existingPosts:2,beamsExisting:true}),bad:canopyPlan({riseMm:100}),zero:canopyPlan({overhangMm:0}),tooMany:canopyPlan({existingPosts:99})};
+ });
+ expect(data.base.errors).toEqual([]);
+ const p=data.base.plan;
+ expect(p.trusses).toBe(6);
+ expect(p.posts).toBe(8);
+ expect(p.roof.buyMeters).toBe(24);
+ expect(p.roof.connectors).toBe(4);
+ expect(p.roof.endProfiles).toBe(10);
+ expect(p.spec.geometry.upperArcMm).toBe(3928);
+ expect(p.spec.membersTotal).toBe(84);
+ expect(p.materials.reduce((n,r)=>n+r.sticks,0)).toBeGreaterThan(13);
+ expect(data.base.total).toBeNull();
+ expect(JSON.stringify(p)).not.toMatch(/"cost"|"profit"|"price"/);
+ expect(data.prof.plan.lagLines).toBe(5);
+ expect(data.prof.plan.roof.parts).toBe(3);
+ expect(data.none.plan.roof.type).toBe('Без покрытия');
+ expect(data.vertical.plan.spec.rows.some(r=>r.id.startsWith('D'))).toBe(false);
+ expect(data.strong.plan.spec.rows.some(r=>r.id.startsWith('V'))).toBe(true);
+ expect(data.existing.plan.newPosts).toBe(6);
+ expect(data.existing.plan.beams).toBe(0);
+ expect(data.bad.plan).toBeNull();
+ expect(data.zero.plan).toBeNull();
+ expect(data.tooMany.plan).toBeNull();
+ const home=page.locator('#v2HomeScreen');
+ await home.locator('[data-v2-action="catalog"]').click();
+ await home.locator('[data-v2-action="canopy"]').click();
+ await expect(home.locator('[data-canopy-plan]')).toContainText('Поликарбонат к закупке, м24');
+ await home.locator('[data-canopy-field="coverage"]').selectOption('Профнастил');
+ await expect(home.locator('[data-canopy-plan]')).toContainText('Листы, шт.');
+ await home.locator('[data-canopy-back]').click();
+ await home.locator('[data-v2-action="canopy"]').click();
+ await expect(home.locator('[data-canopy-field="coverage"]')).toHaveValue('Профнастил');
+ await expect(page.locator('#surveyDialog')).not.toBeVisible();
+});
