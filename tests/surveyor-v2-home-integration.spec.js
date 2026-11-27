@@ -637,13 +637,22 @@ test('synthetic swing quotes separate owner economics and save only an allowlist
   await expect(dialog.locator('.calculation-card')).toContainText('Тест ·');
   await expect(dialog.locator('.calculation-card')).toContainText('3500 × 1800 мм');
   await expect(dialog.locator('.calculation-card [data-show-calculation]')).toHaveCount(0);
+  await expect(dialog.locator('[data-v3-preview]')).toHaveCount(0);
+  await expect(dialog.locator('[data-complete-survey]')).toHaveCount(0);
+  await expect(dialog.locator('[data-v3-calc]')).toHaveCount(0);
+  await expect(dialog.locator('[data-add-calculation]')).toHaveCount(0);
+  await expect(dialog.locator('[data-edit-survey-data]')).toHaveCount(0);
+  await expect(dialog).toContainText('Не заказ и не коммерческое предложение.');
+
   const snapshot=await page.evaluate(async()=>{
     const db=await new Promise((resolve,reject)=>{const req=indexedDB.open('kd-surveyor-stage1');req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)});
     const surveys=await new Promise((resolve,reject)=>{const req=db.transaction('surveys').objectStore('surveys').getAll();req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)});
     db.close();
-    return surveys.flatMap(s=>s.configuration?.calculations||[]).find(c=>c.type==='simpleSwing');
+    const survey=surveys.find(s=>s.configuration?.calculations?.some(c=>c.type==='simpleSwing'));
+    return {...survey.configuration.calculations.find(c=>c.type==='simpleSwing'),testOnly:survey.configuration.testOnly};
   });
   expect(snapshot.payload.test).toBe(true);
+  expect(snapshot.testOnly).toBe(true);
   expect(snapshot.payload.tariffRevision).toBe('synthetic-preview-v1');
   expect(snapshot.payload.configuration.widthMm).toBe(3500);
   expect(snapshot.payload.prices.wage).toBeUndefined();
