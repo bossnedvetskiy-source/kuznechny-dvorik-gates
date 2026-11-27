@@ -60,7 +60,7 @@ function diagram(q){
   if(q.wicket?.valid)drawing+='<rect x="'+(x+q.wicket.left*scale)+'" y="'+(top+7)+'" width="'+(q.wicket.width*scale)+'" height="'+(bottom-top-14)+'"/>';
   return '<svg viewBox="0 0 360 145" role="img" aria-label="Условный эскиз откатных ворот, не производственный чертёж"><g fill="none" stroke="#20262d" stroke-width="2">'+drawing+'</g><text x="'+((x+right)/2)+'" y="137" fill="#20262d" text-anchor="middle" font-size="12">'+Math.round(w*1000)+' мм</text></svg>';
 }
-export function mountProductEditor(root,{onBack,onLegacy,draft,onDraft}={}){
+export function mountProductEditor(root,{onBack,onLegacy,draft,onDraft,onReset}={}){
   let state={...SLIDING_DEFAULTS,...draft};
   root.innerHTML='<section class="kd-product-editor" aria-label="Быстрый расчёт откатных ворот">'+
     '<button type="button" class="kd-v2-action" data-product-back>← К каталогу</button><h3>Откатные ворота</h3><p class="kd-v2-note">Предварительная цена по действующим формулам · без заказа и контактов. Эскиз условный.</p>'+
@@ -73,6 +73,7 @@ export function mountProductEditor(root,{onBack,onLegacy,draft,onDraft}={}){
     '<details><summary>Дополнительные параметры</summary><div class="kd-product-grid">'+select('picket','Штакетник',[['single','Односторонний'],['double','Двусторонний']])+select('centerPost','Центральная стойка',[['auto','По типу каркаса'],['yes','Да'],['no','Нет']])+number('distance','Доставка, км',0,.1)+number('discount','Скидка, ₽')+'</div></details></div>'+
     '<div data-product-errors role="status"></div><details class="kd-v2-card"><summary>Состав цены</summary><div data-product-rows></div></details>'+
     '<button type="button" class="kd-v2-action" data-product-legacy>Открыть действующий замер</button>'+
+    '<button type="button" class="kd-v2-action" data-product-reset>Новый расчёт · сбросить параметры</button>'+
     '<div class="kd-product-total kd-v2-card"><small>Предварительная стоимость</small><strong data-product-total aria-live="polite">—</strong></div></section>';
   const fields=[...root.querySelectorAll('[data-product-field]')];
   for(const el of fields){const k=el.dataset.productField;if(el.type==='checkbox')el.checked=state[k];else el.value=state[k];}
@@ -92,5 +93,6 @@ export function mountProductEditor(root,{onBack,onLegacy,draft,onDraft}={}){
   });
   root.querySelector('[data-product-back]').addEventListener('click',()=>onBack?.());
   root.querySelector('[data-product-legacy]').addEventListener('click',()=>onLegacy?.());
+  root.querySelector('[data-product-reset]').addEventListener('click',()=>{if(window.confirm('Начать новый расчёт? Текущие параметры будут сброшены.'))onReset?.()});
   render();
 }
