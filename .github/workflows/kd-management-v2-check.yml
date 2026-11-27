@@ -79,7 +79,9 @@ jobs:
           Test build only. Do not deploy to production or enter real client data.
           Extract this artifact into a folder named kuznechny-dvorik-gates.
           In its parent directory run: python -m http.server 4173 --bind 127.0.0.1
-          Open: http://127.0.0.1:4173/kuznechny-dvorik-gates/surveyor-test/
+          New interface: http://127.0.0.1:4173/kuznechny-dvorik-gates/surveyor-test/?ui=v2
+          Old interface: http://127.0.0.1:4173/kuznechny-dvorik-gates/surveyor-test/?ui=legacy
+          Standalone design preview: http://127.0.0.1:4173/kuznechny-dvorik-gates/surveyor-app/v2-shell-preview.html
           Local test login: admin / 1234 or zamer / 1234.
           Use a separate browser profile; the test does not sync to the business database.
           EOF
