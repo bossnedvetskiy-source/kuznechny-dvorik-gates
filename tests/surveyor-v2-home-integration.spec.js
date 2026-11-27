@@ -151,3 +151,33 @@ test('downloadable static preview opens the v2 home in a local browser',async({p
   await page.locator('[data-v2-action="catalog"]').click();
   await expect(page.locator('[data-v2-action="profileFence"]')).toBeVisible();
 });
+
+test('v2 test PWA reopens authenticated offline and retains a locally saved survey',async({page,context})=>{
+  await page.goto('/kuznechny-dvorik-gates/surveyor-test/?ui=v2');
+  await expect(page.locator('#loginForm button[type="submit"]')).toBeEnabled({timeout:20000});
+  await page.locator('#loginInput').fill('zamer');
+  await page.locator('#passwordInput').fill('1234');
+  await page.locator('#loginForm button[type="submit"]').click();
+  await expect(page.locator('#v2HomeScreen')).toBeVisible({timeout:20000});
+  await expect.poll(()=>page.evaluate(async()=>Boolean((await navigator.serviceWorker.getRegistration('./'))?.active)),{timeout:20000}).toBe(true);
+  await page.reload();
+  await expect(page.locator('#v2HomeScreen')).toBeVisible({timeout:20000});
+  await expect.poll(()=>page.evaluate(()=>Boolean(navigator.serviceWorker.controller)),{timeout:15000}).toBe(true);
+  await expect.poll(()=>page.evaluate(async()=>Boolean(await caches.match(new URL('./v2-home.js',location.href).href))),{timeout:10000}).toBe(true);
+  await context.setOffline(true);
+  try {
+    await page.reload({waitUntil:'domcontentloaded'});
+    await expect(page.locator('#v2HomeScreen')).toBeVisible({timeout:20000});
+    await expect(page.locator('#networkBadge')).toContainText('Офлайн');
+    await page.locator('[data-v2-action="measure"]').click();
+    await page.locator('#surveyAddress').fill('Тест офлайн v2');
+    await page.locator('#saveSurveyBtn').click();
+    await expect(page.locator('#surveyDetailsDialog')).toBeVisible();
+    await expect(page.locator('#surveyDetailsContent')).toContainText('Тест офлайн v2');
+    await page.locator('#closeDetailsBtn').click();
+    await page.reload({waitUntil:'domcontentloaded'});
+    await expect(page.locator('#v2HomeScreen')).toBeVisible({timeout:20000});
+    await page.locator('.kd-v2-nav[data-screen="surveys"]').click();
+    await expect(page.locator('.survey-card')).toContainText('Тест офлайн v2');
+  } finally {await context.setOffline(false)}
+});
