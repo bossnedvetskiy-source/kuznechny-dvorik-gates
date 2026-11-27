@@ -139,3 +139,15 @@ test('v2 owner quick calculator shares theme and retains editable dimensions',as
   await expect(quick.locator('[data-oq-field="width"]')).toHaveValue('4.2');
   await expect(quick.locator('.ownerq-price')).toBeVisible();
 });
+
+test('downloadable static preview opens the v2 home in a local browser',async({page})=>{
+  await page.goto('/kuznechny-dvorik-gates/surveyor-test/?ui=v2');
+  await expect(page.locator('#loginForm button[type="submit"]')).toBeEnabled({timeout:20000});
+  await page.locator('#loginInput').fill('zamer');
+  await page.locator('#passwordInput').fill('1234');
+  await page.locator('#loginForm button[type="submit"]').click();
+  await expect(page.locator('#v2HomeScreen')).toBeVisible({timeout:20000});
+  await expect(page.locator('#v2HomeScreen h2')).toHaveText('КД ЗАМЕРЩИК');
+  await page.locator('[data-v2-action="catalog"]').click();
+  await expect(page.locator('[data-v2-action="profileFence"]')).toBeVisible();
+});
