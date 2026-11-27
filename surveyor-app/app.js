@@ -2313,7 +2313,8 @@ async function bootstrap() {
 function showLogin() {
   $('#loginView').hidden = false;
   $('#mainView').hidden = true;
-  setTimeout(() => $('#loginInput').focus(), 80);
+  // Focus immediately: a delayed callback could steal focus from password entry.
+  $('#loginInput').focus({preventScroll:true});
 }
 function showMain() {
   $('#loginView').hidden = true;
