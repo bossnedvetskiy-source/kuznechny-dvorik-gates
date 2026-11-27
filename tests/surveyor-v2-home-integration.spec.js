@@ -564,7 +564,7 @@ test('built-in swing wicket follows workbook dimensions and restores its own dra
   await home.locator('[data-swing-field="wicketType"]').selectOption('builtIn');
   await expect(home.locator('[data-swing-field="installation"]')).toHaveValue('none');
   await expect(home.locator('[data-swing-position]')).toBeHidden();
-  await expect(home.locator('[data-swing-field="installation"] option[value="set"]')).toBeDisabled();
+  expect(await home.locator('[data-swing-field="installation"] option[value="set"]').evaluate(option=>option.disabled&&option.hidden)).toBe(true);
   await home.locator('[data-swing-field="installation"]').selectOption('builtIn');
   await home.locator('[data-swing-field="postType"]').selectOption('80x80');
   await home.locator('[data-swing-field="link"]').check();
