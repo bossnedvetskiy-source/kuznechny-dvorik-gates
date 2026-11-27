@@ -654,6 +654,7 @@ function switchScreen(name) {
   $(`#${name}Screen`)?.classList.add('active');
   $$('.nav-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.screen === name || (name==='ownerQuick' && btn.dataset.screen==='owner')));
   $('#screenTitle').textContent = titles[name] || 'КД Замерщик';
+  v2Home?.onScreen(name);
   if (name === 'owner') renderOwnerDashboard();
   if (name === 'ownerQuick' && currentUser?.role==='owner') mountOwnerQuickCalculator($('#ownerQuickRoot'),{onBack:()=>switchScreen('owner')});
   if (name === 'surveys') renderSurveys();
