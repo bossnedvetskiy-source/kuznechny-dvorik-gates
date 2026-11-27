@@ -515,6 +515,61 @@ function kd_surveyor_owner_costs(string $method): never
     kd_surveyor_json(['error'=>'Метод не поддерживается'],405);
 }
 
+
+// Authenticated read-only quote. Never sends input tariffs or cost formulas.
+function kd_surveyor_art_quote_data(array $body, array $catalog, array $priceInputs): array
+{
+    require_once __DIR__ . '/gate-quote.php';
+    $limits = ['gateWidthMm'=>[800,8000],'gateHeightMm'=>[1000,3000],'wicketWidthMm'=>[700,2500],'wicketHeightMm'=>[1000,3000]];
+    $dimensions = [];
+    foreach ($limits as $key=>[$min,$max]) {
+        $v = $body[$key] ?? null;
+        if (!is_int($v) || $v < $min || $v > $max) throw new InvalidArgumentException('Проверьте размеры в целых мм');
+        $dimensions[$key] = $v;
+    }
+    foreach (['installation','posts'] as $key) {
+        if (!is_bool($body[$key] ?? null)) throw new InvalidArgumentException('Некорректная комплектация');
+    }
+    $article = $body['article'] ?? null;
+    if (!is_string($article) || strlen($article)>40) throw new InvalidArgumentException('Выберите артикул');
+    $key = kd_gate_normalize_article($article);
+    if (in_array($key,['39','40'],true)) throw new InvalidArgumentException('Модель недоступна');
+    $item = null;
+    foreach (($catalog['catalog'] ?? []) as $row) {
+        if (kd_gate_normalize_article((string)($row['art'] ?? ''))===$key && ($row['visible'] ?? true)!==false) {$item=$row;break;}
+    }
+    if (!$item) throw new InvalidArgumentException('Модель недоступна');
+    $product = kd_gate_calculate_product($key,$dimensions['gateWidthMm']/1000,$dimensions['gateHeightMm']/1000,$dimensions['wicketWidthMm']/1000,$dimensions['wicketHeightMm']/1000,$priceInputs);
+    $rate = static function(string $field) use ($catalog): int {
+        $v=$catalog[$field]??null;
+        if (!is_numeric($v) || !is_finite((float)$v) || (float)$v<0 || (float)$v>10000000) throw new RuntimeException('Тариф услуги недоступен');
+        return (int)round((float)$v);
+    };
+    $installation=$body['installation']?$rate('catalogInstallation'):0;
+    $posts=$body['posts']?$rate('catalogPosts'):0;
+    if ($product<=0) throw new RuntimeException('Цена изделия недоступна');
+    return ['version'=>1,'kind'=>'artGate','article'=>(string)$item['art'],
+        'configuration'=>array_merge($dimensions,['installation'=>$body['installation'],'posts'=>$body['posts']]),
+        'prices'=>['product'=>$product,'installation'=>$installation,'posts'=>$posts,'total'=>$product+$installation+$posts],
+        'deliveryPending'=>true,'calculatedAt'=>gmdate('c'),'tariffRevision'=>hash('sha256',json_encode([$priceInputs,$catalog['catalogInstallation']??null,$catalog['catalogPosts']??null],JSON_THROW_ON_ERROR))];
+}
+function kd_surveyor_art_quote(): never
+{
+    $session=kd_surveyor_require_session();
+    if (!in_array((string)$session['role'],['owner','surveyor'],true)) kd_surveyor_json(['error'=>'Недостаточно прав'],403);
+    require_once __DIR__ . '/gate-quote.php';
+    $body=kd_json_body(8192);
+    try {
+        $reply=kd_surveyor_art_quote_data($body,kd_prices(),kd_gate_runtime_price_inputs());
+    } catch (InvalidArgumentException $e) {
+        kd_surveyor_json(['error'=>$e->getMessage()],400);
+    } catch (Throwable $e) {
+        error_log('KD article quote error: '.$e->getMessage());
+        kd_surveyor_json(['error'=>'Расчёт временно недоступен'],503);
+    }
+    kd_surveyor_json(['quote'=>$reply],200,['Cache-Control'=>'no-store']);
+}
+
 function kd_surveyor_handle(string $route, string $method): never
 {
     if ($method === 'OPTIONS') kd_surveyor_preflight();
@@ -529,6 +584,7 @@ function kd_surveyor_handle(string $route, string $method): never
         kd_surveyor_json(['user'=>['id'=>kd_surveyor_principal_key($session),'name'=>(string)$session['display_name'],'role'=>(string)$session['role']]]);
     }
     if ($suffix === 'sync' && $method === 'POST') kd_surveyor_sync();
+    if ($suffix === 'art-quote' && $method === 'POST') kd_surveyor_art_quote();
     if ($suffix === 'owner-costs') kd_surveyor_owner_costs($method);
     if ($suffix === 'users' || str_starts_with($suffix,'users/')) {
         kd_surveyor_users($method, $suffix === 'users' ? '' : substr($suffix,strlen('users/')));
