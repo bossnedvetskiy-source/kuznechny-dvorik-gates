@@ -122,3 +122,20 @@ test('v2 catalogue keeps corrugated sheet fencing separate from pickets and forg
   await expect(home.locator('[role="status"]')).toContainText('стоимость не рассчитывается');
   await expect(page.locator('#surveyDialog')).not.toBeVisible();
 });
+
+test('v2 owner quick calculator shares theme and retains editable dimensions',async({page})=>{
+  await login(page,'admin');
+  const home=page.locator('#v2HomeScreen');
+  await expect(home).toBeVisible();
+  await home.locator('[data-v2-action="theme"]').click();
+  await home.locator('[data-v2-action="ruler"]').click();
+  await home.locator('[data-v2-action="quick"]').click();
+  const quick=page.locator('#ownerQuickScreen');
+  await expect(quick).toBeVisible();
+  await expect(quick.locator('.ownerq-heading')).toHaveCSS('background-color','rgb(255, 255, 255)');
+  await expect(quick.locator('[data-oq-field="width"]')).toBeEditable();
+  await quick.locator('[data-oq-field="width"]').fill('4.2');
+  await quick.locator('[data-oq-field="width"]').dispatchEvent('change');
+  await expect(quick.locator('[data-oq-field="width"]')).toHaveValue('4.2');
+  await expect(quick.locator('.ownerq-price')).toBeVisible();
+});
