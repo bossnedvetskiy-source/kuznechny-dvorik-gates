@@ -448,3 +448,48 @@ test('serial frame geometry uses clear openings, preserves sliding draft, never 
   await home.locator('[data-v2-action="sliding"]').click();
   await expect(home.locator('[data-product-field="widthMm"]')).toHaveValue('4000');
 });
+
+test('Excel geometry modes and three profiles preserve the source lengths and stock allocation',async({page})=>{
+  await login(page,'zamer');
+  const result=await page.evaluate(async()=>{
+    const {simpleGateGeometry,simpleGateUnfilledQuote,packStock}=await import('./simple-gate-engine.js');
+    const a=simpleGateGeometry(),b=simpleGateGeometry({profile:'40x40x2'}),c=simpleGateGeometry({profile:'40x25x2'}),d=simpleGateGeometry({gapMode:'sideClearance'});
+    // Synthetic tariffs only: no business purchase prices or wages in the repository.
+    const rates=Object.fromEntries(['mainPrice','innerPrice','stripPrice','hingePrice','lockPrice','paintPrice','cutDisc','grindDisc','wire','gas','rent','rearPrice','rearPaintArea','pins','mainPaintArea','innerPaintArea','hingePlate','wageGate','wageWicket','wageRound','frameMarkup'].map(k=>[k,1]));
+    const quote=simpleGateUnfilledQuote({paint:false},rates);
+    const painted=simpleGateUnfilledQuote({paint:true},rates);
+    let invalid=false,missing=false,tooLong=false;
+    try{simpleGateGeometry({wicketType:'builtIn',wicketWidthMm:2000})}catch{invalid=true}
+    try{simpleGateUnfilledQuote({},null)}catch{missing=true}
+    try{packStock([6001])}catch{tooLong=true}
+    return {a,b,c,d,quote,painted,invalid,missing,tooLong};
+  });
+  const {a,b,c,d,quote,painted}=result;
+  expect(a.leafWidthMm).toBe(1690);
+  expect(a.wicketLeafWidthMm).toBe(990);
+  expect(a.main.actualMm).toBeCloseTo(24940,6);
+  expect(a.inner.actualMm).toBeCloseTo(27510,6);
+  expect(a.main.count).toBe(5);
+  expect(a.inner.count).toBe(6);
+  expect(a.rearActualMm).toBe(4200);
+  expect(a.rearPurchaseMm).toBe(6000);
+  expect(b.main).toEqual(a.main);
+  expect(b.inner).toEqual(a.inner);
+  expect(c.inner.count).toBe(0);
+  expect(c.main.actualMm).toBeCloseTo(30902.34449566787,6);
+  expect(d.leafWidthMm).toBe(1670);
+  expect(d.wicketLeafWidthMm).toBe(960);
+  expect(quote.cost).toBeCloseTo(quote.bare,6);
+  expect(painted.cost-quote.cost).toBeCloseTo(painted.paint,6);
+  expect(painted.profit).toBeCloseTo(0,6);
+  expect(result.invalid&&result.missing&&result.tooLong).toBe(true);
+  const home=page.locator('#v2HomeScreen');
+  await home.locator('[data-v2-action="catalog"]').click();
+  await home.locator('[data-v2-action="frames"]').click();
+  await home.locator('[data-swing-field="profile"]').selectOption('60x40x2');
+  await home.locator('[data-swing-field="gapMode"]').selectOption('excel');
+  await expect(home.locator('[data-swing-plan]')).toContainText('1 690 × 1 800 мм');
+  await expect(home.locator('[data-swing-plan]')).toContainText('20×20×1.5');
+  await expect(home.locator('[data-swing-plan]')).toContainText('6 хл.');
+  await expect(home).toContainText('Стоимость пока не рассчитана');
+});
