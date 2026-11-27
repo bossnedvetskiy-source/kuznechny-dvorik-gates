@@ -148,6 +148,10 @@ html.kd-v2-local[data-kd-theme=light]{--kd-bg:#f1f5f9;--kd-card:#fff;--kd-soft:#
 
 .kd-v2-local #v2HomeScreen{padding:8px 2px}
 .kd-v2-local #v2HomeScreen .kd-v2-head{margin-bottom:8px}
+.kd-v2-local #mainView .topbar{padding-block:8px}
+.kd-v2-local #v2HomeScreen .kd-v2-grid+.kd-v2-action{margin-top:10px}
+.kd-v2-local #v2HomeScreen .kd-v2-soon{font-size:11px;color:var(--vmuted);font-weight:normal}
+.kd-v2-local #v2HomeScreen .kd-v2-back{padding:8px 12px;margin-bottom:10px}
 .kd-v2-local #v2HomeScreen .kd-v2-note{margin-bottom:8px;line-height:1.35}
 .kd-v2-local #v2HomeScreen .kd-v2-panel{margin:8px 0;padding:10px}
 .kd-v2-local #v2HomeScreen .kd-v2-tile{min-height:76px!important;padding:8px 4px}
@@ -188,15 +192,16 @@ html.kd-v2-local[data-kd-theme=light]{--kd-bg:#f1f5f9;--kd-card:#fff;--kd-soft:#
   const icon=id=>'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="'+(paths[id]||paths.file)+'"/></svg>';
   const ownerItems=[['tasks','Задачи'],['clients','Клиенты'],['orders','Заказы'],['factory','Цех'],['calendar','Календарь'],['truck','Доставка'],['stock','Склад'],['wallet','Финансы'],['ads','Реклама'],['star','Отзывы'],['ruler','Замерщик'],['chart','Аналитика']];
   const surveyItems=[['catalog','Каталог'],['calc','Мои расчёты'],['clients','Клиенты'],['calendar','Календарь'],['file','Предложения'],['check','Договоры']];
-  const tile=([id,label])=>'<button class="kd-v2-tile" type="button" data-v2-action="'+id+'">'+icon(id)+'<span>'+label+'</span></button>';
+  const upcoming=new Set(['tasks','orders','factory','calendar','truck','stock','ads','star','chart','file','check']);
+  const tile=([id,label])=>'<button class="kd-v2-tile" type="button" data-v2-action="'+id+'">'+icon(id)+'<span>'+label+'</span>'+(upcoming.has(id)?'<small class="kd-v2-soon">Скоро</small>':'')+'</button>';
   const btn=(id,label,desc,primary=false)=>'<button class="kd-v2-action'+(primary?' primary':'')+'" type="button" data-v2-action="'+id+'">'+icon(id)+'<span><b>'+label+'</b><small>'+desc+'</small></span></button>';
   const catalogItems=[
     ['artGates','Кованые ворота Арт.','Действующий каталог ворот и калиток по артикулам.'],
-    ['artFences','Кованые заборы Арт.','Отдельный каталог секций · требуется база моделей и формул.'],
-    ['frames','Каркасы ворот и калиток','Серийные каркасы · отдельный редактор на этапе 2.'],
+    ['artFences','Кованые заборы Арт.','Скоро · каталог секций'],
+    ['frames','Каркасы ворот и калиток','Скоро · серийные каркасы'],
     ['sliding','Откатные ворота','Быстрый расчёт в миллиметрах · без заказа.'],
     ['pickets','Евроштакетник','Действующий калькулятор через замер.'],
-    ['profileFence','Забор из профнастила','Листы, столбы, прожилины · отдельный редактор на этапе 2.'],
+    ['profileFence','Забор из профнастила','Скоро · листы, столбы, прожилины'],
     ['canopy','Навесы','Действующий калькулятор через замер.']
   ];
   function syncHeading(){
@@ -209,9 +214,9 @@ html.kd-v2-local[data-kd-theme=light]{--kd-bg:#f1f5f9;--kd-card:#fff;--kd-soft:#
     root.dataset.kdTheme=theme;
     updateThemeButton();
     const isOwner=workspace==='owner'&&owner;
-    body.innerHTML='<div class="kd-v2-head"><h2>'+(isOwner?'КД УПРАВЛЕНИЕ':'КД ЗАМЕРЩИК')+'</h2><button class="kd-v2-iconbtn" type="button" data-v2-action="theme" aria-label="Переключить тему">'+(theme==='dark'?'☀':'☾')+'</button>'+(owner?'<button class="kd-v2-iconbtn" type="button" data-v2-action="workspace" aria-label="Переключить рабочее пространство">⇄</button>':'')+'</div><p class="kd-v2-note">Тестовая оболочка · действующие функции открываются в прежнем редакторе.</p>'+
-    (productOpen?'<div data-product-editor-root></div>':catalogOpen?'<button class="kd-v2-action" type="button" data-v2-action="catalogBack">← К разделам замерщика</button><h3>Каталог изделий</h3><p class="kd-v2-note">Выберите направление. Новые редакторы подключаются на этапе 2.</p>'+catalogItems.map(([id,label,desc])=>btn(id,label,desc)).join(''):isOwner?'<div class="kd-v2-grid two">'+['Сумма заказов','К получению','Заказы в работе','Активные клиенты'].map(x=>'<div class="kd-v2-card"><small>'+x+'</small><strong>—</strong></div>').join('')+'</div><div class="kd-v2-card kd-v2-panel"><b>Требует внимания</b><small>Рабочие показатели ещё не подключены.</small></div><h3>Управление предприятием</h3><div class="kd-v2-grid">'+ownerItems.map(tile).join('')+'</div><div class="kd-v2-card kd-v2-panel"><b>КД — Умный помощник</b><small>Сценарии подключаются на этапе 11</small><button class="kd-v2-question" data-v2-action="tasks">Что сделать сегодня?</button><button class="kd-v2-question" data-v2-action="wallet">Кто должен деньги?</button><button class="kd-v2-question" data-v2-action="orders">Какие заказы требуют внимания?</button></div>':
-    btn('quick','Быстрый расчёт',owner?'Действующий калькулятор откатных ворот':'Выбрать изделие · без заказа',true)+btn('measure','Новый замер объекта','Открыть действующий редактор замера')+'<h3>Работа с клиентами</h3><div class="kd-v2-grid two">'+surveyItems.map(tile).join('')+'</div>'+btn('threeD','3D-конструктор','Вспомогательный инструмент до этапа 3'))+'<div class="kd-v2-card kd-v2-detail" role="status" hidden></div>';
+    body.innerHTML='<div class="kd-v2-head"><h2>'+(isOwner?'КД УПРАВЛЕНИЕ':'КД ЗАМЕРЩИК')+'</h2><button class="kd-v2-iconbtn" type="button" data-v2-action="theme" aria-label="Переключить тему">'+(theme==='dark'?'☀':'☾')+'</button>'+(owner?'<button class="kd-v2-iconbtn" type="button" data-v2-action="workspace" aria-label="Переключить рабочее пространство">⇄</button>':'')+'</div>'+
+    (productOpen?'<div data-product-editor-root></div>':catalogOpen?'<button class="kd-v2-action kd-v2-back" type="button" data-v2-action="catalogBack">← Назад</button>'+catalogItems.map(([id,label,desc])=>btn(id,label,desc)).join(''):isOwner?'<div class="kd-v2-grid two">'+['Сумма заказов','К получению','Заказы в работе','Активные клиенты'].map(x=>'<div class="kd-v2-card"><small>'+x+'</small><strong>—</strong></div>').join('')+'</div><div class="kd-v2-card kd-v2-panel"><b>Требует внимания</b><small>Рабочие показатели ещё не подключены.</small></div><h3>Управление предприятием</h3><div class="kd-v2-grid">'+ownerItems.map(tile).join('')+'</div><div class="kd-v2-card kd-v2-panel"><b>КД — Умный помощник</b><small>Скоро · подсказки по управлению</small><button class="kd-v2-question" data-v2-action="tasks">Что сделать сегодня?</button><button class="kd-v2-question" data-v2-action="wallet">Кто должен деньги?</button><button class="kd-v2-question" data-v2-action="orders">Какие заказы требуют внимания?</button></div>':
+    btn('quick','Быстрый расчёт',owner?'Действующий калькулятор откатных ворот':'Выбрать изделие · без заказа',true)+btn('measure','Новый замер объекта','Создать карточку объекта')+'<h3>Работа с клиентами</h3><div class="kd-v2-grid two">'+surveyItems.map(tile).join('')+'</div>'+btn('threeD','3D-конструктор','Модель участка и изделий'))+'<div class="kd-v2-card kd-v2-detail" role="status" hidden></div>';
     if(productOpen){
       mountProductEditor(body.querySelector('[data-product-editor-root]'),{
         draft:productDraft,onDraft:saveProductDraft,onReset:()=>{saveProductDraft(null);render()},
