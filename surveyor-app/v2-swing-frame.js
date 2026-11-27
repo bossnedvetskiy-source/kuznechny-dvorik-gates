@@ -30,12 +30,12 @@ export function swingFramePlan(input={}){
   if(errors.length)return {errors:[...new Set(errors)],leaves:[],materials:[],total:null};
   if(state.product==='set'&&state.diagonal==='40x25x2'){
     try{
-      const config={widthMm:Number(state.gateWidthMm),heightMm:Number(state.gateHeightMm),wicketWidthMm:Number(state.wicketWidthMm),wicketHeightMm:Number(state.wicketHeightMm),profile:state.profile,gapMode:state.gapMode,wicketType:state.wicketType,fill:state.fill,postType:state.postType,wicketPosition:state.wicketPosition,manualPosts:state.manualPosts===''?'':Number(state.manualPosts),link:state.link,installation:state.installation};
+      const config={widthMm:Number(state.gateWidthMm),heightMm:Number(state.gateHeightMm),wicketWidthMm:Number(state.wicketWidthMm),wicketHeightMm:Number(state.wicketHeightMm),profile:state.profile,gapMode:state.gapMode,wicketType:state.wicketType,fill:state.fill,paint:state.paint,postType:state.postType,wicketPosition:state.wicketPosition,manualPosts:state.manualPosts===''?'':Number(state.manualPosts),link:state.link,installation:state.installation};
       const g=simpleGateGeometry(config),fill=simpleGateFill(config),extras=simpleGateExtras(config);
       const materials=[{profile:state.profile,mm:g.main.actualMm,stock:g.main.count}];
       if(g.inner.count)materials.push({profile:'20x20x1.5',mm:g.inner.actualMm,stock:g.inner.count});
       materials.push({profile:'40x20x2',mm:g.rearActualMm,stock:g.rearPurchaseMm/6000});
-      return {errors:[],leaves,materials,fill,extras,builtIn:g.builtIn,embeddedOpeningMm:g.builtIn?config.wicketWidthMm:null,total:null,workbookGeometry:true,rearNeedsJoin:g.rearNeedsJoin,
+      return {errors:[],leaves,materials,fill,extras,builtIn:g.builtIn,embeddedOpeningMm:g.builtIn?config.wicketWidthMm:null,total:null,quoteInput:config,workbookGeometry:true,rearNeedsJoin:g.rearNeedsJoin,
         accessories:{hinges:state.hinges?6:0,lock:state.lock?1:0,bolts:state.bolts?1:0,posts:0},paint:state.paint,configuration:state};
     }catch(error){return {errors:[error.message],leaves:[],materials:[],total:null}}
   }
@@ -72,7 +72,7 @@ function diagram(plan){
   }
   return '<svg viewBox="0 0 360 155" role="img" aria-label="Условный эскиз компоновки, не производственный чертёж"><g fill="none" stroke="#20262d" stroke-width="2">'+shapes+'</g></svg>';
 }
-export function mountSwingFrameEditor(root,{draft,onDraft,onBack,onReset}={}){
+export function mountSwingFrameEditor(root,{draft,onDraft,onBack,onReset,onQuote,onSave}={}){
   const state={...SWING_DEFAULTS,...draft};
   root.innerHTML='<section class="kd-product-editor" aria-label="Расчёт каркасов распашных ворот">'+
     '<button type="button" class="kd-v2-action" data-swing-back>← К каталогу</button><h3>Каркасы ворот и калиток</h3>'+
@@ -94,7 +94,8 @@ export function mountSwingFrameEditor(root,{draft,onDraft,onBack,onReset}={}){
     '<label><span>Установка</span><select data-swing-field="installation"><option value="none">Без установки</option><option value="set">Ворота + калитка</option><option value="gate">Только ворота</option><option value="wicket">Только калитка</option><option value="builtIn">Ворота со встроенной калиткой</option></select></label>'+
     check('link','Со связкой')+'</div><div data-swing-fill-plan></div></div>'+
     '<div data-swing-errors role="status"></div><div class="kd-v2-card"><h3>Габариты и материалы</h3><div data-swing-plan></div><p class="kd-v2-note">Предварительный расход по геометрии. Для комплекта по Excel — распределение по хлыстам 6 м без ширины реза. Не карта резки. Технологические припуски и длина столбов не рассчитаны.</p></div>'+
-    '<div class="kd-v2-card"><b>Стоимость пока не рассчитана</b><small>Тарифы серийных каркасов требуют сверки. Сохранение в смету будет доступно после утверждения цены.</small></div>'+
+    '<div class="kd-v2-card" data-swing-price><b>Стоимость пока не рассчитана</b><small>Тарифы серийных каркасов требуют сверки. Сохранение в смету будет доступно после утверждения цены.</small></div>'+
+    (onQuote?'<div class="kd-v2-card"><b>ТЕСТОВЫЙ РЕЖИМ</b><p class="kd-v2-note">Условные тарифы, не коммерческое предложение. Фурнитура по полной комплектации Excel. Только новый тестовый замер.</p><button type="button" class="kd-v2-action" data-swing-demo-quote>Рассчитать на условных тарифах</button><div data-swing-demo-result role="status"></div><button type="button" class="kd-v2-action primary" data-swing-demo-save hidden>Сохранить новый тестовый замер</button></div>':'')+
     '<button type="button" class="kd-v2-action" data-swing-reset>Сбросить параметры</button></section>';
   for(const el of root.querySelectorAll('[data-swing-field]')){const k=el.dataset.swingField;if(el.type==='checkbox')el.checked=state[k];else el.value=state[k];}
   const show=()=>{
@@ -121,8 +122,37 @@ export function mountSwingFrameEditor(root,{draft,onDraft,onBack,onReset}={}){
       p.materials.map(m=>'<div class="kd-product-row"><span>Труба '+m.profile.replaceAll('x','×')+'</span><b>'+fmt(m.mm/1000)+' м'+(m.stock?' · '+m.stock+' хл.':'')+'</b></div>').join('')+
       [['Петли',p.accessories.hinges],['Замок с ручками',p.accessories.lock],['Засовы/штыри, комплект',p.accessories.bolts],['Столбы 80×80×3',p.accessories.posts]].filter(([,v])=>v>0).map(([label,v])=>'<div class="kd-product-row"><span>'+label+'</span><b>'+v+'</b></div>').join('');
   };
+  let demoReply=null,demoBusy=false,version=0;
+  const demoResult=root.querySelector('[data-swing-demo-result]'),demoSave=root.querySelector('[data-swing-demo-save]'),demoButton=root.querySelector('[data-swing-demo-quote]');
+  const clearDemo=()=>{version++;demoReply=null;if(demoResult)demoResult.textContent='';if(demoSave)demoSave.hidden=true;};
+  if(demoButton)demoButton.onclick=async()=>{
+    if(demoBusy)return;
+    clearDemo();
+    const p=swingFramePlan(state);
+    if(!p.quoteInput||p.errors.length){demoResult.textContent='Выберите корректный комплект по Excel.';return}
+    const revision=version;
+    demoBusy=true;demoButton.disabled=true;
+    try{
+      const reply=await onQuote(p.quoteInput);
+      if(revision!==version)return;
+      if(reply?.customer?.test!==true)throw Error('Ожидается только тестовый расчёт');
+      demoReply=reply;
+      demoResult.textContent='Условная цена: '+fmt(reply.customer.prices.total)+' ₽'+(reply.owner?' · Себестоимость (тест): '+fmt(reply.owner.productCost)+' ₽ · Зарплата (тест): '+fmt(reply.owner.wage)+' ₽ · Прибыль изделия (тест): '+fmt(reply.owner.productProfitBeforeRounding)+' ₽':'');
+      demoSave.hidden=!onSave;
+    }catch(error){if(revision===version)demoResult.textContent=error.message}
+    finally{demoBusy=false;demoButton.disabled=false}
+  };
+  if(demoSave)demoSave.onclick=async()=>{
+    if(demoBusy||!demoReply||!onSave)return;
+    const p=swingFramePlan(state);
+    if(!p.quoteInput||p.errors.length)return;
+    demoBusy=true;demoSave.disabled=true;demoButton.disabled=true;
+    try{await onSave(p.quoteInput)}catch(error){demoResult.textContent=error.message}
+    finally{demoBusy=false;demoSave.disabled=false;demoButton.disabled=false}
+  };
   root.addEventListener('input',e=>{
     const el=e.target,k=el.dataset.swingField;if(!Object.hasOwn(SWING_DEFAULTS,k))return;
+    clearDemo();
     state[k]=el.type==='checkbox'?el.checked:el.value;
     if(state.product!=='set'||state.diagonal!=='40x25x2'){state.wicketType='separate';root.querySelector('[data-swing-field="wicketType"]').value='separate'}
     if(k==='wicketType'||k==='product'||k==='diagonal'){
