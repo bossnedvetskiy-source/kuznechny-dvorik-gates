@@ -93,3 +93,36 @@ test('phone swing preview supports real dimensions and isolates synthetic quote 
   expect(state.survey.clientPhone).toBe('');
   expect(requests.filter(r=>r.method!=='GET'||/\/api\/(?:surveyor|leads)(?:[/?]|$)/.test(r.url))).toEqual([]);
 });
+
+test('phone catalogue opens forged photos, picket sides and continuous profile sheets without API',async({page})=>{
+  test.setTimeout(90000);
+  const requests=[];
+  page.on('request',r=>requests.push({url:r.url(),method:r.method()}));
+  await page.goto('/kuznechny-dvorik-gates/kd-v2/');
+  await expect(page.locator('#loginForm button[type=submit]')).toBeEnabled({timeout:20000});
+  await page.locator('#loginInput').fill('zamer');
+  await page.locator('#passwordInput').fill('1234');
+  await page.locator('#loginForm button[type=submit]').click();
+  const home=page.locator('#v2HomeScreen');
+  await expect(home).toBeVisible({timeout:20000});
+  await home.locator('[data-v2-action="catalog"]').click();
+  await home.locator('[data-v2-action="artGates"]').click();
+  await expect(home.locator('[data-art-article]')).toHaveCount(38);
+  const photo=home.locator('[data-art-article="Арт.6"] img');
+  await expect.poll(()=>photo.evaluate(e=>e.complete&&e.naturalWidth>0)).toBe(true);
+  await home.locator('[data-art-article="Арт.6"]').click();
+  await expect(home.locator('[data-art-calculate]')).toBeDisabled();
+  await home.locator('[data-art-back]').click();
+  await home.locator('[data-v2-action="pickets"]').click();
+  await home.locator('[data-picket-fit]').click();
+  await expect(home.locator('[data-picket-plan]')).toContainText('Без подрезки');
+  await home.locator('[data-picket-side="Б"]').click();
+  await home.getByText('Общие угловые столбы',{exact:true}).click();
+  await home.locator('[data-picket-corner="АБ"]').check();
+  await expect(home.locator('[data-picket-site-summary]')).toContainText('Общие углы (вычтено)');
+  await home.locator('[data-picket-back]').click();
+  await home.locator('[data-v2-action="profileFence"]').click();
+  await home.locator('[data-profile-field="sheetMode"]').selectOption('continuous');
+  await expect(home.locator('[data-profile-plan]')).toContainText('23,76');
+  expect(requests.filter(r=>r.method!=='GET'||/\/api\/(?:surveyor|leads)(?:[/?]|$)/.test(r.url))).toEqual([]);
+});
