@@ -14,6 +14,11 @@ test('published phone sandbox has separate database, cache and no API writes',as
   await expect(page.locator('#loginForm button[type=submit]')).toBeEnabled({timeout:20000});
   await page.locator('#loginInput').fill('zamer');
   await page.locator('#passwordInput').fill('1234');
+  // Reproduce the old 80ms autofocus window: it must not steal password focus.
+  await page.waitForTimeout(120);
+  await expect(page.locator('#passwordInput')).toBeFocused();
+  await expect(page.locator('#loginInput')).toHaveValue('zamer');
+  await expect(page.locator('#passwordInput')).toHaveValue('1234');
   await page.locator('#loginForm button[type=submit]').click();
   const home=page.locator('#v2HomeScreen');
   await expect(home).toBeVisible({timeout:20000});
@@ -53,6 +58,11 @@ test('phone swing preview supports real dimensions and isolates synthetic quote 
   await expect(page.locator('#loginForm button[type=submit]')).toBeEnabled({timeout:20000});
   await page.locator('#loginInput').fill('zamer');
   await page.locator('#passwordInput').fill('1234');
+  // Reproduce the old 80ms autofocus window: it must not steal password focus.
+  await page.waitForTimeout(120);
+  await expect(page.locator('#passwordInput')).toBeFocused();
+  await expect(page.locator('#loginInput')).toHaveValue('zamer');
+  await expect(page.locator('#passwordInput')).toHaveValue('1234');
   await page.locator('#loginForm button[type=submit]').click();
   const home=page.locator('#v2HomeScreen');
   await expect(home).toBeVisible({timeout:20000});
