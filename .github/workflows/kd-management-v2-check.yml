@@ -56,6 +56,8 @@ jobs:
           npm run build
           node scripts/build-timeweb.mjs
           node scripts/build-dev-preview.mjs
+          KD_V2_SOURCE_SHA="$GITHUB_SHA" node scripts/build-kd-v2-phone.mjs surveyor-app _site
+          test -s _site/kd-v2/index.html
           test -s _site/dev-tools/index.html
           test -s _site/surveyor-test/index.html
       - name: Verify frontend-only preview isolation
@@ -122,6 +124,9 @@ jobs:
       - name: Verify local authenticated v2 home separately
         if: (success() || failure()) && steps.chromium.outcome == 'success'
         run: npx playwright test tests/surveyor-v2-home-integration.spec.js --workers=1
+      - name: Verify isolated phone copy
+        if: (success() || failure()) && steps.chromium.outcome == 'success'
+        run: npx playwright test tests/surveyor-v2-phone.spec.js --workers=1
       - name: Run mobile, offline, roles and all surveyor browser tests
         if: (success() || failure()) && steps.chromium.outcome == 'success' && !contains(github.event.head_commit.message, '[v2-focused]')
         run: npx playwright test tests/surveyor-*.spec.js tests/dev-pwa.spec.js --workers=2
