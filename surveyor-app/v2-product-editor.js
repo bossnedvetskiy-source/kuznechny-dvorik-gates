@@ -60,8 +60,8 @@ function diagram(q){
   if(q.wicket?.valid)drawing+='<rect x="'+(x+q.wicket.left*scale)+'" y="'+(top+7)+'" width="'+(q.wicket.width*scale)+'" height="'+(bottom-top-14)+'"/>';
   return '<svg viewBox="0 0 360 145" role="img" aria-label="Условный эскиз откатных ворот, не производственный чертёж"><g fill="none" stroke="#20262d" stroke-width="2">'+drawing+'</g><text x="'+((x+right)/2)+'" y="137" fill="#20262d" text-anchor="middle" font-size="12">'+Math.round(w*1000)+' мм</text></svg>';
 }
-export function mountProductEditor(root,{onBack,onLegacy}={}){
-  let state={...SLIDING_DEFAULTS};
+export function mountProductEditor(root,{onBack,onLegacy,draft,onDraft}={}){
+  let state={...SLIDING_DEFAULTS,...draft};
   root.innerHTML='<section class="kd-product-editor" aria-label="Быстрый расчёт откатных ворот">'+
     '<button type="button" class="kd-v2-action" data-product-back>← К каталогу</button><h3>Откатные ворота</h3><p class="kd-v2-note">Предварительная цена по действующим формулам · без заказа и контактов. Эскиз условный.</p>'+
     '<div class="kd-v2-card"><div class="kd-product-sketch" data-product-sketch></div><div class="kd-product-grid">'+
@@ -87,6 +87,7 @@ export function mountProductEditor(root,{onBack,onLegacy}={}){
   root.addEventListener('input',e=>{
     const el=e.target,key=el.dataset.productField;if(!Object.hasOwn(SLIDING_DEFAULTS,key))return;
     state[key]=el.type==='checkbox'?el.checked:el.value;
+    onDraft?.({...state});
     render();
   });
   root.querySelector('[data-product-back]').addEventListener('click',()=>onBack?.());
