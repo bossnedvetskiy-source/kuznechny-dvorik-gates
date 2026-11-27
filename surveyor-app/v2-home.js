@@ -12,6 +12,7 @@ export function mountV2Home({role,navigate,newSurvey,open3D}) {
   oldNav.forEach(btn=>btn.classList.add('kd-v2-legacy-nav'));
   root.classList.add('kd-v2-local');
   let currentScreen='v2Home';
+  let catalogOpen=false;
   const host=document.createElement('section');
   host.id='v2HomeScreen';host.className='screen kd-v2-home';host.setAttribute('aria-label','Новая главная');
   const style=document.createElement('style');
@@ -70,20 +71,37 @@ html.kd-v2-local[data-kd-theme=light]{--kd-bg:#f1f5f9;--kd-card:#fff;--kd-soft:#
   const surveyItems=[['catalog','Каталог'],['calc','Мои расчёты'],['clients','Клиенты'],['calendar','Календарь'],['file','Предложения'],['check','Договоры']];
   const tile=([id,label])=>'<button class="kd-v2-tile" type="button" data-v2-action="'+id+'">'+icon(id)+'<span>'+label+'</span></button>';
   const btn=(id,label,desc,primary=false)=>'<button class="kd-v2-action'+(primary?' primary':'')+'" type="button" data-v2-action="'+id+'">'+icon(id)+'<span><b>'+label+'</b><small>'+desc+'</small></span></button>';
+  const catalogItems=[
+    ['artGates','Кованые ворота Арт.','Действующий каталог ворот и калиток по артикулам.'],
+    ['artFences','Кованые заборы Арт.','Отдельный каталог секций · требуется база моделей и формул.'],
+    ['frames','Каркасы ворот и калиток','Серийные каркасы · отдельный редактор на этапе 2.'],
+    ['sliding','Откатные ворота','Действующий калькулятор через замер.'],
+    ['pickets','Евроштакетник','Действующий калькулятор через замер.'],
+    ['canopy','Навесы','Действующий калькулятор через замер.']
+  ];
   function render(){
     host.dataset.theme=theme;
     root.dataset.kdTheme=theme;
     const isOwner=workspace==='owner'&&owner;
     body.innerHTML='<div class="kd-v2-head"><h2>'+(isOwner?'КД УПРАВЛЕНИЕ':'КД ЗАМЕРЩИК')+'</h2><button class="kd-v2-iconbtn" type="button" data-v2-action="theme" aria-label="Переключить тему">'+(theme==='dark'?'☀':'☾')+'</button>'+(owner?'<button class="kd-v2-iconbtn" type="button" data-v2-action="workspace" aria-label="Переключить рабочее пространство">⇄</button>':'')+'</div><p class="kd-v2-note">Тестовая оболочка · действующие функции открываются в прежнем редакторе.</p>'+
-    (isOwner?'<div class="kd-v2-grid two">'+['Сумма заказов','К получению','Заказы в работе','Активные клиенты'].map(x=>'<div class="kd-v2-card"><small>'+x+'</small><strong>—</strong></div>').join('')+'</div><div class="kd-v2-card kd-v2-panel"><b>Требует внимания</b><small>Рабочие показатели ещё не подключены.</small></div><h3>Управление предприятием</h3><div class="kd-v2-grid">'+ownerItems.map(tile).join('')+'</div><div class="kd-v2-card kd-v2-panel"><b>КД — Умный помощник</b><small>Сценарии подключаются на этапе 11</small><button class="kd-v2-question" data-v2-action="tasks">Что сделать сегодня?</button><button class="kd-v2-question" data-v2-action="wallet">Кто должен деньги?</button><button class="kd-v2-question" data-v2-action="orders">Какие заказы требуют внимания?</button></div>':
+    (catalogOpen?'<button class="kd-v2-action" type="button" data-v2-action="catalogBack">← К разделам замерщика</button><h3>Каталог изделий</h3><p class="kd-v2-note">Выберите направление. Новые редакторы подключаются на этапе 2.</p>'+catalogItems.map(([id,label,desc])=>btn(id,label,desc)).join(''):isOwner?'<div class="kd-v2-grid two">'+['Сумма заказов','К получению','Заказы в работе','Активные клиенты'].map(x=>'<div class="kd-v2-card"><small>'+x+'</small><strong>—</strong></div>').join('')+'</div><div class="kd-v2-card kd-v2-panel"><b>Требует внимания</b><small>Рабочие показатели ещё не подключены.</small></div><h3>Управление предприятием</h3><div class="kd-v2-grid">'+ownerItems.map(tile).join('')+'</div><div class="kd-v2-card kd-v2-panel"><b>КД — Умный помощник</b><small>Сценарии подключаются на этапе 11</small><button class="kd-v2-question" data-v2-action="tasks">Что сделать сегодня?</button><button class="kd-v2-question" data-v2-action="wallet">Кто должен деньги?</button><button class="kd-v2-question" data-v2-action="orders">Какие заказы требуют внимания?</button></div>':
     btn('quick','Быстрый расчёт',owner?'Действующий калькулятор откатных ворот':'Без заказа — появится на этапе 2',true)+btn('measure','Новый замер объекта','Открыть действующий редактор замера')+'<h3>Работа с клиентами</h3><div class="kd-v2-grid two">'+surveyItems.map(tile).join('')+'</div>'+btn('threeD','3D-конструктор','Вспомогательный инструмент до этапа 3'))+'<div class="kd-v2-card kd-v2-detail" role="status" hidden></div>';
   }
   function pending(label){const detail=body.querySelector('.kd-v2-detail');detail.textContent=label;detail.hidden=false;detail.scrollIntoView({block:'nearest'});}
   body.addEventListener('click',e=>{
     const action=e.target.closest('[data-v2-action]')?.dataset.v2Action;if(!action)return;
     if(action==='theme'){theme=theme==='dark'?'light':'dark';try{localStorage.setItem('kd-v2-home-theme',theme)}catch{}render();return}
-    if(action==='workspace'&&owner){workspace=workspace==='owner'?'surveyor':'owner';render();syncNav();return}
-    if(action==='ruler'&&owner){workspace='surveyor';render();syncNav();return}
+    if(action==='workspace'&&owner){catalogOpen=false;workspace=workspace==='owner'?'surveyor':'owner';render();syncNav();return}
+    if(action==='ruler'&&owner){catalogOpen=false;workspace='surveyor';render();syncNav();return}
+    if(action==='catalog'){catalogOpen=true;render();return}
+    if(action==='catalogBack'){catalogOpen=false;render();return}
+    if(action==='artFences'){pending('Кованые заборы Арт.: отдельный редактор на этапе 2. До утверждения моделей, размеров, материалов и тарифов стоимость не рассчитывается.');return}
+    if(action==='frames'){pending('Серийные каркасы: отдельный редактор на этапе 2.');return}
+    if(['artGates','sliding','pickets','canopy'].includes(action)){
+      pending('Действующий калькулятор доступен через новый замер. В редакторе замера выберите соответствующее изделие.');
+      const detail=body.querySelector('.kd-v2-detail');
+      const next=document.createElement('button');next.type='button';next.className='kd-v2-action primary';next.dataset.v2Action='measure';next.textContent='Создать замер';detail.append(next);return
+    }
     if(action==='clients'){navigate('clients');return}
     if(action==='calc'){navigate('surveys');return}
     if(action==='orders'&&owner){pending('Реестр заказов появится на этапе 6. Замеры доступны в пространстве замерщика.');return}
@@ -109,7 +127,7 @@ html.kd-v2-local[data-kd-theme=light]{--kd-bg:#f1f5f9;--kd-card:#fff;--kd-soft:#
         if(target==='ordersPending'||target==='factoryPending'){
           navigate('v2Home');
           pending(target==='ordersPending'?'Полноценный реестр заказов появится на этапе 6. Существующие замеры доступны в рабочем пространстве замерщика.':'Цех будет подключён на этапе 7.');
-        }else navigate(target);
+        }else {if(target==='v2Home'&&catalogOpen){catalogOpen=false;render()}navigate(target);}
       });
       bottom.append(nav);navNodes.push(nav);
     }
