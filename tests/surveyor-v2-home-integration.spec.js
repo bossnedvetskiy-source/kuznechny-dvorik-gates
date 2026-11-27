@@ -246,3 +246,43 @@ test('v2 visual acceptance at 320, 390 and 1280 pixels with named controls',asyn
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
   await page.screenshot({path:testInfo.outputPath('catalog-320.png'),fullPage:true,animations:'disabled'});
 });
+
+test('v2 customer quick calculation uses existing sliding engine without creating a survey',async({page})=>{
+  await login(page,'zamer');
+  const home=page.locator('#v2HomeScreen');
+  await expect(home).toBeVisible();
+  await home.locator('[data-v2-action="quick"]').click();
+  await home.locator('[data-v2-action="sliding"]').click();
+  const editor=home.locator('.kd-product-editor');
+  await expect(editor).toBeVisible();
+  await expect(editor.locator('[data-product-field="widthMm"]')).toHaveValue('4000');
+  const original=await editor.locator('[data-product-total]').textContent();
+  await expect(editor.locator('[data-product-total]')).toContainText('₽');
+  await editor.locator('[data-product-field="widthMm"]').fill('4200');
+  await expect(editor.locator('[data-product-total]')).not.toHaveText(original);
+  await expect(editor.locator('[data-product-sketch]')).toContainText('4200 мм');
+  await home.getByRole('button',{name:'Переключить тему'}).click();
+  await expect(editor.locator('[data-product-field="widthMm"]')).toHaveValue('4200');
+  await editor.locator('[data-product-field="widthMm"]').fill('499');
+  await expect(editor.locator('[data-product-total]')).toHaveText('—');
+  await expect(editor.locator('[data-product-errors]')).not.toHaveText('');
+  await editor.locator('[data-product-field="widthMm"]').fill('4000');
+  await expect(editor.locator('[data-product-total]')).toHaveText(original);
+  await expect(home.locator('[data-product-rows]')).not.toContainText(/Себестоимость|Прибыль|Зарплата/);
+  await page.locator('.kd-v2-nav[data-screen="surveys"]').click();
+  await expect(page.locator('#surveyList .survey-card')).toHaveCount(0);
+});
+test('millimetre adapter agrees with existing sliding price engine and rejects invalid input',async({page})=>{
+  await page.goto('/surveyor-app/index.html?ui=v2');
+  const comparisons=await page.evaluate(async()=>{
+    const {slidingQuoteMm,SLIDING_DEFAULTS}=await import('/surveyor-app/v2-product-editor.js');
+    const {calculateSlidingQuote}=await import('/surveyor-app/sliding-gates/pricing.js');
+    const states=[{}, {widthMm:4200,paint:false,fill:false}, {frame:'vertical',picket:'double',widthMm:3600}, {builtInWicket:true,heightMm:1800}, {frame:'jalousie'}, {tail:'triangle',distance:15,discount:500}];
+    return {matches:states.map(s=>{const q=slidingQuoteMm(s);return q.total!==null&&q.total===calculateSlidingQuote(q.configuration).total}),
+      invalid:[slidingQuoteMm({widthMm:'',heightMm:1800}).total,slidingQuoteMm({widthMm:499}).total,slidingQuoteMm({widthMm:4000.5}).total,slidingQuoteMm({frame:'unknown'}).total],
+      defaults:SLIDING_DEFAULTS.widthMm};
+  });
+  expect(comparisons.matches).toEqual([true,true,true,true,true,true]);
+  expect(comparisons.invalid).toEqual([null,null,null,null]);
+  expect(comparisons.defaults).toBe(4000);
+});
