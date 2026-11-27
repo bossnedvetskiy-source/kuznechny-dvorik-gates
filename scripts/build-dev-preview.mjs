@@ -699,7 +699,7 @@ devSw = devSw.replace(surveyorTestFetchNeedle, surveyorTestFetchReplacement);
 // resumeSurvey state in the URL. Prefer the exact, current-build precache for
 // this route; do not await writing a cloned navigation response or fall back
 // to the public catalog. This also works during offline calculator returns.
-const devResumeNeedle = "if(request.method!=='GET')return;\\n  if(request.mode==='navigate'){";
+const devResumeNeedle = "if(request.method!=='GET')return;\n  if(request.mode==='navigate'){";
 const devResumeReplacement = `if(request.method!=='GET')return;
   if(request.mode==='navigate' && url.searchParams.has('resumeSurvey') &&
       ${JSON.stringify([BASE+'/'+DEV_TOOLS_DIR+'/',BASE+'/'+DEV_TOOLS_FRESH_DIR+'/',BASE+'/'+SURVEYOR_V2_DIR+'/'])}.includes(url.pathname)){
