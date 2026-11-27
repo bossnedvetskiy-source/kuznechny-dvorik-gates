@@ -44,6 +44,20 @@ export function slidingQuoteMm(input={}){
   const quote=calculateSlidingQuote(config);
   return {...quote,configuration:config,rows:quote.rows||[]};
 }
+// Rebuild a customer-only snapshot from validated inputs, never trust a displayed total.
+export function buildSlidingCalculation(input,id,now=new Date().toISOString()){
+  const q=slidingQuoteMm(input);
+  if(q.total===null||!q.configuration)throw new Error(q.errors.join(' ')||'Проверьте размеры');
+  const config={...q.configuration};
+  if(config.frame==='jalousie')config.fill=false;
+  config.builtInFrameProfile=config.builtInWicket?'60x40x2':null;
+  config.builtInThreshold=config.builtInWicket?'step-over':null;
+  config.deliveryCost=config.distance*90;
+  const names={prof:'Профнастил',vertical:'Вертикальный евроштакетник',horizontal:'Горизонтальный евроштакетник',jalousie:'Каркас под жалюзи'};
+  return {id,type:'sliding',title:'Откатные ворота',total:q.total,
+    summary:(config.builtInWicket?'Встроенная калитка '+config.builtInWidth+' м · ':'')+names[config.frame]+' · '+config.width+' × '+config.height+' м · '+(config.tail==='square'?'квадратный':'треугольный')+' хвостовик',
+    createdAt:now,updatedAt:now,payload:{category:'sliding-gates',productTitle:'Откатные ворота',total:q.total,deliveryPending:false,configuration:config}};
+}
 const money=n=>Number.isFinite(n)?new Intl.NumberFormat('ru-RU',{maximumFractionDigits:0}).format(n)+' ₽':'—';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const number=(key,label,min=0,step=1)=>'<label><span>'+label+'</span><input data-product-field="'+key+'" type="number" inputmode="'+(step===1?'numeric':'decimal')+'" min="'+min+'" step="'+step+'"></label>';
@@ -60,7 +74,7 @@ function diagram(q){
   if(q.wicket?.valid)drawing+='<rect x="'+(x+q.wicket.left*scale)+'" y="'+(top+7)+'" width="'+(q.wicket.width*scale)+'" height="'+(bottom-top-14)+'"/>';
   return '<svg viewBox="0 0 360 145" role="img" aria-label="Условный эскиз откатных ворот, не производственный чертёж"><g fill="none" stroke="#20262d" stroke-width="2">'+drawing+'</g><text x="'+((x+right)/2)+'" y="137" fill="#20262d" text-anchor="middle" font-size="12">'+Math.round(w*1000)+' мм</text></svg>';
 }
-export function mountProductEditor(root,{onBack,onLegacy,draft,onDraft,onReset}={}){
+export function mountProductEditor(root,{onBack,onLegacy,draft,onDraft,onReset,listTargets,onSave}={}){
   let state={...SLIDING_DEFAULTS,...draft};
   root.innerHTML='<section class="kd-product-editor" aria-label="Быстрый расчёт откатных ворот">'+
     '<button type="button" class="kd-v2-action" data-product-back>← К каталогу</button><h3>Откатные ворота</h3><p class="kd-v2-note">Предварительная цена по действующим формулам · без заказа и контактов. Эскиз условный.</p>'+
@@ -72,17 +86,22 @@ export function mountProductEditor(root,{onBack,onLegacy,draft,onDraft,onReset}=
     '<div class="kd-product-grid" data-product-wicket hidden>'+number('builtInWidthMm','Ширина калитки, мм',700)+select('builtInMode','Расположение',[['center','По центру'],['left','Слева'],['right','Справа']])+number('builtInOffsetMm','Отступ от края, мм')+'</div>'+
     '<details><summary>Дополнительные параметры</summary><div class="kd-product-grid">'+select('picket','Штакетник',[['single','Односторонний'],['double','Двусторонний']])+select('centerPost','Центральная стойка',[['auto','По типу каркаса'],['yes','Да'],['no','Нет']])+number('distance','Доставка, км',0,.1)+number('discount','Скидка, ₽')+'</div></details></div>'+
     '<div data-product-errors role="status"></div><details class="kd-v2-card"><summary>Состав цены</summary><div data-product-rows></div></details>'+
-    '<button type="button" class="kd-v2-action" data-product-legacy>Открыть действующий замер</button>'+
+    '<button type="button" class="kd-v2-action primary" data-product-add>Добавить в замер</button>'+
+    '<div class="kd-v2-card" data-product-targets hidden><label><span>Куда сохранить расчёт</span><select data-product-target></select></label><button type="button" class="kd-v2-action primary" data-product-confirm>Сохранить расчёт</button><button type="button" class="kd-v2-action" data-product-cancel>Отмена</button><p data-product-save-status role="status"></p></div>'+
+    '<button type="button" class="kd-v2-action" data-product-legacy>Открыть действующий замер отдельно</button>'+
     '<button type="button" class="kd-v2-action" data-product-reset>Новый расчёт · сбросить параметры</button>'+
     '<div class="kd-product-total kd-v2-card"><small>Предварительная стоимость</small><strong data-product-total aria-live="polite">—</strong></div></section>';
   const fields=[...root.querySelectorAll('[data-product-field]')];
   for(const el of fields){const k=el.dataset.productField;if(el.type==='checkbox')el.checked=state[k];else el.value=state[k];}
+  let saving=false;
   function render(){
     const q=slidingQuoteMm(state);
     root.querySelector('[data-product-wicket]').hidden=!state.builtInWicket;
     root.querySelector('[data-product-sketch]').innerHTML=diagram(q);
     root.querySelector('[data-product-errors]').textContent=q.errors.join(' ');
     root.querySelector('[data-product-total]').textContent=money(q.total);
+    root.querySelector('[data-product-add]').disabled=q.total===null||!onSave;
+    root.querySelector('[data-product-confirm]').disabled=q.total===null||saving;
     root.querySelector('[data-product-rows]').innerHTML=q.rows.map(([name,v])=>'<div class="kd-product-row"><span>'+esc(name)+'</span><b>'+money(v)+'</b></div>').join('');
   }
   root.addEventListener('input',e=>{
@@ -90,6 +109,20 @@ export function mountProductEditor(root,{onBack,onLegacy,draft,onDraft,onReset}=
     state[key]=el.type==='checkbox'?el.checked:el.value;
     onDraft?.({...state});
     render();
+  });
+  const targets=root.querySelector('[data-product-targets]'),target=root.querySelector('[data-product-target]'),status=root.querySelector('[data-product-save-status]');
+  root.querySelector('[data-product-add]').addEventListener('click',async()=>{
+    if(saving)return;
+    targets.hidden=false;status.textContent='Загрузка замеров…';target.replaceChildren(new Option('Создать новый замер без контактов',''));
+    try{for(const row of await listTargets?.()||[])target.add(new Option(row.label,row.id));status.textContent='';}catch{status.textContent='Не удалось загрузить список. Попробуйте снова.';}
+  });
+  root.querySelector('[data-product-cancel]').addEventListener('click',()=>{if(!saving)targets.hidden=true});
+  root.querySelector('[data-product-confirm]').addEventListener('click',async()=>{
+    if(saving||!onSave||slidingQuoteMm(state).total===null)return;
+    saving=true;render();status.textContent='Сохраняем…';
+    try{await onSave({...state},target.value);}
+    catch(error){status.textContent=error?.message||'Не удалось сохранить расчёт';}
+    finally{saving=false;render();}
   });
   root.querySelector('[data-product-back]').addEventListener('click',()=>onBack?.());
   root.querySelector('[data-product-legacy]').addEventListener('click',()=>onLegacy?.());
