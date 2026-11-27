@@ -95,14 +95,14 @@ jobs:
           retention-days: 5
           compression-level: 1
       - name: Cache Playwright Chromium
-        if: success() || failure()
+        if: (success() || failure()) && steps.isolation.outcome == 'success'
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('package-lock.json') }}
       - name: Install Chromium
         id: chromium
-        if: success() || failure()
+        if: (success() || failure()) && steps.isolation.outcome == 'success'
         env:
           PLAYWRIGHT_DOWNLOAD_CONNECTION_TIMEOUT: '120000'
         shell: bash
