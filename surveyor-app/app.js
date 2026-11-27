@@ -1962,6 +1962,10 @@ async function openSurveyDetails(id, {openExtra=false} = {}) {
     for(const row of q.lines){const p=document.createElement('p');p.dataset.savedBasketLine=row.id;p.textContent=row.summary||row.error||'Уточнить изделие';list.append(p)}
     root.querySelector('[data-restore-basket]').disabled=survey.createdBy!==currentUser?.id||!v2Home||API_ENABLED;
     root.querySelector('[data-restore-basket]').onclick=()=>restoreV2Basket(survey.id);
+    const prep=document.createElement('details');prep.className='details-section';const title=document.createElement('summary');title.textContent='Подготовка комплектации для предложения';const content=document.createElement('div');content.dataset.basketProposal='';prep.append(title,content);root.append(prep);
+    const {mountProposalPreparation}=await import('./v2-proposal-preparation.js');
+    mountProposalPreparation(content,survey.configuration.basketDraft.items);
+
     $('#surveyDetailsDialog').showModal();return;
   }
   const rows = surveyCalculations(survey);
