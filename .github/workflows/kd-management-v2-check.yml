@@ -114,6 +114,9 @@ jobs:
             if [[ "$attempt" -lt 3 ]]; then sleep 10; fi
           done
           exit 1
+      - name: Verify new shell prototype separately
+        if: (success() || failure()) && steps.chromium.outcome == 'success'
+        run: npx playwright test tests/surveyor-v2-shell-preview.spec.js --workers=1
       - name: Run mobile, offline, roles and all surveyor browser tests
         if: (success() || failure()) && steps.chromium.outcome == 'success'
         run: npx playwright test tests/surveyor-*.spec.js tests/dev-pwa.spec.js --workers=2
