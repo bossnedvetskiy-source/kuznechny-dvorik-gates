@@ -83,10 +83,45 @@ html.kd-v2-local[data-kd-theme=light]{--kd-bg:#f1f5f9;--kd-card:#fff;--kd-soft:#
 .kd-v2-local #planDialog :is(.plan-inline-measure input,.plan-inline-material select,.plan-quick-distance input,.plan-line-settings-body input,.plan-bottom-sheet input,.plan-bottom-sheet select){background:var(--kd-bg)!important;color:var(--kd-text)!important;border-color:var(--kd-line)!important}
 .kd-v2-local #planDialog .plan-footer{background:var(--kd-bg)!important}
 .kd-v2-local #planDialog #savePlanBtn{background:var(--kd-primary)!important;border-color:var(--kd-primary)!important;color:white!important;box-shadow:none!important}
+
+/* Shared shell controls; leave WebGL canvas, drawing sheets and warning
+   semantics unchanged. The full calculator redesign belongs to stages 2–3. */
+.kd-v2-local #mainView .kd-v2-theme-global{width:44px;height:44px;flex:0 0 44px;border:1px solid var(--kd-line);border-radius:12px;background:var(--kd-card);color:var(--kd-accent);font-size:21px}
+.kd-v2-local #mainView .kd-v2-theme-global[hidden]{display:none!important}
+.kd-v2-local #mainView .topbar{gap:6px}
+.kd-v2-local #mainView .topbar>div:first-child{min-width:0;overflow-wrap:anywhere}
+.kd-v2-local #mainView .topbar-actions{gap:5px;flex-shrink:0}
+.kd-v2-local #mainView .topbar-title{font-size:clamp(16px,4.5vw,22px)}
+.kd-v2-local :is(button,input,select,textarea,summary):focus-visible{outline:3px solid var(--kd-accent)!important;outline-offset:2px}
+.kd-v2-local #threeDScreen{color:var(--kd-text)!important}
+.kd-v2-local #threeDScreen :is(.kd3d-top,.kd3d-form,.kd3d-editor,.kd3d-editor-head,.kd3d-product-panel,.kd3d-compact,.kd3d-side-entry.selected,.kd3d-side-products .kd3d-product-card,.kd3d-side-products .kd3d-product-wicket,.kd3d-side-products .kd3d-built-in,.kd3d-stats>div,.kd3d-back){background:var(--kd-card)!important;color:var(--kd-text)!important;border-color:var(--kd-line)!important;box-shadow:none!important}
+.kd-v2-local #threeDScreen :is(.kd3d-top small,.kd3d-fields label,.kd3d-select-label,.kd3d-product-head small,.kd3d-product-type,.kd3d-product-fields label,.kd3d-compact-field,.kd3d-compact-segment,.kd3d-compact-head small,.kd3d-compact-number small,.kd3d-side-quick label,.kd3d-gate-fields>label,.kd3d-builtin-fields>label,.kd3d-gate-toggle small,.kd3d-direction-note){color:var(--kd-muted)!important}
+.kd-v2-local #threeDScreen :is(.kd3d-editor-head h3,.kd3d-product-head strong,.kd3d-compact-head strong,.kd3d-compact-current,.kd3d-sides-head strong,.kd3d-side-line [data-side],.kd3d-gate-toggle strong,.kd3d-stats b){color:var(--kd-text)!important}
+.kd-v2-local #threeDScreen :is(.kd3d-mode,.kd3d-scope,.kd3d-compact-kind-tabs,.kd3d-compact-segment>div,.kd3d-compact-side-tabs button,.kd3d-compact-number,.kd3d-product-note,.kd3d-compact-help,.kd3d-compact-empty,.kd3d-gate-note){background:var(--kd-soft)!important;color:var(--kd-text)!important;border-color:var(--kd-line)!important}
+.kd-v2-local #threeDScreen :is(.kd3d-mode button,.kd3d-scope button,.kd3d-compact-kind-tabs button,.kd3d-compact-segment button){color:var(--kd-muted)!important}
+.kd-v2-local #threeDScreen :is(.kd3d-mode button.active,.kd3d-scope button[aria-pressed=true],.kd3d-compact-side-tabs button[aria-pressed=true],.kd3d-compact-kind-tabs button[aria-pressed=true],.kd3d-compact-segment button[aria-pressed=true]){background:var(--kd-primary)!important;border-color:var(--kd-primary)!important;color:white!important}
+.kd-v2-local #threeDScreen :is(.kd3d-fields input,.kd3d-select-label select,.kd3d-product-type select,.kd3d-product-fields input,.kd3d-product-fields select,.kd3d-side-quick input,.kd3d-side-quick select,.kd3d-compact-field select,.kd3d-gate-fields input:not([type=checkbox]),.kd3d-gate-fields select,.kd3d-builtin-fields input:not([type=checkbox])){background:var(--kd-bg)!important;color:var(--kd-text)!important;border-color:var(--kd-line)!important}
+.kd-v2-local #threeDScreen .kd3d-compact-field input{color:var(--kd-text)!important}
+@media(prefers-reduced-motion:reduce){.kd-v2-local #mainView .screen,.kd-v2-local #mainView .btn,.kd-v2-local .kd-v2-home *{animation:none!important;transition:none!important}}
 @media(min-width:700px){.kd-v2-grid{grid-template-columns:repeat(4,minmax(0,1fr))}.kd-v2-grid.two{grid-template-columns:repeat(4,minmax(0,1fr))}.kd-v2-tile{min-height:105px!important}}
 `;
   host.append(style);
   const body=document.createElement('div');host.append(body);
+  const globalTheme=document.createElement('button');
+  globalTheme.type='button';globalTheme.className='kd-v2-theme-global';globalTheme.id='kdV2GlobalTheme';
+  globalTheme.hidden=true;
+  main.querySelector('.topbar-actions').prepend(globalTheme);
+  function updateThemeButton(){
+    globalTheme.textContent=theme==='dark'?'☀':'☾';
+    globalTheme.setAttribute('aria-label',theme==='dark'?'Включить светлую тему':'Включить тёмную тему');
+    globalTheme.hidden=currentScreen==='v2Home';
+  }
+  function toggleTheme(){
+    theme=theme==='dark'?'light':'dark';
+    try{localStorage.setItem('kd-v2-home-theme',theme)}catch{}
+    render();
+  }
+  globalTheme.addEventListener('click',toggleTheme);
   const paths={home:'M3 10l9-7 9 7v10h-6v-6H9v6H3z',menu:'M4 6h16 M4 12h16 M4 18h16',tasks:'M4 3h16v18H4z M7 9l2 2 3-4 M14 10h3 M7 16l2 2 3-4 M14 17h3',clients:'M9 10a3 3 0 1 0 0-6 3 3 0 0 0 0 6 M3 20v-3a6 6 0 0 1 12 0v3 M16 5a3 3 0 0 1 0 6 M18 14a5 5 0 0 1 3 5',orders:'M5 4h14v18H5z M9 4V2h6v2 M9 10h6 M9 14h6 M9 18h6',factory:'M3 21V10l6 3V8l6 4V4h5l1 17Z M7 17h2 M12 17h2 M17 17h2',calendar:'M3 5h18v16H3z M7 2v6 M17 2v6 M3 11h18',truck:'M2 5h12v12H2z M14 10h5l3 4v3h-8 M6 17v3 M18 17v3',stock:'M3 7l9-5 9 5v10l-9 5-9-5Z M3 7l9 5 9-5 M12 12v10',wallet:'M3 5h18v15H3z M21 11h-6v5h6 M17 13.5h.1',ads:'M3 9l14-5v16L3 15z M7 16l2 5h3l-2-5 M21 9v6',star:'M12 2l3 6 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1Z',ruler:'M3 17L17 3l4 4L7 21z M8 12l3 3 M12 8l3 3',chart:'M3 3v18h18 M7 17v-5 M12 17V8 M17 17V5',calc:'M5 2h14v20H5z M8 6h8 M8 11h1 M15 11h1 M8 15h1 M15 15h1 M8 19h1 M15 19h1',catalog:'M3 4h18v16H3z M3 16l5-5 4 4 3-3 6 6',file:'M5 2h10l4 4v16H5z M15 2v5h4 M8 12h8 M8 16h8',check:'M5 2h10l4 4v16H5z M8 15l2 2 5-5'};
   const icon=id=>'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="'+(paths[id]||paths.file)+'"/></svg>';
   const ownerItems=[['tasks','Задачи'],['clients','Клиенты'],['orders','Заказы'],['factory','Цех'],['calendar','Календарь'],['truck','Доставка'],['stock','Склад'],['wallet','Финансы'],['ads','Реклама'],['star','Отзывы'],['ruler','Замерщик'],['chart','Аналитика']];
@@ -105,6 +140,7 @@ html.kd-v2-local[data-kd-theme=light]{--kd-bg:#f1f5f9;--kd-card:#fff;--kd-soft:#
   function render(){
     host.dataset.theme=theme;
     root.dataset.kdTheme=theme;
+    updateThemeButton();
     const isOwner=workspace==='owner'&&owner;
     body.innerHTML='<div class="kd-v2-head"><h2>'+(isOwner?'КД УПРАВЛЕНИЕ':'КД ЗАМЕРЩИК')+'</h2><button class="kd-v2-iconbtn" type="button" data-v2-action="theme" aria-label="Переключить тему">'+(theme==='dark'?'☀':'☾')+'</button>'+(owner?'<button class="kd-v2-iconbtn" type="button" data-v2-action="workspace" aria-label="Переключить рабочее пространство">⇄</button>':'')+'</div><p class="kd-v2-note">Тестовая оболочка · действующие функции открываются в прежнем редакторе.</p>'+
     (catalogOpen?'<button class="kd-v2-action" type="button" data-v2-action="catalogBack">← К разделам замерщика</button><h3>Каталог изделий</h3><p class="kd-v2-note">Выберите направление. Новые редакторы подключаются на этапе 2.</p>'+catalogItems.map(([id,label,desc])=>btn(id,label,desc)).join(''):isOwner?'<div class="kd-v2-grid two">'+['Сумма заказов','К получению','Заказы в работе','Активные клиенты'].map(x=>'<div class="kd-v2-card"><small>'+x+'</small><strong>—</strong></div>').join('')+'</div><div class="kd-v2-card kd-v2-panel"><b>Требует внимания</b><small>Рабочие показатели ещё не подключены.</small></div><h3>Управление предприятием</h3><div class="kd-v2-grid">'+ownerItems.map(tile).join('')+'</div><div class="kd-v2-card kd-v2-panel"><b>КД — Умный помощник</b><small>Сценарии подключаются на этапе 11</small><button class="kd-v2-question" data-v2-action="tasks">Что сделать сегодня?</button><button class="kd-v2-question" data-v2-action="wallet">Кто должен деньги?</button><button class="kd-v2-question" data-v2-action="orders">Какие заказы требуют внимания?</button></div>':
@@ -113,7 +149,7 @@ html.kd-v2-local[data-kd-theme=light]{--kd-bg:#f1f5f9;--kd-card:#fff;--kd-soft:#
   function pending(label){const detail=body.querySelector('.kd-v2-detail');detail.textContent=label;detail.hidden=false;detail.scrollIntoView({block:'nearest'});}
   body.addEventListener('click',e=>{
     const action=e.target.closest('[data-v2-action]')?.dataset.v2Action;if(!action)return;
-    if(action==='theme'){theme=theme==='dark'?'light':'dark';try{localStorage.setItem('kd-v2-home-theme',theme)}catch{}render();return}
+    if(action==='theme'){toggleTheme();body.querySelector('[data-v2-action="theme"]')?.focus();return}
     if(action==='workspace'&&owner){catalogOpen=false;workspace=workspace==='owner'?'surveyor':'owner';render();syncNav();return}
     if(action==='ruler'&&owner){catalogOpen=false;workspace='surveyor';render();syncNav();return}
     if(action==='catalog'){catalogOpen=true;render();return}
@@ -139,6 +175,7 @@ html.kd-v2-local[data-kd-theme=light]{--kd-bg:#f1f5f9;--kd-card:#fff;--kd-soft:#
   const navNodes=[];
   function syncNav(screen=currentScreen){
     currentScreen=screen;
+    updateThemeButton();
     navNodes.splice(0).forEach(n=>n.remove());
     const isOwner=workspace==='owner'&&owner;
     const items=isOwner?[['home','Главная','v2Home'],['orders','Заказы','ordersPending'],['clients','Клиенты','clients'],['factory','Цех','factoryPending'],['menu','Ещё','settings']]:[['home','Главная','v2Home'],['calc','Расчёты','surveys'],['clients','Клиенты','clients'],['menu','Ещё','settings']];
@@ -157,5 +194,5 @@ html.kd-v2-local[data-kd-theme=light]{--kd-bg:#f1f5f9;--kd-card:#fff;--kd-soft:#
     }
   }
   render();syncNav();
-  return {onScreen:syncNav,destroy(){host.remove();navNodes.forEach(n=>n.remove());oldNav.forEach(btn=>btn.classList.remove('kd-v2-legacy-nav'));root.classList.remove('kd-v2-local');delete root.dataset.kdTheme;}};
+  return {onScreen:syncNav,destroy(){host.remove();globalTheme.remove();navNodes.forEach(n=>n.remove());oldNav.forEach(btn=>btn.classList.remove('kd-v2-legacy-nav'));root.classList.remove('kd-v2-local');delete root.dataset.kdTheme;}};
 }
