@@ -1,8 +1,9 @@
+import {simpleGateGeometry} from './simple-gate-engine.js';
 // Serial unfilled swing frames. Dimensions are clear openings between posts.
 // Geometry/material estimate only. Never use illustrative lengths as a cut list.
 export const SWING_DEFAULTS=Object.freeze({
   product:'set',gateWidthMm:3400,gateHeightMm:1800,wicketWidthMm:1000,wicketHeightMm:1800,
-  diagonal:'40x25x2',paint:false,hinges:false,lock:false,bolts:false,posts:false
+  profile:'40x25x2',gapMode:'sideClearance',diagonal:'40x25x2',paint:false,hinges:false,lock:false,bolts:false,posts:false
 });
 const int=v=>(typeof v==='number'||typeof v==='string'&&v.trim()!=='')&&Number.isSafeInteger(Number(v));
 export function swingFramePlan(input={}){
@@ -14,13 +15,26 @@ export function swingFramePlan(input={}){
   for(const [enabled,w,h,gap] of [[gate,'gateWidthMm','gateHeightMm',60],[wicket,'wicketWidthMm','wicketHeightMm',40]]){
     if(enabled&&(!int(state[w])||Number(state[w])<=gap||!int(state[h])||Number(state[h])<=80))errors.push('Укажите положительные целые размеры в мм с учётом зазоров и профиля.');
   }
+  if(!['60x40x2','40x40x2','40x25x2'].includes(state.profile)||!['excel','sideClearance'].includes(state.gapMode))errors.push('Выберите профиль и зазоры.');
+  if(state.product!=='set'&&state.profile!=='40x25x2')errors.push('Профили 60×40 и 40×40 пока проверены только для комплекта.');
   const leaves=[];
   if(!errors.length){
-    if(gate)for(let i=0;i<2;i++)leaves.push({kind:'gate',width:(Number(state.gateWidthMm)-60)/2,height:Number(state.gateHeightMm)});
-    if(wicket)leaves.push({kind:'wicket',width:Number(state.wicketWidthMm)-40,height:Number(state.wicketHeightMm)});
+    if(gate)for(let i=0;i<2;i++)leaves.push({kind:'gate',width:(Number(state.gateWidthMm)-(state.gapMode==='excel'?20:60))/2,height:Number(state.gateHeightMm)});
+    if(wicket)leaves.push({kind:'wicket',width:Number(state.wicketWidthMm)-(state.gapMode==='excel'?10:40),height:Number(state.wicketHeightMm)});
     if(leaves.some(x=>x.width<=80))errors.push('Недостаточная ширина полотна.');
   }
   if(errors.length)return {errors:[...new Set(errors)],leaves:[],materials:[],total:null};
+  if(state.product==='set'&&state.diagonal==='40x25x2'){
+    try{
+      const g=simpleGateGeometry({widthMm:Number(state.gateWidthMm),heightMm:Number(state.gateHeightMm),wicketWidthMm:Number(state.wicketWidthMm),wicketHeightMm:Number(state.wicketHeightMm),profile:state.profile,gapMode:state.gapMode});
+      const materials=[{profile:state.profile,mm:g.main.actualMm,stock:g.main.count}];
+      if(g.inner.count)materials.push({profile:'20x20x1.5',mm:g.inner.actualMm,stock:g.inner.count});
+      materials.push({profile:'40x20x2',mm:g.rearActualMm,stock:g.rearPurchaseMm/6000});
+      return {errors:[],leaves,materials,total:null,workbookGeometry:true,rearNeedsJoin:g.rearNeedsJoin,
+        accessories:{hinges:state.hinges?6:0,lock:state.lock?1:0,bolts:state.bolts?1:0,posts:state.posts?3:0},paint:state.paint,configuration:state};
+    }catch(error){return {errors:[error.message],leaves:[],materials:[],total:null}}
+  }
+  if(state.profile!=='40x25x2')return {errors:['Для этого профиля используется схема диагоналей из Excel.'],leaves:[],materials:[],total:null};
   // Gross geometric stock estimate: full perimeter plus full-width midrail
   // and outside corner diagonal. Actual cuts depend on joint/end treatment.
   const perimeter=leaves.reduce((n,x)=>n+2*(x.width+x.height),0);
@@ -51,10 +65,12 @@ export function mountSwingFrameEditor(root,{draft,onDraft,onBack,onReset}={}){
   const state={...SWING_DEFAULTS,...draft};
   root.innerHTML='<section class="kd-product-editor" aria-label="Расчёт каркасов распашных ворот">'+
     '<button type="button" class="kd-v2-action" data-swing-back>← К каталогу</button><h3>Каркасы ворот и калиток</h3>'+
-    '<p class="kd-v2-note">Без заполнения и внутренней рамки. Размеры между столбами, высота готового полотна.</p>'+
+    '<p class="kd-v2-note">Без заполнения. Высота готового полотна. Размеры и зазоры — по выбранной схеме.</p>'+
     '<div class="kd-v2-card"><div class="kd-product-sketch" data-swing-sketch></div><div class="kd-product-grid">'+
     '<label><span>Изделие</span><select data-swing-field="product"><option value="set">Ворота с калиткой</option><option value="gate">Только ворота</option><option value="wicket">Только калитка</option></select></label>'+
-    '<label><span>Профиль диагонали</span><select data-swing-field="diagonal"><option value="40x25x2">40×25×2</option><option value="25x25x1.5">25×25×1,5</option></select></label>'+
+    '<label><span>Основной профиль</span><select data-swing-field="profile"><option value="40x25x2">40×25×2</option><option value="40x40x2">40×40×2</option><option value="60x40x2">60×40×2</option></select></label>'+
+    '<label><span>Зазоры</span><select data-swing-field="gapMode"><option value="sideClearance">По проёму: 60 / 40 мм</option><option value="excel">Из Excel: 20 / 10 мм</option></select></label>'+
+    '<label><span>Схема диагонали</span><select data-swing-field="diagonal"><option value="40x25x2">По Excel / основной профиль</option><option value="25x25x1.5">25×25×1,5 (предварительно)</option></select></label>'+
     '</div><div class="kd-product-grid" data-swing-gate>'+num('gateWidthMm','Проём ворот, мм')+num('gateHeightMm','Высота ворот, мм')+'</div>'+
     '<div class="kd-product-grid" data-swing-wicket>'+num('wicketWidthMm','Проём калитки, мм')+num('wicketHeightMm','Высота калитки, мм')+'</div></div>'+
     '<div class="kd-v2-card"><h3>Комплектация</h3><div class="kd-product-checks">'+check('paint','Покраска')+check('hinges','Петли')+check('lock','Замок с ручками')+check('bolts','Засовы и штыри')+check('posts','Столбы 80×80×3')+'</div></div>'+
@@ -66,10 +82,10 @@ export function mountSwingFrameEditor(root,{draft,onDraft,onBack,onReset}={}){
     const p=swingFramePlan(state);
     root.querySelector('[data-swing-gate]').hidden=state.product==='wicket';
     root.querySelector('[data-swing-wicket]').hidden=state.product==='gate';
-    root.querySelector('[data-swing-sketch]').innerHTML=diagram(p);
-    root.querySelector('[data-swing-errors]').textContent=p.errors.join(' ');
+    root.querySelector('[data-swing-sketch]').innerHTML=state.profile==='40x25x2'?diagram(p):'<small>Эскиз с внутренней рамкой будет добавлен на этапе чертежей.</small>';
+    root.querySelector('[data-swing-errors]').textContent=p.errors.join(' ')+(p.rearNeedsJoin?' Задняя закрывашка длиннее 6 м, требуется согласовать стыковку.':'');
     root.querySelector('[data-swing-plan]').innerHTML=p.errors.length?'':p.leaves.map((l,i)=>'<div class="kd-product-row"><span>'+(l.kind==='gate'?'Створка ворот '+(i+1):'Калитка')+'</span><b>'+fmt(l.width)+' × '+fmt(l.height)+' мм</b></div>').join('')+
-      p.materials.map(m=>'<div class="kd-product-row"><span>Труба '+m.profile.replaceAll('x','×')+'</span><b>'+fmt(m.mm/1000)+' м</b></div>').join('')+
+      p.materials.map(m=>'<div class="kd-product-row"><span>Труба '+m.profile.replaceAll('x','×')+'</span><b>'+fmt(m.mm/1000)+' м'+(m.stock?' · '+m.stock+' хл.':'')+'</b></div>').join('')+
       [['Петли',p.accessories.hinges],['Замок с ручками',p.accessories.lock],['Засовы/штыри, комплект',p.accessories.bolts],['Столбы 80×80×3',p.accessories.posts]].filter(([,v])=>v>0).map(([label,v])=>'<div class="kd-product-row"><span>'+label+'</span><b>'+v+'</b></div>').join('');
   };
   root.addEventListener('input',e=>{
