@@ -391,3 +391,22 @@ test('v2 navigation retains keyboard focus and surveyor has no staff controls',a
   await page.locator('.kd-v2-nav[data-screen="settings"]').click();
   await expect(page.locator('#openTeamBtn')).toBeHidden();
 });
+
+test('v2 headings follow workspace and catalogue rather than duplicating the brand',async({page})=>{
+  await login(page,'admin');
+  const home=page.locator('#v2HomeScreen');
+  await expect(home).toBeVisible();
+  await expect(page.locator('#screenTitle')).toHaveText('Главная');
+  await expect(page.locator('#mainView .topbar .eyebrow')).toHaveText('Тестовая версия · DEV');
+  await home.locator('[data-v2-action="workspace"]').click();
+  await expect(home.locator('h2')).toHaveText('КД ЗАМЕРЩИК');
+  await home.locator('[data-v2-action="catalog"]').click();
+  await expect(page.locator('#screenTitle')).toHaveText('Каталог изделий');
+  const icons=await home.locator('.kd-v2-action svg path').evaluateAll(els=>els.map(el=>el.getAttribute('d')));
+  expect(new Set(icons).size).toBe(7);
+  await page.locator('.kd-v2-nav[data-screen="clients"]').click();
+  await expect(page.locator('#mainView .topbar .eyebrow')).toHaveText('КД Замерщик · DEV');
+  await expect(page.locator('#clientsScreen')).toBeVisible();
+  await page.locator('.kd-v2-nav[data-screen="v2Home"]').click();
+  await expect(page.locator('#screenTitle')).toHaveText('Главная');
+});
