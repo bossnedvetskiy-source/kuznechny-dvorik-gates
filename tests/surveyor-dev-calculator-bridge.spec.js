@@ -659,3 +659,33 @@ test('new fence survey does not inherit previous survey draft; previous survey k
   await expect(page.locator('[data-field="length"][data-index="1"]')).toHaveValue('12');
   await expect(page.locator('[data-section-card="1"]')).toBeVisible();
 });
+
+test('DEV resume opens the exact cached surveyor shell offline',async({page,context})=>{
+  test.setTimeout(90000);
+  await page.addInitScript(()=>localStorage.setItem('kuzdvor-dev-access-v1','1'));
+  await page.goto('/kuznechny-dvorik-gates/dev-tools/');
+  await expect(page.locator('#loginForm button[type="submit"]')).toBeEnabled({timeout:20000});
+  await page.locator('#loginInput').fill('zamer');
+  await page.locator('#passwordInput').fill('1234');
+  await page.locator('#loginForm button[type="submit"]').click();
+  await expect(page.locator('#mainView')).toBeVisible({timeout:20000});
+  await page.locator('#newSurveyBtn').click();
+  await page.locator('#surveyAddress').fill('Тест возврата без сети');
+  await page.locator('#saveSurveyBtn').click();
+  await expect(page.locator('#surveyDetailsDialog')).toBeVisible();
+  await page.locator('#closeDetailsBtn').click();
+  const id=await page.locator('.survey-card').first().getAttribute('data-survey-id');
+  await expect.poll(()=>page.evaluate(async()=>{
+    const scope='/kuznechny-dvorik-gates/dev-tools/';
+    const registration=await navigator.serviceWorker.getRegistration(scope);
+    const keys=await caches.keys();
+    return Boolean(registration?.active&&navigator.serviceWorker.controller&&keys.some(k=>k.startsWith('kuzdvor-dev-offline-')&&k.endsWith('-shell'))&&await caches.match(scope,{ignoreSearch:true}));
+  }),{timeout:30000}).toBe(true);
+  await context.setOffline(true);
+  try{
+    await page.goto('/kuznechny-dvorik-gates/dev-tools/?resumeSurvey='+encodeURIComponent(id),{waitUntil:'domcontentloaded'});
+    await expect(page.locator('#surveyDetailsDialog')).toBeVisible({timeout:20000});
+    await expect(page.locator('#surveyDetailsContent')).toContainText('Тест возврата без сети');
+    await expect(page).toHaveURL(/dev-tools\/\?resumeSurvey=sv_/);
+  }finally{await context.setOffline(false)}
+});
