@@ -1,7 +1,7 @@
-import {mountProductEditor} from './v2-product-editor.js';
+import {mountProductEditor,SLIDING_DEFAULTS} from './v2-product-editor.js';
 // Experimental shell. Only mounted by app.js on an explicitly opted-in local
 // preview with the existing real session. No data fetching or role mutation.
-export function mountV2Home({role,navigate,newSurvey,open3D}) {
+export function mountV2Home({role,userId,navigate,newSurvey,open3D}) {
   const owner=role==='owner';
   let workspace=owner?'owner':'surveyor';
   let theme='dark';
@@ -15,13 +15,32 @@ export function mountV2Home({role,navigate,newSurvey,open3D}) {
   let currentScreen='v2Home';
   let catalogOpen=false;
   let productOpen=false, productDraft=null;
+  // Per-user, per-tab, customer quote inputs only; never store names, prices or owner costs.
+  const draftKey=userId?'kd-v2-sliding-draft-v1:'+String(userId):null;
+  function loadProductDraft(){
+    if(!draftKey)return null;
+    try{
+      const saved=JSON.parse(sessionStorage.getItem(draftKey)||'null');
+      if(saved?.version!==1||!saved.fields||typeof saved.fields!=='object')return null;
+      return Object.fromEntries(Object.entries(saved.fields).filter(([k,v])=>Object.hasOwn(SLIDING_DEFAULTS,k)&&['number','string','boolean'].includes(typeof v)));
+    }catch{return null}
+  }
+  function saveProductDraft(value){
+    productDraft=value;
+    if(!draftKey)return;
+    try{
+      if(value===null)sessionStorage.removeItem(draftKey);
+      else sessionStorage.setItem(draftKey,JSON.stringify({version:1,fields:value}));
+    }catch{}
+  }
+  productDraft=loadProductDraft();
   const host=document.createElement('section');
   host.id='v2HomeScreen';host.className='screen kd-v2-home';host.setAttribute('aria-label','Новая главная');
   const style=document.createElement('style');
   style.textContent=`
 .kd-v2-home{--vbg:#111827;--vcard:#1f2937;--vtext:#f8fafc;--vmuted:#a5b4c7;--vline:#374151;--vacc:#93c5fd;--vprimary:#2563eb;background:var(--vbg);color:var(--vtext);padding:14px;border-radius:16px;max-width:1050px;margin:0 auto}
 .kd-v2-home[data-theme=light]{--vbg:#f1f5f9;--vcard:#fff;--vtext:#172033;--vmuted:#526176;--vline:#d3dce8;--vacc:#1d4ed8;--vprimary:#1d4ed8}
-.kd-v2-home *{box-sizing:border-box}.kd-v2-home button{font:inherit;color:inherit;cursor:pointer;min-height:44px}.kd-v2-home button:focus-visible{outline:3px solid var(--vacc);outline-offset:2px}.kd-v2-head{display:flex;align-items:center;gap:8px;margin-bottom:14px}.kd-v2-head h2{font-size:17px;margin:0;flex:1}.kd-v2-home small{color:var(--vmuted);font-size:12px;display:block}.kd-v2-iconbtn{border:1px solid var(--vline);background:var(--vcard);border-radius:10px;width:44px;flex:none}.kd-v2-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.kd-v2-grid.two{grid-template-columns:repeat(2,minmax(0,1fr))}.kd-v2-card,.kd-v2-tile{border:1px solid var(--vline);background:var(--vcard);border-radius:12px;padding:12px;min-width:0}.kd-v2-card strong{display:block;font-size:24px}.kd-v2-panel{margin:12px 0}.kd-v2-tile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;text-align:center;font-size:13px!important;min-height:86px!important;overflow-wrap:anywhere}.kd-v2-home svg{width:25px;height:25px;stroke:var(--vacc);stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round}.kd-v2-home h3{font-size:16px;margin:16px 0 10px}.kd-v2-action{display:flex;align-items:center;gap:12px;text-align:left;width:100%;margin-bottom:10px;border-radius:12px;padding:14px;border:1px solid var(--vline);background:var(--vcard)}.kd-v2-action.primary{background:var(--vprimary);color:white}.kd-v2-action.primary small{color:#dbeafe}.kd-v2-question{display:block;width:100%;background:transparent;border:0;border-top:1px solid var(--vline);text-align:left;padding:10px 0}.kd-v2-detail{margin:12px 0;line-height:1.4}.kd-v2-note{color:var(--vmuted);font-size:12px;margin:0 0 12px}.kd-v2-home [hidden]{display:none!important}
+.kd-v2-home *{box-sizing:border-box}#v2HomeScreen button{min-height:44px!important}.kd-v2-home button{font:inherit;color:inherit;cursor:pointer;min-height:44px}.kd-v2-home button:focus-visible{outline:3px solid var(--vacc);outline-offset:2px}.kd-v2-head{display:flex;align-items:center;gap:8px;margin-bottom:14px}.kd-v2-head h2{font-size:17px;margin:0;flex:1}.kd-v2-home small{color:var(--vmuted);font-size:12px;display:block}.kd-v2-iconbtn{border:1px solid var(--vline);background:var(--vcard);border-radius:10px;width:44px;flex:none}.kd-v2-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.kd-v2-grid.two{grid-template-columns:repeat(2,minmax(0,1fr))}.kd-v2-card,.kd-v2-tile{border:1px solid var(--vline);background:var(--vcard);border-radius:12px;padding:12px;min-width:0}.kd-v2-card strong{display:block;font-size:24px}.kd-v2-panel{margin:12px 0}.kd-v2-tile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;text-align:center;font-size:13px!important;min-height:86px!important;overflow-wrap:anywhere}.kd-v2-home svg{width:25px;height:25px;stroke:var(--vacc);stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round}.kd-v2-home h3{font-size:16px;margin:16px 0 10px}.kd-v2-action{display:flex;align-items:center;gap:12px;text-align:left;width:100%;margin-bottom:10px;border-radius:12px;padding:14px;border:1px solid var(--vline);background:var(--vcard)}.kd-v2-action.primary{background:var(--vprimary);color:white}.kd-v2-action.primary small{color:#dbeafe}.kd-v2-question{display:block;width:100%;background:transparent;border:0;border-top:1px solid var(--vline);text-align:left;padding:10px 0}.kd-v2-detail{margin:12px 0;line-height:1.4}.kd-v2-note{color:var(--vmuted);font-size:12px;margin:0 0 12px}.kd-v2-home [hidden]{display:none!important}
 html.kd-v2-local{--bg:var(--kd-bg);--surface:var(--kd-card);--surface-2:var(--kd-soft);--text:var(--kd-text);--muted:var(--kd-muted);--line:var(--kd-line);--gold:var(--kd-accent);--gold-2:var(--kd-accent);--dark:var(--kd-card);--kd-bg:#111827;--kd-card:#1f2937;--kd-soft:#283548;--kd-text:#f8fafc;--kd-muted:#a5b4c7;--kd-line:#374151;--kd-accent:#93c5fd;--kd-primary:#2563eb;color-scheme:dark}
 html.kd-v2-local[data-kd-theme=light]{--kd-bg:#f1f5f9;--kd-card:#fff;--kd-soft:#e2e8f0;--kd-text:#172033;--kd-muted:#526176;--kd-line:#d3dce8;--kd-accent:#1d4ed8;--kd-primary:#1d4ed8;color-scheme:light}
 .kd-v2-local body,.kd-v2-local #mainView{background:var(--kd-bg)!important;color:var(--kd-text)!important}
@@ -152,7 +171,7 @@ html.kd-v2-local[data-kd-theme=light]{--kd-bg:#f1f5f9;--kd-card:#fff;--kd-soft:#
     ['artGates','Кованые ворота Арт.','Действующий каталог ворот и калиток по артикулам.'],
     ['artFences','Кованые заборы Арт.','Отдельный каталог секций · требуется база моделей и формул.'],
     ['frames','Каркасы ворот и калиток','Серийные каркасы · отдельный редактор на этапе 2.'],
-    ['sliding','Откатные ворота','Действующий калькулятор через замер.'],
+    ['sliding','Откатные ворота','Быстрый расчёт в миллиметрах · без заказа.'],
     ['pickets','Евроштакетник','Действующий калькулятор через замер.'],
     ['profileFence','Забор из профнастила','Листы, столбы, прожилины · отдельный редактор на этапе 2.'],
     ['canopy','Навесы','Действующий калькулятор через замер.']
@@ -167,7 +186,7 @@ html.kd-v2-local[data-kd-theme=light]{--kd-bg:#f1f5f9;--kd-card:#fff;--kd-soft:#
     btn('quick','Быстрый расчёт',owner?'Действующий калькулятор откатных ворот':'Выбрать изделие · без заказа',true)+btn('measure','Новый замер объекта','Открыть действующий редактор замера')+'<h3>Работа с клиентами</h3><div class="kd-v2-grid two">'+surveyItems.map(tile).join('')+'</div>'+btn('threeD','3D-конструктор','Вспомогательный инструмент до этапа 3'))+'<div class="kd-v2-card kd-v2-detail" role="status" hidden></div>';
     if(productOpen){
       mountProductEditor(body.querySelector('[data-product-editor-root]'),{
-        draft:productDraft,onDraft:value=>{productDraft=value},
+        draft:productDraft,onDraft:saveProductDraft,onReset:()=>{saveProductDraft(null);render()},
         onBack:()=>{productOpen=false;catalogOpen=true;render()},
         onLegacy:()=>{productOpen=false;catalogOpen=false;render();navigate('surveys');newSurvey()}
       });
@@ -223,5 +242,5 @@ html.kd-v2-local[data-kd-theme=light]{--kd-bg:#f1f5f9;--kd-card:#fff;--kd-soft:#
     }
   }
   render();syncNav();
-  return {onScreen:syncNav,destroy(){host.remove();globalTheme.remove();navNodes.forEach(n=>n.remove());oldNav.forEach(btn=>btn.classList.remove('kd-v2-legacy-nav'));root.classList.remove('kd-v2-local');delete root.dataset.kdTheme;}};
+  return {onScreen:syncNav,destroy(){saveProductDraft(null);host.remove();globalTheme.remove();navNodes.forEach(n=>n.remove());oldNav.forEach(btn=>btn.classList.remove('kd-v2-legacy-nav'));root.classList.remove('kd-v2-local');delete root.dataset.kdTheme;}};
 }
