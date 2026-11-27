@@ -1,0 +1,72 @@
+name: KD Management v2 isolated regression
+
+on:
+  push:
+    branches: [feature/kd-management-v2]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kd-management-v2-regression
+  cancel-in-progress: true
+
+jobs:
+  baseline:
+    if: github.ref == 'refs/heads/feature/kd-management-v2'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      DEV_SURVEYOR_API_URL: ''
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --include=dev --no-audit --no-fund
+      - name: Normalize local browser assets
+        run: |
+          if [ ! -s node_modules/xlsx/dist/xlsx.full.min.js ]; then
+            mkdir -p node_modules/xlsx/dist
+            cp node_modules/xlsx/xlsx.js node_modules/xlsx/dist/xlsx.full.min.js
+          fi
+      - name: Run existing calculation and geometry references
+        shell: bash
+        run: |
+          set -uo pipefail
+          failed=0
+          for test in gate-calculator picket-calculator canopy-calculator owner-materials surveyor-3d-geometry surveyor-3d-layout surveyor-3d-product surveyor-3d-sliding plan-auto-divide surveyor-integrity offline-integrity; do
+            echo "::group::$test"
+            node "scripts/test-$test.mjs" || failed=1
+            echo "::endgroup::"
+          done
+          exit "$failed"
+      - name: Check backend syntax
+        if: success() || failure()
+        run: php -l timeweb/backend/surveyor.php
+      - name: Build isolated preview from repository data only
+        if: success() || failure()
+        run: |
+          set -euo pipefail
+          rm -f /tmp/kuzdvor-live-catalog.json /tmp/kuzdvor-live-fence-prices.json
+          npm run build
+          node scripts/build-timeweb.mjs
+          node scripts/build-dev-preview.mjs
+          test -s _site/dev-tools/index.html
+          test -s _site/surveyor-test/index.html
+      - name: Install Chromium
+        if: success() || failure()
+        run: npx playwright install --with-deps chromium
+      - name: Run mobile, offline, roles and all surveyor browser tests
+        if: success() || failure()
+        run: npx playwright test tests/surveyor-*.spec.js tests/dev-pwa.spec.js --workers=2
+      - name: Save failure traces and local test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kd-management-v2-test-results
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 5
