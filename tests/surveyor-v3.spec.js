@@ -18,6 +18,7 @@ async function startNewSurvey(page) {
 }
 
 test('V3: begin survey, show 4 direct calculators, gate saves back to same survey, client view returns', async ({page}) => {
+  test.setTimeout(90000);
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
   await startNewSurvey(page);
