@@ -1,9 +1,10 @@
-import {simpleGateGeometry} from './simple-gate-engine.js';
+import {simpleGateGeometry,simpleGateFill,simpleGateExtras} from './simple-gate-engine.js';
 // Serial unfilled swing frames. Dimensions are clear openings between posts.
 // Geometry/material estimate only. Never use illustrative lengths as a cut list.
 export const SWING_DEFAULTS=Object.freeze({
   product:'set',gateWidthMm:3400,gateHeightMm:1800,wicketWidthMm:1000,wicketHeightMm:1800,
-  profile:'40x25x2',gapMode:'sideClearance',diagonal:'40x25x2',paint:false,hinges:false,lock:false,bolts:false,posts:false
+  profile:'40x25x2',gapMode:'sideClearance',diagonal:'40x25x2',paint:false,hinges:false,lock:false,bolts:false,posts:false,
+  fill:'none',postType:'none',wicketPosition:'adjacent',manualPosts:'',link:false,installation:'none'
 });
 const int=v=>(typeof v==='number'||typeof v==='string'&&v.trim()!=='')&&Number.isSafeInteger(Number(v));
 export function swingFramePlan(input={}){
@@ -26,12 +27,13 @@ export function swingFramePlan(input={}){
   if(errors.length)return {errors:[...new Set(errors)],leaves:[],materials:[],total:null};
   if(state.product==='set'&&state.diagonal==='40x25x2'){
     try{
-      const g=simpleGateGeometry({widthMm:Number(state.gateWidthMm),heightMm:Number(state.gateHeightMm),wicketWidthMm:Number(state.wicketWidthMm),wicketHeightMm:Number(state.wicketHeightMm),profile:state.profile,gapMode:state.gapMode});
+      const config={widthMm:Number(state.gateWidthMm),heightMm:Number(state.gateHeightMm),wicketWidthMm:Number(state.wicketWidthMm),wicketHeightMm:Number(state.wicketHeightMm),profile:state.profile,gapMode:state.gapMode,fill:state.fill,postType:state.postType,wicketPosition:state.wicketPosition,manualPosts:state.manualPosts===''?'':Number(state.manualPosts),link:state.link,installation:state.installation};
+      const g=simpleGateGeometry(config),fill=simpleGateFill(config),extras=simpleGateExtras(config);
       const materials=[{profile:state.profile,mm:g.main.actualMm,stock:g.main.count}];
       if(g.inner.count)materials.push({profile:'20x20x1.5',mm:g.inner.actualMm,stock:g.inner.count});
       materials.push({profile:'40x20x2',mm:g.rearActualMm,stock:g.rearPurchaseMm/6000});
-      return {errors:[],leaves,materials,total:null,workbookGeometry:true,rearNeedsJoin:g.rearNeedsJoin,
-        accessories:{hinges:state.hinges?6:0,lock:state.lock?1:0,bolts:state.bolts?1:0,posts:state.posts?3:0},paint:state.paint,configuration:state};
+      return {errors:[],leaves,materials,fill,extras,total:null,workbookGeometry:true,rearNeedsJoin:g.rearNeedsJoin,
+        accessories:{hinges:state.hinges?6:0,lock:state.lock?1:0,bolts:state.bolts?1:0,posts:0},paint:state.paint,configuration:state};
     }catch(error){return {errors:[error.message],leaves:[],materials:[],total:null}}
   }
   if(state.profile!=='40x25x2')return {errors:['Для этого профиля используется схема диагоналей из Excel.'],leaves:[],materials:[],total:null};
@@ -65,7 +67,7 @@ export function mountSwingFrameEditor(root,{draft,onDraft,onBack,onReset}={}){
   const state={...SWING_DEFAULTS,...draft};
   root.innerHTML='<section class="kd-product-editor" aria-label="Расчёт каркасов распашных ворот">'+
     '<button type="button" class="kd-v2-action" data-swing-back>← К каталогу</button><h3>Каркасы ворот и калиток</h3>'+
-    '<p class="kd-v2-note">Без заполнения. Высота готового полотна. Размеры и зазоры — по выбранной схеме.</p>'+
+    '<p class="kd-v2-note">Высота готового полотна. Размеры и зазоры — по выбранной схеме.</p>'+
     '<div class="kd-v2-card"><div class="kd-product-sketch" data-swing-sketch></div><div class="kd-product-grid">'+
     '<label><span>Изделие</span><select data-swing-field="product"><option value="set">Ворота с калиткой</option><option value="gate">Только ворота</option><option value="wicket">Только калитка</option></select></label>'+
     '<label><span>Основной профиль</span><select data-swing-field="profile"><option value="40x25x2">40×25×2</option><option value="40x40x2">40×40×2</option><option value="60x40x2">60×40×2</option></select></label>'+
@@ -74,12 +76,28 @@ export function mountSwingFrameEditor(root,{draft,onDraft,onBack,onReset}={}){
     '</div><div class="kd-product-grid" data-swing-gate>'+num('gateWidthMm','Проём ворот, мм')+num('gateHeightMm','Высота ворот, мм')+'</div>'+
     '<div class="kd-product-grid" data-swing-wicket>'+num('wicketWidthMm','Проём калитки, мм')+num('wicketHeightMm','Высота калитки, мм')+'</div></div>'+
     '<div class="kd-v2-card"><h3>Комплектация</h3><div class="kd-product-checks">'+check('paint','Покраска')+check('hinges','Петли')+check('lock','Замок с ручками')+check('bolts','Засовы и штыри')+check('posts','Столбы 80×80×3')+'</div></div>'+
-    '<div data-swing-errors role="status"></div><div class="kd-v2-card"><h3>Габариты и материалы</h3><div data-swing-plan></div><p class="kd-v2-note">Предварительный расход по геометрии без оптимизации раскроя. Не карта резки. Технологические припуски и длина столбов не рассчитаны.</p></div>'+
+    '<div class="kd-v2-card" data-swing-workbook-options><h3>Заполнение и дополнительные услуги</h3><div class="kd-product-grid">'+
+    '<label><span>Заполнение</span><select data-swing-field="fill"><option value="none">Без заполнения</option><option value="single">Односторонний</option><option value="chess">Шахматка</option><option value="horizontal">Горизонтальный</option><option value="sheet">Профнастил</option></select></label>'+
+    '<label><span>Столбы</span><select data-swing-field="postType"><option value="none">Без столбов</option><option value="100x100">100×100</option><option value="80x80">80×80</option><option value="60x60">60×60</option></select></label>'+
+    '<label><span>Калитка</span><select data-swing-field="wicketPosition"><option value="adjacent">Рядом</option><option value="separate">Отдельно</option></select></label>'+
+    '<label><span>Столбов вручную (необязательно)</span><input type="number" min="0" step="1" inputmode="numeric" data-swing-field="manualPosts" placeholder="По схеме"></label>'+
+    '<label><span>Установка</span><select data-swing-field="installation"><option value="none">Без установки</option><option value="set">Ворота + калитка</option><option value="gate">Только ворота</option><option value="wicket">Только калитка</option></select></label>'+
+    check('link','Со связкой')+'</div><div data-swing-fill-plan></div></div>'+
+    '<div data-swing-errors role="status"></div><div class="kd-v2-card"><h3>Габариты и материалы</h3><div data-swing-plan></div><p class="kd-v2-note">Предварительный расход по геометрии. Для комплекта по Excel — распределение по хлыстам 6 м без ширины реза. Не карта резки. Технологические припуски и длина столбов не рассчитаны.</p></div>'+
     '<div class="kd-v2-card"><b>Стоимость пока не рассчитана</b><small>Тарифы серийных каркасов требуют сверки. Сохранение в смету будет доступно после утверждения цены.</small></div>'+
     '<button type="button" class="kd-v2-action" data-swing-reset>Сбросить параметры</button></section>';
   for(const el of root.querySelectorAll('[data-swing-field]')){const k=el.dataset.swingField;if(el.type==='checkbox')el.checked=state[k];else el.value=state[k];}
   const show=()=>{
     const p=swingFramePlan(state);
+    const complete=state.product==='set'&&state.diagonal==='40x25x2';
+    root.querySelector('[data-swing-workbook-options]').hidden=!complete;
+    root.querySelector('[data-swing-field="posts"]').closest('label').hidden=complete;
+    const extraRows=[];
+    if(p.fill?.fill==='sheet')extraRows.push(['Профнастил, листов',p.fill.total.sheets],['Закупочная площадь, м²',fmt(p.fill.total.areaM2)]);
+    else if(p.fill&&p.fill.fill!=='none')extraRows.push(['Штакетник спереди, шт',p.fill.total.front],['Штакетник сзади, шт',p.fill.total.back],['Запас планок, шт',p.fill.total.spare],['Штакетник к закупке, п.м.',fmt(p.fill.total.picketMm/1000)]);
+    if(p.fill?.fill!=='none'&&p.fill)extraRows.push(['Саморезы, шт',p.fill.total.screws]);
+    if(p.extras)extraRows.push(['Столбов по схеме',p.extras.schemePosts],['Столбов в комплектации',p.extras.postCount],['Ширина связки, мм',p.extras.linkMm]);
+    root.querySelector('[data-swing-fill-plan]').innerHTML=extraRows.map(([label,value])=>'<div class="kd-product-row"><span>'+label+'</span><b>'+value+'</b></div>').join('');
     root.querySelector('[data-swing-gate]').hidden=state.product==='wicket';
     root.querySelector('[data-swing-wicket]').hidden=state.product==='gate';
     root.querySelector('[data-swing-sketch]').innerHTML=state.profile==='40x25x2'?diagram(p):'<small>Эскиз с внутренней рамкой будет добавлен на этапе чертежей.</small>';
