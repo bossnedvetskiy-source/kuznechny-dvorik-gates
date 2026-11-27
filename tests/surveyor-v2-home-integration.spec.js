@@ -738,3 +738,36 @@ test('forged catalogue uses 38 active articles and original photos without treat
   });
   expect(check).toEqual({unique:38,reference:null,verified:false,rejected:true});
 });
+
+test('forged quote contract validates server amounts, options and changed dimensions without private fields',async({page})=>{
+  await login(page,'zamer');
+  const result=await page.evaluate(async()=>{
+    const {artGateRequest,artGateVerifiedQuote,buildArtGateCalculation}=await import('./v2-art-gates.js');
+    const request=artGateRequest('Арт.6',{gateWidthMm:3800},{installation:true,posts:true});
+    const {article,...configuration}=request;
+    const response={quote:{version:1,kind:'artGate',article,configuration:{...configuration,secret:1},prices:{product:61300,installation:8000,posts:25000,total:94300,privateCost:1},deliveryPending:true,tariffRevision:'a'.repeat(64),calculatedAt:'2026-09-01T00:00:00Z',owner:{cost:1}}};
+    const q=artGateVerifiedQuote(request,response),snapshot=buildArtGateCalculation(request,response,'fixture');
+    let rejected=0;
+    for(const modify of [q=>({...q,article:'Арт.18'}),q=>({...q,configuration:{...q.configuration,gateWidthMm:3400}}),q=>({...q,prices:{...q.prices,total:1}}),q=>({...q,deliveryPending:false})]){
+      try{artGateVerifiedQuote(request,{quote:modify(response.quote)})}catch{rejected++}
+    }
+    return {q,snapshot,rejected};
+  });
+  expect(result.q.prices.total).toBe(94300);
+  expect(result.snapshot.payload.deliveryPending).toBe(true);
+  expect(result.snapshot.payload.configuration.gateWidthMm).toBe(3800);
+  expect(result.rejected).toBe(4);
+  expect(JSON.stringify(result.snapshot)).not.toMatch(/privateCost|secret|owner/);
+  const home=page.locator('#v2HomeScreen');
+  await home.locator('[data-v2-action="catalog"]').click();
+  await home.locator('[data-v2-action="artGates"]').click();
+  await home.locator('[data-art-article="Арт.6"]').click();
+  await home.locator('[data-art-option="installation"]').check();
+  await home.locator('[data-art-option="posts"]').check();
+  await expect(home.locator('[data-art-calculate]')).toBeDisabled();
+  await expect(home.locator('[data-art-calculate]')).toContainText('Сервер расчёта не подключён');
+  await home.locator('[data-art-back]').click();
+  await home.locator('[data-v2-action="artGates"]').click();
+  await expect(home.locator('[data-art-option="installation"]')).toBeChecked();
+  await expect(home.locator('[data-art-option="posts"]')).toBeChecked();
+});
