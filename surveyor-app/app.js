@@ -692,8 +692,8 @@ async function prepareV2Home() {
 }
 function switchScreen(name) {
   if(name==='v2Home'&&!v2Home) name=currentUser?.role==='owner'?'owner':'surveys';
-  if (['owner','ownerQuick'].includes(name) && currentUser?.role!=='owner') name='surveys';
-  const titles = { v2Home:'Главная · DEV', owner: 'КД Управление', ownerQuick:'Быстрый расчёт', surveys: 'Замеры', threeD: '3D расчёт', clients: 'Клиенты', team: 'Сотрудники', settings: 'Ещё' };
+  if (['owner','ownerQuick','team'].includes(name) && currentUser?.role!=='owner') name='surveys';
+  const titles = { v2Home:'Главная · DEV', owner: v2Home?'Расчётная экономика':'КД Управление', ownerQuick:'Быстрый расчёт', surveys: 'Замеры', threeD: '3D расчёт', clients: 'Клиенты', team: 'Сотрудники', settings: 'Ещё' };
   $$('.screen').forEach(el => el.classList.remove('active'));
   $(`#${name}Screen`)?.classList.add('active');
   $$('.nav-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.screen === name || (name==='ownerQuick' && btn.dataset.screen==='owner')));
