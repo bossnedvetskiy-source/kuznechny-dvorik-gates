@@ -38,6 +38,7 @@ test('gate calculator result returns into the same survey card', async ({page}) 
   await expect(page.locator('#leadRequest .estimate-top')).toContainText('Расчёт для клиента');
   await expect(page.locator('#kdSurveyorBridgeSave')).toBeVisible();
   await expect(page.locator('#kdSurveyorBridgeSave')).toHaveText('Добавить в замер');
+  expect(await page.locator('script').evaluateAll(scripts=>scripts.some(s=>s.textContent.includes('mc.yandex.ru/metrika/tag.js')))).toBe(false);
   await page.waitForFunction(() => Boolean(window.KUZDVOR_GATE_APP?.snapshot), null, {timeout:15000});
 
   await page.locator('#kdSurveyorBridgeSave').click();
@@ -53,6 +54,8 @@ test('gate calculator result returns into the same survey card', async ({page}) 
   await expect(page.locator('.calculation-card')).toContainText('Ворота с калиткой');
   await expect(page.locator('.calculation-card')).toContainText('Арт.');
   await expect(page.locator('.calculation-card-lines')).toContainText('Ворота 3,4 × 1,8 м');
+  const firstResumeAttempt=new URL(page.url()).searchParams.get('resumeAttempt');
+  expect(firstResumeAttempt).toBeTruthy();
   await expect(page.locator('.calculation-card-lines')).toContainText('Калитка 1 × 1,8 м');
   await expect(page.locator('.calculation-card-tags')).toContainText('столб');
   await expect(page.locator('.calculation-card-price')).toContainText('₽');
@@ -76,6 +79,9 @@ test('gate calculator result returns into the same survey card', async ({page}) 
   }
   await expect(page.locator('.calculation-card')).toHaveCount(1);
   await expect(page.locator('.calculation-card-lines')).toContainText('Ворота 3,6 × 1,8 м');
+  const secondResumeAttempt=new URL(page.url()).searchParams.get('resumeAttempt');
+  expect(secondResumeAttempt).toBeTruthy();
+  expect(secondResumeAttempt).not.toBe(firstResumeAttempt);
 });
 
 
