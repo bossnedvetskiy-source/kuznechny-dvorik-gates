@@ -1,7 +1,7 @@
 import {mountProductEditor,SLIDING_DEFAULTS} from './v2-product-editor.js';
 // Experimental shell. Only mounted by app.js on an explicitly opted-in local
 // preview with the existing real session. No data fetching or role mutation.
-export function mountV2Home({role,userId,navigate,newSurvey,open3D}) {
+export function mountV2Home({role,userId,navigate,newSurvey,open3D,listQuoteTargets,saveQuote,openSavedQuote}) {
   const owner=role==='owner';
   let workspace=owner?'owner':'surveyor';
   let theme='dark';
@@ -187,6 +187,12 @@ html.kd-v2-local[data-kd-theme=light]{--kd-bg:#f1f5f9;--kd-card:#fff;--kd-soft:#
     if(productOpen){
       mountProductEditor(body.querySelector('[data-product-editor-root]'),{
         draft:productDraft,onDraft:saveProductDraft,onReset:()=>{saveProductDraft(null);render()},
+        listTargets:listQuoteTargets,
+        onSave:saveQuote?async(input,targetId)=>{
+          const id=await saveQuote(input,targetId);
+          saveProductDraft(null);productOpen=false;catalogOpen=false;render();
+          try{await openSavedQuote?.(id)}catch(error){console.warn('Saved quote could not open',error);navigate('surveys')}
+        }:null,
         onBack:()=>{productOpen=false;catalogOpen=true;render()},
         onLegacy:()=>{productOpen=false;catalogOpen=false;render();navigate('surveys');newSurvey()}
       });
