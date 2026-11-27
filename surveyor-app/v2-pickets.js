@@ -62,11 +62,28 @@ export function mountPicketEditor(root,{draft,onDraft,onBack,onReset}={}){
 
 
 export const PICKET_SIDES=Object.freeze(['А','Б','В','Г']);
-export function picketSitePlan(sides={}){
+export const PICKET_CORNERS=Object.freeze([['А','Б'],['Б','В'],['В','Г'],['Г','А']].map(Object.freeze));
+export function picketSitePlan(sides={},corners={}){
  const rows=PICKET_SIDES.filter(id=>sides[id]).map(id=>({id,...picketPlan(sides[id])}));
  const errors=rows.flatMap(row=>row.errors.map(e=>row.id+': '+e));
  if(!rows.length||errors.length)return {rows,errors:errors.length?errors:['Добавьте сторону'],summary:null,total:null};
- // Each side is a separate measured line. Never assume a shared corner.
+ // Both side lengths must include the full width of the same physical corner post.
+ // Geometry on each side stays unchanged; only procurement quantity is deduplicated.
+ const shared={newPosts:0,existingPosts:0,count:0},cornerIssues=[];
+ const byId=new Map(rows.map(row=>[row.id,row.plan]));
+ for(const [a,b] of PICKET_CORNERS){
+  if(corners[a+b]!==true)continue;
+  const x=byId.get(a),y=byId.get(b),sx={...PICKET_DEFAULTS,...sides[a]},sy={...PICKET_DEFAULTS,...sides[b]};
+  const fail=reason=>cornerIssues.push(a+'/'+b+': '+reason);
+  if(!x||!y){fail('добавьте обе стороны');continue}
+  if(sx.post!==sy.post){fail('разные профили угловой опоры');continue}
+  if(x.openingPosts&&x.openingAfterMm<=0.0001||y.openingPosts&&y.openingBeforeMm<=0.0001){fail('на углу опора проёма, уточните вручную');continue}
+  const status=p=>p.newPosts===p.posts?'newPosts':p.existingPosts===p.posts?'existingPosts':null;
+  const u=status(x),v=status(y);
+  if(!u||u!==v){fail('смешанные или разные состояния опор, уточните вручную');continue}
+  shared[u]++;shared.count++;
+ }
+ if(cornerIssues.length)return {rows,errors:cornerIssues,summary:null,total:null};
  const batches=new Map(),sum=k=>rows.reduce((n,row)=>n+row.plan[k],0);
  for(const row of rows)for(const b of row.plan.batches){
   const type=sides[row.id].type||PICKET_DEFAULTS.type;
@@ -76,21 +93,22 @@ export function picketSitePlan(sides={}){
   old.front+=b.front;old.back+=b.back;old.actualM+=b.actualM;old.reserve=Math.max(old.reserve,b.reserve);batches.set(key,old);
  }
  const stock=[...batches.values()];
- return {rows,errors:[],total:null,summary:{sides:rows.length,spans:sum('spans'),posts:sum('posts'),openingPosts:sum('openingPosts'),newPosts:sum('newPosts'),existingPosts:sum('existingPosts'),front:sum('front'),back:sum('back'),reserve:stock.reduce((n,b)=>n+b.reserve,0),screws:sum('screws'),tubeUsed:sum('tubeUsed'),tubeStocks:sum('tubeStocks'),picketPurchaseM:stock.reduce((n,b)=>n+b.actualM+b.reserve*b.lengthMm/1000,0),approved:rows.every(row=>row.plan.approved),batches:stock}};
+ return {rows,errors:[],total:null,summary:{sides:rows.length,spans:sum('spans'),posts:sum('posts')-shared.count,sharedCorners:shared.count,openingPosts:sum('openingPosts'),newPosts:sum('newPosts')-shared.newPosts,existingPosts:sum('existingPosts')-shared.existingPosts,front:sum('front'),back:sum('back'),reserve:stock.reduce((n,b)=>n+b.reserve,0),screws:sum('screws'),tubeUsed:sum('tubeUsed'),tubeStocks:sum('tubeStocks'),picketPurchaseM:stock.reduce((n,b)=>n+b.actualM+b.reserve*b.lengthMm/1000,0),approved:rows.every(row=>row.plan.approved),batches:stock}};
 }
 export function mountPicketSiteEditor(root,{draft,onDraft,onBack,onReset}={}){
- const sides={};
+ const sides={},corners={};
+ for(const [a,b] of PICKET_CORNERS)if(draft?.corners?.[a+b]===true)corners[a+b]=true;
  if(draft?.version===2){for(const id of PICKET_SIDES)if(draft.sides?.[id])sides[id]={...PICKET_DEFAULTS,...draft.sides[id]};}
  else sides['А']={...PICKET_DEFAULTS,...draft};
  if(!Object.keys(sides).length)sides['А']={...PICKET_DEFAULTS};
  let active=sides[draft?.active]?draft.active:Object.keys(sides)[0];
- root.innerHTML='<div class="kd-v2-card"><b>Стороны участка</b><div class="kd-v2-grid two" data-picket-side-tabs></div><button type="button" class="kd-v2-action" data-picket-remove-side>Удалить выбранную сторону</button><small>Стороны пока считаются отдельно: общие угловые столбы не вычитаются автоматически.</small></div><div data-picket-side-editor></div><div class="kd-v2-card"><h3>Итого по участку</h3><div data-picket-site-summary role="status"></div></div>';
+ root.innerHTML='<div class="kd-v2-card"><b>Стороны участка</b><div class="kd-v2-grid two" data-picket-side-tabs></div><button type="button" class="kd-v2-action" data-picket-remove-side>Удалить выбранную сторону</button><details><summary>Общие угловые столбы</summary><small>Отметьте только одну физическую опору, полностью включённую в длину обеих соседних сторон. Опоры должны иметь одинаковый профиль и состояние.</small><div data-picket-corners></div></details></div><div data-picket-side-editor></div><div class="kd-v2-card"><h3>Итого по участку</h3><div data-picket-site-summary role="status"></div></div>';
  const tabs=root.querySelector('[data-picket-side-tabs]'),editor=root.querySelector('[data-picket-side-editor]'),summary=root.querySelector('[data-picket-site-summary]');
- const notify=()=>onDraft?.({version:2,active,sides:structuredClone(sides)});
+ const notify=()=>onDraft?.({version:2,active,sides:structuredClone(sides),corners:{...corners}});
  function renderSummary(){
-  const q=picketSitePlan(sides),p=q.summary;
+  const q=picketSitePlan(sides,corners),p=q.summary;
   if(!p){summary.textContent=q.errors.join(' ');return}
-  const rows=[['Сторон',p.sides],['Пролётов',p.spans],['Опоры забора',p.posts],['Опоры проёмов отдельно',p.openingPosts],['Новые опоры забора',p.newPosts],['Спереди',p.front],['Сзади',p.back],['Запас по длинам и покрытию',p.reserve],['Саморезы',p.screws],['Штакетник к закупке, м',fmt(p.picketPurchaseM)],['Труба, м',fmt(p.tubeUsed)],['Хлысты по сторонам, шт.',p.tubeStocks],['Раскладка всех сторон',p.approved?'Без подрезки':'Не подтверждена']];
+  const rows=[['Сторон',p.sides],['Пролётов',p.spans],['Опоры забора',p.posts],['Общие углы (вычтено)',p.sharedCorners],['Опоры проёмов отдельно',p.openingPosts],['Новые опоры забора',p.newPosts],['Спереди',p.front],['Сзади',p.back],['Запас по длинам и покрытию',p.reserve],['Саморезы',p.screws],['Штакетник к закупке, м',fmt(p.picketPurchaseM)],['Труба, м',fmt(p.tubeUsed)],['Хлысты по сторонам, шт.',p.tubeStocks],['Раскладка всех сторон',p.approved?'Без подрезки':'Не подтверждена']];
   summary.innerHTML=rows.map(([l,v])=>'<div class="kd-product-row"><span>'+l+'</span><b>'+v+'</b></div>').join('');
  }
  function render(){
@@ -100,8 +118,13 @@ export function mountPicketSiteEditor(root,{draft,onDraft,onBack,onReset}={}){
   }
   root.querySelector('[data-picket-remove-side]').hidden=Object.keys(sides).length<=1;
   mountPicketEditor(editor,{draft:sides[active],onDraft:v=>{sides[active]=v;notify();renderSummary()},onBack,onReset:()=>{sides[active]={...PICKET_DEFAULTS};notify();render()}});
+  const cornerRoot=root.querySelector('[data-picket-corners]');cornerRoot.replaceChildren();
+  for(const [a,b] of PICKET_CORNERS){
+   if(!sides[a]||!sides[b])continue;
+   const l=document.createElement('label'),i=document.createElement('input'),t=document.createElement('span');l.className='kd-product-check';i.type='checkbox';i.dataset.picketCorner=a+b;i.checked=corners[a+b]===true;t.textContent='Общий угол '+a+'/'+b;i.onchange=()=>{corners[a+b]=i.checked;notify();renderSummary()};l.append(i,t);cornerRoot.append(l);
+  }
   renderSummary();
  }
- root.querySelector('[data-picket-remove-side]').onclick=()=>{if(Object.keys(sides).length>1&&window.confirm('Удалить сторону '+active+'?')){delete sides[active];active=Object.keys(sides)[0];notify();render()}};
+ root.querySelector('[data-picket-remove-side]').onclick=()=>{if(Object.keys(sides).length>1&&window.confirm('Удалить сторону '+active+'?')){delete sides[active];for(const [a,b] of PICKET_CORNERS)if(a===active||b===active)delete corners[a+b];active=Object.keys(sides)[0];notify();render()}};
  render();
 }
