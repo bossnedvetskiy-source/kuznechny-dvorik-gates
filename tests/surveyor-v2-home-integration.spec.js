@@ -45,3 +45,25 @@ test('legacy remains default without preview opt-in',async({page})=>{
   await expect(page.locator('#surveysScreen')).toBeVisible();
   await expect(page.locator('#v2HomeScreen')).toHaveCount(0);
 });
+
+test('v2 unified navigation is role-aware and theme follows existing screens',async({page})=>{
+  await login(page,'admin');
+  const home=page.locator('#v2HomeScreen');
+  await expect(home).toBeVisible();
+  const nav=page.locator('#mainView .bottom-nav');
+  await expect(nav.locator('button:visible')).toHaveCount(5);
+  await expect(nav.locator('button:visible b')).toHaveText(['Главная','Заказы','Клиенты','Цех','Ещё']);
+  await home.locator('[data-v2-action="theme"]').click();
+  await expect(page.locator('html')).toHaveAttribute('data-kd-theme','light');
+  await nav.locator('[data-screen="clients"]:visible').click();
+  await expect(page.locator('#clientsScreen')).toBeVisible();
+  await expect(nav.locator('[aria-current="page"]')).toHaveText('Клиенты');
+  await expect(page.locator('#mainView')).toHaveCSS('background-color','rgb(241, 245, 249)');
+  await nav.locator('[data-screen="v2Home"]').click();
+  await home.locator('[data-v2-action="ruler"]').click();
+  await expect(nav.locator('button:visible b')).toHaveText(['Главная','Расчёты','Клиенты','Ещё']);
+  await nav.locator('[data-screen="surveys"]:visible').click();
+  await expect(page.locator('#surveysScreen')).toBeVisible();
+  await expect(nav.locator('[aria-current="page"]')).toHaveText('Расчёты');
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
+});
