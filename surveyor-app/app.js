@@ -837,7 +837,7 @@ async function createPlanFromSavedCalculations(surveyId) {
   showToast(skipped.length ? 'Эскиз создан. Проверьте участки с проёмами.' : 'Схема создана из размеров расчётов');
   await renderSurveys();
   if($('#surveyDetailsDialog').open) $('#surveyDetailsDialog').close();
-  await openSurveyDetails(survey.id);
+  await openSurveyDetails(survey.id, {openExtra:true});
   if(API_ENABLED && navigator.onLine) syncNow({silent:true});
 }
 
@@ -854,7 +854,7 @@ async function refreshPlanSizesFromQuotes(surveyId) {
   await idbPut('surveys',survey);
   await renderSurveys();
   if($('#surveyDetailsDialog').open)$('#surveyDetailsDialog').close();
-  await openSurveyDetails(surveyId);
+  await openSurveyDetails(surveyId, {openExtra:true});
   showToast(result.skipped.length ? 'Размеры обновлены частично. Проверьте предупреждения.' : 'Размеры схемы обновлены');
   if(API_ENABLED && navigator.onLine) syncNow({silent:true});
 }
@@ -1346,7 +1346,7 @@ async function savePlan() {
   $('#planDialog').close();
   showToast('Схема сохранена');
   if($('#surveyDetailsDialog').open) $('#surveyDetailsDialog').close();
-  await openSurveyDetails(survey.id);
+  await openSurveyDetails(survey.id, {openExtra:true});
   if(API_ENABLED && navigator.onLine) syncNow({silent:true});
 }
 
@@ -1837,7 +1837,7 @@ function v3ProductTools(survey) {
   </section>`;
 }
 
-async function openSurveyDetails(id) {
+async function openSurveyDetails(id, {openExtra=false} = {}) {
   if (currentUser?.role === 'owner' && API_ENABLED) await loadOwnerCosts(id);
   const survey = await idbGet('surveys', id);
   if (!survey) return;
@@ -1866,7 +1866,7 @@ async function openSurveyDetails(id) {
       </section>` : ''}
     </div>
     ${survey.syncState === 'conflict' ? '<div class="details-section"><div class="notice notice-lock">На сервере есть новая версия этого замера. Данные на телефоне не перезаписаны.</div></div>' : ''}
-    <details class="v3-extra">
+    <details class="v3-extra"${openExtra ? ' open' : ''}>
       <summary>Схема участка и заметки <span>⌄</span></summary>
       ${surveyPlanSummaryHtml(survey)}
       ${survey.note ? `<p class="v3-note"><b>Комментарий:</b> ${escapeHtml(survey.note)}</p>` : ''}
