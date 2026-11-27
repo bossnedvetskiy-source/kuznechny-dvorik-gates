@@ -58,3 +58,11 @@ export function buildSwingCalculation(reply,id,now=new Date().toISOString()){
   const c=q.configuration;
   return {id,type:'simpleSwing',title:(q.test?'Тест · ':'')+'Распашные ворота с калиткой',total:q.prices.total,summary:'Проём '+c.widthMm+' × '+c.heightMm+' мм · '+(c.wicketType==='builtIn'?'встроенная':'отдельная')+' калитка '+c.wicketWidthMm+' × '+c.wicketHeightMm+' мм',createdAt:now,updatedAt:now,payload:{category:'simpleSwing',test:q.test,tariffRevision:q.tariffRevision,configuration:c,prices:q.prices,total:q.prices.total,deliveryPending:true}};
 }
+
+/** Deliberately fictitious rates for the isolated preview only. */
+export function makeSwingDemoQuote(input,role){
+  const frame=Object.fromEntries(['mainPrice','innerPrice','stripPrice','hingePrice','lockPrice','paintPrice','cutDisc','grindDisc','wire','gas','rent','rearPrice','rearPaintArea','pins','mainPaintArea','innerPaintArea','hingePlate','wageGate','wageWicket','wageRound','frameMarkup'].map(k=>[k,1]));
+  // Integer round values intentionally unrelated to current business rates.
+  Object.assign(frame,{mainPrice:100,innerPrice:50,stripPrice:50,paintPrice:100,mainPaintArea:.2,innerPaintArea:.08,rearPaintArea:.12,wageGate:1000,wageWicket:500,wageRound:100,frameMarkup:1.5});
+  return makeSwingQuote(input,{frame,fill:{sheetPrice:100,sheetScrewPrice:1,sheetGateLabor:100,sheetWicketLabor:100,singlePrice:100,doublePrice:100,picketScrewPrice:1,singleLabor:100,chessLabor:100,horizontalLabor:100,fillMarkup:1.2},extras:{post100x100:1000,post80x80:1000,post60x60:1000,linkBase:1000,installset:1000,installgate:1000,installwicket:1000,installbuiltIn:1000}},{role,test:true,revision:'synthetic-preview-v1'});
+}
