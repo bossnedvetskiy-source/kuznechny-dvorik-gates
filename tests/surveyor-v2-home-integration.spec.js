@@ -1,0 +1,47 @@
+import {test,expect} from '@playwright/test';
+test.use({viewport:{width:390,height:844}});
+
+async function login(page,user,mode='v2'){
+  await page.goto('/surveyor-app/index.html?ui='+mode);
+  await expect(page.locator('#loginForm button[type="submit"]')).toBeEnabled({timeout:20000});
+  await page.locator('#loginInput').fill(user);
+  await page.locator('#passwordInput').fill('1234');
+  await page.locator('#loginForm button[type="submit"]').click();
+  await expect(page.locator('#mainView')).toBeVisible({timeout:20000});
+}
+
+test('owner local v2 home uses existing screens and no fabricated KPIs',async({page})=>{
+  await login(page,'admin');
+  const home=page.locator('#v2HomeScreen');
+  await expect(home).toBeVisible();
+  await expect(home.locator('.kd-v2-tile')).toHaveCount(12);
+  await expect(home.locator('.kd-v2-grid.two strong')).toHaveText(['—','—','—','—']);
+  await home.locator('[data-v2-action="clients"]').click();
+  await expect(page.locator('#clientsScreen')).toBeVisible();
+  await page.locator('.nav-btn[data-screen="v2Home"]').click();
+  await home.locator('[data-v2-action="ruler"]').click();
+  await expect(home.locator('h2')).toHaveText('КД ЗАМЕРЩИК');
+  await home.locator('[data-v2-action="quick"]').click();
+  await expect(page.locator('#ownerQuickScreen')).toBeVisible();
+});
+
+test('surveyor local v2 home opens actual new survey, owner controls absent',async({page})=>{
+  await login(page,'zamer');
+  const home=page.locator('#v2HomeScreen');
+  await expect(home).toBeVisible();
+  await expect(home.locator('h2')).toHaveText('КД ЗАМЕРЩИК');
+  await expect(home.locator('[data-v2-action="workspace"]')).toHaveCount(0);
+  await expect(home.locator('[data-v2-action="wallet"]')).toHaveCount(0);
+  await home.locator('[data-v2-action="measure"]').click();
+  await expect(page.locator('#surveyDialog')).toBeVisible();
+  await page.locator('#saveSurveyBtn').click();
+  await expect(page.locator('#surveyDetailsDialog')).toBeVisible();
+  await expect(page.locator('.v3-product-tile')).toHaveCount(4);
+  await expect(page.locator('[data-owner-detail-tab="finance"]')).toHaveCount(0);
+});
+
+test('legacy remains default without preview opt-in',async({page})=>{
+  await login(page,'zamer','legacy');
+  await expect(page.locator('#surveysScreen')).toBeVisible();
+  await expect(page.locator('#v2HomeScreen')).toHaveCount(0);
+});
