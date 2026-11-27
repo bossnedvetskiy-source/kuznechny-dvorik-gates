@@ -634,7 +634,7 @@ async function prepareV2Home() {
     const {mountV2Home}=await import('./v2-home.js');
     if(currentUser!==user || v2Home) return;
     v2Home=mountV2Home({
-      role:user.role,
+      role:user.role,userId:user.id,
       navigate:switchScreen,
       newSurvey:()=>$('#newSurveyBtn').click(),
       open3D:open3DCalculator
