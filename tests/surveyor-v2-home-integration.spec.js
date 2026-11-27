@@ -216,3 +216,33 @@ test('v2 3D controls follow palette without replacing the drawing canvas',async(
   await expect(page.locator('#threeDScreen')).toBeVisible();
   await expect(page.locator('#kd3dRoot [data-stats]')).toContainText('Пролётов');
 });
+
+test('v2 visual acceptance at 320, 390 and 1280 pixels with named controls',async({page},testInfo)=>{
+  test.setTimeout(90000);
+  await page.setViewportSize({width:320,height:740});
+  await login(page,'admin');
+  const home=page.locator('#v2HomeScreen');
+  await expect(home).toBeVisible();
+  for(const [width,height] of [[320,740],[390,844],[1280,900]]){
+    await page.setViewportSize({width,height});
+    for(const theme of ['dark','light']){
+      if(await page.locator('html').getAttribute('data-kd-theme')!==theme)
+        await home.getByRole('button',{name:'Переключить тему'}).click();
+      await expect(page.locator('html')).toHaveAttribute('data-kd-theme',theme);
+      expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+      const buttons=await home.locator('button:visible').evaluateAll(els=>els.map(e=>({name:(e.getAttribute('aria-label')||e.textContent||'').trim(),height:e.getBoundingClientRect().height})));
+      expect(buttons.every(b=>b.name&&b.height>=44)).toBe(true);
+      await page.screenshot({path:testInfo.outputPath('owner-'+width+'-'+theme+'.png'),fullPage:true,animations:'disabled'});
+    }
+  }
+  await page.setViewportSize({width:320,height:740});
+  await home.getByRole('button',{name:'Переключить рабочее пространство'}).click();
+  await expect(home.locator('h2')).toHaveText('КД ЗАМЕРЩИК');
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  await page.screenshot({path:testInfo.outputPath('surveyor-320.png'),fullPage:true,animations:'disabled'});
+  await home.locator('[data-v2-action="catalog"]').click();
+  for(const id of ['artGates','artFences','profileFence','frames','sliding','pickets','canopy'])
+    await expect(home.locator('[data-v2-action="'+id+'"]')).toBeVisible();
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  await page.screenshot({path:testInfo.outputPath('catalog-320.png'),fullPage:true,animations:'disabled'});
+});
