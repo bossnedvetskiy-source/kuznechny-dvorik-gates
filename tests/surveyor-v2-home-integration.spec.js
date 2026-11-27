@@ -421,6 +421,30 @@ test('phone home and catalogue avoid roadmap clutter and label unfinished module
   await home.locator('[data-v2-action="catalog"]').click();
   await expect(page.locator('#screenTitle')).toHaveText('Каталог изделий');
   await expect(home.locator('h3')).toHaveCount(0);
-  await expect(home.locator('[data-v2-action="frames"]')).toContainText('Скоро');
+  await expect(home.locator('[data-v2-action="frames"]')).toContainText('предварительные материалы');
   await expect(home.locator('[data-v2-action="catalogBack"]')).toHaveText('← Назад');
+});
+
+test('serial frame geometry uses clear openings, preserves sliding draft, never publishes unverified price',async({page})=>{
+  await login(page,'zamer');
+  const home=page.locator('#v2HomeScreen');
+  await home.locator('[data-v2-action="catalog"]').click();
+  await home.locator('[data-v2-action="frames"]').click();
+  const plan=home.locator('[data-swing-plan]');
+  await expect(plan).toContainText('1 670 × 1 800 мм');
+  await expect(plan).toContainText('960 × 1 800 мм');
+  await home.locator('[data-swing-field="hinges"]').check();
+  await expect(plan).toContainText('Петли');
+  await home.locator('[data-swing-field="product"]').selectOption('wicket');
+  await expect(plan).not.toContainText('Створка ворот');
+  await home.locator('[data-swing-field="wicketWidthMm"]').fill('20');
+  await expect(home.locator('[data-swing-errors]')).not.toBeEmpty();
+  await expect(plan).toBeEmpty();
+  await home.locator('[data-swing-field="wicketWidthMm"]').fill('1100');
+  await expect(plan).toContainText('1 060 × 1 800 мм');
+  await expect(home).toContainText('Стоимость пока не рассчитана');
+  await expect(home.locator('[data-product-confirm]')).toHaveCount(0);
+  await home.locator('[data-swing-back]').click();
+  await home.locator('[data-v2-action="sliding"]').click();
+  await expect(home.locator('[data-product-field="widthMm"]')).toHaveValue('4000');
 });
