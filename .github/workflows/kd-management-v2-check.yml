@@ -60,6 +60,9 @@ jobs:
           test -s _site/kd-v2/index.html
           test -s _site/dev-tools/index.html
           test -s _site/surveyor-test/index.html
+      - name: Verify PHP article quote against all model references
+        if: (success() || failure()) && steps.preview.outcome == 'success'
+        run: php scripts/test-timeweb-gate-quote.php timeweb-dist
       - name: Verify frontend-only preview isolation
         id: isolation
         if: (success() || failure()) && steps.preview.outcome == 'success'
