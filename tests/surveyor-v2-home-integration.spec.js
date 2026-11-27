@@ -703,3 +703,38 @@ test('sliding materials and built-in wicket variants agree with existing engine 
   await expect(page.locator('#surveyDetailsDialog')).toBeVisible();
   await expect(page.locator('.calculation-card')).toContainText('Встроенная калитка 1 м · справа');
 });
+
+test('forged catalogue uses 38 active articles and original photos without treating fallback prices as quotes',async({page})=>{
+  await login(page,'zamer');
+  const home=page.locator('#v2HomeScreen');
+  await home.locator('[data-v2-action="catalog"]').click();
+  await home.locator('[data-v2-action="artGates"]').click();
+  await expect(home.locator('[data-art-article]')).toHaveCount(38);
+  await expect(home.locator('[data-art-article="Арт.39"],[data-art-article="Арт.40"]')).toHaveCount(0);
+  await expect(home.locator('[data-art-article="Арт.6"]')).toContainText('56 600');
+  const picture=home.locator('[data-art-article="Арт.6"] img');
+  await expect.poll(()=>picture.evaluate(el=>el.complete&&el.naturalWidth>0)).toBe(true);
+  await home.locator('[data-art-search]').fill('17C');
+  await expect(home.locator('[data-art-article]')).toHaveCount(1);
+  await home.locator('[data-art-article="Арт.17С"]').click();
+  await expect(home.locator('[data-art-selection] img')).toHaveCount(3);
+  await expect(home.locator('[data-art-price]')).toContainText('90 000');
+  await expect(home.locator('[data-art-price]')).toContainText('не подтверждена');
+  await home.locator('[data-art-field="gateWidthMm"]').fill('3800');
+  await expect(home.locator('[data-art-price]')).toContainText('Цена не подставляется');
+  await home.locator('[data-art-field="gateWidthMm"]').fill('0');
+  await expect(home.locator('[data-art-price]')).toContainText('Проверьте размеры');
+  await home.locator('[data-art-field="gateWidthMm"]').fill('3400');
+  await expect(home.locator('[data-art-price]')).toContainText('90 000');
+  await home.locator('[data-art-back]').click();
+  await home.locator('[data-v2-action="artGates"]').click();
+  await expect(home.locator('[data-art-selection]')).toContainText('Арт.17С');
+  await expect(page.locator('#surveyDialog')).not.toBeVisible();
+  const check=await page.evaluate(async()=>{
+    const {ART_GATE_CATALOG,artGateSnapshot}=await import('./v2-art-gates.js');
+    const q=artGateSnapshot('Арт.6',{gateWidthMm:3800});
+    let rejected=false;try{artGateSnapshot('Арт.40')}catch{rejected=true}
+    return {unique:new Set(ART_GATE_CATALOG.map(x=>x.article)).size,reference:q.referenceRub,verified:q.verified,rejected};
+  });
+  expect(check).toEqual({unique:38,reference:null,verified:false,rejected:true});
+});
