@@ -181,3 +181,38 @@ test('v2 test PWA reopens authenticated offline and retains a locally saved surv
     await expect(page.locator('.survey-card')).toContainText('Тест офлайн v2');
   } finally {await context.setOffline(false)}
 });
+
+test('v2 theme can be changed on existing screens without returning home',async({page})=>{
+  await login(page,'zamer');
+  const home=page.locator('#v2HomeScreen');
+  await expect(home).toBeVisible();
+  await expect(page.locator('#kdV2GlobalTheme')).toBeHidden();
+  await home.locator('[data-v2-action="clients"]').click();
+  await expect(page.locator('#clientsScreen')).toBeVisible();
+  await page.getByRole('button',{name:'Включить светлую тему'}).click();
+  await expect(page.locator('html')).toHaveAttribute('data-kd-theme','light');
+  await expect(page.locator('#mainView')).toHaveCSS('background-color','rgb(241, 245, 249)');
+  await expect(page.locator('#clientsScreen')).toBeVisible();
+  await page.getByRole('button',{name:'Включить тёмную тему'}).click();
+  await expect(page.locator('html')).toHaveAttribute('data-kd-theme','dark');
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
+  await page.locator('.kd-v2-nav[data-screen="v2Home"]').click();
+  await expect(page.locator('#kdV2GlobalTheme')).toBeHidden();
+});
+test('v2 3D controls follow palette without replacing the drawing canvas',async({page})=>{
+  test.setTimeout(90000);
+  await page.goto('/kuznechny-dvorik-gates/surveyor-test/?ui=v2');
+  await expect(page.locator('#loginForm button[type="submit"]')).toBeEnabled({timeout:20000});
+  await page.locator('#loginInput').fill('zamer');
+  await page.locator('#passwordInput').fill('1234');
+  await page.locator('#loginForm button[type="submit"]').click();
+  await expect(page.locator('#v2HomeScreen')).toBeVisible({timeout:20000});
+  await page.locator('[data-v2-action="threeD"]').click();
+  await expect(page.locator('#threeDScreen')).toBeVisible();
+  await expect(page.locator('#kd3dRoot [data-stats]')).toContainText('Пролётов',{timeout:20000});
+  await expect(page.locator('#kd3dRoot .kd3d-top')).toHaveCSS('background-color','rgb(31, 41, 55)');
+  await page.getByRole('button',{name:'Включить светлую тему'}).click();
+  await expect(page.locator('#kd3dRoot .kd3d-top')).toHaveCSS('background-color','rgb(255, 255, 255)');
+  await expect(page.locator('#threeDScreen')).toBeVisible();
+  await expect(page.locator('#kd3dRoot [data-stats]')).toContainText('Пролётов');
+});
