@@ -133,3 +133,43 @@ test('phone catalogue opens forged photos, picket sides and continuous profile s
 
   expect(requests.filter(r=>r.method!=='GET'||/\/api\/(?:surveyor|leads)(?:[/?]|$)/.test(r.url))).toEqual([]);
 });
+
+test('phone multi-product basket remains local, restores same survey, and blocks prices and release',async({page})=>{
+ test.setTimeout(90000);
+ const requests=[];page.on('request',r=>requests.push({url:r.url(),method:r.method()}));
+ await page.goto('/kuznechny-dvorik-gates/kd-v2/');
+ await expect(page.locator('#loginForm button[type=submit]')).toBeEnabled({timeout:20000});
+ await page.locator('#loginInput').fill('zamer');
+ await page.locator('#passwordInput').fill('1234');
+ await page.locator('#loginForm button[type=submit]').click();
+ const home=page.locator('#v2HomeScreen');
+ await expect(home).toBeVisible({timeout:20000});
+ await home.locator('[data-v2-action="catalog"]').click();
+ await home.locator('[data-v2-action="frames"]').click();
+ await home.locator('[data-basket-add]').click();
+ await home.locator('[data-basket-back]').click();
+ await home.locator('[data-v2-action="canopy"]').click();
+ await home.locator('[data-basket-add]').click();
+ await expect(home.locator('[data-basket-line]')).toHaveCount(2);
+ await home.locator('[data-basket-save]').click();
+ const dialog=page.locator('#surveyDetailsDialog');
+ await expect(dialog).toBeVisible();
+ await dialog.getByText('Подготовка комплектации для предложения',{exact:true}).click();
+ await expect(dialog.locator('[data-proposal-line]')).toHaveCount(2);
+ await expect(dialog.locator('[data-proposal-quote]')).toBeDisabled();
+ await expect(dialog.locator('[data-proposal-status]')).toContainText('Выпуск КП и ТЗ заблокирован');
+ await dialog.locator('[data-restore-basket]').click();
+ await home.locator('[data-basket-edit]').first().click();
+ await home.locator('[data-swing-field="gateWidthMm"]').fill('3700');
+ await home.locator('[data-basket-add]').click();
+ await home.locator('[data-basket-save]').click();
+ await expect(dialog.locator('[data-saved-basket-line]').first()).toContainText('3700');
+ const rows=await page.evaluate(async()=>{
+  const db=await new Promise((resolve,reject)=>{const q=indexedDB.open('kd-v2-phone-demo-v1');q.onsuccess=()=>resolve(q.result);q.onerror=()=>reject(q.error)});
+  const rows=await new Promise((resolve,reject)=>{const q=db.transaction('surveys').objectStore('surveys').getAll();q.onsuccess=()=>resolve(q.result);q.onerror=()=>reject(q.error)});db.close();return rows;
+ });
+ expect(rows).toHaveLength(1);
+ expect(rows[0].configuration.basketDraft.items).toHaveLength(2);
+ expect(rows[0].configuration.calculations).toBeUndefined();
+ expect(requests.filter(r=>r.method!=='GET'||/\/api\/surveyor(?:[/?]|$)/.test(r.url))).toEqual([]);
+});
