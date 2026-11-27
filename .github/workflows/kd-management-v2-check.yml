@@ -15,7 +15,8 @@ concurrency:
 jobs:
   baseline:
     if: github.ref == 'refs/heads/feature/kd-management-v2'
-    runs-on: ubuntu-latest
+    # Playwright 1.55 does not support ubuntu26.04-x64.
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     env:
       DEV_SURVEYOR_API_URL: ''
