@@ -1,3 +1,4 @@
+import {mountProfileFenceEditor} from './v2-profile-fence.js';
 import {mountPicketSiteEditor} from './v2-pickets.js';
 import {mountArtFenceEditor} from './v2-art-fences.js';
 import {mountArtGateCatalog} from './v2-art-gates.js';
@@ -21,7 +22,7 @@ export function mountV2Home({role,userId,navigate,newSurvey,open3D,listQuoteTarg
   root.classList.add('kd-v2-local');
   let currentScreen='v2Home';
   let catalogOpen=false;
-  let productOpen=false, productDraft=null, swingDraft=null, artDraft=null, artFenceDraft=null,picketDraft=null;
+  let productOpen=false, productDraft=null, swingDraft=null, artDraft=null, artFenceDraft=null,picketDraft=null,profileFenceDraft=null;
   // Per-user, per-tab, customer quote inputs only; never store names, prices or owner costs.
   const draftKey=userId?'kd-v2-sliding-draft-v1:'+String(userId):null;
   function loadProductDraft(){
@@ -220,7 +221,7 @@ html.kd-v2-local[data-kd-theme=light]{--kd-bg:#f1f5f9;--kd-card:#fff;--kd-soft:#
     ['frames','Каркасы ворот и калиток','Размеры и предварительные материалы'],
     ['sliding','Откатные ворота','Быстрый расчёт в миллиметрах · без заказа.'],
     ['pickets','Евроштакетник','Пролёты и материалы без подрезки'],
-    ['profileFence','Забор из профнастила','Скоро · листы, столбы, прожилины'],
+    ['profileFence','Забор из профнастила','Листы, опоры и раскрой'],
     ['canopy','Навесы','Действующий калькулятор через замер.']
   ];
   function syncHeading(){
@@ -236,7 +237,9 @@ html.kd-v2-local[data-kd-theme=light]{--kd-bg:#f1f5f9;--kd-card:#fff;--kd-soft:#
     body.innerHTML='<div class="kd-v2-head"><h2>'+(isOwner?'КД УПРАВЛЕНИЕ':'КД ЗАМЕРЩИК')+'</h2><button class="kd-v2-iconbtn" type="button" data-v2-action="theme" aria-label="Переключить тему">'+(theme==='dark'?'☀':'☾')+'</button>'+(owner?'<button class="kd-v2-iconbtn" type="button" data-v2-action="workspace" aria-label="Переключить рабочее пространство">⇄</button>':'')+'</div>'+
     (productOpen?'<div data-product-editor-root></div>':catalogOpen?'<button class="kd-v2-action kd-v2-back" type="button" data-v2-action="catalogBack">← Назад</button>'+catalogItems.map(([id,label,desc])=>btn(id,label,desc)).join(''):isOwner?'<div class="kd-v2-grid two">'+['Сумма заказов','К получению','Заказы в работе','Активные клиенты'].map(x=>'<div class="kd-v2-card"><small>'+x+'</small><strong>—</strong></div>').join('')+'</div><div class="kd-v2-card kd-v2-panel"><b>Требует внимания</b><small>Рабочие показатели ещё не подключены.</small></div><h3>Управление предприятием</h3><div class="kd-v2-grid">'+ownerItems.map(tile).join('')+'</div><div class="kd-v2-card kd-v2-panel"><b>КД — Умный помощник</b><small>Скоро · подсказки по управлению</small><button class="kd-v2-question" data-v2-action="tasks">Что сделать сегодня?</button><button class="kd-v2-question" data-v2-action="wallet">Кто должен деньги?</button><button class="kd-v2-question" data-v2-action="orders">Какие заказы требуют внимания?</button></div>':
     btn('quick','Быстрый расчёт',owner?'Действующий калькулятор откатных ворот':'Выбрать изделие · без заказа',true)+btn('measure','Новый замер объекта','Создать карточку объекта')+'<h3>Работа с клиентами</h3><div class="kd-v2-grid two">'+surveyItems.map(tile).join('')+'</div>'+btn('threeD','3D-конструктор','Модель участка и изделий'))+'<div class="kd-v2-card kd-v2-detail" role="status" hidden></div>';
-    if(productOpen==='pickets'){
+    if(productOpen==='profileFence'){
+      mountProfileFenceEditor(body.querySelector('[data-product-editor-root]'),{draft:profileFenceDraft,onDraft:value=>{profileFenceDraft=value},onReset:()=>{profileFenceDraft=null;render()},onBack:()=>{productOpen=false;catalogOpen=true;render()}});
+    }else if(productOpen==='pickets'){
       mountPicketSiteEditor(body.querySelector('[data-product-editor-root]'),{draft:picketDraft,onDraft:value=>{picketDraft=value},onReset:()=>{picketDraft=null;render()},onBack:()=>{productOpen=false;catalogOpen=true;render()}});
     }else if(productOpen==='artFences'){
       mountArtFenceEditor(body.querySelector('[data-product-editor-root]'),{draft:artFenceDraft,onDraft:value=>{artFenceDraft=value},onReset:()=>{artFenceDraft=null;render()},onBack:()=>{productOpen=false;catalogOpen=true;render()}});
@@ -267,7 +270,7 @@ html.kd-v2-local[data-kd-theme=light]{--kd-bg:#f1f5f9;--kd-card:#fff;--kd-soft:#
     if(action==='catalog'){productOpen=false;catalogOpen=true;render();return}
     if(action==='catalogBack'){catalogOpen=false;render();return}
     if(action==='artFences'){productOpen='artFences';catalogOpen=false;render();return}
-    if(action==='profileFence'){pending('Забор из профнастила: отдельный редактор на этапе 2. До утверждения параметров листов, каркаса и тарифов стоимость не рассчитывается.');return}
+    if(action==='profileFence'){productOpen='profileFence';catalogOpen=false;render();return}
     if(action==='frames'){productOpen='frames';catalogOpen=false;render();return}
     if(action==='sliding'){productOpen=true;catalogOpen=false;render();return}
     if(action==='artGates'){productOpen='artGates';catalogOpen=false;render();return}
