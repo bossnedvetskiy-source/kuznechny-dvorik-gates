@@ -242,7 +242,7 @@ jobs:
       - name: Build and test isolated KD 2.0 phone preview
         shell: bash
         env:
-          KD_V2_SOURCE_SHA: '5f3c791388e23fc062b1c6ab76bae656a2fa25c6'
+          KD_V2_SOURCE_SHA: 'b45eac441c66b119e54f4ff6a0b0ac9dd6cd7921'
         run: |
           set -euo pipefail
           test "$GITHUB_REF" = refs/heads/dev
