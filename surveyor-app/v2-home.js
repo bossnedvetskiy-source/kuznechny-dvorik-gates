@@ -9,6 +9,9 @@ export function mountV2Home({role,userId,navigate,newSurvey,open3D,listQuoteTarg
   const root=document.documentElement;
   const main=document.querySelector('#mainView');
   const bottom=main.querySelector('.bottom-nav');
+  const topBrand=main.querySelector('.topbar .eyebrow');
+  const topTitle=main.querySelector('#screenTitle');
+  const originalBrand=topBrand?.textContent||'';
   const oldNav=Array.from(bottom.children);
   oldNav.forEach(btn=>btn.classList.add('kd-v2-legacy-nav'));
   root.classList.add('kd-v2-local');
@@ -142,6 +145,16 @@ html.kd-v2-local[data-kd-theme=light]{--kd-bg:#f1f5f9;--kd-card:#fff;--kd-soft:#
 .kd-product-total{position:sticky;bottom:0;z-index:1;box-shadow:0 -4px 16px #0002}
 .kd-product-total strong{color:var(--vacc)}
 .kd-product-editor [data-product-errors]:not(:empty){color:var(--vtext);border:1px solid #d97706;border-radius:10px;padding:12px}
+
+.kd-v2-local #v2HomeScreen{padding:8px 2px}
+.kd-v2-local #v2HomeScreen .kd-v2-head{margin-bottom:8px}
+.kd-v2-local #v2HomeScreen .kd-v2-note{margin-bottom:8px;line-height:1.35}
+.kd-v2-local #v2HomeScreen .kd-v2-panel{margin:8px 0;padding:10px}
+.kd-v2-local #v2HomeScreen .kd-v2-tile{min-height:76px!important;padding:8px 4px}
+.kd-v2-local #v2HomeScreen .kd-v2-action svg{flex:0 0 25px}
+.kd-v2-local #v2HomeScreen .kd-v2-action.primary svg{stroke:#fff}
+.kd-v2-local #v2HomeScreen .kd-v2-action{overflow-wrap:anywhere}
+@media(min-width:700px){.kd-v2-local #v2HomeScreen{padding:16px}.kd-v2-local #v2HomeScreen .kd-v2-tile{min-height:100px!important}}
 @media(min-width:700px){.kd-v2-grid{grid-template-columns:repeat(4,minmax(0,1fr))}.kd-v2-grid.two{grid-template-columns:repeat(4,minmax(0,1fr))}.kd-v2-tile{min-height:105px!important}}
 `;
   host.append(style);
@@ -162,6 +175,16 @@ html.kd-v2-local[data-kd-theme=light]{--kd-bg:#f1f5f9;--kd-card:#fff;--kd-soft:#
   }
   globalTheme.addEventListener('click',toggleTheme);
   const paths={home:'M3 10l9-7 9 7v10h-6v-6H9v6H3z',menu:'M4 6h16 M4 12h16 M4 18h16',tasks:'M4 3h16v18H4z M7 9l2 2 3-4 M14 10h3 M7 16l2 2 3-4 M14 17h3',clients:'M9 10a3 3 0 1 0 0-6 3 3 0 0 0 0 6 M3 20v-3a6 6 0 0 1 12 0v3 M16 5a3 3 0 0 1 0 6 M18 14a5 5 0 0 1 3 5',orders:'M5 4h14v18H5z M9 4V2h6v2 M9 10h6 M9 14h6 M9 18h6',factory:'M3 21V10l6 3V8l6 4V4h5l1 17Z M7 17h2 M12 17h2 M17 17h2',calendar:'M3 5h18v16H3z M7 2v6 M17 2v6 M3 11h18',truck:'M2 5h12v12H2z M14 10h5l3 4v3h-8 M6 17v3 M18 17v3',stock:'M3 7l9-5 9 5v10l-9 5-9-5Z M3 7l9 5 9-5 M12 12v10',wallet:'M3 5h18v15H3z M21 11h-6v5h6 M17 13.5h.1',ads:'M3 9l14-5v16L3 15z M7 16l2 5h3l-2-5 M21 9v6',star:'M12 2l3 6 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1Z',ruler:'M3 17L17 3l4 4L7 21z M8 12l3 3 M12 8l3 3',chart:'M3 3v18h18 M7 17v-5 M12 17V8 M17 17V5',calc:'M5 2h14v20H5z M8 6h8 M8 11h1 M15 11h1 M8 15h1 M15 15h1 M8 19h1 M15 19h1',catalog:'M3 4h18v16H3z M3 16l5-5 4 4 3-3 6 6',file:'M5 2h10l4 4v16H5z M15 2v5h4 M8 12h8 M8 16h8',check:'M5 2h10l4 4v16H5z M8 15l2 2 5-5'};
+  Object.assign(paths,{
+    quick:paths.calc,measure:paths.ruler,threeD:'M12 2 22 7.5v9L12 22 2 16.5v-9Z M2 7.5l10 5.5 10-5.5M12 13v9',
+    artGates:'M2 20V5h20v15M12 5v15M4 8l6 5-6 5M20 8l-6 5 6 5',
+    artFences:'M2 21V4M22 21V4M2 7h20M2 19h20M6 7v12M12 7v12M18 7v12M6 9l6 4-6 4M18 9l-6 4 6 4',
+    frames:'M2 5h14v15H2zM9 5v15M2 5l7 15M16 5L9 20M18 5h4v15h-4z',
+    sliding:'M2 7h14v12H2zM16 7l6 12h-6M2 13h14M7 7v12M12 7v12M2 21h20',
+    pickets:'M2 8l2-3 2 3v13H2zM10 8l2-3 2 3v13h-4zM18 8l2-3 2 3v13h-4zM2 12h20M2 18h20',
+    profileFence:'M2 5h20v15H2zM6 5v15M10 5v15M14 5v15M18 5v15',
+    canopy:'M2 9l10-6 10 6M2 9h20M4 9v12M20 9v12M8 9l4-6 4 6'
+  });
   const icon=id=>'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="'+(paths[id]||paths.file)+'"/></svg>';
   const ownerItems=[['tasks','Задачи'],['clients','Клиенты'],['orders','Заказы'],['factory','Цех'],['calendar','Календарь'],['truck','Доставка'],['stock','Склад'],['wallet','Финансы'],['ads','Реклама'],['star','Отзывы'],['ruler','Замерщик'],['chart','Аналитика']];
   const surveyItems=[['catalog','Каталог'],['calc','Мои расчёты'],['clients','Клиенты'],['calendar','Календарь'],['file','Предложения'],['check','Договоры']];
@@ -176,7 +199,12 @@ html.kd-v2-local[data-kd-theme=light]{--kd-bg:#f1f5f9;--kd-card:#fff;--kd-soft:#
     ['profileFence','Забор из профнастила','Листы, столбы, прожилины · отдельный редактор на этапе 2.'],
     ['canopy','Навесы','Действующий калькулятор через замер.']
   ];
+  function syncHeading(){
+    if(topBrand)topBrand.textContent=currentScreen==='v2Home'?'Тестовая версия · DEV':(workspace==='owner'&&owner?'КД Управление · DEV':'КД Замерщик · DEV');
+    if(currentScreen==='v2Home'&&topTitle)topTitle.textContent=productOpen?'Быстрый расчёт':catalogOpen?'Каталог изделий':'Главная';
+  }
   function render(){
+    syncHeading();
     host.dataset.theme=theme;
     root.dataset.kdTheme=theme;
     updateThemeButton();
@@ -234,6 +262,7 @@ html.kd-v2-local[data-kd-theme=light]{--kd-bg:#f1f5f9;--kd-card:#fff;--kd-soft:#
   const navNodes=[];
   function syncNav(screen=currentScreen){
     currentScreen=screen;
+    syncHeading();
     updateThemeButton();
     const focusedTarget=navNodes.includes(document.activeElement)?document.activeElement.dataset.screen:null;
     navNodes.splice(0).forEach(n=>n.remove());
@@ -255,5 +284,5 @@ html.kd-v2-local[data-kd-theme=light]{--kd-bg:#f1f5f9;--kd-card:#fff;--kd-soft:#
     if(focusedTarget)navNodes.find(n=>n.dataset.screen===focusedTarget)?.focus({preventScroll:true});
   }
   render();syncNav();
-  return {onScreen:syncNav,destroy(){saveProductDraft(null);host.remove();globalTheme.remove();navNodes.forEach(n=>n.remove());oldNav.forEach(btn=>btn.classList.remove('kd-v2-legacy-nav'));root.classList.remove('kd-v2-local');delete root.dataset.kdTheme;}};
+  return {onScreen:syncNav,destroy(){if(topBrand)topBrand.textContent=originalBrand;saveProductDraft(null);host.remove();globalTheme.remove();navNodes.forEach(n=>n.remove());oldNav.forEach(btn=>btn.classList.remove('kd-v2-legacy-nav'));root.classList.remove('kd-v2-local');delete root.dataset.kdTheme;}};
 }
