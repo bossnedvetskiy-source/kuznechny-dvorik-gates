@@ -331,9 +331,10 @@ async function nextSurveyNumber() {
   return `ЗМ-${String(value).padStart(4, '0')}`;
 }
 function isSwingTestSurvey(survey){return survey?.configuration?.testOnly===true||surveyCalculations(survey).some(item=>item?.type==='simpleSwing'&&item?.payload?.test===true);}
+function isV2BasketSurvey(survey){return survey?.configuration?.basketDraft?.version===1;}
 function displaySurveyNumber(survey) {
   const number=survey.number || survey.localNumber || 'Замер без номера';
-  return isSwingTestSurvey(survey)?'ТЕСТ · '+number:number;
+  return isSwingTestSurvey(survey)?'ТЕСТ · '+number:isV2BasketSurvey(survey)?'ЧЕРНОВИК · '+number:number;
 }
 
 async function upsertClient({ name = '', phone, address = '' }) {
@@ -461,7 +462,7 @@ async function syncNow({ silent = false } = {}) {
     const allClients = await idbGetAll('clients');
     const allSurveys = await idbGetAll('surveys');
     const pendingClients = allClients.filter(x => x.syncState === 'pending' || x.syncState === 'conflict');
-    const pendingSurveys = allSurveys.filter(x => !isSwingTestSurvey(x)&&(x.syncState === 'pending' || x.syncState === 'conflict'));
+    const pendingSurveys = allSurveys.filter(x => !isSwingTestSurvey(x)&&!isV2BasketSurvey(x)&&(x.syncState === 'pending' || x.syncState === 'conflict'));
     const since = await metaGet('serverLastSync', '1970-01-01 00:00:00');
     const payload = {
       since,
@@ -637,7 +638,7 @@ function v2LocalPreviewEnabled() {
 }
 // Local opt-in editor: only explicit save can create a survey. No live API.
 function v2DraftAccessible(survey,user){
-  return Boolean(survey&&!isSwingTestSurvey(survey)&&!survey.archived&&survey.status==='draft'&&user&&(user.role==='owner'||survey.createdBy===user.id));
+  return Boolean(survey&&!isSwingTestSurvey(survey)&&!isV2BasketSurvey(survey)&&!survey.archived&&survey.status==='draft'&&user&&(user.role==='owner'||survey.createdBy===user.id));
 }
 async function listV2QuoteTargets(){
   if(!v2LocalPreviewEnabled()||!currentUser)throw new Error('Локальный режим недоступен');
@@ -693,6 +694,40 @@ async function saveSwingDemo(input){
     return survey.id;
   }finally{v2QuoteSaving=false}
 }
+// Dedicated local-only basket record. No client mutation or price persistence.
+async function listV2BasketClients(){
+  if(!v2LocalPreviewEnabled()||API_ENABLED||!currentUser)throw Error('Локальный режим недоступен');
+  return (await idbGetAll('clients')).map(c=>({id:c.id,label:[c.name||'Контакт',c.phone,c.address].filter(Boolean).join(' · ')}));
+}
+async function saveV2Basket(items,basketId,clientId){
+  if(!v2LocalPreviewEnabled()||API_ENABLED||!currentUser||v2QuoteSaving)throw Error('Сохранение недоступно');
+  if(typeof basketId!=='string'||!/^[a-f0-9-]{36}$/.test(basketId)||typeof clientId!=='string')throw Error('Некорректный черновик');
+  const user=currentUser;v2QuoteSaving=true;
+  try{
+    const {readBasket}=await import('./v2-basket.js');
+    const rows=readBasket(items);
+    if(!rows.length||rows.length!==items.length)throw Error('Проверьте все позиции черновика');
+    const id='sv-basket-'+basketId,existing=await idbGet('surveys',id);
+    if(existing&&(!isV2BasketSurvey(existing)||existing.createdBy!==user.id||existing.archived||existing.status!=='draft'))throw Error('Черновик недоступен');
+    const client=clientId?await idbGet('clients',clientId):null;
+    if(clientId&&!client)throw Error('Карточка клиента не найдена');
+    if(currentUser!==user||API_ENABLED)throw Error('Войдите повторно');
+    const now=new Date().toISOString();
+    const survey={...(existing||{id,number:await nextSurveyNumber(),localNumber:'',createdBy:user.id,createdByName:user.name,createdAt:now,serverRevision:0,archived:false,schemaVersion:4,note:''}),
+      clientId:client?.id||'',clientName:client?.name||'',clientPhone:client?.phone||'',address:client?.address||'',
+      updatedAt:now,status:'draft',syncState:'local',workTypes:[],
+      configuration:{basketDraft:{version:1,items:rows}}};
+    if(currentUser!==user||API_ENABLED)throw Error('Войдите повторно');
+    await idbPut('surveys',survey);
+    return id;
+  }finally{v2QuoteSaving=false}
+}
+async function restoreV2Basket(id){
+  const survey=await idbGet('surveys',id);
+  if(!v2Home||!v2LocalPreviewEnabled()||API_ENABLED||!isV2BasketSurvey(survey)||survey.createdBy!==currentUser?.id||survey.archived||survey.status!=='draft')return showToast('Черновик недоступен');
+  if(!v2Home.restoreBasket(survey.configuration.basketDraft.items,id.slice('sv-basket-'.length),survey.clientId||''))return;
+  $('#surveyDetailsDialog').close();switchScreen('v2Home');
+}
 async function prepareV2Home() {
   if(!v2LocalPreviewEnabled() || !currentUser || v2Home) return;
   const user=currentUser;
@@ -706,6 +741,7 @@ async function prepareV2Home() {
       open3D:open3DCalculator,
       listQuoteTargets:listV2QuoteTargets,
       saveQuote:saveV2SlidingQuote,
+      saveBasket:saveV2Basket,listBasketClients:listV2BasketClients,
       quoteSwing:swingDemoEnabled()?requestSwingDemo:null,
       saveSwing:swingDemoEnabled()?saveSwingDemo:null,
       openSavedQuote:async id=>{switchScreen('surveys');await renderSurveys();await openSurveyDetails(id);showToast('Расчёт сохранён в замере');}
@@ -738,7 +774,7 @@ async function renderOwnerDashboard() {
   if (currentUser?.role !== 'owner') return;
   const container=$('#ownerDashboardRoot');
   if (!container) return;
-  const surveys=(await idbGetAll('surveys')).filter(row=>!row.archived);
+  const surveys=(await idbGetAll('surveys')).filter(row=>!row.archived&&!isV2BasketSurvey(row));
   // Load the private ledger separately: it must never join synced survey JSON.
   if (API_ENABLED && navigator.onLine) {
     await Promise.all(surveys.slice(0,35).map(row=>loadOwnerCosts(row.id)));
@@ -782,7 +818,7 @@ async function renderSurveys() {
         </div>
         <span class="status-pill ${survey.status}">${survey.status === 'ready' ? 'Готов' : 'Черновик'}</span>
       </div>
-      <div class="badge-row">${calculationWorkTypes(survey).length ? calculationWorkTypes(survey).map(type => `<span class="type-badge ${WORK_TYPES[type]?.className || ''}">${WORK_TYPES[type]?.short || type}</span>`).join('') : '<span class="type-badge">Расчётов пока нет</span>'}</div>
+      <div class="badge-row">${isV2BasketSurvey(survey)?'<span class="type-badge">'+survey.configuration.basketDraft.items.length+' изд. · цена не подтверждена</span>':calculationWorkTypes(survey).length ? calculationWorkTypes(survey).map(type => `<span class="type-badge ${WORK_TYPES[type]?.className || ''}">${WORK_TYPES[type]?.short || type}</span>`).join('') : '<span class="type-badge">Расчётов пока нет</span>'}</div>
        ${surveyCalculations(survey).length === 1 ? `<div class="survey-card-total"><span>Цена варианта</span><b>${formatMoney(surveyCalculations(survey)[0].total)}</b></div>` : surveyCalculations(survey).length > 1 ? `<div class="survey-card-variants"><b>${surveyCalculations(survey).length} расчёта</b><span>Варианты — не общая сумма</span></div>` : ''}
       <div class="survey-card-actions">
         <button type="button" class="open-survey-btn v3-open-survey" data-open-survey="${survey.id}">Открыть замер →</button>
@@ -1917,6 +1953,17 @@ async function openSurveyDetails(id, {openExtra=false} = {}) {
   const survey = await idbGet('surveys', id);
   if (!survey) return;
   $('#detailsNumber').textContent = displaySurveyNumber(survey);
+  if(isV2BasketSurvey(survey)){
+    const {basketSummary}=await import('./v2-basket.js');
+    const q=basketSummary(survey.configuration.basketDraft.items);
+    const root=$('#surveyDetailsContent');
+    root.innerHTML='<div class="notice notice-lock">Локальный черновик · не заказ, не коммерческое предложение. Цены не подтверждены.</div><section class="v3-survey-head"><div class="v3-address"><span>Объект</span><b>'+escapeHtml(survey.address||'Адрес не указан')+'</b></div><div class="v3-survey-meta">'+escapeHtml(survey.clientName||'Клиент не выбран')+' '+escapeHtml(survey.clientPhone||'')+'</div></section><section class="details-section"><h3>Изделия черновика</h3><div data-saved-basket-lines></div><p>Итог сметы не рассчитан</p><button class="btn btn-primary btn-block" type="button" data-restore-basket>Открыть в редакторе</button></section>';
+    const list=root.querySelector('[data-saved-basket-lines]');
+    for(const row of q.lines){const p=document.createElement('p');p.dataset.savedBasketLine=row.id;p.textContent=row.summary||row.error||'Уточнить изделие';list.append(p)}
+    root.querySelector('[data-restore-basket]').disabled=survey.createdBy!==currentUser?.id||!v2Home||API_ENABLED;
+    root.querySelector('[data-restore-basket]').onclick=()=>restoreV2Basket(survey.id);
+    $('#surveyDetailsDialog').showModal();return;
+  }
   const rows = surveyCalculations(survey);
   $('#surveyDetailsContent').innerHTML = `
     ${isSwingTestSurvey(survey)?'<div class="notice notice-lock">ТЕСТ · условные цены. Не заказ и не коммерческое предложение.</div>':''}
@@ -2041,7 +2088,7 @@ async function openSurveyDetails(id, {openExtra=false} = {}) {
 }
 
 function showCustomerView(survey, onlyCalculationId = '') {
-  if(isSwingTestSurvey(survey))return showToast('Тестовые цены нельзя показывать как коммерческое предложение');
+  if(isV2BasketSurvey(survey)||isSwingTestSurvey(survey))return showToast('Неподтверждённые цены нельзя показывать как коммерческое предложение');
   const estimate = unifiedEstimate(survey);
   const onlyItem = onlyCalculationId ? surveyCalculations(survey).find(item=>item.id===onlyCalculationId) : null;
   if (onlyCalculationId && !onlyItem) return;
@@ -2089,7 +2136,7 @@ function showCustomerView(survey, onlyCalculationId = '') {
 async function openSurveyDataDialog(surveyId) {
   const survey = await idbGet('surveys', surveyId);
   if (!survey) return;
-  if(isSwingTestSurvey(survey))return showToast('Не добавляйте реальные контакты к тестовому замеру');
+  if(isV2BasketSurvey(survey)||isSwingTestSurvey(survey))return showToast('Измените связь с клиентом в редакторе черновика');
   $('#surveyDataId').value = survey.id;
   $('#surveyDataName').value = survey.clientName || '';
   $('#surveyDataPhone').value = survey.clientPhone || '';
@@ -2106,7 +2153,7 @@ async function saveSurveyData() {
   const surveyId = $('#surveyDataId').value;
   const survey = await idbGet('surveys', surveyId);
   if (!survey) return showToast('Замер не найден');
-  if(isSwingTestSurvey(survey))return showToast('Тестовые замеры не содержат контактов');
+  if(isV2BasketSurvey(survey)||isSwingTestSurvey(survey))return showToast('Изменение контактов здесь недоступно');
 
   const name = $('#surveyDataName').value.trim();
   const phoneRaw = $('#surveyDataPhone').value.trim();
@@ -2155,7 +2202,7 @@ async function saveSurveyData() {
 async function completeSurvey(id) {
   const survey = await idbGet('surveys', id);
   if (!survey || survey.status === 'ready') return;
-  if(isSwingTestSurvey(survey))return showToast('Тестовый замер нельзя завершить');
+  if(isV2BasketSurvey(survey)||isSwingTestSurvey(survey))return showToast('Черновик с неподтверждёнными ценами нельзя завершить');
   survey.status = 'ready';
   survey.updatedAt = new Date().toISOString();
   survey.syncState = API_ENABLED ? 'pending' : 'local';
