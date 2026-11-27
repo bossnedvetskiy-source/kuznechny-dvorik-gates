@@ -368,7 +368,7 @@ test('v2 owner retains staff and estimate economy routes with correct labels',as
   await login(page,'admin');
   const home=page.locator('#v2HomeScreen');
   await expect(home).toBeVisible();
-  await home.locator('[data-v2-action="wallet"]').click();
+  await home.getByRole('button',{name:'Финансы',exact:true}).click();
   await expect(home.locator('.kd-v2-detail')).toContainText('Учёт фактических оплат и расходов появится на этапе 9');
   await home.locator('[data-v2-action="estimateEconomy"]').click();
   await expect(page.locator('#ownerScreen')).toBeVisible();
