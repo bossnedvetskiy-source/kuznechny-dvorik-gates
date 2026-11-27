@@ -363,3 +363,31 @@ test('quick quote explicitly creates one survey and saves a second variant into 
   expect(second.estimateRole).toBe('alternative');
   expect(JSON.stringify(saved)).not.toMatch(/ownerCosts|wageRates|profit/);
 });
+
+test('v2 owner retains staff and estimate economy routes with correct labels',async({page})=>{
+  await login(page,'admin');
+  const home=page.locator('#v2HomeScreen');
+  await expect(home).toBeVisible();
+  await home.locator('[data-v2-action="wallet"]').click();
+  await expect(home.locator('.kd-v2-detail')).toContainText('Учёт фактических оплат и расходов появится на этапе 9');
+  await home.locator('[data-v2-action="estimateEconomy"]').click();
+  await expect(page.locator('#ownerScreen')).toBeVisible();
+  await expect(page.locator('#screenTitle')).toHaveText('Расчётная экономика');
+  await page.locator('.kd-v2-nav[data-screen="settings"]').click();
+  await expect(page.locator('#settingsScreen')).toBeVisible();
+  await expect(page.locator('#openTeamBtn')).toBeVisible();
+  await page.locator('#openTeamBtn').click();
+  await expect(page.locator('#teamScreen')).toBeVisible();
+  await expect(page.locator('.kd-v2-nav[data-screen="settings"]')).toHaveAttribute('aria-current','page');
+});
+test('v2 navigation retains keyboard focus and surveyor has no staff controls',async({page})=>{
+  await login(page,'zamer');
+  await expect(page.locator('#v2HomeScreen')).toBeVisible();
+  const clients=page.locator('.kd-v2-nav[data-screen="clients"]');
+  await clients.focus();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#clientsScreen')).toBeVisible();
+  await expect(clients).toBeFocused();
+  await page.locator('.kd-v2-nav[data-screen="settings"]').click();
+  await expect(page.locator('#openTeamBtn')).toBeHidden();
+});
