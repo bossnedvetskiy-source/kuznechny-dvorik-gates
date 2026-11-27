@@ -33,7 +33,7 @@ export function normalizeBasketDraft(kind,input){
    for(const [a,b] of PICKET_CORNERS)if(input.corners?.[a+b]===true)corners[a+b]=true;
   }else sides['А']=fields(input,PICKET_DEFAULTS);
   if(!Object.keys(sides).length)throw Error('Добавьте сторону');
-  return {version:2,active:sides[input?.active]?input.active:Object.keys(sides)[0],sides,corners};
+  return {version:2,active:PICKET_SIDES.includes(input?.active)&&Object.hasOwn(sides,input.active)?input.active:Object.keys(sides)[0],sides,corners};
  }
  return fields(input,defaults[kind]);
 }
