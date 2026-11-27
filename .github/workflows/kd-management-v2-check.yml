@@ -56,11 +56,30 @@ jobs:
           node scripts/build-dev-preview.mjs
           test -s _site/dev-tools/index.html
           test -s _site/surveyor-test/index.html
+      - name: Cache Playwright Chromium
+        if: success() || failure()
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('package-lock.json') }}
       - name: Install Chromium
+        id: chromium
         if: success() || failure()
-        run: npx playwright install --with-deps chromium
+        env:
+          PLAYWRIGHT_DOWNLOAD_CONNECTION_TIMEOUT: '120000'
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3; do
+            if npx playwright install --with-deps chromium; then
+              exit 0
+            fi
+            echo "::warning::Chromium setup failed (attempt $attempt)"
+            if [[ "$attempt" -lt 3 ]]; then sleep 10; fi
+          done
+          exit 1
       - name: Run mobile, offline, roles and all surveyor browser tests
-        if: success() || failure()
+        if: (success() || failure()) && steps.chromium.outcome == 'success'
         run: npx playwright test tests/surveyor-*.spec.js tests/dev-pwa.spec.js --workers=2
       - name: Save failure traces and local test results
         if: always()
