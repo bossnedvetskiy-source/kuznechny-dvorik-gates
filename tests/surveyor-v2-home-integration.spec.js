@@ -91,3 +91,21 @@ test('v2 compact survey card and forms follow both themes without losing fields'
   await expect(page.locator('.v3-product-tile')).toHaveCount(4);
   expect(await page.locator('#surveyDetailsDialog .sheet').evaluate(el=>el.scrollWidth<=el.clientWidth+1)).toBe(true);
 });
+
+test('v2 catalogue separates forged gate and fence articles and preserves existing gate entry',async({page})=>{
+  await login(page,'zamer');
+  const home=page.locator('#v2HomeScreen');
+  await expect(home).toBeVisible();
+  await home.locator('[data-v2-action="catalog"]').click();
+  await expect(home.locator('[data-v2-action="artGates"]')).toContainText('Кованые ворота Арт.');
+  await expect(home.locator('[data-v2-action="artFences"]')).toContainText('Кованые заборы Арт.');
+  await expect(home.locator('[data-v2-action="pickets"]')).toContainText('Евроштакетник');
+  await home.locator('[data-v2-action="artFences"]').click();
+  await expect(home.locator('[role="status"]')).toContainText('стоимость не рассчитывается');
+  await expect(page.locator('#surveyDialog')).not.toBeVisible();
+  await home.locator('[data-v2-action="artGates"]').click();
+  await home.locator('[role="status"] [data-v2-action="measure"]').click();
+  await expect(page.locator('#surveyDialog')).toBeVisible();
+  await page.locator('#saveSurveyBtn').click();
+  await expect(page.locator('#surveyDetailsDialog [data-v3-calc="gates"]')).toBeVisible();
+});
