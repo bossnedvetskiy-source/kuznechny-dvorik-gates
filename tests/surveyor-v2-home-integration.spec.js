@@ -602,3 +602,50 @@ test('built-in swing wicket follows workbook dimensions and restores its own dra
   await expect(page.locator('#loginView')).toBeVisible();
   expect(await page.evaluate(()=>Object.keys(sessionStorage).filter(k=>k.startsWith('kd-v2-swing-draft-v1:')))).toEqual([]);
 });
+
+test('synthetic swing quotes separate owner economics and save only an allowlisted test snapshot',async({page})=>{
+  await login(page,'zamer','v2&swingDemo=1');
+  const home=page.locator('#v2HomeScreen');
+  const result=await page.evaluate(async()=>{
+    const {makeSwingDemoQuote,buildSwingCalculation}=await import('./simple-gate-quote.js');
+    const input={widthMm:3400,heightMm:1800,wicketWidthMm:1000,wicketHeightMm:1800,profile:'60x40x2',wicketType:'separate',gapMode:'excel',fill:'sheet',postType:'none',wicketPosition:'adjacent',installation:'none',paint:true,link:false,manualPosts:null,privateRate:123456};
+    const owner=makeSwingDemoQuote(input,'owner'),surveyor=makeSwingDemoQuote(input,'surveyor');
+    const item=buildSwingCalculation({...owner,customer:{...owner.customer,configuration:{...owner.customer.configuration,secret:999},prices:{...owner.customer.prices,wage:999}}},'test');
+    let rejected=false;try{buildSwingCalculation({...surveyor,customer:{...surveyor.customer,prices:{...surveyor.customer.prices,total:1}}},'bad')}catch{rejected=true}
+    return {owner,surveyor,item,rejected};
+  });
+  expect(result.owner.owner.productCost).toBeGreaterThan(0);
+  expect(result.surveyor.owner).toBeUndefined();
+  expect(result.owner.customer).toEqual(result.surveyor.customer);
+  expect(result.item.payload.test).toBe(true);
+  expect(result.item.payload.configuration.secret).toBeUndefined();
+  expect(result.item.payload.configuration.privateRate).toBeUndefined();
+  expect(result.item.payload.prices.wage).toBeUndefined();
+  expect(result.rejected).toBe(true);
+  await home.locator('[data-v2-action="catalog"]').click();
+  await home.locator('[data-v2-action="frames"]').click();
+  await home.locator('[data-swing-demo-quote]').click();
+  await expect(home.locator('[data-swing-demo-result]')).toContainText('Условная цена:');
+  await expect(home.locator('[data-swing-demo-result]')).not.toContainText('Себестоимость');
+  await home.locator('[data-swing-field="gateWidthMm"]').fill('3500');
+  await expect(home.locator('[data-swing-demo-save]')).toBeHidden();
+  await home.locator('[data-swing-demo-quote]').click();
+  await home.locator('[data-swing-demo-save]').click();
+  const dialog=page.locator('#surveyDetailsDialog');
+  await expect(dialog).toBeVisible({timeout:20000});
+  await expect(dialog.locator('.calculation-card')).toHaveCount(1);
+  await expect(dialog.locator('.calculation-card')).toContainText('Тест ·');
+  await expect(dialog.locator('.calculation-card')).toContainText('3500 × 1800 мм');
+  await expect(dialog.locator('.calculation-card [data-show-calculation]')).toHaveCount(0);
+  const snapshot=await page.evaluate(async()=>{
+    const db=await new Promise((resolve,reject)=>{const req=indexedDB.open('kd-surveyor-stage1');req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)});
+    const surveys=await new Promise((resolve,reject)=>{const req=db.transaction('surveys').objectStore('surveys').getAll();req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)});
+    db.close();
+    return surveys.flatMap(s=>s.configuration?.calculations||[]).find(c=>c.type==='simpleSwing');
+  });
+  expect(snapshot.payload.test).toBe(true);
+  expect(snapshot.payload.tariffRevision).toBe('synthetic-preview-v1');
+  expect(snapshot.payload.configuration.widthMm).toBe(3500);
+  expect(snapshot.payload.prices.wage).toBeUndefined();
+  expect(snapshot.owner).toBeUndefined();
+});
