@@ -101,8 +101,9 @@ test('v2 catalogue separates forged gate and fence articles and preserves existi
   await expect(home.locator('[data-v2-action="artFences"]')).toContainText('Кованые заборы Арт.');
   await expect(home.locator('[data-v2-action="pickets"]')).toContainText('Евроштакетник');
   await home.locator('[data-v2-action="artFences"]').click();
-  await expect(home.locator('[role="status"]')).toContainText('стоимость не рассчитывается');
+  await expect(home.getByText('Стоимость не рассчитывается',{exact:true})).toBeVisible();
   await expect(page.locator('#surveyDialog')).not.toBeVisible();
+  await home.locator('[data-art-fence-back]').click();
   await home.locator('[data-v2-action="artGates"]').click();
   await home.locator('[role="status"] [data-v2-action="measure"]').click();
   await expect(page.locator('#surveyDialog')).toBeVisible();
@@ -770,4 +771,46 @@ test('forged quote contract validates server amounts, options and changed dimens
   await home.locator('[data-v2-action="artGates"]').click();
   await expect(home.locator('[data-art-option="installation"]')).toBeChecked();
   await expect(home.locator('[data-art-option="posts"]')).toBeChecked();
+});
+
+test('forged fence measures sections and shared supports without inventing a catalogue or price',async({page})=>{
+ await login(page,'zamer');
+ const home=page.locator('#v2HomeScreen');
+ await home.locator('[data-v2-action="catalog"]').click();
+ await home.locator('[data-v2-action="artFences"]').click();
+ const field=k=>home.locator('[data-art-fence-field="'+k+'"]');
+ const plan=home.locator('[data-art-fence-plan]');
+ await expect(field('sectionWidthMm')).toHaveValue('1000');
+ await expect(field('heightMm')).toHaveValue('1700');
+ await field('count').fill('5');
+ await field('supportMode').selectOption('new');
+ await expect(plan).toContainText('5480');
+ await expect(plan).toContainText('8,5');
+ await expect(plan.locator('.kd-product-row').filter({hasText:'Новых столбов'})).toContainText('6');
+ await field('supportMode').selectOption('mixed');
+ await field('manualNewPosts').fill('7');
+ await expect(home.locator('[data-art-fence-errors]')).toContainText('0 до 6');
+ await expect(plan).toBeEmpty();
+ await field('manualNewPosts').fill('2');
+ await expect(plan.locator('.kd-product-row').filter({hasText:'Готовых опор'})).toContainText('4');
+ await field('article').fill('Образец клиента');
+ await field('fill').selectOption('open');
+ await home.locator('[data-art-fence-back]').click();
+ await home.locator('[data-v2-action="artFences"]').click();
+ await expect(field('article')).toHaveValue('Образец клиента');
+ await expect(field('count')).toHaveValue('5');
+ await expect(field('fill')).toHaveValue('open');
+ await expect(home.getByText('Стоимость не рассчитывается',{exact:true})).toBeVisible();
+ await expect(page.locator('#surveyDialog')).not.toBeVisible();
+ const test=await page.evaluate(async()=>{
+  const {artFencePlan}=await import('./v2-art-fences.js');
+  const p=artFencePlan({count:5,supportMode:'new'});
+  return {plan:p.plan,total:p.total,invalid:artFencePlan({count:0}).plan,unknown:artFencePlan({supportMode:'existing'}).plan.outerLengthMm};
+ });
+ expect(test.plan.openingSumMm).toBe(5000);
+ expect(test.plan.outerLengthMm).toBe(5480);
+ expect(test.plan.sectionAreaM2).toBe(8.5);
+ expect(test.total).toBeNull();
+ expect(test.invalid).toBeNull();
+ expect(test.unknown).toBeNull();
 });
