@@ -120,7 +120,7 @@ test('v2 catalogue keeps corrugated sheet fencing separate from pickets and forg
   await expect(home.locator('[data-v2-action="pickets"]')).toBeVisible();
   await expect(home.locator('[data-v2-action="artFences"]')).toBeVisible();
   await home.locator('[data-v2-action="profileFence"]').click();
-  await expect(home.locator('[role="status"]')).toContainText('стоимость не рассчитывается');
+  await expect(home.locator('[data-profile-plan]')).toContainText('Листы, шт.');
   await expect(page.locator('#surveyDialog')).not.toBeVisible();
 });
 
@@ -935,9 +935,50 @@ test('picket common corners deduplicate only compatible posts and price correcte
  await home.getByText('Общие угловые столбы',{exact:true}).click();
  await home.locator('[data-picket-corner="АБ"]').check();
  const sum=home.locator('[data-picket-site-summary]');
- await expect(sum.locator('.kd-product-row').filter({hasText:'Опоры забора'})).toContainText('11');
+ await expect(sum.locator('.kd-product-row').filter({has:page.getByText('Опоры забора',{exact:true})})).toContainText('11');
  await home.locator('[data-picket-field="post"]').selectOption('60x60x2');
  await expect(sum).toContainText('разные профили');
  await home.locator('[data-picket-field="post"]').selectOption('80x80x3');
  await expect(sum).toContainText('Общие углы (вычтено)');
+});
+
+test('profile fence uses working sheet width, exact purchase area and kerf-aware rail cutting',async({page})=>{
+ await login(page,'zamer');
+ const data=await page.evaluate(async()=>{
+  const {profileFencePlan,profileFenceCut}=await import('./v2-profile-fence.js');
+  return {base:profileFencePlan(),three:profileFencePlan({rails:3}),open:profileFencePlan({gateMm:3400,wicketMm:1000,openingStartMm:1000}),bad:profileFencePlan({workingMm:1300}),badOffset:profileFencePlan({gateMm:3400,openingStartMm:11000}),cut:profileFenceCut([2999,2999],3)};
+ });
+ expect(data.base.errors).toEqual([]);
+ const p=data.base.plan;
+ expect(p.spans).toBe(5);
+ expect(p.posts).toBe(6);
+ expect(p.sheets).toBe(15);
+ expect(p.overlapMm).toBe(60);
+ expect(p.purchaseAreaM2).toBeCloseTo(32.4,6);
+ expect(p.coveredAreaM2).toBeCloseTo(20.736,6);
+ expect(p.screws).toBe(270);
+ expect(p.pieces).toBe(10);
+ expect(p.tubeUsedM).toBeCloseTo(23.04,6);
+ expect(p.tubeStocks).toBe(5);
+ expect(p.cut.bins.every(b=>b.remaining>=0)).toBe(true);
+ expect(data.three.plan.tubeStocks).toBe(8);
+ expect(data.open.plan.openingPosts).toBe(3);
+ expect(data.open.plan.spans).toBe(4);
+ expect(data.bad.plan).toBeNull();
+ expect(data.badOffset.plan).toBeNull();
+ expect(data.cut.stocks).toBe(2);
+ expect(data.base.total).toBeNull();
+ const home=page.locator('#v2HomeScreen');
+ await home.locator('[data-v2-action="catalog"]').click();
+ await home.locator('[data-v2-action="profileFence"]').click();
+ await home.locator('[data-profile-field="rails"]').selectOption('3');
+ await expect(home.locator('[data-profile-plan]')).toContainText('Хлысты 6 м, шт.8');
+ await home.getByText('Листы и крепёж',{exact:true}).click();
+ await home.locator('[data-profile-field="workingMm"]').fill('1300');
+ await expect(home.locator('[data-profile-errors]')).not.toBeEmpty();
+ await home.locator('[data-profile-field="workingMm"]').fill('1140');
+ await home.locator('[data-profile-back]').click();
+ await home.locator('[data-v2-action="profileFence"]').click();
+ await expect(home.locator('[data-profile-field="rails"]')).toHaveValue('3');
+ await expect(page.locator('#surveyDialog')).not.toBeVisible();
 });
