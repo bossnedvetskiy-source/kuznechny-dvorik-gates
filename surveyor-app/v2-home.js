@@ -1,3 +1,4 @@
+import {mountProductEditor} from './v2-product-editor.js';
 // Experimental shell. Only mounted by app.js on an explicitly opted-in local
 // preview with the existing real session. No data fetching or role mutation.
 export function mountV2Home({role,navigate,newSurvey,open3D}) {
@@ -13,6 +14,7 @@ export function mountV2Home({role,navigate,newSurvey,open3D}) {
   root.classList.add('kd-v2-local');
   let currentScreen='v2Home';
   let catalogOpen=false;
+  let productOpen=false, productDraft=null;
   const host=document.createElement('section');
   host.id='v2HomeScreen';host.className='screen kd-v2-home';host.setAttribute('aria-label','Новая главная');
   const style=document.createElement('style');
@@ -103,6 +105,24 @@ html.kd-v2-local[data-kd-theme=light]{--kd-bg:#f1f5f9;--kd-card:#fff;--kd-soft:#
 .kd-v2-local #threeDScreen :is(.kd3d-fields input,.kd3d-select-label select,.kd3d-product-type select,.kd3d-product-fields input,.kd3d-product-fields select,.kd3d-side-quick input,.kd3d-side-quick select,.kd3d-compact-field select,.kd3d-gate-fields input:not([type=checkbox]),.kd3d-gate-fields select,.kd3d-builtin-fields input:not([type=checkbox])){background:var(--kd-bg)!important;color:var(--kd-text)!important;border-color:var(--kd-line)!important}
 .kd-v2-local #threeDScreen .kd3d-compact-field input{color:var(--kd-text)!important}
 @media(prefers-reduced-motion:reduce){.kd-v2-local #mainView .screen,.kd-v2-local #mainView .btn,.kd-v2-local .kd-v2-home *{animation:none!important;transition:none!important}}
+
+.kd-product-editor{display:grid;gap:10px;padding-bottom:4px}
+.kd-product-editor h3{margin:4px 0 8px}
+.kd-product-editor .kd-product-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:10px}
+.kd-product-editor label{display:grid;gap:5px;min-width:0;font-size:12px;color:var(--vmuted)}
+.kd-product-editor input:not([type=checkbox]),.kd-product-editor select{width:100%;min-width:0;height:46px;background:var(--vbg);color:var(--vtext);border:1px solid var(--vline);border-radius:10px;padding:8px;font-size:15px}
+.kd-product-editor .kd-product-checks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.kd-product-editor .kd-product-check{display:flex;align-items:center;gap:8px;min-height:44px;color:var(--vtext);overflow-wrap:anywhere}
+.kd-product-editor input[type=checkbox]{accent-color:var(--vprimary);width:19px;height:19px;flex:none}
+.kd-product-sketch{background:#fff;border-radius:10px;padding:6px}
+.kd-product-sketch svg{width:100%;height:auto;display:block;stroke:initial}
+.kd-product-editor details>summary{min-height:44px;display:flex;align-items:center;cursor:pointer;font-weight:650}
+.kd-product-editor details>summary:before{content:'▸';margin-right:8px;color:var(--vacc)}
+.kd-product-editor details[open]>summary:before{content:'▾'}
+.kd-product-editor .kd-product-row{display:flex;justify-content:space-between;gap:6px;padding:8px 0;border-top:1px solid var(--vline);font-size:13px}
+.kd-product-total{position:sticky;bottom:0;z-index:1;box-shadow:0 -4px 16px #0002}
+.kd-product-total strong{color:var(--vacc)}
+.kd-product-editor [data-product-errors]:not(:empty){color:var(--vtext);border:1px solid #d97706;border-radius:10px;padding:12px}
 @media(min-width:700px){.kd-v2-grid{grid-template-columns:repeat(4,minmax(0,1fr))}.kd-v2-grid.two{grid-template-columns:repeat(4,minmax(0,1fr))}.kd-v2-tile{min-height:105px!important}}
 `;
   host.append(style);
@@ -143,21 +163,29 @@ html.kd-v2-local[data-kd-theme=light]{--kd-bg:#f1f5f9;--kd-card:#fff;--kd-soft:#
     updateThemeButton();
     const isOwner=workspace==='owner'&&owner;
     body.innerHTML='<div class="kd-v2-head"><h2>'+(isOwner?'КД УПРАВЛЕНИЕ':'КД ЗАМЕРЩИК')+'</h2><button class="kd-v2-iconbtn" type="button" data-v2-action="theme" aria-label="Переключить тему">'+(theme==='dark'?'☀':'☾')+'</button>'+(owner?'<button class="kd-v2-iconbtn" type="button" data-v2-action="workspace" aria-label="Переключить рабочее пространство">⇄</button>':'')+'</div><p class="kd-v2-note">Тестовая оболочка · действующие функции открываются в прежнем редакторе.</p>'+
-    (catalogOpen?'<button class="kd-v2-action" type="button" data-v2-action="catalogBack">← К разделам замерщика</button><h3>Каталог изделий</h3><p class="kd-v2-note">Выберите направление. Новые редакторы подключаются на этапе 2.</p>'+catalogItems.map(([id,label,desc])=>btn(id,label,desc)).join(''):isOwner?'<div class="kd-v2-grid two">'+['Сумма заказов','К получению','Заказы в работе','Активные клиенты'].map(x=>'<div class="kd-v2-card"><small>'+x+'</small><strong>—</strong></div>').join('')+'</div><div class="kd-v2-card kd-v2-panel"><b>Требует внимания</b><small>Рабочие показатели ещё не подключены.</small></div><h3>Управление предприятием</h3><div class="kd-v2-grid">'+ownerItems.map(tile).join('')+'</div><div class="kd-v2-card kd-v2-panel"><b>КД — Умный помощник</b><small>Сценарии подключаются на этапе 11</small><button class="kd-v2-question" data-v2-action="tasks">Что сделать сегодня?</button><button class="kd-v2-question" data-v2-action="wallet">Кто должен деньги?</button><button class="kd-v2-question" data-v2-action="orders">Какие заказы требуют внимания?</button></div>':
-    btn('quick','Быстрый расчёт',owner?'Действующий калькулятор откатных ворот':'Без заказа — появится на этапе 2',true)+btn('measure','Новый замер объекта','Открыть действующий редактор замера')+'<h3>Работа с клиентами</h3><div class="kd-v2-grid two">'+surveyItems.map(tile).join('')+'</div>'+btn('threeD','3D-конструктор','Вспомогательный инструмент до этапа 3'))+'<div class="kd-v2-card kd-v2-detail" role="status" hidden></div>';
+    (productOpen?'<div data-product-editor-root></div>':catalogOpen?'<button class="kd-v2-action" type="button" data-v2-action="catalogBack">← К разделам замерщика</button><h3>Каталог изделий</h3><p class="kd-v2-note">Выберите направление. Новые редакторы подключаются на этапе 2.</p>'+catalogItems.map(([id,label,desc])=>btn(id,label,desc)).join(''):isOwner?'<div class="kd-v2-grid two">'+['Сумма заказов','К получению','Заказы в работе','Активные клиенты'].map(x=>'<div class="kd-v2-card"><small>'+x+'</small><strong>—</strong></div>').join('')+'</div><div class="kd-v2-card kd-v2-panel"><b>Требует внимания</b><small>Рабочие показатели ещё не подключены.</small></div><h3>Управление предприятием</h3><div class="kd-v2-grid">'+ownerItems.map(tile).join('')+'</div><div class="kd-v2-card kd-v2-panel"><b>КД — Умный помощник</b><small>Сценарии подключаются на этапе 11</small><button class="kd-v2-question" data-v2-action="tasks">Что сделать сегодня?</button><button class="kd-v2-question" data-v2-action="wallet">Кто должен деньги?</button><button class="kd-v2-question" data-v2-action="orders">Какие заказы требуют внимания?</button></div>':
+    btn('quick','Быстрый расчёт',owner?'Действующий калькулятор откатных ворот':'Выбрать изделие · без заказа',true)+btn('measure','Новый замер объекта','Открыть действующий редактор замера')+'<h3>Работа с клиентами</h3><div class="kd-v2-grid two">'+surveyItems.map(tile).join('')+'</div>'+btn('threeD','3D-конструктор','Вспомогательный инструмент до этапа 3'))+'<div class="kd-v2-card kd-v2-detail" role="status" hidden></div>';
+    if(productOpen){
+      mountProductEditor(body.querySelector('[data-product-editor-root]'),{
+        draft:productDraft,onDraft:value=>{productDraft=value},
+        onBack:()=>{productOpen=false;catalogOpen=true;render()},
+        onLegacy:()=>{productOpen=false;catalogOpen=false;render();navigate('surveys');newSurvey()}
+      });
+    }
   }
   function pending(label){const detail=body.querySelector('.kd-v2-detail');detail.textContent=label;detail.hidden=false;detail.scrollIntoView({block:'nearest'});}
   body.addEventListener('click',e=>{
     const action=e.target.closest('[data-v2-action]')?.dataset.v2Action;if(!action)return;
     if(action==='theme'){toggleTheme();body.querySelector('[data-v2-action="theme"]')?.focus();return}
-    if(action==='workspace'&&owner){catalogOpen=false;workspace=workspace==='owner'?'surveyor':'owner';render();syncNav();return}
-    if(action==='ruler'&&owner){catalogOpen=false;workspace='surveyor';render();syncNav();return}
-    if(action==='catalog'){catalogOpen=true;render();return}
+    if(action==='workspace'&&owner){productOpen=false;catalogOpen=false;workspace=workspace==='owner'?'surveyor':'owner';render();syncNav();return}
+    if(action==='ruler'&&owner){productOpen=false;catalogOpen=false;workspace='surveyor';render();syncNav();return}
+    if(action==='catalog'){productOpen=false;catalogOpen=true;render();return}
     if(action==='catalogBack'){catalogOpen=false;render();return}
     if(action==='artFences'){pending('Кованые заборы Арт.: отдельный редактор на этапе 2. До утверждения моделей, размеров, материалов и тарифов стоимость не рассчитывается.');return}
     if(action==='profileFence'){pending('Забор из профнастила: отдельный редактор на этапе 2. До утверждения параметров листов, каркаса и тарифов стоимость не рассчитывается.');return}
     if(action==='frames'){pending('Серийные каркасы: отдельный редактор на этапе 2.');return}
-    if(['artGates','sliding','pickets','canopy'].includes(action)){
+    if(action==='sliding'){productOpen=true;catalogOpen=false;render();return}
+    if(['artGates','pickets','canopy'].includes(action)){
       pending('Действующий калькулятор доступен через новый замер. В редакторе замера выберите соответствующее изделие.');
       const detail=body.querySelector('.kd-v2-detail');
       const next=document.createElement('button');next.type='button';next.className='kd-v2-action primary';next.dataset.v2Action='measure';next.textContent='Создать замер';detail.append(next);return
@@ -167,6 +195,7 @@ html.kd-v2-local[data-kd-theme=light]{--kd-bg:#f1f5f9;--kd-card:#fff;--kd-soft:#
     if(action==='orders'&&owner){pending('Реестр заказов появится на этапе 6. Замеры доступны в пространстве замерщика.');return}
     if(action==='wallet'&&owner){navigate('owner');return}
     if(action==='quick'&&owner){navigate('ownerQuick');return}
+    if(action==='quick'){productOpen=false;catalogOpen=true;render();return}
     if(action==='measure'){navigate('surveys');newSurvey();return}
     if(action==='threeD'){open3D();return}
     pending('Раздел пока не подключён. Его реализация предусмотрена утверждённой дорожной картой.');
@@ -188,7 +217,7 @@ html.kd-v2-local[data-kd-theme=light]{--kd-bg:#f1f5f9;--kd-card:#fff;--kd-soft:#
         if(target==='ordersPending'||target==='factoryPending'){
           navigate('v2Home');
           pending(target==='ordersPending'?'Полноценный реестр заказов появится на этапе 6. Существующие замеры доступны в рабочем пространстве замерщика.':'Цех будет подключён на этапе 7.');
-        }else {if(target==='v2Home'&&catalogOpen){catalogOpen=false;render()}navigate(target);}
+        }else {if(target==='v2Home'&&(catalogOpen||productOpen)){catalogOpen=false;productOpen=false;render()}navigate(target);}
       });
       bottom.append(nav);navNodes.push(nav);
     }
