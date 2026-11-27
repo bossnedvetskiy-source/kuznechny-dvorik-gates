@@ -231,7 +231,7 @@ test('v2 visual acceptance at 320, 390 and 1280 pixels with named controls',asyn
       await expect(page.locator('html')).toHaveAttribute('data-kd-theme',theme);
       expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
       const buttons=await home.locator('button:visible').evaluateAll(els=>els.map(e=>({name:(e.getAttribute('aria-label')||e.textContent||'').trim(),height:e.getBoundingClientRect().height})));
-      expect(buttons.every(b=>b.name&&b.height>=44)).toBe(true);
+      expect(buttons.filter(b=>!b.name||b.height<44), 'Inadequate touch targets at '+width+'px / '+theme).toEqual([]);
       await page.screenshot({path:testInfo.outputPath('owner-'+width+'-'+theme+'.png'),fullPage:true,animations:'disabled'});
     }
   }
@@ -285,4 +285,35 @@ test('millimetre adapter agrees with existing sliding price engine and rejects i
   expect(comparisons.matches).toEqual([true,true,true,true,true,true]);
   expect(comparisons.invalid).toEqual([null,null,null,null]);
   expect(comparisons.defaults).toBe(4000);
+});
+
+test('v2 local quick draft survives reload, reset and explicit logout without creating orders',async({page})=>{
+  test.setTimeout(90000);
+  await login(page,'zamer');
+  const home=page.locator('#v2HomeScreen');
+  const open=async()=>{
+    await expect(home).toBeVisible({timeout:20000});
+    await home.locator('[data-v2-action="quick"]').click();
+    await home.locator('[data-v2-action="sliding"]').click();
+    await expect(home.locator('.kd-product-editor')).toBeVisible();
+  };
+  await open();
+  const width=home.locator('[data-product-field="widthMm"]');
+  await width.fill('4100');
+  await page.reload();
+  await open();
+  await expect(width).toHaveValue('4100');
+  page.once('dialog',dialog=>dialog.accept());
+  await home.locator('[data-product-reset]').click();
+  await expect(width).toHaveValue('4000');
+  await width.fill('4250');
+  await page.locator('#profileBtn').click();
+  await page.locator('#logoutBtn').click();
+  await expect(page.locator('#loginView')).toBeVisible();
+  expect(await page.evaluate(()=>Object.keys(sessionStorage).filter(k=>k.startsWith('kd-v2-sliding-draft-v1:')))).toEqual([]);
+  await login(page,'zamer');
+  await open();
+  await expect(width).toHaveValue('4000');
+  await page.locator('.kd-v2-nav[data-screen="surveys"]').click();
+  await expect(page.locator('#surveyList .survey-card')).toHaveCount(0);
 });
