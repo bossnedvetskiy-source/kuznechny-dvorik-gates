@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: kd-management-v2-regression
+  group: kd-management-v2-regression-with-preview
   cancel-in-progress: true
 
 jobs:
@@ -75,6 +75,14 @@ jobs:
             fi
           done
           printf '%s\n' "$GITHUB_SHA" > _site/KD-V2-BUILD-SHA.txt
+          cat > _site/KD-V2-LOCAL-README.txt <<'EOF'
+          Test build only. Do not deploy to production or enter real client data.
+          Extract this artifact into a folder named kuznechny-dvorik-gates.
+          In its parent directory run: python -m http.server 4173 --bind 127.0.0.1
+          Open: http://127.0.0.1:4173/kuznechny-dvorik-gates/surveyor-test/
+          Local test login: admin / 1234 or zamer / 1234.
+          Use a separate browser profile; the test does not sync to the business database.
+          EOF
       - name: Store isolated static preview (no deployment)
         if: (success() || failure()) && steps.isolation.outcome == 'success'
         uses: actions/upload-artifact@v4
