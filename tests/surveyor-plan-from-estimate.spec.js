@@ -98,6 +98,7 @@ test('scheme gets selected gate and wicket plus fence spans, without inventing o
 
   await page.locator('[data-edit-plan]').click();
   await expect(page.locator('#planDialog')).toBeVisible();
+  await page.locator('#planListModeBtn').click();
   await page.locator('#planItems .plan-item-row').first().click();
   await page.locator('#planEditorFields [data-plan-field="state"]').selectOption('existing');
   await page.locator('#donePlanItemBtn').click();
@@ -139,13 +140,14 @@ test('touch diagram splits a fence span, toggles post state, removes and undoes 
   await reopen(page);
   await page.locator('[data-build-plan-from-calcs]').click();
   const extra = page.locator('#surveyDetailsContent details.v3-extra');
-  if (await extra.getAttribute('open') === null) await extra.locator('summary').click();
+  await expect(extra).toHaveAttribute('open','');
   await page.locator('[data-edit-plan]').click();
   await expect(page.locator('#planDialog')).toBeVisible();
   await page.locator('#planLineTabs .plan-line-tab').nth(1).click();
-  await expect(page.locator('#planCanvas [data-split-fence]')).toHaveCount(3);
+  await expect(page.locator('#planCanvas .plan-part-wrap.fence [data-select-plan-item]')).toHaveCount(3);
   const originalWidth=await page.locator('#planLineWidth').textContent();
-  await page.locator('#planCanvas [data-split-fence]').first().click();
+  await page.locator('#planCanvas .plan-part-wrap.fence [data-select-plan-item]').first().click();
+  await page.locator('[data-plan-inline-split]').click();
   await expect(page.locator('#planQuickPostActions')).toBeVisible();
   await expect(page.locator('#planQuickPostActions')).toContainText('Новый');
   await expect(page.locator('#planLineWidth')).toHaveText(originalWidth);
@@ -190,7 +192,7 @@ test('gate support quick actions keep gate structurally supported and allow mark
   await reopen(page);
   await page.locator('[data-build-plan-from-calcs]').click();
   const extra = page.locator('#surveyDetailsContent details.v3-extra');
-  if (await extra.getAttribute('open') === null) await extra.locator('summary').click();
+  await expect(extra).toHaveAttribute('open','');
   await page.locator('[data-edit-plan]').click();
   await page.locator('#planCanvas .plan-part-wrap.post [data-select-plan-item]').first().click();
   await expect(page.locator('#planQuickPostActions')).toBeVisible();
