@@ -668,6 +668,28 @@ async function saveV2SlidingQuote(input,targetId){
     return survey.id;
   }finally{v2QuoteSaving=false}
 }
+// Opt-in synthetic pricing and explicit save only in the isolated local preview.
+function swingDemoEnabled(){return v2LocalPreviewEnabled()&&!API_ENABLED&&new URLSearchParams(location.search).get('swingDemo')==='1';}
+async function requestSwingDemo(input){
+  if(!swingDemoEnabled()||!currentUser)throw new Error('Тестовый расчёт недоступен');
+  const user=currentUser;
+  const {makeSwingDemoQuote}=await import('./simple-gate-quote.js');
+  if(currentUser!==user)throw new Error('Войдите повторно');
+  return makeSwingDemoQuote(input,user.role);
+}
+async function saveSwingDemo(input){
+  if(!swingDemoEnabled()||!currentUser||v2QuoteSaving)throw new Error('Сохранение недоступно');
+  const user=currentUser;
+  v2QuoteSaving=true;
+  try{
+    const reply=await requestSwingDemo(input);
+    const {buildSwingCalculation}=await import('./simple-gate-quote.js');
+    if(currentUser!==user||!reply.customer.test||API_ENABLED)throw new Error('Сохранение недоступно');
+    const item=buildSwingCalculation(reply,makeId('simpleSwing'));
+    const survey=await createSurvey({name:'',phone:'',address:'',note:'ТЕСТ: условные тарифы, не коммерческое предложение',workTypes:[],initialCalculation:item});
+    return survey.id;
+  }finally{v2QuoteSaving=false}
+}
 async function prepareV2Home() {
   if(!v2LocalPreviewEnabled() || !currentUser || v2Home) return;
   const user=currentUser;
@@ -681,6 +703,8 @@ async function prepareV2Home() {
       open3D:open3DCalculator,
       listQuoteTargets:listV2QuoteTargets,
       saveQuote:saveV2SlidingQuote,
+      quoteSwing:swingDemoEnabled()?requestSwingDemo:null,
+      saveSwing:swingDemoEnabled()?saveSwingDemo:null,
       openSavedQuote:async id=>{switchScreen('surveys');await renderSurveys();await openSurveyDetails(id);showToast('Расчёт сохранён в замере');}
     });
     const resume=new URLSearchParams(location.search).has('resumeSurvey');
@@ -1444,14 +1468,14 @@ function unifiedEstimate(survey) {
 function surveyCalculationsTotal(survey) { return unifiedEstimate(survey).total; }
 function calculationWorkTypes(survey) {
   const allowed = new Set(['gates','fence','canopy']);
-  return [...new Set(surveyCalculations(survey).map(item => item?.type === 'sliding' ? 'gates' : item?.type).filter(type => allowed.has(type)))];
+  return [...new Set(surveyCalculations(survey).map(item => ['sliding','simpleSwing'].includes(item?.type) ? 'gates' : item?.type).filter(type => allowed.has(type)))];
 }
 function syncSurveyWorkTypes(survey) {
   survey.workTypes = calculationWorkTypes(survey);
   return survey.workTypes;
 }
 function calculationTypeLabel(type) {
-  return type === 'sliding' ? 'Откатные ворота' : type === 'gates' ? 'Ворота' : type === 'fence' ? 'Забор' : type === 'canopy' ? 'Навес' : 'Расчёт';
+  return type === 'simpleSwing' ? 'Простые распашные ворота' : type === 'sliding' ? 'Откатные ворота' : type === 'gates' ? 'Ворота' : type === 'fence' ? 'Забор' : type === 'canopy' ? 'Навес' : 'Расчёт';
 }
 function calcNumber(value) {
   const number = Number(value);
@@ -1492,6 +1516,9 @@ function calculationCardDetails(item) {
   const config = payload.configuration && typeof payload.configuration === 'object' ? payload.configuration : {};
   const fallback = { title:item.title || calculationTypeLabel(item.type), lines:item.summary ? [item.summary] : [], tags:[] };
 
+  if (item.type === 'simpleSwing') {
+    return {title:item.title||'Тестовый расчёт',lines:[`Проём ${config.widthMm} × ${config.heightMm} мм`,`Калитка ${config.wicketWidthMm} × ${config.wicketHeightMm} мм`],tags:['Условные тарифы · не предложение','Доставка не рассчитана']};
+  }
   if (item.type === 'gates') {
     const article = payload.article || config.article || '';
     const width = payload.width ?? config.width;
@@ -1633,8 +1660,8 @@ function calculationsHtml(survey) {
             <b>${formatMoney(item.total)}</b>
           </div>
           <div class="calculation-card-actions">
-            <button type="button" class="calculation-edit-btn" data-edit-calculation-button="${escapeHtml(item.id)}">Изменить</button>
-            <button type="button" class="calculation-show-btn" data-show-calculation="${escapeHtml(item.id)}">Показать клиенту</button>
+            ${item.type==='simpleSwing'?'':`<button type="button" class="calculation-edit-btn" data-edit-calculation-button="${escapeHtml(item.id)}">Изменить</button>`}
+            ${item.type==='simpleSwing'?'':`<button type="button" class="calculation-show-btn" data-show-calculation="${escapeHtml(item.id)}">Показать клиенту</button>`}
             <button type="button" class="calculation-delete-btn" data-delete-calculation="${escapeHtml(item.id)}" aria-label="Удалить расчёт ${escapeHtml(details.title)}">×</button>
           </div>
           ${canopyProductionActions(survey,item,included)}
@@ -1697,6 +1724,7 @@ async function editCalculation(surveyId, calculationId) {
   const survey = await idbGet('surveys', surveyId);
   const item = surveyCalculations(survey).find(row => row.id === calculationId);
   if (!survey || !item) return showToast('Расчёт не найден');
+  if(item.type==='simpleSwing')return showToast('Тестовый снимок. Создайте новый расчёт.');
   try {
     localStorage.setItem(CALC_EDIT_KEY, JSON.stringify({
       version:1,
