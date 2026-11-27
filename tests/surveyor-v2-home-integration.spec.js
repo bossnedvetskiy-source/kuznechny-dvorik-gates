@@ -1197,3 +1197,50 @@ test('internal proposal preparation uses seven configurations, excludes all pric
  expect(data.rejected).toBe(true);
  expect(JSON.stringify(data.result)).not.toMatch(/privateCost|contractSigned|referenceRub/);
 });
+
+test('estimate reply validates every line, rejects changed configuration and never issues an order',async({page})=>{
+ await login(page,'zamer');
+ const result=await page.evaluate(async()=>{
+  const {basketLine}=await import('./v2-basket.js');
+  const {estimateRequest,validateEstimateReply,requestEstimate}=await import('./v2-estimate-quote.js');
+  const {mountProposalPreparation}=await import('./v2-proposal-preparation.js');
+  const rows=[{id:'art-1',...basketLine('artGates',{article:'Арт.6',dimensions:{gateWidthMm:3800},options:{installation:true,posts:true}})},{id:'fence-1',...basketLine('pickets',{})}];
+  const req=estimateRequest(rows);
+  const d=req.items[0].draft;
+  const response={estimate:{version:1,totalRub:null,deliveryPending:true,canIssue:false,canReleaseProduction:false,rows:[
+   {id:'art-1',kind:'artGates',status:'calculated',reason:null,importedAt:'2026-11-20T00:00:00+00:00',quote:{version:1,kind:'artGate',article:d.article,configuration:{...d.dimensions,...d.options},prices:{product:61300,installation:8000,posts:25000,total:94300,privateCost:1},deliveryPending:true,tariffRevision:'a'.repeat(64),calculatedAt:'2026-11-28T00:00:00+00:00'}},
+   {id:'fence-1',kind:'pickets',status:'unavailable',reason:'pricing_not_connected',quote:null}]}};
+  const q=await requestEstimate(rows,async input=>{if(JSON.stringify(input)!==JSON.stringify(req))throw Error('request mismatch');return response});
+  let rejected=0;
+  for(const alter of [
+   x=>x.estimate.rows[0].quote.configuration.gateWidthMm=3500,
+   x=>x.estimate.rows[0].quote.prices.total=1,
+   x=>x.estimate.rows[1].id='art-1',
+   x=>x.estimate.rows[1].quote={total:1},
+   x=>x.estimate.canReleaseProduction=true,
+   x=>x.estimate.totalRub=94300,
+   x=>x.estimate.rows.pop()
+  ]){const copy=structuredClone(response);alter(copy);try{validateEstimateReply(rows,copy)}catch{rejected++}}
+  const root=document.createElement('div');document.body.append(root);
+  mountProposalPreparation(root,rows);
+  const disabled=root.querySelector('[data-proposal-quote]').disabled;
+  mountProposalPreparation(root,rows,{quoteProvider:async()=>response});
+  await root.querySelector('[data-proposal-quote]').onclick();
+  const ui=root.textContent;root.remove();
+  return {q,rejected,disabled,ui,request:req};
+ });
+ expect(result.q.calculatedCount).toBe(1);
+ expect(result.q.unavailableCount).toBe(1);
+ expect(result.q.calculatedSubtotalRub).toBe(94300);
+ expect(result.q.totalRub).toBeNull();
+ expect(result.q.canIssue).toBe(false);
+ expect(result.q.canReleaseProduction).toBe(false);
+ expect(result.rejected).toBe(7);
+ expect(result.disabled).toBe(true);
+ expect(result.ui).toContain('Расчёт по импортированным тарифам');
+ expect(result.ui).toContain('Расчёт этой категории ещё не подключён');
+ expect(result.ui).toContain('Общий итог не утверждён');
+ expect(result.ui).toContain('Выпуск КП и ТЗ заблокирован');
+ expect(JSON.stringify(result.q)).not.toContain('privateCost');
+ expect(result.request.items.every(x=>Object.keys(x).sort().join(',')==='draft,id,kind')).toBe(true);
+});
