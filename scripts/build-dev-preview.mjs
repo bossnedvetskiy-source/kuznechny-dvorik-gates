@@ -489,6 +489,9 @@ const surveyorGateGuard = `<script id="kd-surveyor-gate-context">
 </style>`;
 if (!surveyorGateHtml.includes(`${BASE}/surveyor-bridge.js`))
   throw new Error('Gate surveyor route cannot load the transfer bridge');
+// The root page's relative production bridge points to a nonexistent nested
+// directory here. Keep only the already injected absolute DEV bridge.
+surveyorGateHtml = surveyorGateHtml.replace(/<script\s+src=["']surveyor-app\/calculator-bridge\.js["'][^>]*><\/script>/g,'');
 surveyorGateHtml = surveyorGateHtml.replace('</head>', surveyorGateGuard + '\n</head>');
 await writeFile(path.join(surveyorGateOut, 'index.html'), surveyorGateHtml, 'utf8');
 
@@ -692,6 +695,31 @@ const surveyorTestFetchNeedle = "self.addEventListener('fetch',event=>{\n  const
 const surveyorTestFetchReplacement = surveyorTestFetchNeedle + `\n  // The un-gated test PWA has its own worker. V2 uses the shared root worker\n  // so its links to gates / fence / canopy remain available without internet.\n  if(url.pathname==='${BASE}/${SURVEYOR_TEST_DIR}'||url.pathname.startsWith('${BASE}/${SURVEYOR_TEST_DIR}/'))return;`;
 if (!devSw.includes(surveyorTestFetchNeedle)) throw new Error('DEV service worker fetch handler not found');
 devSw = devSw.replace(surveyorTestFetchNeedle, surveyorTestFetchReplacement);
+// A calculator return is a navigation to an unchanged shell with dynamic
+// resumeSurvey state in the URL. Prefer the exact, current-build precache for
+// this route; do not await writing a cloned navigation response or fall back
+// to the public catalog. This also works during offline calculator returns.
+const devResumeNeedle = "if(request.method!=='GET')return;\\n  if(request.mode==='navigate'){";
+const devResumeReplacement = `if(request.method!=='GET')return;
+  if(request.mode==='navigate' && url.searchParams.has('resumeSurvey') &&
+      ${JSON.stringify([BASE+'/'+DEV_TOOLS_DIR+'/',BASE+'/'+DEV_TOOLS_FRESH_DIR+'/',BASE+'/'+SURVEYOR_V2_DIR+'/'])}.includes(url.pathname)){
+    event.respondWith((async()=>{
+      const cache=await caches.open(SHELL_CACHE);
+      const shell=await cache.match(url.pathname,{ignoreSearch:true});
+      if(shell)return shell;
+      const controller=new AbortController();
+      const timer=setTimeout(()=>controller.abort(),8000);
+      try{
+        const response=await fetch(new Request(request,{cache:'no-store',signal:controller.signal}));
+        if(response.ok)return response;
+      }catch{}finally{clearTimeout(timer)}
+      return new Response('Не удалось открыть замер. Расчёт сохранён локально. Повторите открытие приложения.',{status:503,headers:{'content-type':'text/plain; charset=utf-8'}});
+    })());
+    return;
+  }
+  if(request.mode==='navigate'){`;
+if(!devSw.includes(devResumeNeedle))throw new Error('DEV resume navigation marker missing');
+devSw=devSw.replace(devResumeNeedle,devResumeReplacement);
 await writeFile(swPath, devSw, 'utf8');
 
 // An incorrect mandatory asset once made EVERY offline download show
