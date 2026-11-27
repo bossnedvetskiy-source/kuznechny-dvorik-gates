@@ -231,7 +231,7 @@ test('surveyor can create a mixed survey and reopen it offline', async ({page, c
   await page.locator('#savePlanBtn').click();
 
   await expect(page.locator('#surveyDetailsDialog')).toBeVisible();
-  await page.locator('.v3-extra summary').click();
+  await expect(page.locator('.v3-extra')).toHaveAttribute('open','');
   await expect(page.locator('.plan-mini-preview')).toBeVisible();
   await expect(page.locator('#surveyDetailsContent')).toContainText('6,1 м');
 
