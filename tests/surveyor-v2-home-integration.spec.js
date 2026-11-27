@@ -982,3 +982,41 @@ test('profile fence uses working sheet width, exact purchase area and kerf-aware
  await expect(home.locator('[data-profile-field="rails"]')).toHaveValue('3');
  await expect(page.locator('#surveyDialog')).not.toBeVisible();
 });
+
+test('continuous profile sheets cover regular posts but do not cross gate or wicket openings',async({page})=>{
+ await login(page,'zamer');
+ const result=await page.evaluate(async()=>{
+  const {profileFencePlan}=await import('./v2-profile-fence.js');
+  const base=profileFencePlan({sheetMode:'continuous'}).plan;
+  const withOpening=profileFencePlan({sheetMode:'continuous',gateMm:3400,wicketMm:1000,openingStartMm:1000}).plan;
+  const split=profileFencePlan({sheetMode:'continuous',gateMm:3400,wicketMm:1000,openingStartMm:1000,shareOpeningPost:false,betweenMm:2000}).plan;
+  const edge=profileFencePlan({sheetMode:'continuous',lengthMm:11400}).plan;
+  return {base,withOpening,split,edge,invalid:profileFencePlan({sheetMode:'invalid'}).plan};
+ });
+ expect(result.base.sheets).toBe(11);
+ expect(result.base.betweenSheets).toBe(15);
+ expect(result.base.continuousSheets).toBe(11);
+ expect(result.base.coveredWidthMm).toBeCloseTo(12000,6);
+ expect(result.base.coveredAreaM2).toBeCloseTo(21.6,6);
+ expect(result.base.purchaseAreaM2).toBeCloseTo(23.76,6);
+ expect(result.base.screws).toBe(198);
+ expect(result.base.tubeStocks).toBe(5);
+ expect(result.withOpening.coveredWidthMm).toBeCloseTo(7300,6);
+ expect(result.withOpening.segments.map(g=>g.key)).toEqual(['before-opening','after-opening']);
+ expect(result.withOpening.sheets).toBe(7);
+ expect(result.split.coveredWidthMm).toBeCloseTo(7200,6);
+ expect(result.split.segments.some(g=>g.key==='between-openings')).toBe(true);
+ expect(result.edge.sheets).toBe(10);
+ expect(result.invalid).toBeNull();
+ const home=page.locator('#v2HomeScreen');
+ await home.locator('[data-v2-action="catalog"]').click();
+ await home.locator('[data-v2-action="profileFence"]').click();
+ const field=home.locator('[data-profile-field="sheetMode"]');
+ await field.selectOption('continuous');
+ const plan=home.locator('[data-profile-plan]');
+ await expect(plan.locator('.kd-product-row').filter({has:page.getByText('Листы, шт.',{exact:true})})).toContainText('11');
+ await expect(plan).toContainText('23,76');
+ await home.locator('[data-profile-back]').click();
+ await home.locator('[data-v2-action="profileFence"]').click();
+ await expect(field).toHaveValue('continuous');
+});
