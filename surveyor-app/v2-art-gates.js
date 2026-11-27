@@ -384,7 +384,9 @@ export function artGateSnapshot(article,dimensions={}){
  return {article,configuration,standard,referenceRub:standard?model.standardSnapshotRub:null,verified:false};
 }
 const money=n=>new Intl.NumberFormat('ru-RU',{maximumFractionDigits:0}).format(n)+' ₽';
-const img=name=>'../assets/catalog/'+name;
+const img=name=>'../catalog/'+name;
+// Built site publishes /catalog; repository-only test server may expose /assets/catalog.
+function setArtPhoto(picture,name){picture.onerror=()=>{picture.onerror=null;picture.src='../assets/catalog/'+name};picture.src=img(name);}
 export function mountArtGateCatalog(root,{onBack,onLegacy,draft,onDraft,onQuote}={}){
  let selected=ART_GATE_CATALOG.find(x=>x.article===draft?.article)||null;
  let dimensions={...ART_GATE_STANDARD,...draft?.dimensions};
@@ -397,7 +399,7 @@ export function mountArtGateCatalog(root,{onBack,onLegacy,draft,onDraft,onQuote}
   list.replaceChildren();
   for(const row of rows){
    const b=document.createElement('button');b.type='button';b.className='kd-v2-card';b.dataset.artArticle=row.article;b.setAttribute('aria-pressed',String(row.article===selected?.article));b.style.cssText='padding:8px;text-align:left;display:grid;gap:5px;align-content:start';
-   const picture=document.createElement('img');picture.src=img(row.images[0]);picture.alt=row.article;picture.loading='lazy';picture.style.cssText='width:100%;aspect-ratio:4/3;object-fit:contain;border-radius:6px;background:#eee';
+   const picture=document.createElement('img');setArtPhoto(picture,row.images[0]);picture.alt=row.article;picture.loading='lazy';picture.style.cssText='width:100%;aspect-ratio:4/3;object-fit:contain;border-radius:6px;background:#eee';
    const title=document.createElement('b');title.textContent=row.article;
    const price=document.createElement('small');price.textContent=money(row.standardSnapshotRub)+' · справочно';
    b.append(picture,title,price);list.append(b);
@@ -418,7 +420,7 @@ export function mountArtGateCatalog(root,{onBack,onLegacy,draft,onDraft,onQuote}
   detail.replaceChildren();
   const heading=document.createElement('h3');heading.textContent=selected.article;detail.append(heading);
   const gallery=document.createElement('div');gallery.className='kd-v2-grid two';
-  for(const name of selected.images){const picture=document.createElement('img');picture.src=img(name);picture.alt=selected.article;picture.style.cssText='width:100%;aspect-ratio:4/3;object-fit:contain;background:#eee;border-radius:6px';gallery.append(picture);}
+  for(const name of selected.images){const picture=document.createElement('img');setArtPhoto(picture,name);picture.alt=selected.article;picture.style.cssText='width:100%;aspect-ratio:4/3;object-fit:contain;background:#eee;border-radius:6px';gallery.append(picture);}
   detail.append(gallery);
   const grid=document.createElement('div');grid.className='kd-product-grid';
   for(const [key,label] of [['gateWidthMm','Ширина ворот, мм'],['gateHeightMm','Высота ворот, мм'],['wicketWidthMm','Ширина калитки, мм'],['wicketHeightMm','Высота калитки, мм']]){
