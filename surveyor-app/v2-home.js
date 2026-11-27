@@ -1,3 +1,4 @@
+import {basketLine,readBasket,mountBasket,BASKET_LIMIT} from './v2-basket.js';
 import {mountCanopyEditor} from './v2-canopy.js';
 import {mountProfileFenceEditor} from './v2-profile-fence.js';
 import {mountPicketSiteEditor} from './v2-pickets.js';
@@ -58,6 +59,30 @@ export function mountV2Home({role,userId,navigate,newSurvey,open3D,listQuoteTarg
       swingDraft=Object.fromEntries(Object.entries(value.fields).filter(([k,v])=>Object.hasOwn(SWING_DEFAULTS,k)&&['number','string','boolean'].includes(typeof v)));
   }catch{}
 
+  const basketKey=userId?'kd-v2-basket-v1:'+String(userId):null;
+  let basket=[],basketOpen=false,editId=null,editDraft=null,basketStorageError=false;
+  if(basketKey)try{basket=readBasket(JSON.parse(sessionStorage.getItem(basketKey)||'[]'))}catch{basketStorageError=true}
+  function persistBasket(){
+    if(!basketKey){basketStorageError=true;return}
+    try{if(basket.length)sessionStorage.setItem(basketKey,JSON.stringify(basket));else sessionStorage.removeItem(basketKey);basketStorageError=false}catch{basketStorageError=true}
+  }
+  function clearEdit(){editId=null;editDraft=null}
+  function backToCatalogue(){productOpen=false;catalogOpen=!editId;basketOpen=Boolean(editId);clearEdit();render()}
+  const activeKind=()=>productOpen===true?'sliding':productOpen;
+  function currentDraft(){return editId?editDraft:({sliding:productDraft,frames:swingDraft,artGates:artDraft,artFences:artFenceDraft,pickets:picketDraft,profileFence:profileFenceDraft,canopy:canopyDraft})[activeKind()]}
+  function draftFor(value){return editId?editDraft:value}
+  function changeDraft(save,value){if(editId)editDraft=value;else save(value)}
+  function resetDraft(save){changeDraft(save,null);render()}
+  function openBasket(){productOpen=false;catalogOpen=false;basketOpen=true;clearEdit();render()}
+  function addBasket(){
+    const status=body.querySelector('[data-basket-add-status]');
+    try{
+      const kind=activeKind(),{draft}=basketLine(kind,currentDraft());
+      if(editId){if(!basket.some(row=>row.id===editId))throw Error('Позиция не найдена');basket=basket.map(row=>row.id===editId?{id:row.id,kind,draft}:row)}
+      else{if(basket.length>=BASKET_LIMIT)throw Error('Максимум '+BASKET_LIMIT+' изделий');basket.push({id:crypto.randomUUID(),kind,draft})}
+      persistBasket();openBasket();
+    }catch(error){status.textContent=error.message||'Проверьте параметры изделия'}
+  }
   const host=document.createElement('section');
   host.id='v2HomeScreen';host.className='screen kd-v2-home';host.setAttribute('aria-label','Новая главная');
   const style=document.createElement('style');
@@ -227,7 +252,7 @@ html.kd-v2-local[data-kd-theme=light]{--kd-bg:#f1f5f9;--kd-card:#fff;--kd-soft:#
   ];
   function syncHeading(){
     if(topBrand)topBrand.textContent=currentScreen==='v2Home'?'Тестовая версия · DEV':(workspace==='owner'&&owner?'КД Управление · DEV':'КД Замерщик · DEV');
-    if(currentScreen==='v2Home'&&topTitle)topTitle.textContent=productOpen?'Быстрый расчёт':catalogOpen?'Каталог изделий':'Главная';
+    if(currentScreen==='v2Home'&&topTitle)topTitle.textContent=productOpen?'Быстрый расчёт':basketOpen?'Черновик сметы':catalogOpen?'Каталог изделий':'Главная';
   }
   function render(){
     syncHeading();
@@ -236,30 +261,42 @@ html.kd-v2-local[data-kd-theme=light]{--kd-bg:#f1f5f9;--kd-card:#fff;--kd-soft:#
     updateThemeButton();
     const isOwner=workspace==='owner'&&owner;
     body.innerHTML='<div class="kd-v2-head"><h2>'+(isOwner?'КД УПРАВЛЕНИЕ':'КД ЗАМЕРЩИК')+'</h2><button class="kd-v2-iconbtn" type="button" data-v2-action="theme" aria-label="Переключить тему">'+(theme==='dark'?'☀':'☾')+'</button>'+(owner?'<button class="kd-v2-iconbtn" type="button" data-v2-action="workspace" aria-label="Переключить рабочее пространство">⇄</button>':'')+'</div>'+
-    (productOpen?'<div data-product-editor-root></div>':catalogOpen?'<button class="kd-v2-action kd-v2-back" type="button" data-v2-action="catalogBack">← Назад</button>'+catalogItems.map(([id,label,desc])=>btn(id,label,desc)).join(''):isOwner?'<div class="kd-v2-grid two">'+['Сумма заказов','К получению','Заказы в работе','Активные клиенты'].map(x=>'<div class="kd-v2-card"><small>'+x+'</small><strong>—</strong></div>').join('')+'</div><div class="kd-v2-card kd-v2-panel"><b>Требует внимания</b><small>Рабочие показатели ещё не подключены.</small></div><h3>Управление предприятием</h3><div class="kd-v2-grid">'+ownerItems.map(tile).join('')+'</div><div class="kd-v2-card kd-v2-panel"><b>КД — Умный помощник</b><small>Скоро · подсказки по управлению</small><button class="kd-v2-question" data-v2-action="tasks">Что сделать сегодня?</button><button class="kd-v2-question" data-v2-action="wallet">Кто должен деньги?</button><button class="kd-v2-question" data-v2-action="orders">Какие заказы требуют внимания?</button></div>':
+    (productOpen?'<div data-product-editor-root></div><div class="kd-v2-card"><button type="button" class="kd-v2-action primary" data-basket-add>'+(editId?'Сохранить изменения в черновике':'Добавить в черновик сметы')+'</button><div data-basket-add-status role="status"></div></div>':basketOpen?'<div data-basket-root></div>':catalogOpen?'<button class="kd-v2-action kd-v2-back" type="button" data-v2-action="catalogBack">← Назад</button>'+catalogItems.map(([id,label,desc])=>btn(id,label,desc)).join(''):isOwner?'<div class="kd-v2-grid two">'+['Сумма заказов','К получению','Заказы в работе','Активные клиенты'].map(x=>'<div class="kd-v2-card"><small>'+x+'</small><strong>—</strong></div>').join('')+'</div><div class="kd-v2-card kd-v2-panel"><b>Требует внимания</b><small>Рабочие показатели ещё не подключены.</small></div><h3>Управление предприятием</h3><div class="kd-v2-grid">'+ownerItems.map(tile).join('')+'</div><div class="kd-v2-card kd-v2-panel"><b>КД — Умный помощник</b><small>Скоро · подсказки по управлению</small><button class="kd-v2-question" data-v2-action="tasks">Что сделать сегодня?</button><button class="kd-v2-question" data-v2-action="wallet">Кто должен деньги?</button><button class="kd-v2-question" data-v2-action="orders">Какие заказы требуют внимания?</button></div>':
     btn('quick','Быстрый расчёт',owner?'Действующий калькулятор откатных ворот':'Выбрать изделие · без заказа',true)+btn('measure','Новый замер объекта','Создать карточку объекта')+'<h3>Работа с клиентами</h3><div class="kd-v2-grid two">'+surveyItems.map(tile).join('')+'</div>'+btn('threeD','3D-конструктор','Модель участка и изделий'))+'<div class="kd-v2-card kd-v2-detail" role="status" hidden></div>';
+    if(!basketOpen&&!editId){
+      const link=document.createElement('button');link.type='button';link.className='kd-v2-action';link.dataset.v2Action='basket';link.textContent='Черновик сметы · '+basket.length+' изд.';body.children[0].after(link);
+    }
+    if(basketStorageError){const note=document.createElement('p');note.className='kd-v2-note';note.textContent='Локальное сохранение недоступно: черновик может исчезнуть при обновлении.';body.children[0].after(note)}
+    if(basketOpen){
+      mountBasket(body.querySelector('[data-basket-root]'),basket,{
+        onBack:()=>{basketOpen=false;catalogOpen=true;render()},
+        onEdit:id=>{const row=basket.find(r=>r.id===id);if(!row)return;editId=id;editDraft=structuredClone(row.draft);basketOpen=false;catalogOpen=false;productOpen=row.kind==='sliding'?true:row.kind;render()},
+        onRemove:id=>{if(window.confirm('Удалить изделие из черновика?')){basket=basket.filter(row=>row.id!==id);persistBasket();render()}}
+      });
+    }
+    if(productOpen)body.querySelector('[data-basket-add]').onclick=addBasket;
     if(productOpen==='canopy'){
-      mountCanopyEditor(body.querySelector('[data-product-editor-root]'),{draft:canopyDraft,onDraft:value=>{canopyDraft=value},onReset:()=>{canopyDraft=null;render()},onBack:()=>{productOpen=false;catalogOpen=true;render()}});
+      mountCanopyEditor(body.querySelector('[data-product-editor-root]'),{draft:draftFor(canopyDraft),onDraft:value=>changeDraft(value=>{canopyDraft=value},value),onReset:()=>resetDraft(value=>{canopyDraft=value}),onBack:backToCatalogue});
     }else if(productOpen==='profileFence'){
-      mountProfileFenceEditor(body.querySelector('[data-product-editor-root]'),{draft:profileFenceDraft,onDraft:value=>{profileFenceDraft=value},onReset:()=>{profileFenceDraft=null;render()},onBack:()=>{productOpen=false;catalogOpen=true;render()}});
+      mountProfileFenceEditor(body.querySelector('[data-product-editor-root]'),{draft:draftFor(profileFenceDraft),onDraft:value=>changeDraft(value=>{profileFenceDraft=value},value),onReset:()=>resetDraft(value=>{profileFenceDraft=value}),onBack:backToCatalogue});
     }else if(productOpen==='pickets'){
-      mountPicketSiteEditor(body.querySelector('[data-product-editor-root]'),{draft:picketDraft,onDraft:value=>{picketDraft=value},onReset:()=>{picketDraft=null;render()},onBack:()=>{productOpen=false;catalogOpen=true;render()}});
+      mountPicketSiteEditor(body.querySelector('[data-product-editor-root]'),{draft:draftFor(picketDraft),onDraft:value=>changeDraft(value=>{picketDraft=value},value),onReset:()=>resetDraft(value=>{picketDraft=value}),onBack:backToCatalogue});
     }else if(productOpen==='artFences'){
-      mountArtFenceEditor(body.querySelector('[data-product-editor-root]'),{draft:artFenceDraft,onDraft:value=>{artFenceDraft=value},onReset:()=>{artFenceDraft=null;render()},onBack:()=>{productOpen=false;catalogOpen=true;render()}});
+      mountArtFenceEditor(body.querySelector('[data-product-editor-root]'),{draft:draftFor(artFenceDraft),onDraft:value=>changeDraft(value=>{artFenceDraft=value},value),onReset:()=>resetDraft(value=>{artFenceDraft=value}),onBack:backToCatalogue});
     }else if(productOpen==='artGates'){
-      mountArtGateCatalog(body.querySelector('[data-product-editor-root]'),{draft:artDraft,onDraft:value=>{artDraft=value},onQuote:quoteArtGate,onBack:()=>{productOpen=false;catalogOpen=true;render()}});
+      mountArtGateCatalog(body.querySelector('[data-product-editor-root]'),{draft:draftFor(artDraft),onDraft:value=>changeDraft(value=>{artDraft=value},value),onQuote:quoteArtGate,onBack:backToCatalogue});
     }else if(productOpen==='frames'){
-      mountSwingFrameEditor(body.querySelector('[data-product-editor-root]'),{draft:swingDraft,onDraft:saveSwingDraft,onQuote:quoteSwing,onSave:saveSwing?async input=>{const id=await saveSwing(input);saveSwingDraft(null);productOpen=false;catalogOpen=false;render();await openSavedQuote?.(id)}:null,onReset:()=>{saveSwingDraft(null);render()},onBack:()=>{productOpen=false;catalogOpen=true;render()}});
+      mountSwingFrameEditor(body.querySelector('[data-product-editor-root]'),{draft:draftFor(swingDraft),onDraft:value=>changeDraft(saveSwingDraft,value),onQuote:quoteSwing,onSave:saveSwing&&!editId?async input=>{const id=await saveSwing(input);saveSwingDraft(null);productOpen=false;catalogOpen=false;render();await openSavedQuote?.(id)}:null,onReset:()=>resetDraft(saveSwingDraft),onBack:backToCatalogue});
     }else if(productOpen){
       mountProductEditor(body.querySelector('[data-product-editor-root]'),{
-        draft:productDraft,onDraft:saveProductDraft,onReset:()=>{saveProductDraft(null);render()},
+        draft:draftFor(productDraft),onDraft:value=>changeDraft(saveProductDraft,value),onReset:()=>resetDraft(saveProductDraft),
         listTargets:listQuoteTargets,
-        onSave:saveQuote?async(input,targetId)=>{
+        onSave:saveQuote&&!editId?async(input,targetId)=>{
           const id=await saveQuote(input,targetId);
           saveProductDraft(null);productOpen=false;catalogOpen=false;render();
           try{await openSavedQuote?.(id)}catch(error){console.warn('Saved quote could not open',error);navigate('surveys')}
         }:null,
-        onBack:()=>{productOpen=false;catalogOpen=true;render()},
+        onBack:backToCatalogue,
         onLegacy:()=>{productOpen=false;catalogOpen=false;render();navigate('surveys');newSurvey()}
       });
     }
@@ -268,9 +305,10 @@ html.kd-v2-local[data-kd-theme=light]{--kd-bg:#f1f5f9;--kd-card:#fff;--kd-soft:#
   body.addEventListener('click',e=>{
     const action=e.target.closest('[data-v2-action]')?.dataset.v2Action;if(!action)return;
     if(action==='theme'){toggleTheme();body.querySelector('[data-v2-action="theme"]')?.focus();return}
-    if(action==='workspace'&&owner){productOpen=false;catalogOpen=false;workspace=workspace==='owner'?'surveyor':'owner';render();syncNav();return}
-    if(action==='ruler'&&owner){productOpen=false;catalogOpen=false;workspace='surveyor';render();syncNav();return}
-    if(action==='catalog'){productOpen=false;catalogOpen=true;render();return}
+    if(action==='workspace'&&owner){clearEdit();basketOpen=false;productOpen=false;catalogOpen=false;workspace=workspace==='owner'?'surveyor':'owner';render();syncNav();return}
+    if(action==='ruler'&&owner){clearEdit();basketOpen=false;productOpen=false;catalogOpen=false;workspace='surveyor';render();syncNav();return}
+    if(action==='basket'){openBasket();return}
+    if(action==='catalog'){clearEdit();basketOpen=false;productOpen=false;catalogOpen=true;render();return}
     if(action==='catalogBack'){catalogOpen=false;render();return}
     if(action==='artFences'){productOpen='artFences';catalogOpen=false;render();return}
     if(action==='profileFence'){productOpen='profileFence';catalogOpen=false;render();return}
@@ -314,12 +352,12 @@ html.kd-v2-local[data-kd-theme=light]{--kd-bg:#f1f5f9;--kd-card:#fff;--kd-soft:#
         if(target==='ordersPending'||target==='factoryPending'){
           navigate('v2Home');
           pending(target==='ordersPending'?'Полноценный реестр заказов появится на этапе 6. Существующие замеры доступны в рабочем пространстве замерщика.':'Цех будет подключён на этапе 7.');
-        }else {if(target==='v2Home'&&(catalogOpen||productOpen)){catalogOpen=false;productOpen=false;render()}navigate(target);}
+        }else {if(target==='v2Home'&&(catalogOpen||productOpen||basketOpen)){clearEdit();basketOpen=false;catalogOpen=false;productOpen=false;render()}navigate(target);}
       });
       bottom.append(nav);navNodes.push(nav);
     }
     if(focusedTarget)navNodes.find(n=>n.dataset.screen===focusedTarget)?.focus({preventScroll:true});
   }
   render();syncNav();
-  return {onScreen:syncNav,destroy(){if(topBrand)topBrand.textContent=originalBrand;saveProductDraft(null);saveSwingDraft(null);host.remove();globalTheme.remove();navNodes.forEach(n=>n.remove());oldNav.forEach(btn=>btn.classList.remove('kd-v2-legacy-nav'));root.classList.remove('kd-v2-local');delete root.dataset.kdTheme;}};
+  return {onScreen:syncNav,destroy(){if(topBrand)topBrand.textContent=originalBrand;saveProductDraft(null);saveSwingDraft(null);basket=[];persistBasket();clearEdit();host.remove();globalTheme.remove();navNodes.forEach(n=>n.remove());oldNav.forEach(btn=>btn.classList.remove('kd-v2-legacy-nav'));root.classList.remove('kd-v2-local');delete root.dataset.kdTheme;}};
 }
