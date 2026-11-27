@@ -58,6 +58,18 @@ export function buildSlidingCalculation(input,id,now=new Date().toISOString()){
     summary:(config.builtInWicket?'Встроенная калитка '+config.builtInWidth+' м · ':'')+names[config.frame]+' · '+config.width+' × '+config.height+' м · '+(config.tail==='square'?'квадратный':'треугольный')+' хвостовик',
     createdAt:now,updatedAt:now,payload:{category:'sliding-gates',productTitle:'Откатные ворота',total:q.total,deliveryPending:false,configuration:config}};
 }
+// Customer-safe quantities from the same geometry used by the retail engine.
+// Stock counts follow the current engine's aggregate rounding, not a cutting plan.
+export function slidingMaterialSummary(q){
+  if(!q?.geometry||q.total===null)return null;
+  const g=q.geometry,w=q.wicketQuote;
+  const stock60=Math.ceil(g.tube60/6),stock20=Math.ceil(g.tube20/6);
+  return {openingMm:Math.round(q.configuration.width*1000),heightMm:Math.round(q.configuration.height*1000),
+    tailMm:Math.round(g.tail*1000),fullMm:Math.round(g.full*1000),beamMm:g.beam*1000,
+    tube60:g.tube60,tube20:g.tube20,stock60,stock20,centerPost:g.centerPost,
+    wicket:w?{widthMm:Math.round(q.wicket.width*1000),leftMm:Math.round(q.wicket.left*1000),rightMm:Math.round(q.wicket.right*1000),clearHeightMm:Math.round(w.clearHeight*1000),tube60:w.tube60Length,tube20:w.inner20Length,hinges:w.hinges,locks:w.locks}:null,
+    fillDescription:q.fillDescription||''};
+}
 const money=n=>Number.isFinite(n)?new Intl.NumberFormat('ru-RU',{maximumFractionDigits:0}).format(n)+' ₽':'—';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const number=(key,label,min=0,step=1)=>'<label><span>'+label+'</span><input data-product-field="'+key+'" type="number" inputmode="'+(step===1?'numeric':'decimal')+'" min="'+min+'" step="'+step+'"></label>';
@@ -85,7 +97,7 @@ export function mountProductEditor(root,{onBack,onLegacy,draft,onDraft,onReset,l
     '</div></div><div class="kd-v2-card"><h3>Комплектация</h3><div class="kd-product-checks">'+check('fill','Заполнение')+check('paint','Покраска')+check('stand','Станина')+check('bolts','Болты')+check('install','Монтаж')+check('auto','Автоматика')+check('builtInWicket','Встроенная калитка')+'</div>'+
     '<div class="kd-product-grid" data-product-wicket hidden>'+number('builtInWidthMm','Ширина калитки, мм',700)+select('builtInMode','Расположение',[['center','По центру'],['left','Слева'],['right','Справа']])+number('builtInOffsetMm','Отступ от края, мм')+'</div>'+
     '<details><summary>Дополнительные параметры</summary><div class="kd-product-grid">'+select('picket','Штакетник',[['single','Односторонний'],['double','Двусторонний']])+select('centerPost','Центральная стойка',[['auto','По типу каркаса'],['yes','Да'],['no','Нет']])+number('distance','Доставка, км',0,.1)+number('discount','Скидка, ₽')+'</div></details></div>'+
-    '<div data-product-errors role="status"></div><details class="kd-v2-card"><summary>Состав цены</summary><div data-product-rows></div></details>'+
+    '<div data-product-errors role="status"></div><details class="kd-v2-card"><summary>Материалы и габариты</summary><div data-product-materials></div><p class="kd-v2-note">Метраж по действующему расчёту. Хлысты — округление суммарного метража, не карта раскроя. Материалы калитки показаны отдельно.</p></details><details class="kd-v2-card"><summary>Состав цены</summary><div data-product-rows></div></details>'+
     '<button type="button" class="kd-v2-action primary" data-product-add>Добавить в замер</button>'+
     '<div class="kd-v2-card" data-product-targets hidden><label><span>Куда сохранить расчёт</span><select data-product-target></select></label><button type="button" class="kd-v2-action primary" data-product-confirm>Сохранить расчёт</button><button type="button" class="kd-v2-action" data-product-cancel>Отмена</button><p data-product-save-status role="status"></p></div>'+
     '<button type="button" class="kd-v2-action" data-product-legacy>Открыть действующий замер отдельно</button>'+
@@ -98,6 +110,13 @@ export function mountProductEditor(root,{onBack,onLegacy,draft,onDraft,onReset,l
     const q=slidingQuoteMm(state);
     root.querySelector('[data-product-wicket]').hidden=!state.builtInWicket;
     root.querySelector('[data-product-sketch]').innerHTML=diagram(q);
+    const m=slidingMaterialSummary(q),format=n=>new Intl.NumberFormat('ru-RU',{maximumFractionDigits:2}).format(n);
+    const list=m?[['Ширина проёма, мм',m.openingMm],['Хвостовик, мм',m.tailMm],['Общая длина, мм',m.fullMm],['Балка, мм',m.beamMm],['Труба 60×40, м',format(m.tube60)],['60×40, хлысты по 6 м',m.stock60],['Труба 20×20, м',format(m.tube20)],['20×20, хлысты по 6 м',m.stock20],['Центральная стойка',m.centerPost?'Да':'Нет'],...(m.fillDescription?[['Заполнение',m.fillDescription]]:[]),...(m.wicket?[['Калитка, ширина, мм',m.wicket.widthMm],['Калитка, отступ слева, мм',m.wicket.leftMm],['Калитка, отступ справа, мм',m.wicket.rightMm],['Высота полотна калитки по формуле, мм',m.wicket.clearHeightMm],['Калитка: труба 60×40, м',format(m.wicket.tube60)],['Калитка: труба 20×20, м',format(m.wicket.tube20)],['Калитка: петли, шт',m.wicket.hinges],['Калитка: замки, шт',m.wicket.locks]]:[])]:[];
+    root.querySelector('[data-product-materials]').innerHTML=list.map(([label,value])=>'<div class="kd-product-row"><span>'+esc(label)+'</span><b>'+esc(value)+'</b></div>').join('');
+    root.querySelector('[data-product-field="builtInOffsetMm"]').closest('label').hidden=state.builtInMode==='center';
+    root.querySelector('[data-product-field="picket"]').closest('label').hidden=state.frame!=='vertical';
+    root.querySelector('[data-product-field="fill"]').disabled=state.frame==='jalousie';
+    root.querySelector('[data-product-field="fill"]').checked=state.frame!=='jalousie'&&state.fill;
     root.querySelector('[data-product-errors]').textContent=q.errors.join(' ');
     root.querySelector('[data-product-total]').textContent=money(q.total);
     root.querySelector('[data-product-add]').disabled=q.total===null||!onSave;
@@ -107,6 +126,7 @@ export function mountProductEditor(root,{onBack,onLegacy,draft,onDraft,onReset,l
   root.addEventListener('input',e=>{
     const el=e.target,key=el.dataset.productField;if(!Object.hasOwn(SLIDING_DEFAULTS,key))return;
     state[key]=el.type==='checkbox'?el.checked:el.value;
+    if(key==='frame'&&state.frame==='jalousie')state.fill=false;
     onDraft?.({...state});
     render();
   });
