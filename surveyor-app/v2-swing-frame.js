@@ -4,7 +4,7 @@ import {simpleGateGeometry,simpleGateFill,simpleGateExtras} from './simple-gate-
 export const SWING_DEFAULTS=Object.freeze({
   product:'set',gateWidthMm:3400,gateHeightMm:1800,wicketWidthMm:1000,wicketHeightMm:1800,
   profile:'40x25x2',gapMode:'sideClearance',diagonal:'40x25x2',paint:false,hinges:false,lock:false,bolts:false,posts:false,
-  fill:'none',postType:'none',wicketPosition:'adjacent',manualPosts:'',link:false,installation:'none'
+  wicketType:'separate',fill:'none',postType:'none',wicketPosition:'adjacent',manualPosts:'',link:false,installation:'none'
 });
 const int=v=>(typeof v==='number'||typeof v==='string'&&v.trim()!=='')&&Number.isSafeInteger(Number(v));
 export function swingFramePlan(input={}){
@@ -13,6 +13,9 @@ export function swingFramePlan(input={}){
   if(!['40x25x2','25x25x1.5'].includes(state.diagonal))errors.push('Выберите профиль диагонали.');
   for(const k of ['paint','hinges','lock','bolts','posts'])if(typeof state[k]!=='boolean')errors.push('Некорректная комплектация.');
   const gate=state.product!=='wicket',wicket=state.product!=='gate';
+  const built=state.wicketType==='builtIn';
+  if(!['separate','builtIn'].includes(state.wicketType))errors.push('Выберите тип калитки.');
+  if(built&&(state.product!=='set'||state.diagonal!=='40x25x2'))errors.push('Встроенная калитка доступна только в комплекте по схеме Excel.');
   for(const [enabled,w,h,gap] of [[gate,'gateWidthMm','gateHeightMm',60],[wicket,'wicketWidthMm','wicketHeightMm',40]]){
     if(enabled&&(!int(state[w])||Number(state[w])<=gap||!int(state[h])||Number(state[h])<=80))errors.push('Укажите положительные целые размеры в мм с учётом зазоров и профиля.');
   }
@@ -21,18 +24,18 @@ export function swingFramePlan(input={}){
   const leaves=[];
   if(!errors.length){
     if(gate)for(let i=0;i<2;i++)leaves.push({kind:'gate',width:(Number(state.gateWidthMm)-(state.gapMode==='excel'?20:60))/2,height:Number(state.gateHeightMm)});
-    if(wicket)leaves.push({kind:'wicket',width:Number(state.wicketWidthMm)-(state.gapMode==='excel'?10:40),height:Number(state.wicketHeightMm)});
+    if(wicket)leaves.push({kind:built?'embeddedWicket':'wicket',width:Number(state.wicketWidthMm)-(state.gapMode==='excel'?10:40),height:Number(state.wicketHeightMm)});
     if(leaves.some(x=>x.width<=80))errors.push('Недостаточная ширина полотна.');
   }
   if(errors.length)return {errors:[...new Set(errors)],leaves:[],materials:[],total:null};
   if(state.product==='set'&&state.diagonal==='40x25x2'){
     try{
-      const config={widthMm:Number(state.gateWidthMm),heightMm:Number(state.gateHeightMm),wicketWidthMm:Number(state.wicketWidthMm),wicketHeightMm:Number(state.wicketHeightMm),profile:state.profile,gapMode:state.gapMode,fill:state.fill,postType:state.postType,wicketPosition:state.wicketPosition,manualPosts:state.manualPosts===''?'':Number(state.manualPosts),link:state.link,installation:state.installation};
+      const config={widthMm:Number(state.gateWidthMm),heightMm:Number(state.gateHeightMm),wicketWidthMm:Number(state.wicketWidthMm),wicketHeightMm:Number(state.wicketHeightMm),profile:state.profile,gapMode:state.gapMode,wicketType:state.wicketType,fill:state.fill,postType:state.postType,wicketPosition:state.wicketPosition,manualPosts:state.manualPosts===''?'':Number(state.manualPosts),link:state.link,installation:state.installation};
       const g=simpleGateGeometry(config),fill=simpleGateFill(config),extras=simpleGateExtras(config);
       const materials=[{profile:state.profile,mm:g.main.actualMm,stock:g.main.count}];
       if(g.inner.count)materials.push({profile:'20x20x1.5',mm:g.inner.actualMm,stock:g.inner.count});
       materials.push({profile:'40x20x2',mm:g.rearActualMm,stock:g.rearPurchaseMm/6000});
-      return {errors:[],leaves,materials,fill,extras,total:null,workbookGeometry:true,rearNeedsJoin:g.rearNeedsJoin,
+      return {errors:[],leaves,materials,fill,extras,builtIn:g.builtIn,embeddedOpeningMm:g.builtIn?config.wicketWidthMm:null,total:null,workbookGeometry:true,rearNeedsJoin:g.rearNeedsJoin,
         accessories:{hinges:state.hinges?6:0,lock:state.lock?1:0,bolts:state.bolts?1:0,posts:0},paint:state.paint,configuration:state};
     }catch(error){return {errors:[error.message],leaves:[],materials:[],total:null}}
   }
@@ -53,15 +56,21 @@ const check=(k,title)=>'<label class="kd-product-check"><input type="checkbox" d
 const fmt=n=>new Intl.NumberFormat('ru-RU',{maximumFractionDigits:2}).format(n);
 function diagram(plan){
   if(!plan.leaves.length)return '';
-  const maxH=Math.max(...plan.leaves.map(l=>l.height)),totalW=plan.leaves.reduce((n,l)=>n+l.width,0)+20*(plan.leaves.length-1);
+  const embedded=plan.leaves.find(l=>l.kind==='embeddedWicket');
+  const outer=plan.leaves.filter(l=>l.kind!=='embeddedWicket');
+  const maxH=Math.max(...outer.map(l=>l.height)),totalW=outer.reduce((n,l)=>n+l.width,0)+20*(outer.length-1);
   const s=Math.min(314/totalW,126/maxH);let x=(360-totalW*s)/2;
   let shapes='';
-  for(const l of plan.leaves){
+  for(const [i,l] of outer.entries()){
     const w=l.width*s,h=l.height*s,y=140-h;
-    shapes+='<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'"/><path d="M'+x+' '+(y+h/2)+'h'+w+' M'+x+' '+(y+h)+'L'+(x+w)+' '+y+'"/>';
+    shapes+='<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'"/>';
+    if(embedded&&i===1){
+      const opening=plan.embeddedOpeningMm*s,door=embedded.width*s,dh=embedded.height*s,left=x+(w-opening)/2,dx=x+(w-door)/2,dy=140-dh;
+      shapes+='<path d="M'+left+' '+y+'V140 M'+(left+opening)+' '+y+'V140 M'+x+' '+(y+h/2)+'H'+left+' M'+(left+opening)+' '+(y+h/2)+'H'+(x+w)+'"/><rect x="'+dx+'" y="'+dy+'" width="'+door+'" height="'+dh+'" stroke="#2563eb"/>';
+    }else shapes+='<path d="M'+x+' '+(y+h/2)+'h'+w+' M'+x+' '+(y+h)+'L'+(x+w)+' '+y+'"/>';
     x+=w+20*s;
   }
-  return '<svg viewBox="0 0 360 155" role="img" aria-label="Условный эскиз рам с перемычкой и диагональю"><g fill="none" stroke="#20262d" stroke-width="2">'+shapes+'</g></svg>';
+  return '<svg viewBox="0 0 360 155" role="img" aria-label="Условный эскиз компоновки, не производственный чертёж"><g fill="none" stroke="#20262d" stroke-width="2">'+shapes+'</g></svg>';
 }
 export function mountSwingFrameEditor(root,{draft,onDraft,onBack,onReset}={}){
   const state={...SWING_DEFAULTS,...draft};
@@ -70,6 +79,7 @@ export function mountSwingFrameEditor(root,{draft,onDraft,onBack,onReset}={}){
     '<p class="kd-v2-note">Высота готового полотна. Размеры и зазоры — по выбранной схеме.</p>'+
     '<div class="kd-v2-card"><div class="kd-product-sketch" data-swing-sketch></div><div class="kd-product-grid">'+
     '<label><span>Изделие</span><select data-swing-field="product"><option value="set">Ворота с калиткой</option><option value="gate">Только ворота</option><option value="wicket">Только калитка</option></select></label>'+
+    '<label data-swing-wicket-type><span>Тип калитки</span><select data-swing-field="wicketType"><option value="separate">Отдельная</option><option value="builtIn">Встроенная</option></select></label>'+
     '<label><span>Основной профиль</span><select data-swing-field="profile"><option value="40x25x2">40×25×2</option><option value="40x40x2">40×40×2</option><option value="60x40x2">60×40×2</option></select></label>'+
     '<label><span>Зазоры</span><select data-swing-field="gapMode"><option value="sideClearance">По проёму: 60 / 40 мм</option><option value="excel">Из Excel: 20 / 10 мм</option></select></label>'+
     '<label><span>Схема диагонали</span><select data-swing-field="diagonal"><option value="40x25x2">По Excel / основной профиль</option><option value="25x25x1.5">25×25×1,5 (предварительно)</option></select></label>'+
@@ -79,9 +89,9 @@ export function mountSwingFrameEditor(root,{draft,onDraft,onBack,onReset}={}){
     '<div class="kd-v2-card" data-swing-workbook-options><h3>Заполнение и дополнительные услуги</h3><div class="kd-product-grid">'+
     '<label><span>Заполнение</span><select data-swing-field="fill"><option value="none">Без заполнения</option><option value="single">Односторонний</option><option value="chess">Шахматка</option><option value="horizontal">Горизонтальный</option><option value="sheet">Профнастил</option></select></label>'+
     '<label><span>Столбы</span><select data-swing-field="postType"><option value="none">Без столбов</option><option value="100x100">100×100</option><option value="80x80">80×80</option><option value="60x60">60×60</option></select></label>'+
-    '<label><span>Калитка</span><select data-swing-field="wicketPosition"><option value="adjacent">Рядом</option><option value="separate">Отдельно</option></select></label>'+
+    '<label data-swing-position><span>Расположение отдельной калитки</span><select data-swing-field="wicketPosition"><option value="adjacent">Рядом</option><option value="separate">Отдельно</option></select></label>'+
     '<label><span>Столбов вручную (необязательно)</span><input type="number" min="0" step="1" inputmode="numeric" data-swing-field="manualPosts" placeholder="По схеме"></label>'+
-    '<label><span>Установка</span><select data-swing-field="installation"><option value="none">Без установки</option><option value="set">Ворота + калитка</option><option value="gate">Только ворота</option><option value="wicket">Только калитка</option></select></label>'+
+    '<label><span>Установка</span><select data-swing-field="installation"><option value="none">Без установки</option><option value="set">Ворота + калитка</option><option value="gate">Только ворота</option><option value="wicket">Только калитка</option><option value="builtIn">Ворота со встроенной калиткой</option></select></label>'+
     check('link','Со связкой')+'</div><div data-swing-fill-plan></div></div>'+
     '<div data-swing-errors role="status"></div><div class="kd-v2-card"><h3>Габариты и материалы</h3><div data-swing-plan></div><p class="kd-v2-note">Предварительный расход по геометрии. Для комплекта по Excel — распределение по хлыстам 6 м без ширины реза. Не карта резки. Технологические припуски и длина столбов не рассчитаны.</p></div>'+
     '<div class="kd-v2-card"><b>Стоимость пока не рассчитана</b><small>Тарифы серийных каркасов требуют сверки. Сохранение в смету будет доступно после утверждения цены.</small></div>'+
@@ -90,6 +100,11 @@ export function mountSwingFrameEditor(root,{draft,onDraft,onBack,onReset}={}){
   const show=()=>{
     const p=swingFramePlan(state);
     const complete=state.product==='set'&&state.diagonal==='40x25x2';
+    const built=state.wicketType==='builtIn';
+    root.querySelector('[data-swing-wicket-type]').hidden=!complete;
+    root.querySelector('[data-swing-position]').hidden=built;
+    const install=root.querySelector('[data-swing-field="installation"]');
+    for(const option of install.options){option.hidden=option.disabled=option.value!=='none'&&(built?option.value!=='builtIn':option.value==='builtIn');}
     root.querySelector('[data-swing-workbook-options]').hidden=!complete;
     root.querySelector('[data-swing-field="posts"]').closest('label').hidden=complete;
     const extraRows=[];
@@ -100,15 +115,20 @@ export function mountSwingFrameEditor(root,{draft,onDraft,onBack,onReset}={}){
     root.querySelector('[data-swing-fill-plan]').innerHTML=extraRows.map(([label,value])=>'<div class="kd-product-row"><span>'+label+'</span><b>'+value+'</b></div>').join('');
     root.querySelector('[data-swing-gate]').hidden=state.product==='wicket';
     root.querySelector('[data-swing-wicket]').hidden=state.product==='gate';
-    root.querySelector('[data-swing-sketch]').innerHTML=state.profile==='40x25x2'?diagram(p):'<small>Эскиз с внутренней рамкой будет добавлен на этапе чертежей.</small>';
+    root.querySelector('[data-swing-sketch]').innerHTML=(state.profile==='40x25x2'||p.builtIn)?diagram(p):'<small>Эскиз с внутренней рамкой будет добавлен на этапе чертежей.</small>';
     root.querySelector('[data-swing-errors]').textContent=p.errors.join(' ')+(p.rearNeedsJoin?' Задняя закрывашка длиннее 6 м, требуется согласовать стыковку.':'');
-    root.querySelector('[data-swing-plan]').innerHTML=p.errors.length?'':p.leaves.map((l,i)=>'<div class="kd-product-row"><span>'+(l.kind==='gate'?'Створка ворот '+(i+1):'Калитка')+'</span><b>'+fmt(l.width)+' × '+fmt(l.height)+' мм</b></div>').join('')+
+    root.querySelector('[data-swing-plan]').innerHTML=p.errors.length?'':p.leaves.map((l,i)=>'<div class="kd-product-row"><span>'+(l.kind==='gate'?'Створка ворот '+(i+1):l.kind==='embeddedWicket'?'Встроенная калитка':'Калитка')+'</span><b>'+fmt(l.width)+' × '+fmt(l.height)+' мм</b></div>').join('')+
       p.materials.map(m=>'<div class="kd-product-row"><span>Труба '+m.profile.replaceAll('x','×')+'</span><b>'+fmt(m.mm/1000)+' м'+(m.stock?' · '+m.stock+' хл.':'')+'</b></div>').join('')+
       [['Петли',p.accessories.hinges],['Замок с ручками',p.accessories.lock],['Засовы/штыри, комплект',p.accessories.bolts],['Столбы 80×80×3',p.accessories.posts]].filter(([,v])=>v>0).map(([label,v])=>'<div class="kd-product-row"><span>'+label+'</span><b>'+v+'</b></div>').join('');
   };
   root.addEventListener('input',e=>{
     const el=e.target,k=el.dataset.swingField;if(!Object.hasOwn(SWING_DEFAULTS,k))return;
     state[k]=el.type==='checkbox'?el.checked:el.value;
+    if(state.product!=='set'||state.diagonal!=='40x25x2'){state.wicketType='separate';root.querySelector('[data-swing-field="wicketType"]').value='separate'}
+    if(k==='wicketType'||k==='product'||k==='diagonal'){
+      if((state.wicketType==='builtIn'&& !['none','builtIn'].includes(state.installation))||(state.wicketType!=='builtIn'&&state.installation==='builtIn')){state.installation='none';root.querySelector('[data-swing-field="installation"]').value='none'}
+      if(state.wicketType==='builtIn'){state.wicketPosition='adjacent';root.querySelector('[data-swing-field="wicketPosition"]').value='adjacent'}
+    }
     onDraft?.({...state});show();
   });
   root.querySelector('[data-swing-back]').onclick=()=>onBack?.();
