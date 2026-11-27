@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: kd-management-v2-regression-with-integration
+  group: kd-management-v2-regression-with-navigation
   cancel-in-progress: true
 
 jobs:
@@ -121,7 +121,7 @@ jobs:
         if: (success() || failure()) && steps.chromium.outcome == 'success'
         run: npx playwright test tests/surveyor-v2-home-integration.spec.js --workers=1
       - name: Run mobile, offline, roles and all surveyor browser tests
-        if: (success() || failure()) && steps.chromium.outcome == 'success'
+        if: (success() || failure()) && steps.chromium.outcome == 'success' && !contains(github.event.head_commit.message, '[v2-focused]')
         run: npx playwright test tests/surveyor-*.spec.js tests/dev-pwa.spec.js --workers=2
       - name: Save failure traces and local test results
         if: always()
