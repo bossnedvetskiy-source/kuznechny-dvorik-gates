@@ -410,3 +410,17 @@ test('v2 headings follow workspace and catalogue rather than duplicating the bra
   await page.locator('.kd-v2-nav[data-screen="v2Home"]').click();
   await expect(page.locator('#screenTitle')).toHaveText('Главная');
 });
+
+test('phone home and catalogue avoid roadmap clutter and label unfinished modules',async({page})=>{
+  await login(page,'zamer');
+  const home=page.locator('#v2HomeScreen');
+  await expect(home).toBeVisible();
+  await expect(home.locator('[data-v2-action="calendar"]')).toContainText('Скоро');
+  await expect(home.locator('[data-v2-action="check"]')).toContainText('Скоро');
+  await expect(home).not.toContainText('Тестовая оболочка');
+  await home.locator('[data-v2-action="catalog"]').click();
+  await expect(page.locator('#screenTitle')).toHaveText('Каталог изделий');
+  await expect(home.locator('h3')).toHaveCount(0);
+  await expect(home.locator('[data-v2-action="frames"]')).toContainText('Скоро');
+  await expect(home.locator('[data-v2-action="catalogBack"]')).toHaveText('← Назад');
+});
