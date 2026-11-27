@@ -792,7 +792,7 @@ test('forged fence measures sections and shared supports without inventing a cat
  await expect(home.locator('[data-art-fence-errors]')).toContainText('0 до 6');
  await expect(plan).toBeEmpty();
  await field('manualNewPosts').fill('2');
- await expect(plan.locator('.kd-product-row').filter({hasText:'Готовых опор'})).toContainText('4');
+ await expect(plan.locator('.kd-product-row').filter({hasText:'Готовых опор, шт.'})).toContainText('4');
  await field('article').fill('Образец клиента');
  await field('fill').selectOption('open');
  await home.locator('[data-art-fence-back]').click();
@@ -813,4 +813,41 @@ test('forged fence measures sections and shared supports without inventing a cat
  expect(test.total).toBeNull();
  expect(test.invalid).toBeNull();
  expect(test.unknown).toBeNull();
+});
+
+test('picket editor uses whole strips, explicit gap fitting and correct two-row hardware',async({page})=>{
+ await login(page,'zamer');
+ const data=await page.evaluate(async()=>{
+  const {picketPlan}=await import('./v2-pickets.js');
+  const opts={lengthMm:12000,heightMm:1800,type:'vertical-double'};
+  const raw=picketPlan(opts).plan,fit=picketPlan({...opts,fit:true}).plan;
+  const horizontal=picketPlan({...opts,type:'horizontal-double',fit:true}).plan;
+  const single=picketPlan({...opts,type:'vertical-single',gapMm:50,fit:true}).plan;
+  const narrow=picketPlan({lengthMm:310,post:'80x80x3',type:'vertical-single',gapMm:50,fit:true}).plan;
+  return {raw,fit,horizontal,single,narrow,invalid:picketPlan({lengthMm:0}).plan,total:picketPlan(opts).total};
+ });
+ expect(data.raw.spans).toBe(5);
+ expect(data.raw.posts).toBe(6);
+ expect(data.fit.front).toBe(70);
+ expect(data.fit.back).toBe(65);
+ expect(data.fit.screws).toBe(540);
+ expect(data.fit.reserve).toBe(4);
+ expect(data.fit.gapMm).toBeCloseTo(48,2);
+ expect(data.horizontal.screws).toBe((data.horizontal.front+data.horizontal.back)*6);
+ expect(data.single.back).toBe(0);
+ expect(data.single.reserve).toBe(0);
+ expect(data.narrow.approved).toBe(false);
+ expect(data.invalid).toBeNull();
+ expect(data.total).toBeNull();
+ const home=page.locator('#v2HomeScreen');
+ await home.locator('[data-v2-action="catalog"]').click();
+ await home.locator('[data-v2-action="pickets"]').click();
+ await expect(home.locator('[data-picket-fit]')).toBeVisible();
+ await home.locator('[data-picket-fit]').click();
+ await expect(home.locator('[data-picket-plan]')).toContainText('Без подрезки');
+ await home.locator('[data-picket-field="lengthMm"]').fill('13000');
+ await home.locator('[data-picket-back]').click();
+ await home.locator('[data-v2-action="pickets"]').click();
+ await expect(home.locator('[data-picket-field="lengthMm"]')).toHaveValue('13000');
+ await expect(page.locator('#surveyDialog')).not.toBeVisible();
 });
