@@ -77,6 +77,7 @@ html.kd-v2-local[data-kd-theme=light]{--kd-bg:#f1f5f9;--kd-card:#fff;--kd-soft:#
     ['frames','Каркасы ворот и калиток','Серийные каркасы · отдельный редактор на этапе 2.'],
     ['sliding','Откатные ворота','Действующий калькулятор через замер.'],
     ['pickets','Евроштакетник','Действующий калькулятор через замер.'],
+    ['profileFence','Забор из профнастила','Листы, столбы, прожилины · отдельный редактор на этапе 2.'],
     ['canopy','Навесы','Действующий калькулятор через замер.']
   ];
   function render(){
@@ -96,6 +97,7 @@ html.kd-v2-local[data-kd-theme=light]{--kd-bg:#f1f5f9;--kd-card:#fff;--kd-soft:#
     if(action==='catalog'){catalogOpen=true;render();return}
     if(action==='catalogBack'){catalogOpen=false;render();return}
     if(action==='artFences'){pending('Кованые заборы Арт.: отдельный редактор на этапе 2. До утверждения моделей, размеров, материалов и тарифов стоимость не рассчитывается.');return}
+    if(action==='profileFence'){pending('Забор из профнастила: отдельный редактор на этапе 2. До утверждения параметров листов, каркаса и тарифов стоимость не рассчитывается.');return}
     if(action==='frames'){pending('Серийные каркасы: отдельный редактор на этапе 2.');return}
     if(['artGates','sliding','pickets','canopy'].includes(action)){
       pending('Действующий калькулятор доступен через новый замер. В редакторе замера выберите соответствующее изделие.');
