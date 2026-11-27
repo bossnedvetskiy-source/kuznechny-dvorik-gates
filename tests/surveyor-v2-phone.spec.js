@@ -109,6 +109,7 @@ test('phone catalogue opens forged photos, picket sides and continuous profile s
   await home.locator('[data-v2-action="artGates"]').click();
   await expect(home.locator('[data-art-article]')).toHaveCount(38);
   const photo=home.locator('[data-art-article="Арт.6"] img');
+  await photo.scrollIntoViewIfNeeded();
   await expect.poll(()=>photo.evaluate(e=>e.complete&&e.naturalWidth>0)).toBe(true);
   await home.locator('[data-art-article="Арт.6"]').click();
   await expect(home.locator('[data-art-calculate]')).toBeDisabled();
@@ -124,5 +125,11 @@ test('phone catalogue opens forged photos, picket sides and continuous profile s
   await home.locator('[data-v2-action="profileFence"]').click();
   await home.locator('[data-profile-field="sheetMode"]').selectOption('continuous');
   await expect(home.locator('[data-profile-plan]')).toContainText('23,76');
+  await home.locator('[data-profile-back]').click();
+  await home.locator('[data-v2-action="canopy"]').click();
+  await expect(home.locator('[data-canopy-plan]')).toContainText('Поликарбонат к закупке, м24');
+  await home.locator('[data-canopy-field="coverage"]').selectOption('Профнастил');
+  await expect(home.locator('[data-canopy-plan]')).toContainText('Листы, шт.');
+
   expect(requests.filter(r=>r.method!=='GET'||/\/api\/(?:surveyor|leads)(?:[/?]|$)/.test(r.url))).toEqual([]);
 });
