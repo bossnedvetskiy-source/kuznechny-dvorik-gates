@@ -148,5 +148,30 @@ foreach ([['gateWidthMm'=>799],['gateWidthMm'=>'3800'],['article'=>'Арт.39'],
 }
 fwrite(STDOUT,"Staff quote: {$staffChecked} custom models + known control + 4 invalid requests passed\n");
 
+
+$stored=['version'=>2,'prices'=>$prices,'standardPrices'=>$serverStandards,'meta'=>['importedAt'=>'2026-11-20T00:00:00+00:00']];
+$items=['items'=>[
+ ['id'=>'art-1','kind'=>'artGates','draft'=>['article'=>'Арт.6','dimensions'=>['gateWidthMm'=>3800,'gateHeightMm'=>1800,'wicketWidthMm'=>1000,'wicketHeightMm'=>1800],'options'=>['installation'=>true,'posts'=>true]],'total'=>1],
+ ['id'=>'fence-1','kind'=>'pickets','draft'=>[],'total'=>1]
+]];
+$services=['catalogInstallation'=>8000,'catalogPosts'=>25000];
+$result=kd_surveyor_estimate_readonly_data($items,$catalog,$stored,$services);
+if ($result['rows'][0]['quote']['prices']['total']!==94300 || $result['rows'][0]['status']!=='calculated' || $result['rows'][1]['reason']!=='pricing_not_connected' || $result['totalRub']!==null || $result['canIssue'] || $result['canReleaseProduction']) throw new RuntimeException('Estimate pricing boundary failed');
+if (kd_surveyor_estimate_readonly_data($items,$catalog,$stored,[])['rows'][0]['reason']!=='service_rate_missing') throw new RuntimeException('Missing service fallback accepted');
+foreach (['missing','null','wrong-standard','no-date','wrong-version'] as $case) {
+    $bad=$stored;
+    if ($case==='missing') unset($bad['prices'][array_key_first($prices)]);
+    if ($case==='null') $bad['prices'][array_key_first($prices)]=['value'=>null];
+    if ($case==='wrong-standard') $bad['standardPrices']['6']=1;
+    if ($case==='no-date') unset($bad['meta']);
+    if ($case==='wrong-version') $bad['version']=1;
+    $reply=kd_surveyor_estimate_readonly_data($items,$catalog,$bad,$services);
+    if ($reply['rows'][0]['reason']!=='excel_not_verified'||$reply['rows'][0]['quote']!==null)throw new RuntimeException('Invalid Excel source accepted: '.$case);
+}
+$duplicate=$items;$duplicate['items'][]=$items['items'][0];$rejected=false;
+try {kd_surveyor_estimate_readonly_data($duplicate,$catalog,$stored,$services);}catch(InvalidArgumentException){$rejected=true;}
+if (!$rejected)throw new RuntimeException('Duplicate estimate item accepted');
+fwrite(STDOUT,"Estimate source: verified import, explicit services, 5 rejected imports, missing provider and duplicate rejection passed\n");
+
 fwrite(STDOUT, "PHP gate standards checked: {$checkedStandards}; controls: " . count($cases) . "; Excel validation: 4; failures: {$failures}\n");
 exit($failures ? 1 : 0);
