@@ -2,7 +2,7 @@ import {mountSwingFrameEditor,SWING_DEFAULTS} from './v2-swing-frame.js';
 import {mountProductEditor,SLIDING_DEFAULTS} from './v2-product-editor.js';
 // Experimental shell. Only mounted by app.js on an explicitly opted-in local
 // preview with the existing real session. No data fetching or role mutation.
-export function mountV2Home({role,userId,navigate,newSurvey,open3D,listQuoteTargets,saveQuote,openSavedQuote}) {
+export function mountV2Home({role,userId,navigate,newSurvey,open3D,listQuoteTargets,saveQuote,quoteSwing,saveSwing,openSavedQuote}) {
   const owner=role==='owner';
   let workspace=owner?'owner':'surveyor';
   let theme='dark';
@@ -234,7 +234,7 @@ html.kd-v2-local[data-kd-theme=light]{--kd-bg:#f1f5f9;--kd-card:#fff;--kd-soft:#
     (productOpen?'<div data-product-editor-root></div>':catalogOpen?'<button class="kd-v2-action kd-v2-back" type="button" data-v2-action="catalogBack">← Назад</button>'+catalogItems.map(([id,label,desc])=>btn(id,label,desc)).join(''):isOwner?'<div class="kd-v2-grid two">'+['Сумма заказов','К получению','Заказы в работе','Активные клиенты'].map(x=>'<div class="kd-v2-card"><small>'+x+'</small><strong>—</strong></div>').join('')+'</div><div class="kd-v2-card kd-v2-panel"><b>Требует внимания</b><small>Рабочие показатели ещё не подключены.</small></div><h3>Управление предприятием</h3><div class="kd-v2-grid">'+ownerItems.map(tile).join('')+'</div><div class="kd-v2-card kd-v2-panel"><b>КД — Умный помощник</b><small>Скоро · подсказки по управлению</small><button class="kd-v2-question" data-v2-action="tasks">Что сделать сегодня?</button><button class="kd-v2-question" data-v2-action="wallet">Кто должен деньги?</button><button class="kd-v2-question" data-v2-action="orders">Какие заказы требуют внимания?</button></div>':
     btn('quick','Быстрый расчёт',owner?'Действующий калькулятор откатных ворот':'Выбрать изделие · без заказа',true)+btn('measure','Новый замер объекта','Создать карточку объекта')+'<h3>Работа с клиентами</h3><div class="kd-v2-grid two">'+surveyItems.map(tile).join('')+'</div>'+btn('threeD','3D-конструктор','Модель участка и изделий'))+'<div class="kd-v2-card kd-v2-detail" role="status" hidden></div>';
     if(productOpen==='frames'){
-      mountSwingFrameEditor(body.querySelector('[data-product-editor-root]'),{draft:swingDraft,onDraft:saveSwingDraft,onReset:()=>{saveSwingDraft(null);render()},onBack:()=>{productOpen=false;catalogOpen=true;render()}});
+      mountSwingFrameEditor(body.querySelector('[data-product-editor-root]'),{draft:swingDraft,onDraft:saveSwingDraft,onQuote:quoteSwing,onSave:saveSwing?async input=>{const id=await saveSwing(input);saveSwingDraft(null);productOpen=false;catalogOpen=false;render();await openSavedQuote?.(id)}:null,onReset:()=>{saveSwingDraft(null);render()},onBack:()=>{productOpen=false;catalogOpen=true;render()}});
     }else if(productOpen){
       mountProductEditor(body.querySelector('[data-product-editor-root]'),{
         draft:productDraft,onDraft:saveProductDraft,onReset:()=>{saveProductDraft(null);render()},
