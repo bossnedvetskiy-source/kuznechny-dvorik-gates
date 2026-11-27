@@ -8,7 +8,7 @@ import {mountSwingFrameEditor,SWING_DEFAULTS} from './v2-swing-frame.js';
 import {mountProductEditor,SLIDING_DEFAULTS} from './v2-product-editor.js';
 // Experimental shell. Only mounted by app.js on an explicitly opted-in local
 // preview with the existing real session. No data fetching or role mutation.
-export function mountV2Home({role,userId,navigate,newSurvey,open3D,listQuoteTargets,saveQuote,quoteSwing,saveSwing,quoteArtGate,openSavedQuote}) {
+export function mountV2Home({role,userId,navigate,newSurvey,open3D,listQuoteTargets,saveQuote,saveBasket,listBasketClients,quoteSwing,saveSwing,quoteArtGate,openSavedQuote}) {
   const owner=role==='owner';
   let workspace=owner?'owner':'surveyor';
   let theme='dark';
@@ -60,11 +60,12 @@ export function mountV2Home({role,userId,navigate,newSurvey,open3D,listQuoteTarg
   }catch{}
 
   const basketKey=userId?'kd-v2-basket-v1:'+String(userId):null;
-  let basket=[],basketOpen=false,editId=null,editDraft=null,basketStorageError=false;
-  if(basketKey)try{basket=readBasket(JSON.parse(sessionStorage.getItem(basketKey)||'[]'))}catch{basketStorageError=true}
+  let basket=[],basketOpen=false,editId=null,editDraft=null,basketStorageError=false,basketId=crypto.randomUUID(),basketClientId='',basketSaving=false;
+  const basketMetaKey=basketKey?basketKey+':meta':null;
+  if(basketKey)try{basket=readBasket(JSON.parse(sessionStorage.getItem(basketKey)||'[]'));const meta=JSON.parse(sessionStorage.getItem(basketMetaKey)||'null');if(basket.length&&/^[a-f0-9-]{36}$/.test(meta?.id||'')){basketId=meta.id;basketClientId=typeof meta.clientId==='string'?meta.clientId:''}}catch{basketStorageError=true}
   function persistBasket(){
     if(!basketKey){basketStorageError=true;return}
-    try{if(basket.length)sessionStorage.setItem(basketKey,JSON.stringify(basket));else sessionStorage.removeItem(basketKey);basketStorageError=false}catch{basketStorageError=true}
+    try{if(basket.length){sessionStorage.setItem(basketKey,JSON.stringify(basket));sessionStorage.setItem(basketMetaKey,JSON.stringify({id:basketId,clientId:basketClientId}))}else{sessionStorage.removeItem(basketKey);sessionStorage.removeItem(basketMetaKey)}basketStorageError=false}catch{basketStorageError=true}
   }
   function clearEdit(){editId=null;editDraft=null}
   function backToCatalogue(){productOpen=false;catalogOpen=!editId;basketOpen=Boolean(editId);clearEdit();render()}
@@ -271,8 +272,34 @@ html.kd-v2-local[data-kd-theme=light]{--kd-bg:#f1f5f9;--kd-card:#fff;--kd-soft:#
       mountBasket(body.querySelector('[data-basket-root]'),basket,{
         onBack:()=>{basketOpen=false;catalogOpen=true;render()},
         onEdit:id=>{const row=basket.find(r=>r.id===id);if(!row)return;editId=id;editDraft=structuredClone(row.draft);basketOpen=false;catalogOpen=false;productOpen=row.kind==='sliding'?true:row.kind;render()},
-        onRemove:id=>{if(window.confirm('Удалить изделие из черновика?')){basket=basket.filter(row=>row.id!==id);persistBasket();render()}}
+        onRemove:id=>{if(!basketSaving&&window.confirm('Удалить изделие из черновика?')){basket=basket.filter(row=>row.id!==id);persistBasket();render()}}
       });
+      if(saveBasket&&basket.length){
+        const panel=document.createElement('div');panel.className='kd-v2-card kd-product-editor';
+        panel.innerHTML='<h3>Сохранить в замер</h3><small>Только локальный черновик. Выберите существующего тестового клиента или оставьте без клиента.</small><label><span>Карточка клиента</span><select data-basket-client disabled><option value="">Без клиента</option></select></label><button class="kd-v2-action primary" type="button" data-basket-save disabled>Сохранить черновик в замер</button><div role="status" data-basket-save-status></div>';
+        body.querySelector('[data-basket-root]').append(panel);
+        const select=panel.querySelector('select'),button=panel.querySelector('button'),status=panel.querySelector('[data-basket-save-status]');
+        Promise.resolve().then(()=>listBasketClients?.()).then(clients=>{
+          if(!panel.isConnected)return;
+          for(const client of clients||[])select.add(new Option(client.label,client.id));
+          if(basketClientId&&!Array.from(select.options).some(o=>o.value===basketClientId)){select.add(new Option('Ранее выбранный клиент недоступен',basketClientId));status.textContent='Выберите другую карточку или оставьте без клиента.'}
+          select.value=basketClientId;select.disabled=false;button.disabled=basketSaving;
+        }).catch(()=>{if(panel.isConnected)status.textContent='Не удалось загрузить список клиентов'});
+        select.onchange=()=>{basketClientId=select.value;persistBasket()};
+        button.onclick=async()=>{
+          if(basketSaving)return;
+          basketSaving=true;button.disabled=true;select.disabled=true;
+          const snapshot=structuredClone(basket),id=basketId,client=basketClientId;
+          try{
+            const saved=await saveBasket(snapshot,id,client);
+            if(!panel.isConnected)return;
+            // Clear only after a successful persistent write.
+            basket=[];basketId=crypto.randomUUID();basketClientId='';persistBasket();basketOpen=false;render();
+            try{await openSavedQuote?.(saved)}catch{navigate('surveys')}
+          }catch(error){if(panel.isConnected)status.textContent=error.message||'Не удалось сохранить'}
+          finally{basketSaving=false;if(panel.isConnected){button.disabled=false;select.disabled=false}}
+        };
+      }
     }
     if(productOpen)body.querySelector('[data-basket-add]').onclick=addBasket;
     if(productOpen==='canopy'){
@@ -359,5 +386,5 @@ html.kd-v2-local[data-kd-theme=light]{--kd-bg:#f1f5f9;--kd-card:#fff;--kd-soft:#
     if(focusedTarget)navNodes.find(n=>n.dataset.screen===focusedTarget)?.focus({preventScroll:true});
   }
   render();syncNav();
-  return {onScreen:syncNav,destroy(){if(topBrand)topBrand.textContent=originalBrand;saveProductDraft(null);saveSwingDraft(null);basket=[];persistBasket();clearEdit();host.remove();globalTheme.remove();navNodes.forEach(n=>n.remove());oldNav.forEach(btn=>btn.classList.remove('kd-v2-legacy-nav'));root.classList.remove('kd-v2-local');delete root.dataset.kdTheme;}};
+  return {onScreen:syncNav,restoreBasket(items,id,clientId){if(basketSaving)return false;const restored=readBasket(items);if(!restored.length||restored.length!==items.length)return false;if(basket.length&&!window.confirm('Заменить текущую корзину сохранённым черновиком?'))return false;basket=restored;basketId=id;basketClientId=clientId;persistBasket();openBasket();return true},destroy(){if(topBrand)topBrand.textContent=originalBrand;saveProductDraft(null);saveSwingDraft(null);basket=[];persistBasket();clearEdit();host.remove();globalTheme.remove();navNodes.forEach(n=>n.remove());oldNav.forEach(btn=>btn.classList.remove('kd-v2-legacy-nav'));root.classList.remove('kd-v2-local');delete root.dataset.kdTheme;}};
 }
