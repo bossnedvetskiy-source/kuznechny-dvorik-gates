@@ -120,5 +120,33 @@ if (!$mismatchRejected) {
     fwrite(STDERR, "EXCEL PHP FAIL: подменённая стандартная цена была принята\n");
 }
 
+
+require_once $dist . '/backend/surveyor.php';
+$catalog=$defaults['prices'] ?? null;
+if (!is_array($catalog) || count($catalog['catalog']??[])!==38) {
+    // The test's independent catalog uses only the active model identities.
+    $catalog=['catalog'=>array_map(static fn($a)=>['art'=>'Арт.'.$a],array_keys($models)),'catalogInstallation'=>8000,'catalogPosts'=>25000];
+}
+$catalog['catalogInstallation']=8000;
+$catalog['catalogPosts']=25000;
+$staffChecked=0;
+foreach ($models as $article=>$model) {
+    $request=['article'=>'Арт.'.$article,'gateWidthMm'=>3800,'gateHeightMm'=>2000,'wicketWidthMm'=>1100,'wicketHeightMm'=>2000,'installation'=>true,'posts'=>true,'total'=>1,'privateCost'=>1];
+    $reply=kd_surveyor_art_quote_data($request,$catalog,$prices);
+    $expected=kd_gate_calculate_product((string)$article,3.8,2,1.1,2,$prices);
+    if ($reply['prices']!==['product'=>$expected,'installation'=>8000,'posts'=>25000,'total'=>$expected+33000] || $reply['deliveryPending']!==true || isset($reply['configuration']['privateCost'])) throw new RuntimeException('Staff quote mismatch: '.$article);
+    $staffChecked++;
+}
+$request=['article'=>'Арт.6','gateWidthMm'=>3800,'gateHeightMm'=>1800,'wicketWidthMm'=>1000,'wicketHeightMm'=>1800,'installation'=>false,'posts'=>false];
+$reply=kd_surveyor_art_quote_data($request,$catalog,$prices);
+if ($reply['prices']['total']!==61300) throw new RuntimeException('Staff quote known control failed');
+foreach ([['gateWidthMm'=>799],['gateWidthMm'=>'3800'],['article'=>'Арт.39'],['posts'=>1]] as $invalid) {
+    $rejected=false;
+    try { kd_surveyor_art_quote_data(array_replace($request,$invalid),$catalog,$prices); }
+    catch (InvalidArgumentException) { $rejected=true; }
+    if (!$rejected) throw new RuntimeException('Invalid staff quote accepted');
+}
+fwrite(STDOUT,"Staff quote: {$staffChecked} custom models + known control + 4 invalid requests passed\n");
+
 fwrite(STDOUT, "PHP gate standards checked: {$checkedStandards}; controls: " . count($cases) . "; Excel validation: 4; failures: {$failures}\n");
 exit($failures ? 1 : 0);
