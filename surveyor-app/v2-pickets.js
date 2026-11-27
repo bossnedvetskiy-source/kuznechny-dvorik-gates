@@ -59,3 +59,49 @@ export function mountPicketEditor(root,{draft,onDraft,onBack,onReset}={}){
  root.querySelector('[data-picket-reset]').onclick=()=>{if(window.confirm('Сбросить параметры забора?'))onReset?.()};
  render();
 }
+
+
+export const PICKET_SIDES=Object.freeze(['А','Б','В','Г']);
+export function picketSitePlan(sides={}){
+ const rows=PICKET_SIDES.filter(id=>sides[id]).map(id=>({id,...picketPlan(sides[id])}));
+ const errors=rows.flatMap(row=>row.errors.map(e=>row.id+': '+e));
+ if(!rows.length||errors.length)return {rows,errors:errors.length?errors:['Добавьте сторону'],summary:null,total:null};
+ // Each side is a separate measured line. Never assume a shared corner.
+ const batches=new Map(),sum=k=>rows.reduce((n,row)=>n+row.plan[k],0);
+ for(const row of rows)for(const b of row.plan.batches){
+  const type=sides[row.id].type||PICKET_DEFAULTS.type;
+  // Single and double-sided stock may have different coatings.
+  const key=(type==='vertical-single'?'single':'double')+':'+b.lengthMm;
+  const old=batches.get(key)||{coating:type==='vertical-single'?'single':'double',lengthMm:b.lengthMm,front:0,back:0,reserve:0,actualM:0};
+  old.front+=b.front;old.back+=b.back;old.actualM+=b.actualM;old.reserve=Math.max(old.reserve,b.reserve);batches.set(key,old);
+ }
+ const stock=[...batches.values()];
+ return {rows,errors:[],total:null,summary:{sides:rows.length,spans:sum('spans'),posts:sum('posts'),openingPosts:sum('openingPosts'),newPosts:sum('newPosts'),existingPosts:sum('existingPosts'),front:sum('front'),back:sum('back'),reserve:stock.reduce((n,b)=>n+b.reserve,0),screws:sum('screws'),tubeUsed:sum('tubeUsed'),tubeStocks:sum('tubeStocks'),picketPurchaseM:stock.reduce((n,b)=>n+b.actualM+b.reserve*b.lengthMm/1000,0),approved:rows.every(row=>row.plan.approved),batches:stock}};
+}
+export function mountPicketSiteEditor(root,{draft,onDraft,onBack,onReset}={}){
+ const sides={};
+ if(draft?.version===2){for(const id of PICKET_SIDES)if(draft.sides?.[id])sides[id]={...PICKET_DEFAULTS,...draft.sides[id]};}
+ else sides['А']={...PICKET_DEFAULTS,...draft};
+ if(!Object.keys(sides).length)sides['А']={...PICKET_DEFAULTS};
+ let active=sides[draft?.active]?draft.active:Object.keys(sides)[0];
+ root.innerHTML='<div class="kd-v2-card"><b>Стороны участка</b><div class="kd-v2-grid two" data-picket-side-tabs></div><button type="button" class="kd-v2-action" data-picket-remove-side>Удалить выбранную сторону</button><small>Стороны пока считаются отдельно: общие угловые столбы не вычитаются автоматически.</small></div><div data-picket-side-editor></div><div class="kd-v2-card"><h3>Итого по участку</h3><div data-picket-site-summary role="status"></div></div>';
+ const tabs=root.querySelector('[data-picket-side-tabs]'),editor=root.querySelector('[data-picket-side-editor]'),summary=root.querySelector('[data-picket-site-summary]');
+ const notify=()=>onDraft?.({version:2,active,sides:structuredClone(sides)});
+ function renderSummary(){
+  const q=picketSitePlan(sides),p=q.summary;
+  if(!p){summary.textContent=q.errors.join(' ');return}
+  const rows=[['Сторон',p.sides],['Пролётов',p.spans],['Опоры забора',p.posts],['Опоры проёмов отдельно',p.openingPosts],['Новые опоры забора',p.newPosts],['Спереди',p.front],['Сзади',p.back],['Запас по длинам и покрытию',p.reserve],['Саморезы',p.screws],['Штакетник к закупке, м',fmt(p.picketPurchaseM)],['Труба, м',fmt(p.tubeUsed)],['Хлысты по сторонам, шт.',p.tubeStocks],['Раскладка всех сторон',p.approved?'Без подрезки':'Не подтверждена']];
+  summary.innerHTML=rows.map(([l,v])=>'<div class="kd-product-row"><span>'+l+'</span><b>'+v+'</b></div>').join('');
+ }
+ function render(){
+  tabs.replaceChildren();
+  for(const id of PICKET_SIDES){
+   const b=document.createElement('button');b.className='kd-v2-action'+(active===id?' primary':'');b.type='button';b.dataset.picketSide=id;b.textContent='Сторона '+id+(sides[id]?'':' +');b.setAttribute('aria-pressed',String(active===id));b.onclick=()=>{if(!sides[id])sides[id]={...PICKET_DEFAULTS};active=id;notify();render()};tabs.append(b);
+  }
+  root.querySelector('[data-picket-remove-side]').hidden=Object.keys(sides).length<=1;
+  mountPicketEditor(editor,{draft:sides[active],onDraft:v=>{sides[active]=v;notify();renderSummary()},onBack,onReset:()=>{sides[active]={...PICKET_DEFAULTS};notify();render()}});
+  renderSummary();
+ }
+ root.querySelector('[data-picket-remove-side]').onclick=()=>{if(Object.keys(sides).length>1&&window.confirm('Удалить сторону '+active+'?')){delete sides[active];active=Object.keys(sides)[0];notify();render()}};
+ render();
+}
