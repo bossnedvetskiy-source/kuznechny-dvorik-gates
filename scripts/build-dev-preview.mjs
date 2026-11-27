@@ -414,6 +414,15 @@ await patchDevHtml(OUT);
 // DEV-only bridge: existing calculators stay unchanged, but when opened from a
 // survey they can return their exact current snapshot back into that survey.
 await cp(path.join(SURVEYOR_SOURCE, 'calculator-bridge.js'), path.join(OUT, 'surveyor-bridge.js'));
+const devBridgePath = path.join(OUT,'surveyor-bridge.js');
+let devBridge = await readFile(devBridgePath,'utf8');
+const returnMarker = "target.searchParams.set('resumeSurvey', surveyId);";
+const navigateMarker = "setTimeout(() => { location.href = returnUrl(); }, 120);";
+if(!devBridge.includes(returnMarker)||!devBridge.includes(navigateMarker))throw new Error('DEV bridge navigation markers missing');
+devBridge=devBridge.replace(returnMarker,returnMarker+"\n    target.searchParams.set('resumeAttempt', crypto.randomUUID());")
+  .replace(navigateMarker,"location.replace(returnUrl());");
+await writeFile(devBridgePath,devBridge,'utf8');
+
 for (const relative of ['index.html','evroshtaketnik/index.html','naves/index.html']) {
   const full = path.join(OUT, relative);
   let html = await readFile(full, 'utf8');
@@ -492,6 +501,11 @@ if (!surveyorGateHtml.includes(`${BASE}/surveyor-bridge.js`))
 // The root page's relative production bridge points to a nonexistent nested
 // directory here. Keep only the already injected absolute DEV bridge.
 surveyorGateHtml = surveyorGateHtml.replace(/<script\s+src=["']surveyor-app\/calculator-bridge\.js["'][^>]*><\/script>/g,'');
+// Staff calculations must not start the public site's analytics or webvisor.
+surveyorGateHtml = surveyorGateHtml.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, block =>
+  /mc\.yandex\.ru\/metrika\/tag\.js/.test(block) ? '' : block);
+surveyorGateHtml = surveyorGateHtml.replace(/<noscript\b[^>]*>[\s\S]*?<\/noscript>/gi, block =>
+  /mc\.yandex\.ru\/watch\//.test(block) ? '' : block);
 surveyorGateHtml = surveyorGateHtml.replace('</head>', surveyorGateGuard + '\n</head>');
 await writeFile(path.join(surveyorGateOut, 'index.html'), surveyorGateHtml, 'utf8');
 
