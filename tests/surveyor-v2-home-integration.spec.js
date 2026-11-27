@@ -1092,7 +1092,7 @@ test('multi-product basket preserves input-only lines, independent editing and t
  await expect(home).toBeVisible({timeout:20000});
  await home.locator('[data-v2-action="basket"]').click();
  await expect(home.locator('[data-basket-line]')).toHaveCount(3);
- const saved=await page.evaluate(()=>JSON.parse(sessionStorage.getItem(Object.keys(sessionStorage).find(k=>k.startsWith('kd-v2-basket-v1:')))));
+ const saved=await page.evaluate(()=>JSON.parse(sessionStorage.getItem(Object.keys(sessionStorage).find(k=>k.startsWith('kd-v2-basket-v1:')&&!k.endsWith(':meta')))));
  expect(saved.every(x=>Object.keys(x).sort().join(',')==='draft,id,kind')).toBe(true);
  expect(saved[0].draft.gateWidthMm).toBe('3600');
  expect(JSON.stringify(saved)).not.toMatch(/"price"|"total"|"profit"|"owner"/);
@@ -1146,6 +1146,11 @@ test('basket saves a single local survey linked to a test client and restores wi
  await expect(dialog).toContainText('Тестовый клиент');
  await expect(dialog.locator('[data-saved-basket-line]')).toHaveCount(2);
  await expect(dialog).toContainText('Итог сметы не рассчитан');
+ await dialog.getByText('Подготовка комплектации для предложения',{exact:true}).click();
+ await expect(dialog.locator('[data-proposal-line]')).toHaveCount(2);
+ await expect(dialog.locator('[data-proposal-status]')).toContainText('Выпуск КП и ТЗ заблокирован');
+ await expect(dialog.locator('[data-proposal-checks]')).toContainText('Заключить договор');
+
  await expect(dialog.locator('[data-complete-survey],[data-v3-preview],[data-add-calculation],[data-edit-survey-data]')).toHaveCount(0);
  await dialog.locator('[data-restore-basket]').click();
  await expect(home.locator('[data-basket-line]')).toHaveCount(2);
@@ -1169,4 +1174,26 @@ test('basket saves a single local survey linked to a test client and restores wi
  expect(survey.configuration.basketDraft.items).toHaveLength(2);
  expect(JSON.stringify(survey.configuration)).not.toMatch(/"total"|"referenceRub"|"profit"/);
  expect(data.clients).toHaveLength(1);
+});
+
+test('internal proposal preparation uses seven configurations, excludes all price and release claims',async({page})=>{
+ await login(page,'zamer');
+ const data=await page.evaluate(async()=>{
+  const {basketLine}=await import('./v2-basket.js');
+  const {prepareProposal}=await import('./v2-proposal-preparation.js');
+  const kinds=['artGates','artFences','frames','sliding','pickets','profileFence','canopy'];
+  const rows=kinds.map((kind,i)=>({id:'item-'+i,...basketLine(kind,kind==='artGates'?{article:'Арт.6'}:{})}));
+  const result=prepareProposal(rows.map(x=>({...x,total:1,priceRub:1,draft:{...x.draft,privateCost:999},contractSigned:true})));
+  let rejected=false;try{prepareProposal([...rows,rows[0]])}catch{rejected=true}
+  return {result,rejected};
+ });
+ expect(data.result.lines).toHaveLength(7);
+ expect(data.result.lines.every(x=>x.priceRub===null&&x.details.length>=4)).toBe(true);
+ expect(data.result.lines[0].imageName).toMatch(/^art-6-/);
+ expect(data.result.totalRub).toBeNull();
+ expect(data.result.canIssue).toBe(false);
+ expect(data.result.canReleaseProduction).toBe(false);
+ expect(data.result.status).toBe('internalDraft');
+ expect(data.rejected).toBe(true);
+ expect(JSON.stringify(data.result)).not.toMatch(/privateCost|contractSigned|referenceRub/);
 });
