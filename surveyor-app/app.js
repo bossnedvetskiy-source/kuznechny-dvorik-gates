@@ -370,6 +370,11 @@ async function createSurvey(data) {
     createdAt: now, updatedAt: now, syncState: API_ENABLED ? 'pending' : 'local',
     serverRevision: 0, archived: false, schemaVersion: 3, configuration: {}
   };
+  if(data.initialCalculation){
+    survey.configuration.calculations=[{...data.initialCalculation,estimateRole:'included'}];
+    survey.schemaVersion=4;
+    syncSurveyWorkTypes(survey);
+  }
   await idbPut('surveys', survey);
   if (API_ENABLED && navigator.onLine) queueMicrotask(() => syncNow({ silent: true }));
   return survey;
@@ -627,6 +632,42 @@ function v2LocalPreviewEnabled() {
     return sessionStorage.getItem('kd-v2-local-preview')==='1';
   } catch { return requested==='v2'; }
 }
+// Local opt-in editor: only explicit save can create a survey. No live API.
+function v2DraftAccessible(survey,user){
+  return Boolean(survey&&!survey.archived&&survey.status==='draft'&&user&&(user.role==='owner'||survey.createdBy===user.id));
+}
+async function listV2QuoteTargets(){
+  if(!v2LocalPreviewEnabled()||!currentUser)throw new Error('Локальный режим недоступен');
+  return (await idbGetAll('surveys')).filter(s=>v2DraftAccessible(s,currentUser))
+    .sort((a,b)=>String(b.updatedAt||'').localeCompare(String(a.updatedAt||'')))
+    .map(s=>({id:s.id,label:displaySurveyNumber(s)+' · '+(s.address||s.clientName||'Без адреса')}));
+}
+let v2QuoteSaving=false;
+async function saveV2SlidingQuote(input,targetId){
+  if(v2QuoteSaving||!v2LocalPreviewEnabled()||!currentUser)throw new Error('Сохранение недоступно');
+  const user=currentUser;
+  v2QuoteSaving=true;
+  try{
+    const {buildSlidingCalculation}=await import('./v2-product-editor.js');
+    if(currentUser!==user)throw new Error('Войдите в приложение повторно');
+    const item=buildSlidingCalculation(input,makeId('sliding'));
+    let survey;
+    if(targetId){
+      survey=await idbGet('surveys',targetId);
+      if(currentUser!==user||!v2DraftAccessible(survey,user))throw new Error('Черновик недоступен или уже завершён');
+      const rows=surveyCalculations(survey);
+      item.estimateRole=rows.some(row=>row.type==='sliding'&&estimateRole(row,rows)==='included')?'alternative':'included';
+      survey.configuration={...survey.configuration,calculations:[...rows,item]};
+      survey.schemaVersion=Math.max(4,Number(survey.schemaVersion)||0);
+      survey.updatedAt=new Date().toISOString();survey.syncState='local';
+      syncSurveyWorkTypes(survey);
+      await idbPut('surveys',survey);
+    }else{
+      survey=await createSurvey({name:'',phone:'',address:'',note:'',workTypes:[],initialCalculation:item});
+    }
+    return survey.id;
+  }finally{v2QuoteSaving=false}
+}
 async function prepareV2Home() {
   if(!v2LocalPreviewEnabled() || !currentUser || v2Home) return;
   const user=currentUser;
@@ -637,7 +678,10 @@ async function prepareV2Home() {
       role:user.role,userId:user.id,
       navigate:switchScreen,
       newSurvey:()=>$('#newSurveyBtn').click(),
-      open3D:open3DCalculator
+      open3D:open3DCalculator,
+      listQuoteTargets:listV2QuoteTargets,
+      saveQuote:saveV2SlidingQuote,
+      openSavedQuote:async id=>{switchScreen('surveys');await renderSurveys();await openSurveyDetails(id);showToast('Расчёт сохранён в замере');}
     });
     const resume=new URLSearchParams(location.search).has('resumeSurvey');
     if(!resume && !document.querySelector('dialog[open]') &&
