@@ -1,3 +1,4 @@
+import {requestEstimate} from './v2-estimate-quote.js';
 import {basketLine,readBasket} from './v2-basket.js';
 import {PRODUCT_TYPES} from './v2-product-editor.js';
 import {ART_GATE_CATALOG} from './v2-art-gates.js';
@@ -5,7 +6,7 @@ import {ART_GATE_CATALOG} from './v2-art-gates.js';
 const yn=v=>v?'Да':'Нет';
 const mm=(w,h)=>w+' × '+h+' мм';
 const opening=(g,w)=>'Ворота '+g+' мм; калитка '+w+' мм (0 — нет)';
-const fillNames={none:'Без заполнения',sheet:'Профнастил',vertical:'Вертикальный штакетник',horizontal:'Горизонтальный штакетник',prof:'Профнастил',jalousie:'Жалюзи'};
+const fillNames={none:'Без заполнения',sheet:'Профнастил',single:'Односторонний штакетник',chess:'Штакетник шахматка',vertical:'Вертикальный штакетник',horizontal:'Горизонтальный штакетник',prof:'Профнастил',jalousie:'Жалюзи'};
 const fill=v=>fillNames[v]||v;
 function specs(kind,d){
  switch(kind){
@@ -29,7 +30,7 @@ export function prepareProposal(items){
  });
  return {version:1,status:'internalDraft',lines,totalRub:null,canIssue:false,canReleaseProduction:false,checks:['Подтвердить цену каждого изделия по действующим тарифам','Уточнить цвет, покрытие и направление открывания, где применимо','Проверить общие опоры, монтаж и доставку','Согласовать размеры и комплектацию с клиентом','Заключить договор и зафиксировать его версию перед выпуском ТЗ']};
 }
-export function mountProposalPreparation(root,items){
+export function mountProposalPreparation(root,items,{quoteProvider}={}){
  root.replaceChildren();
  let p;try{p=prepareProposal(items)}catch(e){root.textContent=e.message;return}
  const intro=document.createElement('p');intro.textContent='Внутренний лист комплектации. Не коммерческое предложение, не производственное задание.';root.append(intro);
@@ -39,9 +40,32 @@ export function mountProposalPreparation(root,items){
   if(line.imageName){const image=document.createElement('img');image.src='../catalog/'+line.imageName;image.onerror=()=>{image.onerror=null;image.src='../assets/catalog/'+line.imageName};image.alt=line.summary;image.loading='lazy';image.style.cssText='display:block;max-width:100%;max-height:180px;object-fit:contain';section.append(image)}
   for(const [name,value] of line.details){const row=document.createElement('p');row.textContent=name+': '+value;section.append(row)}
   if(line.warning){const w=document.createElement('p');w.textContent=line.warning;section.append(w)}
-  const price=document.createElement('p');price.textContent='Цена не подтверждена';section.append(price);root.append(section)
+  const price=document.createElement('p');price.dataset.proposalPrice=line.id;price.textContent='Цена не подтверждена';section.append(price);root.append(section)
  }
  const summary=document.createElement('div');summary.dataset.proposalChecks='';const heading=document.createElement('h3');heading.textContent='Перед оформлением';summary.append(heading);
  for(const check of p.checks){const row=document.createElement('p');row.textContent='• '+check;summary.append(row)}
  const status=document.createElement('p');status.dataset.proposalStatus='';status.textContent='Итог не рассчитан. Выпуск КП и ТЗ заблокирован.';summary.append(status);root.append(summary);
+ const controls=document.createElement('div'),button=document.createElement('button'),message=document.createElement('p');
+ button.type='button';button.className='kd-v2-action';button.dataset.proposalQuote='';button.textContent='Проверить цены по тарифам';button.disabled=typeof quoteProvider!=='function';
+ message.dataset.proposalQuoteStatus='';message.setAttribute('role','status');message.textContent=button.disabled?'Серверный расчёт пока не подключён.':'Цена пересчитывается по сохранённой комплектации.';
+ controls.append(button,message);root.append(controls);
+ const snapshot=structuredClone(items),prices=new Map([...root.querySelectorAll('[data-proposal-price]')].map(el=>[el.dataset.proposalPrice,el]));
+ const money=n=>new Intl.NumberFormat('ru-RU').format(n)+' ₽';
+ button.onclick=async()=>{
+  if(button.disabled)return;
+  button.disabled=true;message.textContent='Проверка тарифов…';
+  for(const el of prices.values())el.textContent='Цена не подтверждена';
+  try{
+   const q=await requestEstimate(snapshot,quoteProvider);
+   if(!button.isConnected)return;
+   for(const line of q.lines){
+    const el=prices.get(line.id);
+    if(!el)continue;
+    el.textContent=line.status==='calculated'?'Расчёт по импортированным тарифам: '+money(line.priceRub)+' (без доставки; требуется утверждение) · импорт '+line.importedAt.slice(0,10):line.message;
+   }
+   message.textContent='Рассчитано '+q.calculatedCount+' из '+q.lines.length+'. '+(q.calculatedSubtotalRub===null?'Нет рассчитанных цен.':'Сумма рассчитанных позиций: '+money(q.calculatedSubtotalRub)+'. ')+'Общий итог не утверждён.';
+  }catch(e){if(button.isConnected)message.textContent=e.message||'Расчёт недоступен'}
+  finally{if(button.isConnected)button.disabled=false}
+ };
+
 }
