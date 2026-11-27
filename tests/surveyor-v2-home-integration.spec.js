@@ -895,3 +895,49 @@ test('picket site handles independent sides, positioned openings, and shared pur
  await expect(home.locator('[data-picket-field="lengthMm"]')).toHaveValue('15000');
  await expect(home.locator('[data-picket-site-summary]')).toContainText('Опоры проёмов отдельно');
 });
+
+test('picket common corners deduplicate only compatible posts and price corrected quantities',async({page})=>{
+ await login(page,'zamer');
+ const data=await page.evaluate(async()=>{
+  const {picketSitePlan}=await import('./v2-pickets.js');
+  const {picketSiteQuote}=await import('./v2-picket-quote.js');
+  const a={lengthMm:12000,heightMm:1800,fit:true};
+  const sides={'А':a,'Б':a},corners={'АБ':true};
+  const rates=Object.fromEntries(['picketSinglePrice','picketDoublePrice','tube40Price','post60Price','post80Price','post100Price','postMetalMarkupPercent','postPaintMarkupPercent','paintPrice','workVerticalSingle','workVerticalDouble','workHorizontalDouble','postInstallPrice','screwPrice','markupPercent','measurerPercent'].map(k=>[k,0]));
+  Object.assign(rates,{picketDoublePrice:100,tube40Price:10,post80Price:10,postInstallPrice:5,screwPrice:1});
+  const raw=picketSiteQuote(sides,{},rates),shared=picketSiteQuote(sides,corners,rates);
+  const existing={...a,includeNewPosts:false};
+  let blocked=0;
+  try{picketSiteQuote({'А':{...a,fit:false}}, {},rates)}catch{blocked++}
+  try{picketSiteQuote(sides,corners,{})}catch{blocked++}
+  return {raw,shared,blocked,existing:picketSitePlan({'А':existing,'Б':existing},corners),badProfile:picketSitePlan({'А':a,'Б':{...a,post:'60x60x2'}},corners),mixed:picketSitePlan({'А':{...a,existingPostsCount:1},'Б':a},corners),opening:picketSitePlan({'А':a,'Б':{...a,gateMm:3400,openingStartMm:0}},corners)};
+ });
+ expect(data.raw.quantities.posts).toBe(12);
+ expect(data.shared.quantities.posts).toBe(11);
+ expect(data.shared.quantities.newPostsByProfile['80x80x3']).toBe(11);
+ expect(data.shared.quantities.front).toBe(140);
+ expect(data.shared.quantities.back).toBe(130);
+ expect(data.shared.quantities.reserve).toBe(4);
+ expect(data.shared.costs.picket).toBe(49320);
+ expect(data.shared.costs.screws).toBe(1080);
+ expect(data.raw.costs.total-data.shared.costs.total).toBe(35);
+ expect(data.shared.openingsExcluded).toBe(true);
+ expect(data.shared.netProfit).toBeNull();
+ expect(data.existing.summary.existingPosts).toBe(11);
+ expect(data.badProfile.summary).toBeNull();
+ expect(data.mixed.summary).toBeNull();
+ expect(data.opening.summary).toBeNull();
+ expect(data.blocked).toBe(2);
+ const home=page.locator('#v2HomeScreen');
+ await home.locator('[data-v2-action="catalog"]').click();
+ await home.locator('[data-v2-action="pickets"]').click();
+ await home.locator('[data-picket-side="Б"]').click();
+ await home.getByText('Общие угловые столбы',{exact:true}).click();
+ await home.locator('[data-picket-corner="АБ"]').check();
+ const sum=home.locator('[data-picket-site-summary]');
+ await expect(sum.locator('.kd-product-row').filter({hasText:'Опоры забора'})).toContainText('11');
+ await home.locator('[data-picket-field="post"]').selectOption('60x60x2');
+ await expect(sum).toContainText('разные профили');
+ await home.locator('[data-picket-field="post"]').selectOption('80x80x3');
+ await expect(sum).toContainText('Общие углы (вычтено)');
+});
