@@ -4,6 +4,7 @@ test.use({viewport:{width:390,height:844}});
 async function startSurvey(page) {
   await page.addInitScript(()=>localStorage.setItem('kuzdvor-dev-access-v1','1'));
   await page.goto('/kuznechny-dvorik-gates/dev-tools-v4/');
+  await expect(page.locator('#loginForm button[type="submit"]')).toBeEnabled({timeout:20000});
   await page.locator('#loginInput').fill('zamer');
   await page.locator('#passwordInput').fill('1234');
   await page.locator('#loginForm button[type="submit"]').click();
@@ -67,6 +68,9 @@ async function reopen(page){
   await page.locator('#closeDetailsBtn').click();
   await page.locator('.survey-card').first().click();
   await expect(page.locator('#surveyDetailsDialog')).toBeVisible();
+  const extra = page.locator('#surveyDetailsContent details.v3-extra');
+  if (await extra.getAttribute('open') === null) await extra.locator('summary').click();
+  await expect(extra).toHaveAttribute('open', '');
 }
 
 test('scheme gets selected gate and wicket plus fence spans, without inventing opening positions or altering prices',async({page})=>{
@@ -77,6 +81,8 @@ test('scheme gets selected gate and wicket plus fence spans, without inventing o
   await expect(page.locator('[data-build-plan-from-calcs]')).toBeVisible();
   await expect(page.locator('.plan-quote-warnings')).toContainText('есть проёмы');
   await page.locator('[data-build-plan-from-calcs]').click();
+  const extra = page.locator('#surveyDetailsContent details.v3-extra');
+  if (await extra.getAttribute('open') === null) await extra.locator('summary').click();
   await expect(page.locator('.v3-plan-overview .mini-line')).toHaveCount(2);
   await expect(page.locator('.plan-post-summary')).toContainText('7');
   await expect(page.locator('[data-build-plan-from-calcs]')).toHaveCount(0);
@@ -132,6 +138,8 @@ test('touch diagram splits a fence span, toggles post state, removes and undoes 
   await changeSurvey(page,'seed');
   await reopen(page);
   await page.locator('[data-build-plan-from-calcs]').click();
+  const extra = page.locator('#surveyDetailsContent details.v3-extra');
+  if (await extra.getAttribute('open') === null) await extra.locator('summary').click();
   await page.locator('[data-edit-plan]').click();
   await expect(page.locator('#planDialog')).toBeVisible();
   await page.locator('#planLineTabs .plan-line-tab').nth(1).click();
@@ -181,6 +189,8 @@ test('gate support quick actions keep gate structurally supported and allow mark
   await changeSurvey(page,'seed');
   await reopen(page);
   await page.locator('[data-build-plan-from-calcs]').click();
+  const extra = page.locator('#surveyDetailsContent details.v3-extra');
+  if (await extra.getAttribute('open') === null) await extra.locator('summary').click();
   await page.locator('[data-edit-plan]').click();
   await page.locator('#planCanvas .plan-part-wrap.post [data-select-plan-item]').first().click();
   await expect(page.locator('#planQuickPostActions')).toBeVisible();
