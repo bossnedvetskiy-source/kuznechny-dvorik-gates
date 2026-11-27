@@ -851,3 +851,47 @@ test('picket editor uses whole strips, explicit gap fitting and correct two-row 
  await expect(home.locator('[data-picket-field="lengthMm"]')).toHaveValue('13000');
  await expect(page.locator('#surveyDialog')).not.toBeVisible();
 });
+
+test('picket site handles independent sides, positioned openings, and shared purchase reserve',async({page})=>{
+ await login(page,'zamer');
+ const data=await page.evaluate(async()=>{
+  const {picketPlan,picketSitePlan}=await import('./v2-pickets.js');
+  const a={lengthMm:12000,heightMm:1800,fit:true,gateMm:3400,wicketMm:1000,openingStartMm:1000};
+  const b={lengthMm:12000,heightMm:1800,fit:true};
+  return {a:picketPlan(a),site:picketSitePlan({'А':a,'Б':b}),bad:picketPlan({...a,openingStartMm:11000}),separate:picketPlan({...a,shareOpeningPost:false,betweenMm:2000})};
+ });
+ expect(data.a.errors).toEqual([]);
+ expect(data.a.plan.openingPosts).toBe(3);
+ expect(data.a.plan.openingNodeMm).toBeCloseTo(4700,6);
+ expect(data.a.plan.openingBeforeMm).toBeCloseTo(1000,6);
+ expect(data.a.plan.openingAfterMm).toBeCloseTo(6300,6);
+ expect(data.a.plan.spans).toBe(4);
+ expect(data.a.plan.segments.map(g=>g.key)).toEqual(['before-opening','after-opening']);
+ expect(data.a.plan.approved).toBe(true);
+ expect(data.site.summary.sides).toBe(2);
+ expect(data.site.summary.spans).toBe(9);
+ expect(data.site.summary.reserve).toBe(4);
+ expect(data.site.summary.openingPosts).toBe(3);
+ expect(data.bad.plan).toBeNull();
+ expect(data.separate.plan.openingPosts).toBe(4);
+ expect(data.separate.plan.segments.some(g=>g.key==='between-openings')).toBe(true);
+ const home=page.locator('#v2HomeScreen');
+ await home.locator('[data-v2-action="catalog"]').click();
+ await home.locator('[data-v2-action="pickets"]').click();
+ await home.locator('[data-picket-side="Б"]').click();
+ await home.locator('[data-picket-field="lengthMm"]').fill('15000');
+ await home.locator('[data-picket-side="А"]').click();
+ await expect(home.locator('[data-picket-field="lengthMm"]')).toHaveValue('12000');
+ await home.locator('details').filter({hasText:'Ворота и калитка на этой стороне'}).locator('summary').click();
+ await home.locator('[data-picket-field="gateMm"]').fill('3400');
+ await home.locator('[data-picket-field="wicketMm"]').fill('1000');
+ await home.locator('[data-picket-field="openingStartMm"]').fill('1000');
+ await expect(home.locator('[data-picket-plan]')).toContainText('До проёмов');
+ await home.locator('[data-picket-side="Б"]').click();
+ await expect(home.locator('[data-picket-field="lengthMm"]')).toHaveValue('15000');
+ await expect(home.locator('[data-picket-field="gateMm"]')).toHaveValue('0');
+ await home.locator('[data-picket-back]').click();
+ await home.locator('[data-v2-action="pickets"]').click();
+ await expect(home.locator('[data-picket-field="lengthMm"]')).toHaveValue('15000');
+ await expect(home.locator('[data-picket-site-summary]')).toContainText('Опоры проёмов отдельно');
+});
