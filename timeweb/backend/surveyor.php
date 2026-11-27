@@ -570,6 +570,87 @@ function kd_surveyor_art_quote(): never
     kd_surveyor_json(['quote'=>$reply],200,['Cache-Control'=>'no-store']);
 }
 
+
+// Strict pricing source for the new estimate only. The old public calculator
+// keeps its existing fallback behaviour. No settings are changed by this path.
+function kd_surveyor_art_price_source(mixed $saved): array
+{
+    require_once __DIR__ . '/excel-quote-validation.php';
+    if (!is_array($saved) || ($saved['version'] ?? null)!==2 || !is_array($saved['prices'] ?? null)
+        || !is_array($saved['standardPrices'] ?? null)) throw new RuntimeException('Нет проверенного импорта Excel');
+    $date=$saved['meta']['importedAt']??null;
+    if (!is_string($date)||!preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:Z|\+00:00)$/D',$date)||strtotime($date)===false) throw new RuntimeException('Нет даты импорта Excel');
+    $defaults=kd_defaults()['gateCalcPrices']??[];
+    if (!is_array($defaults)||!$defaults) throw new RuntimeException('Нет схемы тарифов');
+    foreach ($defaults as $ref=>$unused) {
+        $raw=$saved['prices'][$ref]??null;
+        $value=is_array($raw)?($raw['value']??null):$raw;
+        if (!is_numeric($value)||!is_finite((float)$value)||(float)$value<0||(float)$value>10000000)
+            throw new RuntimeException('Неполный импорт Excel');
+    }
+    // The legacy importer may have saved unvalidated standards. Recalculate all
+    // 38 from stored inputs at read time rather than trusting the stored totals.
+    $validated=kd_gate_validate_excel_payload($saved);
+    return ['prices'=>$validated['prices'],'importedAt'=>$date];
+}
+function kd_surveyor_estimate_readonly_data(array $body, array $catalog, mixed $saved, mixed $serviceRates): array
+{
+    $items=$body['items']??null;
+    if (!is_array($items)||!array_is_list($items)||count($items)<1||count($items)>50) throw new InvalidArgumentException('Нужно от 1 до 50 изделий');
+    $ids=[];$rows=[];$source=null;$sourceAttempted=false;
+    $kinds=['artGates','artFences','frames','sliding','pickets','profileFence','canopy'];
+    foreach ($items as $item) {
+        if (!is_array($item)||!is_string($item['id']??null)||!preg_match('/^[a-zA-Z0-9_-]{1,80}$/D',$item['id'])||isset($ids[$item['id']])
+            ||!in_array($item['kind']??null,$kinds,true)||!is_array($item['draft']??null)) throw new InvalidArgumentException('Некорректная позиция');
+        $id=$item['id'];$kind=$item['kind'];$ids[$id]=true;
+        $row=['id'=>$id,'kind'=>$kind,'status'=>'unavailable','reason'=>'pricing_not_connected','quote'=>null];
+        if ($kind!=='artGates') {$rows[]=$row;continue;}
+        $draft=$item['draft'];
+        if (!is_array($draft['dimensions']??null)||!is_array($draft['options']??null)) throw new InvalidArgumentException('Некорректные размеры или комплектация');
+        $request=['article'=>$draft['article']??null];
+        foreach (['gateWidthMm','gateHeightMm','wicketWidthMm','wicketHeightMm'] as $key)$request[$key]=$draft['dimensions'][$key]??null;
+        foreach (['installation','posts'] as $key){
+            $request[$key]=$draft['options'][$key]??null;
+            if (!is_bool($request[$key]))throw new InvalidArgumentException('Некорректная комплектация');
+        }
+        if (!$sourceAttempted) {
+            $sourceAttempted=true;
+            try {$source=kd_surveyor_art_price_source($saved);}catch(Throwable $e){$source=null;}
+        }
+        if (!$source) {$row['reason']='excel_not_verified';$rows[]=$row;continue;}
+        // A selected service must have its own explicit stored tariff; defaults
+        // from kd_prices() are not sufficient evidence of a current tariff.
+        $servicesOk=true;$safeCatalog=$catalog;
+        foreach (['installation'=>'catalogInstallation','posts'=>'catalogPosts'] as $flag=>$field){
+            if (!$request[$flag])continue;
+            $v=is_array($serviceRates)?($serviceRates[$field]??null):null;
+            if (!is_numeric($v)||!is_finite((float)$v)||(float)$v<0||(float)$v>10000000){$servicesOk=false;break;}
+            $safeCatalog[$field]=$v;
+        }
+        if (!$servicesOk) {$row['reason']='service_rate_missing';$rows[]=$row;continue;}
+        try {
+            $quote=kd_surveyor_art_quote_data($request,$safeCatalog,$source['prices']);
+            $row=['id'=>$id,'kind'=>$kind,'status'=>'calculated','reason'=>null,'quote'=>$quote,'importedAt'=>$source['importedAt']];
+        } catch (InvalidArgumentException $e) {throw $e;}
+        catch (Throwable $e) {$row['reason']='calculation_unavailable';}
+        $rows[]=$row;
+    }
+    // Even all calculated rows require owner approval of rates, shared work,
+    // delivery, and contract scope. No final price or release authority here.
+    return ['version'=>1,'rows'=>$rows,'totalRub'=>null,'deliveryPending'=>true,'canIssue'=>false,'canReleaseProduction'=>false];
+}
+function kd_surveyor_estimate_readonly(): never
+{
+    $session=kd_surveyor_require_session();
+    if (!in_array((string)$session['role'],['owner','surveyor'],true))kd_surveyor_json(['error'=>'Недостаточно прав'],403);
+    $body=kd_json_body(65536);
+    try {
+        $reply=kd_surveyor_estimate_readonly_data($body,kd_prices(),kd_setting_get('gate_excel_prices',null),kd_setting_get('prices',null));
+    } catch(InvalidArgumentException $e) {kd_surveyor_json(['error'=>$e->getMessage()],400);}
+    catch(Throwable $e) {error_log('KD estimate source unavailable: '.$e->getMessage());kd_surveyor_json(['error'=>'Расчёт временно недоступен'],503);}
+    kd_surveyor_json(['estimate'=>$reply],200,['Cache-Control'=>'no-store']);
+}
+
 function kd_surveyor_handle(string $route, string $method): never
 {
     if ($method === 'OPTIONS') kd_surveyor_preflight();
@@ -585,6 +666,7 @@ function kd_surveyor_handle(string $route, string $method): never
     }
     if ($suffix === 'sync' && $method === 'POST') kd_surveyor_sync();
     if ($suffix === 'art-quote' && $method === 'POST') kd_surveyor_art_quote();
+    if ($suffix === 'estimate-quote' && $method === 'POST') kd_surveyor_estimate_readonly();
     if ($suffix === 'owner-costs') kd_surveyor_owner_costs($method);
     if ($suffix === 'users' || str_starts_with($suffix,'users/')) {
         kd_surveyor_users($method, $suffix === 'users' ? '' : substr($suffix,strlen('users/')));
