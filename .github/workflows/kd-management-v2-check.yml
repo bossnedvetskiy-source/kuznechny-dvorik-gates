@@ -48,6 +48,7 @@ jobs:
         if: success() || failure()
         run: php -l timeweb/backend/surveyor.php
       - name: Build isolated preview from repository data only
+        id: preview
         if: success() || failure()
         run: |
           set -euo pipefail
@@ -57,6 +58,32 @@ jobs:
           node scripts/build-dev-preview.mjs
           test -s _site/dev-tools/index.html
           test -s _site/surveyor-test/index.html
+      - name: Verify frontend-only preview isolation
+        id: isolation
+        if: (success() || failure()) && steps.preview.outcome == 'success'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -z "$DEV_SURVEYOR_API_URL"
+          test ! -e _site/backend
+          test ! -e _site/local-api.php
+          for dir in dev-tools dev-tools-v4 surveyor-test; do
+            test -s "_site/$dir/index.html"
+            if grep -F 'window.KD_DEV_SURVEYOR_API=' "_site/$dir/index.html"; then
+              echo "::error::Unexpected staging API injection in $dir"
+              exit 1
+            fi
+          done
+          printf '%s\n' "$GITHUB_SHA" > _site/KD-V2-BUILD-SHA.txt
+      - name: Store isolated static preview (no deployment)
+        if: (success() || failure()) && steps.isolation.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: kd-management-v2-preview
+          path: _site/
+          if-no-files-found: error
+          retention-days: 5
+          compression-level: 1
       - name: Cache Playwright Chromium
         if: success() || failure()
         uses: actions/cache@v4
