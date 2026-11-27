@@ -40,7 +40,7 @@ export function mountV2Home({role,userId,navigate,newSurvey,open3D,listQuoteTarg
   style.textContent=`
 .kd-v2-home{--vbg:#111827;--vcard:#1f2937;--vtext:#f8fafc;--vmuted:#a5b4c7;--vline:#374151;--vacc:#93c5fd;--vprimary:#2563eb;background:var(--vbg);color:var(--vtext);padding:14px;border-radius:16px;max-width:1050px;margin:0 auto}
 .kd-v2-home[data-theme=light]{--vbg:#f1f5f9;--vcard:#fff;--vtext:#172033;--vmuted:#526176;--vline:#d3dce8;--vacc:#1d4ed8;--vprimary:#1d4ed8}
-.kd-v2-home *{box-sizing:border-box}#v2HomeScreen button{min-height:44px!important}.kd-v2-home button{font:inherit;color:inherit;cursor:pointer;min-height:44px}.kd-v2-home button:focus-visible{outline:3px solid var(--vacc);outline-offset:2px}.kd-v2-head{display:flex;align-items:center;gap:8px;margin-bottom:14px}.kd-v2-head h2{font-size:17px;margin:0;flex:1}.kd-v2-home small{color:var(--vmuted);font-size:12px;display:block}.kd-v2-iconbtn{border:1px solid var(--vline);background:var(--vcard);border-radius:10px;width:44px;flex:none}.kd-v2-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.kd-v2-grid.two{grid-template-columns:repeat(2,minmax(0,1fr))}.kd-v2-card,.kd-v2-tile{border:1px solid var(--vline);background:var(--vcard);border-radius:12px;padding:12px;min-width:0}.kd-v2-card strong{display:block;font-size:24px}.kd-v2-panel{margin:12px 0}.kd-v2-tile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;text-align:center;font-size:13px!important;min-height:86px!important;overflow-wrap:anywhere}.kd-v2-home svg{width:25px;height:25px;stroke:var(--vacc);stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round}.kd-v2-home h3{font-size:16px;margin:16px 0 10px}.kd-v2-action{display:flex;align-items:center;gap:12px;text-align:left;width:100%;margin-bottom:10px;border-radius:12px;padding:14px;border:1px solid var(--vline);background:var(--vcard)}.kd-v2-action.primary{background:var(--vprimary);color:white}.kd-v2-action.primary small{color:#dbeafe}.kd-v2-question{display:block;width:100%;background:transparent;border:0;border-top:1px solid var(--vline);text-align:left;padding:10px 0}.kd-v2-detail{margin:12px 0;line-height:1.4}.kd-v2-note{color:var(--vmuted);font-size:12px;margin:0 0 12px}.kd-v2-home [hidden]{display:none!important}
+.kd-v2-home *{box-sizing:border-box}#v2HomeScreen button{min-height:46px!important}.kd-v2-home button{font:inherit;color:inherit;cursor:pointer;min-height:44px}.kd-v2-home button:focus-visible{outline:3px solid var(--vacc);outline-offset:2px}.kd-v2-head{display:flex;align-items:center;gap:8px;margin-bottom:14px}.kd-v2-head h2{font-size:17px;margin:0;flex:1}.kd-v2-home small{color:var(--vmuted);font-size:12px;display:block}.kd-v2-iconbtn{border:1px solid var(--vline);background:var(--vcard);border-radius:10px;width:44px;flex:none}.kd-v2-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.kd-v2-grid.two{grid-template-columns:repeat(2,minmax(0,1fr))}.kd-v2-card,.kd-v2-tile{border:1px solid var(--vline);background:var(--vcard);border-radius:12px;padding:12px;min-width:0}.kd-v2-card strong{display:block;font-size:24px}.kd-v2-panel{margin:12px 0}.kd-v2-tile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;text-align:center;font-size:13px!important;min-height:86px!important;overflow-wrap:anywhere}.kd-v2-home svg{width:25px;height:25px;stroke:var(--vacc);stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round}.kd-v2-home h3{font-size:16px;margin:16px 0 10px}.kd-v2-action{display:flex;align-items:center;gap:12px;text-align:left;width:100%;margin-bottom:10px;border-radius:12px;padding:14px;border:1px solid var(--vline);background:var(--vcard)}.kd-v2-action.primary{background:var(--vprimary);color:white}.kd-v2-action.primary small{color:#dbeafe}.kd-v2-question{display:block;width:100%;background:transparent;border:0;border-top:1px solid var(--vline);text-align:left;padding:10px 0}.kd-v2-detail{margin:12px 0;line-height:1.4}.kd-v2-note{color:var(--vmuted);font-size:12px;margin:0 0 12px}.kd-v2-home [hidden]{display:none!important}
 html.kd-v2-local{--bg:var(--kd-bg);--surface:var(--kd-card);--surface-2:var(--kd-soft);--text:var(--kd-text);--muted:var(--kd-muted);--line:var(--kd-line);--gold:var(--kd-accent);--gold-2:var(--kd-accent);--dark:var(--kd-card);--kd-bg:#111827;--kd-card:#1f2937;--kd-soft:#283548;--kd-text:#f8fafc;--kd-muted:#a5b4c7;--kd-line:#374151;--kd-accent:#93c5fd;--kd-primary:#2563eb;color-scheme:dark}
 html.kd-v2-local[data-kd-theme=light]{--kd-bg:#f1f5f9;--kd-card:#fff;--kd-soft:#e2e8f0;--kd-text:#172033;--kd-muted:#526176;--kd-line:#d3dce8;--kd-accent:#1d4ed8;--kd-primary:#1d4ed8;color-scheme:light}
 .kd-v2-local body,.kd-v2-local #mainView{background:var(--kd-bg)!important;color:var(--kd-text)!important}
@@ -218,7 +218,12 @@ html.kd-v2-local[data-kd-theme=light]{--kd-bg:#f1f5f9;--kd-card:#fff;--kd-soft:#
     if(action==='clients'){navigate('clients');return}
     if(action==='calc'){navigate('surveys');return}
     if(action==='orders'&&owner){pending('Реестр заказов появится на этапе 6. Замеры доступны в пространстве замерщика.');return}
-    if(action==='wallet'&&owner){navigate('owner');return}
+    if(action==='wallet'&&owner){
+      pending('Учёт фактических оплат и расходов появится на этапе 9. Сейчас доступна только предварительная экономика по замерам.');
+      const detail=body.querySelector('.kd-v2-detail');
+      const next=document.createElement('button');next.type='button';next.className='kd-v2-action';next.dataset.v2Action='estimateEconomy';next.textContent='Расчётная экономика по замерам';detail.append(next);return
+    }
+    if(action==='estimateEconomy'&&owner){navigate('owner');return}
     if(action==='quick'&&owner){navigate('ownerQuick');return}
     if(action==='quick'){productOpen=false;catalogOpen=true;render();return}
     if(action==='measure'){navigate('surveys');newSurvey();return}
@@ -230,13 +235,14 @@ html.kd-v2-local[data-kd-theme=light]{--kd-bg:#f1f5f9;--kd-card:#fff;--kd-soft:#
   function syncNav(screen=currentScreen){
     currentScreen=screen;
     updateThemeButton();
+    const focusedTarget=navNodes.includes(document.activeElement)?document.activeElement.dataset.screen:null;
     navNodes.splice(0).forEach(n=>n.remove());
     const isOwner=workspace==='owner'&&owner;
     const items=isOwner?[['home','Главная','v2Home'],['orders','Заказы','ordersPending'],['clients','Клиенты','clients'],['factory','Цех','factoryPending'],['menu','Ещё','settings']]:[['home','Главная','v2Home'],['calc','Расчёты','surveys'],['clients','Клиенты','clients'],['menu','Ещё','settings']];
     for(const [id,label,target] of items){
       const nav=document.createElement('button');nav.className='nav-btn kd-v2-nav';nav.type='button';nav.dataset.screen=target;
       nav.innerHTML=icon(id)+'<b>'+label+'</b>';
-      const selected=screen===target||(target==='v2Home'&&['owner','ownerQuick'].includes(screen))||(target==='surveys'&&screen==='threeD');
+      const selected=screen===target||(target==='v2Home'&&['owner','ownerQuick'].includes(screen))||(target==='surveys'&&screen==='threeD')||(target==='settings'&&screen==='team');
       nav.classList.toggle('active',selected);if(selected)nav.setAttribute('aria-current','page');
       nav.addEventListener('click',()=>{
         if(target==='ordersPending'||target==='factoryPending'){
@@ -246,6 +252,7 @@ html.kd-v2-local[data-kd-theme=light]{--kd-bg:#f1f5f9;--kd-card:#fff;--kd-soft:#
       });
       bottom.append(nav);navNodes.push(nav);
     }
+    if(focusedTarget)navNodes.find(n=>n.dataset.screen===focusedTarget)?.focus({preventScroll:true});
   }
   render();syncNav();
   return {onScreen:syncNav,destroy(){saveProductDraft(null);host.remove();globalTheme.remove();navNodes.forEach(n=>n.remove());oldNav.forEach(btn=>btn.classList.remove('kd-v2-legacy-nav'));root.classList.remove('kd-v2-local');delete root.dataset.kdTheme;}};
