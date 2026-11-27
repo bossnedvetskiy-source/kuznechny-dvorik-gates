@@ -38,6 +38,28 @@ html.kd-v2-local[data-kd-theme=light]{--kd-bg:#f1f5f9;--kd-card:#fff;--kd-soft:#
 .kd-v2-local #mainView :is(#surveysScreen,#clientsScreen) .searchbox input{background:transparent!important}
 .kd-v2-local #mainView :is(#surveysScreen,#clientsScreen) .searchbox input::placeholder{color:var(--kd-muted)!important}
 .kd-v2-local #mainView .nav-btn:focus-visible,.kd-v2-local #mainView .btn:focus-visible{outline:3px solid var(--kd-accent);outline-offset:2px}
+
+/* Apply the shell palette to ordinary forms and survey cards, not the customer
+   presentation or the drawing canvas; those retain their existing rendering. */
+.kd-v2-local :is(#surveyDialog,#clientDialog,#employeeDialog,#surveyDataDialog,#calculationPickerDialog,#surveyDetailsDialog) .sheet{background:var(--kd-bg)!important;color:var(--kd-text)!important}
+.kd-v2-local #surveyDetailsDialog{background:var(--kd-bg)!important;color:var(--kd-text)!important}
+.kd-v2-local :is(#surveyDialog,#clientDialog,#employeeDialog,#surveyDataDialog,#calculationPickerDialog,#surveyDetailsDialog) .sheet-head{background:var(--kd-bg)!important;border-color:var(--kd-line)!important}
+.kd-v2-local :is(#surveyDialog,#clientDialog,#employeeDialog,#surveyDataDialog,#calculationPickerDialog,#surveyDetailsDialog) :is(h2,h3,.field>span,.eyebrow){font-family:system-ui,sans-serif!important;color:var(--kd-text)!important}
+.kd-v2-local :is(#surveyDialog,#clientDialog,#employeeDialog,#surveyDataDialog,#calculationPickerDialog,#surveyDetailsDialog) :is(.field input,.field textarea,.field select,.icon-btn,.btn-secondary){background:var(--kd-card)!important;color:var(--kd-text)!important;border:1px solid var(--kd-line)!important}
+.kd-v2-local :is(#surveyDialog,#clientDialog,#employeeDialog,#surveyDataDialog,#calculationPickerDialog,#surveyDetailsDialog) .btn-primary{background:var(--kd-primary)!important;color:#fff!important;border-color:var(--kd-primary)!important;box-shadow:none!important}
+.kd-v2-local #surveyDetailsDialog :is(.v3-survey-head,.v3-product-tile,.calculation-section,.calculation-card,.v3-extra,.v3-preview-bar,.calculation-empty,.v3-note){background:var(--kd-card)!important;color:var(--kd-text)!important;border-color:var(--kd-line)!important;box-shadow:none!important}
+.kd-v2-local #surveyDetailsDialog :is(.v3-category-icon,.v3-edit-link,.calculation-edit-btn,.v3-add-more,.calculation-card-tags>span){background:var(--kd-soft)!important;color:var(--kd-accent)!important;border-color:var(--kd-line)!important}
+.kd-v2-local #surveyDetailsDialog :is(.v3-address b,.v3-product-label b,.calculation-card-copy>b,.calculation-section .section-head h3,.v3-preview-bar b){color:var(--kd-text)!important;font-family:system-ui,sans-serif!important}
+.kd-v2-local #surveyDetailsDialog :is(.v3-address span,.v3-survey-meta,.v3-product-hint,.v3-product-label small,.calculation-card-lines>span,.calculation-card-copy>small,.calculation-card-price small,.v3-preview-bar small,.estimate-help,.v3-saved-count){color:var(--kd-muted)!important}
+.kd-v2-local #surveyDetailsDialog :is(.v3-product-arrow,.calculation-card-price>b,.v3-extra summary span){color:var(--kd-accent)!important}
+.kd-v2-local #surveyDetailsDialog .calculation-show-btn{background:var(--kd-primary)!important;color:white!important;border-color:var(--kd-primary)!important}
+.kd-v2-local #surveyDetailsDialog .v3-product-tile{grid-template-columns:58px minmax(0,1fr) 20px!important;min-height:86px!important;gap:10px!important;padding:10px!important;border-radius:14px!important}
+.kd-v2-local #surveyDetailsDialog .v3-category-icon{width:58px!important;height:58px!important;border-radius:12px!important}
+.kd-v2-local #surveyDetailsDialog .v3-category-icon svg{max-width:48px;max-height:48px}
+.kd-v2-local #surveyDetailsDialog .v3-product-label b{font-size:16px!important;font-weight:700!important;overflow-wrap:anywhere}
+.kd-v2-local #surveyDetailsDialog .v3-product-label small{font-size:12px!important}
+.kd-v2-local #surveyDetailsDialog .v3-product-section h3{font-size:19px!important;font-weight:700!important}
+.kd-v2-local #surveyDetailsDialog .v3-complete-action .btn{min-height:48px!important;font-size:15px!important}
 @media(min-width:700px){.kd-v2-grid{grid-template-columns:repeat(4,minmax(0,1fr))}.kd-v2-grid.two{grid-template-columns:repeat(4,minmax(0,1fr))}.kd-v2-tile{min-height:105px!important}}
 `;
   host.append(style);
