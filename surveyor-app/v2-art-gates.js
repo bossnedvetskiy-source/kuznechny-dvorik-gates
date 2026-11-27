@@ -338,22 +338,48 @@ export function findArtGates(query=''){
  const q=normalize(query);
  return ART_GATE_CATALOG.filter(row=>normalize(row.article).includes(q));
 }
+const ART_LIMITS=Object.freeze({gateWidthMm:[800,8000],gateHeightMm:[1000,3000],wicketWidthMm:[700,2500],wicketHeightMm:[1000,3000]});
+export function artGateRequest(article,dimensions={},options={}){
+ if(!ART_GATE_CATALOG.some(x=>x.article===article))throw Error('Артикул отсутствует в каталоге');
+ const request={article};
+ for(const [key,[min,max]] of Object.entries(ART_LIMITS)){
+  const raw=dimensions[key]??ART_GATE_STANDARD[key],v=Number(raw);
+  if((typeof raw!=='string'&&typeof raw!=='number')||String(raw).trim()===''||!Number.isSafeInteger(v)||v<min||v>max)throw Error('Проверьте размеры: '+min+'–'+max+' мм');
+  request[key]=v;
+ }
+ for(const key of ['installation','posts']){
+  const value=options[key]??false;
+  if(typeof value!=='boolean')throw Error('Некорректная комплектация');
+  request[key]=value;
+ }
+ return request;
+}
+// Validate a server reply against the exact request, copy only customer-safe fields.
+export function artGateVerifiedQuote(request,reply){
+ const expected=artGateRequest(request.article,request,request),q=reply?.quote;
+ if(q?.version!==1||q.kind!=='artGate'||q.article!==expected.article||q.deliveryPending!==true||typeof q.tariffRevision!=='string'||!/^[a-f0-9]{64}$/.test(q.tariffRevision)||typeof q.calculatedAt!=='string'||!Number.isFinite(Date.parse(q.calculatedAt)))throw Error('Некорректный ответ сервера');
+ for(const key of Object.keys(expected).filter(k=>k!=='article'))if(q.configuration?.[key]!==expected[key])throw Error('Параметры ответа не совпадают с запросом');
+ const prices={};
+ for(const key of ['product','installation','posts','total']){
+  const v=q.prices?.[key];if(!Number.isSafeInteger(v)||v<0)throw Error('Некорректная сумма');prices[key]=v;
+ }
+ if(prices.product<=0||prices.total!==prices.product+prices.installation+prices.posts||!expected.installation&&prices.installation!==0||!expected.posts&&prices.posts!==0)throw Error('Некорректная комплектация цены');
+ return {version:1,kind:'artGate',article:expected.article,configuration:Object.fromEntries(Object.entries(expected).filter(([k])=>k!=='article')),prices,deliveryPending:true,tariffRevision:q.tariffRevision,calculatedAt:q.calculatedAt};
+}
+
 export function artGateSnapshot(article,dimensions={}){
  const model=ART_GATE_CATALOG.find(x=>x.article===article);
- const configuration={...ART_GATE_STANDARD};
- for(const key of Object.keys(configuration)){
-  if(dimensions[key]!==undefined){const v=dimensions[key];if((typeof v!=='string'&&typeof v!=='number')||String(v).trim()===''||!Number.isSafeInteger(Number(v))||Number(v)<=0||Number(v)>6000)throw Error('Проверьте размеры в целых мм');configuration[key]=Number(v);}
- }
+ const {article:unused,installation,posts,...configuration}=artGateRequest(article,dimensions);
  if(!model)throw Error('Артикул отсутствует в каталоге');
  const standard=Object.keys(ART_GATE_STANDARD).every(k=>configuration[k]===ART_GATE_STANDARD[k]);
  return {article,configuration,standard,referenceRub:standard?model.standardSnapshotRub:null,verified:false};
 }
 const money=n=>new Intl.NumberFormat('ru-RU',{maximumFractionDigits:0}).format(n)+' ₽';
 const img=name=>'../assets/catalog/'+name;
-export function mountArtGateCatalog(root,{onBack,onLegacy,draft,onDraft}={}){
+export function mountArtGateCatalog(root,{onBack,onLegacy,draft,onDraft,onQuote}={}){
  let selected=ART_GATE_CATALOG.find(x=>x.article===draft?.article)||null;
  let dimensions={...ART_GATE_STANDARD,...draft?.dimensions};
- let query='';
+ let query='',options={installation:draft?.options?.installation===true,posts:draft?.options?.posts===true},revision=0;
  root.innerHTML='<section class="kd-product-editor" aria-label="Каталог кованых ворот"><button type="button" class="kd-v2-action" data-art-back>← К каталогу</button><h3>Кованые ворота и калитки</h3><p class="kd-v2-note">38 активных артикулов из каталога сайта. Справочные цены стандартного комплекта — снимок от 01.09.2026, без монтажа, столбов и доставки. Не актуальная смета.</p><div class="kd-v2-card" data-art-selection hidden></div><label><span>Поиск артикула</span><input data-art-search type="search" placeholder="Например, 6 или 17С" autocomplete="off"></label><div data-art-count class="kd-v2-note"></div><div class="kd-v2-grid two" data-art-list></div><div role="status"><button class="kd-v2-action" type="button" data-v2-action="measure">Перейти к действующему замеру</button><small>Старый калькулятор доступен в обычном приложении; в изолированной телефонной копии внешние калькуляторы отключены.</small></div></section>';
  const list=root.querySelector('[data-art-list]'),detail=root.querySelector('[data-art-selection]');
  function renderList(){
@@ -369,10 +395,14 @@ export function mountArtGateCatalog(root,{onBack,onLegacy,draft,onDraft}={}){
   }
  }
  function renderPrice(){
+  revision++;
   const price=detail.querySelector('[data-art-price]');
   try{const q=artGateSnapshot(selected.article,dimensions);price.textContent=q.standard?'Справочная цена: '+money(q.referenceRub)+' · не подтверждена на текущую дату':'Нестандартный размер: нужна актуальная формула расчёта. Цена не подставляется.';}
   catch(e){price.textContent=e.message;}
-  onDraft?.({article:selected.article,dimensions:{...dimensions}});
+  const button=detail.querySelector('[data-art-calculate]');
+  if(button){try{artGateRequest(selected.article,dimensions,options);button.disabled=!onQuote}catch{button.disabled=true}}
+  detail.querySelector('[data-art-result]')?.replaceChildren();
+  onDraft?.({article:selected.article,dimensions:{...dimensions},options:{...options}});
  }
  function renderSelection(){
   detail.hidden=!selected;if(!selected)return;
@@ -383,15 +413,31 @@ export function mountArtGateCatalog(root,{onBack,onLegacy,draft,onDraft}={}){
   detail.append(gallery);
   const grid=document.createElement('div');grid.className='kd-product-grid';
   for(const [key,label] of [['gateWidthMm','Ширина ворот, мм'],['gateHeightMm','Высота ворот, мм'],['wicketWidthMm','Ширина калитки, мм'],['wicketHeightMm','Высота калитки, мм']]){
-   const l=document.createElement('label'),s=document.createElement('span'),i=document.createElement('input');s.textContent=label;i.type='number';i.step='1';i.min='1';i.inputMode='numeric';i.dataset.artField=key;i.value=dimensions[key];l.append(s,i);grid.append(l);
+   const l=document.createElement('label'),s=document.createElement('span'),i=document.createElement('input');s.textContent=label;i.type='number';i.step='1';i.min=String(ART_LIMITS[key][0]);i.max=String(ART_LIMITS[key][1]);i.inputMode='numeric';i.dataset.artField=key;i.value=dimensions[key];l.append(s,i);grid.append(l);
   }
   detail.append(grid);
   const price=document.createElement('p');price.dataset.artPrice='';price.setAttribute('aria-live','polite');detail.append(price);
+  for(const [key,label] of [['installation','Монтаж'],['posts','Новые усиленные столбы']]){
+   const l=document.createElement('label'),i=document.createElement('input'),s=document.createElement('span');l.className='kd-product-check';i.type='checkbox';i.dataset.artOption=key;i.checked=options[key];s.textContent=label;l.append(i,s);detail.append(l);
+  }
+  const button=document.createElement('button');button.type='button';button.className='kd-v2-action primary';button.dataset.artCalculate='';button.textContent=onQuote?'Рассчитать по формуле':'Сервер расчёта не подключён';detail.append(button);
+  const result=document.createElement('div');result.dataset.artResult='';result.setAttribute('role','status');detail.append(result);
+  button.onclick=async()=>{
+   if(!onQuote)return;
+   const id=++revision;
+   try{
+    const request=artGateRequest(selected.article,dimensions,options);button.disabled=true;result.textContent='Расчёт…';
+    const q=artGateVerifiedQuote(request,await onQuote(request));
+    if(id!==revision||!root.isConnected)return;
+    result.textContent='Изделие: '+money(q.prices.product)+' · Монтаж: '+money(q.prices.installation)+' · Столбы: '+money(q.prices.posts)+' · Итого без доставки: '+money(q.prices.total);
+   }catch(e){if(id===revision)result.textContent=e.message||'Расчёт недоступен'}
+   finally{if(id===revision)button.disabled=false}
+  };
   renderPrice();
  }
  root.querySelector('[data-art-search]').oninput=e=>{query=e.target.value;renderList()};
  list.onclick=e=>{const button=e.target.closest('[data-art-article]');if(!button)return;selected=ART_GATE_CATALOG.find(x=>x.article===button.dataset.artArticle);renderSelection();renderList();detail.scrollIntoView({block:'nearest'});};
- detail.oninput=e=>{const key=e.target.dataset.artField;if(!Object.hasOwn(ART_GATE_STANDARD,key))return;dimensions[key]=e.target.value;renderPrice();};
+ detail.oninput=e=>{const option=e.target.dataset.artOption;if(Object.hasOwn(options,option)){options[option]=e.target.checked;renderPrice();return}const key=e.target.dataset.artField;if(!Object.hasOwn(ART_GATE_STANDARD,key))return;dimensions[key]=e.target.value;renderPrice();};
  root.querySelector('[data-art-back]').onclick=()=>onBack?.();
  renderSelection();renderList();
 }
