@@ -330,8 +330,10 @@ async function nextSurveyNumber() {
   await idbPut('meta', item);
   return `ЗМ-${String(value).padStart(4, '0')}`;
 }
+function isSwingTestSurvey(survey){return survey?.configuration?.testOnly===true||surveyCalculations(survey).some(item=>item?.type==='simpleSwing'&&item?.payload?.test===true);}
 function displaySurveyNumber(survey) {
-  return survey.number || survey.localNumber || 'Замер без номера';
+  const number=survey.number || survey.localNumber || 'Замер без номера';
+  return isSwingTestSurvey(survey)?'ТЕСТ · '+number:number;
 }
 
 async function upsertClient({ name = '', phone, address = '' }) {
@@ -372,6 +374,7 @@ async function createSurvey(data) {
   };
   if(data.initialCalculation){
     survey.configuration.calculations=[{...data.initialCalculation,estimateRole:'included'}];
+    if(data.initialCalculation.type==='simpleSwing'&&data.initialCalculation.payload?.test===true)survey.configuration.testOnly=true;
     survey.schemaVersion=4;
     syncSurveyWorkTypes(survey);
   }
@@ -458,7 +461,7 @@ async function syncNow({ silent = false } = {}) {
     const allClients = await idbGetAll('clients');
     const allSurveys = await idbGetAll('surveys');
     const pendingClients = allClients.filter(x => x.syncState === 'pending' || x.syncState === 'conflict');
-    const pendingSurveys = allSurveys.filter(x => x.syncState === 'pending' || x.syncState === 'conflict');
+    const pendingSurveys = allSurveys.filter(x => !isSwingTestSurvey(x)&&(x.syncState === 'pending' || x.syncState === 'conflict'));
     const since = await metaGet('serverLastSync', '1970-01-01 00:00:00');
     const payload = {
       since,
@@ -634,7 +637,7 @@ function v2LocalPreviewEnabled() {
 }
 // Local opt-in editor: only explicit save can create a survey. No live API.
 function v2DraftAccessible(survey,user){
-  return Boolean(survey&&!survey.archived&&survey.status==='draft'&&user&&(user.role==='owner'||survey.createdBy===user.id));
+  return Boolean(survey&&!isSwingTestSurvey(survey)&&!survey.archived&&survey.status==='draft'&&user&&(user.role==='owner'||survey.createdBy===user.id));
 }
 async function listV2QuoteTargets(){
   if(!v2LocalPreviewEnabled()||!currentUser)throw new Error('Локальный режим недоступен');
@@ -1672,7 +1675,7 @@ function calculationsHtml(survey) {
         </article>`;
       }).join('')}
     </div>
-    <button class="btn btn-secondary btn-block v3-add-more" data-add-calculation="${survey.id}" type="button">+ Добавить ещё вариант</button>` : ''}
+    ${isSwingTestSurvey(survey)?'':`<button class="btn btn-secondary btn-block v3-add-more" data-add-calculation="${survey.id}" type="button">+ Добавить ещё вариант</button>`}` : ''}
     ${rows.length ? `<section class="estimate-summary" aria-label="Общая смета объекта">
       <div class="estimate-summary-head"><b>Общая смета объекта</b><span>${estimate.selected.length} в заказе · ${estimate.alternatives.length} альтернатив</span></div>
       ${estimate.selected.length ? `
@@ -1916,9 +1919,10 @@ async function openSurveyDetails(id, {openExtra=false} = {}) {
   $('#detailsNumber').textContent = displaySurveyNumber(survey);
   const rows = surveyCalculations(survey);
   $('#surveyDetailsContent').innerHTML = `
+    ${isSwingTestSurvey(survey)?'<div class="notice notice-lock">ТЕСТ · условные цены. Не заказ и не коммерческое предложение.</div>':''}
     <section class="v3-survey-head">
       <div class="v3-address"><span>Объект</span><b>${escapeHtml(survey.address || 'Адрес не указан')}</b></div>
-      <button type="button" class="v3-edit-link" data-edit-survey-data="${escapeHtml(survey.id)}">${survey.address ? 'Изменить' : 'Добавить'}</button>
+      ${isSwingTestSurvey(survey)?'':`<button type="button" class="v3-edit-link" data-edit-survey-data="${escapeHtml(survey.id)}">${survey.address ? 'Изменить' : 'Добавить'}</button>`}
       <div class="v3-survey-meta"><span>${survey.clientPhone ? '☎ ' + escapeHtml(survey.clientPhone) : (survey.address ? 'Телефон не указан' : 'Контакты не заполнены')}</span>${survey.clientName ? `<span>${escapeHtml(survey.clientName)}</span>` : ''}<span class="v3-save-status">${escapeHtml(surveySyncText(survey))}</span></div>
     </section>
     ${currentUser?.role === 'owner' ? `<div class="owner-detail-tabs" role="tablist" aria-label="Раздел заказа">
@@ -1930,9 +1934,9 @@ async function openSurveyDetails(id, {openExtra=false} = {}) {
         ${ownerReportHtml(buildOwnerReport(survey,unifiedEstimate(survey),ownerCostsCache[survey.id]),unifiedEstimate(survey))}
       </div>` : ''}
     <div data-owner-pane="quote">
-      ${v3ProductTools(survey)}
+      ${isSwingTestSurvey(survey)?'':v3ProductTools(survey)}
       ${calculationsHtml(survey)}
-      ${unifiedEstimate(survey).selected.length ? `<section class="v3-preview-bar">
+      ${!isSwingTestSurvey(survey)&&unifiedEstimate(survey).selected.length ? `<section class="v3-preview-bar">
         <div><small>Предварительно по заказу</small><b>${formatMoney(unifiedEstimate(survey).total)}</b></div>
         <button type="button" class="btn btn-primary" data-v3-preview>Показать клиенту →</button>
       </section>` : ''}
@@ -1946,7 +1950,7 @@ async function openSurveyDetails(id, {openExtra=false} = {}) {
       ${currentUser.role === 'owner' ? `<div class="v3-archive-action"><button class="btn btn-danger btn-block" data-archive-survey="${escapeHtml(survey.id)}" type="button">В архив</button></div>` : ''}
     </details>
     <section class="v3-complete-action">
-      ${survey.status === 'ready'
+      ${isSwingTestSurvey(survey)?'<div class="notice notice-lock">Завершение тестового замера отключено.</div>':survey.status === 'ready'
         ? '<div class="notice notice-ready">✓ Замер завершён</div>'
         : `<button class="btn btn-primary btn-block" data-complete-survey="${escapeHtml(survey.id)}" type="button">✓ Завершить замер</button>`}
     </section>`;
@@ -2037,6 +2041,7 @@ async function openSurveyDetails(id, {openExtra=false} = {}) {
 }
 
 function showCustomerView(survey, onlyCalculationId = '') {
+  if(isSwingTestSurvey(survey))return showToast('Тестовые цены нельзя показывать как коммерческое предложение');
   const estimate = unifiedEstimate(survey);
   const onlyItem = onlyCalculationId ? surveyCalculations(survey).find(item=>item.id===onlyCalculationId) : null;
   if (onlyCalculationId && !onlyItem) return;
@@ -2084,6 +2089,7 @@ function showCustomerView(survey, onlyCalculationId = '') {
 async function openSurveyDataDialog(surveyId) {
   const survey = await idbGet('surveys', surveyId);
   if (!survey) return;
+  if(isSwingTestSurvey(survey))return showToast('Не добавляйте реальные контакты к тестовому замеру');
   $('#surveyDataId').value = survey.id;
   $('#surveyDataName').value = survey.clientName || '';
   $('#surveyDataPhone').value = survey.clientPhone || '';
@@ -2100,6 +2106,7 @@ async function saveSurveyData() {
   const surveyId = $('#surveyDataId').value;
   const survey = await idbGet('surveys', surveyId);
   if (!survey) return showToast('Замер не найден');
+  if(isSwingTestSurvey(survey))return showToast('Тестовые замеры не содержат контактов');
 
   const name = $('#surveyDataName').value.trim();
   const phoneRaw = $('#surveyDataPhone').value.trim();
@@ -2148,6 +2155,7 @@ async function saveSurveyData() {
 async function completeSurvey(id) {
   const survey = await idbGet('surveys', id);
   if (!survey || survey.status === 'ready') return;
+  if(isSwingTestSurvey(survey))return showToast('Тестовый замер нельзя завершить');
   survey.status = 'ready';
   survey.updatedAt = new Date().toISOString();
   survey.syncState = API_ENABLED ? 'pending' : 'local';
