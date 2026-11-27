@@ -367,6 +367,15 @@ export function artGateVerifiedQuote(request,reply){
  return {version:1,kind:'artGate',article:expected.article,configuration:Object.fromEntries(Object.entries(expected).filter(([k])=>k!=='article')),prices,deliveryPending:true,tariffRevision:q.tariffRevision,calculatedAt:q.calculatedAt};
 }
 
+// Build an allowlisted customer-only draft from an exact, validated server reply.
+// Not an authorization token: the future persistence endpoint must recheck it server-side.
+export function buildArtGateCalculation(request,reply,id,now=new Date().toISOString()){
+ const q=artGateVerifiedQuote(request,reply),c=q.configuration;
+ return {id,type:'artGate',title:'Кованые ворота · '+q.article,total:q.prices.total,
+   summary:q.article+' · ворота '+c.gateWidthMm+' × '+c.gateHeightMm+' мм · калитка '+c.wicketWidthMm+' × '+c.wicketHeightMm+' мм',
+   createdAt:now,updatedAt:now,payload:{category:'artGate',article:q.article,configuration:c,prices:q.prices,deliveryPending:true,tariffRevision:q.tariffRevision,calculatedAt:q.calculatedAt}};
+}
+
 export function artGateSnapshot(article,dimensions={}){
  const model=ART_GATE_CATALOG.find(x=>x.article===article);
  const {article:unused,installation,posts,...configuration}=artGateRequest(article,dimensions);
