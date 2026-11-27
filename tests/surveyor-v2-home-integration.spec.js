@@ -317,3 +317,49 @@ test('v2 local quick draft survives reload, reset and explicit logout without cr
   await page.locator('.kd-v2-nav[data-screen="surveys"]').click();
   await expect(page.locator('#surveyList .survey-card')).toHaveCount(0);
 });
+
+test('quick quote explicitly creates one survey and saves a second variant into it',async({page})=>{
+  test.setTimeout(90000);
+  await login(page,'zamer');
+  const home=page.locator('#v2HomeScreen');
+  const open=async()=>{
+    await expect(home).toBeVisible({timeout:20000});
+    await home.locator('[data-v2-action="quick"]').click();
+    await home.locator('[data-v2-action="sliding"]').click();
+    await expect(home.locator('.kd-product-editor')).toBeVisible();
+  };
+  await open();
+  await home.locator('[data-product-field="widthMm"]').fill('4200');
+  await home.locator('[data-product-field="paint"]').uncheck();
+  await home.locator('[data-product-add]').click();
+  await expect(home.locator('[data-product-target] option')).toHaveCount(1);
+  await home.locator('[data-product-confirm]').click();
+  await expect(page.locator('#surveyDetailsDialog')).toBeVisible();
+  await expect(page.locator('.calculation-card')).toHaveCount(1);
+  await page.locator('#closeDetailsBtn').click();
+  await expect(page.locator('#surveyList .survey-card')).toHaveCount(1);
+  await page.locator('.kd-v2-nav[data-screen="v2Home"]').click();
+  await open();
+  await home.locator('[data-product-field="widthMm"]').fill('4300');
+  await home.locator('[data-product-add]').click();
+  await expect(home.locator('[data-product-target] option')).toHaveCount(2);
+  await home.locator('[data-product-target]').selectOption({index:1});
+  await home.locator('[data-product-confirm]').click();
+  await expect(page.locator('#surveyDetailsDialog')).toBeVisible();
+  await expect(page.locator('.calculation-card')).toHaveCount(2);
+  const saved=await page.evaluate(async()=>{
+    const db=await new Promise((resolve,reject)=>{const req=indexedDB.open('kd-surveyor-stage1');req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)});
+    const rows=await new Promise((resolve,reject)=>{const req=db.transaction('surveys').objectStore('surveys').getAll();req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)});
+    db.close();
+    return rows.map(s=>({workTypes:s.workTypes,calculations:s.configuration.calculations}));
+  });
+  expect(saved).toHaveLength(1);
+  expect(saved[0].workTypes).toEqual(['gates']);
+  const [first,second]=saved[0].calculations;
+  expect(first.payload.configuration.width).toBe(4.2);
+  expect(first.payload.configuration.paint).toBe(false);
+  expect(first.estimateRole).toBe('included');
+  expect(second.payload.configuration.width).toBe(4.3);
+  expect(second.estimateRole).toBe('alternative');
+  expect(JSON.stringify(saved)).not.toMatch(/ownerCosts|wageRates|profit/);
+});
