@@ -1,17 +1,14 @@
 import '../naves/geometry.js';
 import '../naves/pricing.js';
 // Existing public canopy engine, without adding tariff constants or changing legacy calculator.
-export const CANOPY_DEFAULTS=Object.freeze({widthMm:3400,lengthMm:8400,visibleHeightMm:2100,riseMm:567,trussHeightMm:250,overhangMm:150,endFlatMm:300,cellStepMm:400,coverage:'Поликарбонат',trussType:'Треугольная',materialMode:'30×30×2',lagMode:'Стандарт',installType:'Бетонирование',postsNeeded:true,existingPosts:0,beamsExisting:false,paint:true});
-const int=(v,min,max)=>(typeof v==='number'||typeof v==='string'&&v.trim()!=='')&&Number.isSafeInteger(Number(v))&&Number(v)>=min&&Number(v)<=max;
+import {CANOPY_DEFAULTS,normalizeCanopyInput} from './v2-canopy-input.js';
+export {CANOPY_DEFAULTS};
 export function canopyPlan(input={}){
- const s={...CANOPY_DEFAULTS,...input};
  const invalid=reason=>({errors:[reason],plan:null,total:null});
- // Legacy geometry treats zero overhang/end flat as default, not zero. Reject instead of silently substituting.
- for(const [key,min,max] of [['widthMm',1500,6000],['lengthMm',1000,12000],['visibleHeightMm',1000,5000],['riseMm',100,2000],['trussHeightMm',120,600],['overhangMm',1,600],['endFlatMm',1,800],['cellStepMm',250,700],['existingPosts',0,100]])if(!int(s[key],min,max))return invalid('Проверьте '+key+': допустимо '+min+'–'+max+' мм / шт.');
- if(!['Поликарбонат','Профнастил','Без покрытия'].includes(s.coverage)||!['Треугольная','Вертикальная','Усиленная'].includes(s.trussType)||!['Авто','30×30×2','40×20×2'].includes(s.materialMode)||!['Стандарт','Эконом'].includes(s.lagMode)||!['Бетонирование','Закладные'].includes(s.installType)||['postsNeeded','beamsExisting','paint'].some(k=>typeof s[k]!=='boolean'))return invalid('Проверьте комплектацию.');
+ let s,raw;
+ try{({configuration:s,raw}=normalizeCanopyInput(input))}catch(error){return invalid(error.message)}
  const G=window.TrussGeometry,C=window.CanopyPricing;
  if(!G||!C)return invalid('Расчётный модуль недоступен');
- const raw={widthPostsM:Number(s.widthMm)/1000,lengthM:Number(s.lengthMm)/1000,visibleHeightM:Number(s.visibleHeightMm)/1000,riseMm:Number(s.riseMm),heightMm:Number(s.trussHeightMm),overhangMm:Number(s.overhangMm),endFlatMm:Number(s.endFlatMm),cellStepMm:Number(s.cellStepMm),coverage:s.coverage,trussType:s.trussType,materialMode:s.materialMode,lagMode:s.lagMode,installType:s.installType,postsNeeded:s.postsNeeded,existingPosts:s.postsNeeded?Number(s.existingPosts):0,beamsExisting:s.beamsExisting,paint:s.paint,delivery:0};
  raw.trussCount=C.autoTrussCount(raw.lengthM);
  const g=G.compute(raw);
  if(!g.ok)return {errors:g.errors,plan:null,total:null};
