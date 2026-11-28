@@ -73,6 +73,7 @@ jobs:
           test ! -e _site/scripts/kd-private-pricing.mjs
           test ! -e _site/scripts/kd-private-serial-frame.mjs
           test ! -e _site/scripts/kd-private-canopy.mjs
+          test ! -e _site/scripts/kd-private-fences.mjs
           test ! -e _site/backend
           test ! -e _site/local-api.php
           for dir in dev-tools dev-tools-v4 surveyor-test; do
