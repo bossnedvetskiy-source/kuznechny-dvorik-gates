@@ -6,6 +6,34 @@ import {packStock} from '../surveyor-app/simple-gate-engine.js';
 import {SWING_DEFAULTS,swingFramePlan} from '../surveyor-app/v2-swing-frame.js';
 const repeat=(n,v)=>Array(n).fill(v);
 const round100=v=>Math.round(v/100)*100;
+// For a small serial kit, try to beat the legacy FFD packing without
+// pretending to account for saw kerf or end preparation. Bounded search:
+// if no better solution is found, retain the valid conservative layout.
+export function serialPackStock(lengths){
+ const fallback=packStock(lengths),pieces=lengths.slice().sort((a,b)=>b-a);
+ const lower=Math.ceil((fallback.actualMm-1e-7)/6000);
+ let visits=0;
+ for(let count=lower;count<fallback.count;count++){
+  const bins=Array.from({length:count},()=>({used:0,parts:[]}));
+  function place(i){
+   if(++visits>50000)return false;
+   if(i===pieces.length)return true;
+   const length=pieces[i],seen=new Set();
+   for(const b of bins){
+    const signature=b.used.toFixed(7);
+    if(seen.has(signature)||b.used+length>6000+1e-7)continue;
+    seen.add(signature);const prev=b.used;b.used+=length;b.parts.push(length);
+    if(place(i+1))return true;
+    b.parts.pop();b.used=prev;
+    if(visits>50000)return false;
+   }
+   return false;
+  }
+  if(place(0))return {count,purchaseMm:count*6000,actualMm:fallback.actualMm,bins};
+  if(visits>50000)break;
+ }
+ return fallback;
+}
 export function serialFrameParts(input={}){
  const s={...SWING_DEFAULTS};
  for(const k of Object.keys(s))if(Object.hasOwn(input,k))s[k]=input[k];
@@ -23,7 +51,7 @@ export function serialFrameParts(input={}){
  for(const [enabled,w,h] of [[gate,Number(s.gateWidthMm),gH],[wicket,Number(s.wicketWidthMm),kH]])if(enabled&&(!Number.isSafeInteger(w)||!Number.isSafeInteger(h)||w>6000||h>6000||w<=0||h<=0))throw Error('Размеры вне диапазона');
  const w=(Number(s.gateWidthMm)-(s.gapMode==='excel'?20:60))/2,k=Number(s.wicketWidthMm)-(s.gapMode==='excel'?10:40);
  const gp=gate?[...repeat(4,gH),...repeat(6,w),...repeat(2,Math.hypot(gH,w))]:[],kp=wicket?[...repeat(2,kH),...repeat(3,k),Math.hypot(kH,k)]:[];
- const main=packStock([...gp,...kp]);
+ const main=serialPackStock([...gp,...kp]);
  const rear=gate?Number(s.gateWidthMm)+800:0;
  if(rear>6000)throw Error('Согласуйте стыковку задней трубы');
  const sum=a=>a.reduce((n,v)=>n+v,0);
