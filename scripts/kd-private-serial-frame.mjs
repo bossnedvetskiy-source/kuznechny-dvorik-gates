@@ -7,7 +7,15 @@ import {SWING_DEFAULTS,swingFramePlan} from '../surveyor-app/v2-swing-frame.js';
 const repeat=(n,v)=>Array(n).fill(v);
 const round100=v=>Math.round(v/100)*100;
 export function serialFrameParts(input={}){
- const s={...SWING_DEFAULTS,...input},p=swingFramePlan(s);
+ const s={...SWING_DEFAULTS};
+ for(const k of Object.keys(s))if(Object.hasOwn(input,k))s[k]=input[k];
+ for(const k of ['gateWidthMm','gateHeightMm','wicketWidthMm','wicketHeightMm']){
+  if((typeof s[k]!=='number'&&typeof s[k]!=='string')||String(s[k]).trim()===''||!Number.isSafeInteger(Number(s[k]))||Number(s[k])<1||Number(s[k])>6000)throw Error('Размеры вне диапазона');
+  s[k]=Number(s[k]);
+ }
+ for(const k of ['hinges','lock','bolts','posts','paint','link'])if(typeof s[k]!=='boolean')throw Error('Некорректная комплектация');
+ if(s.wicketPosition!=='adjacent')throw Error('Отдельное расположение опор требует уточнения');
+ const p=swingFramePlan(s);
  if(p.errors.length)throw Error(p.errors.join(' '));
  if(s.profile!=='40x25x2'||s.diagonal!=='40x25x2'||s.wicketType!=='separate'||s.fill!=='none'||s.installation!=='none'||s.link||s.postType!=='none'||s.manualPosts!=='')throw Error('Модель пока только для простых каркасов 40×25 без заполнения, связки и установки');
  if(s.product==='gate'&&s.lock||s.product==='wicket'&&s.bolts)throw Error('Фурнитура не соответствует изделию');
