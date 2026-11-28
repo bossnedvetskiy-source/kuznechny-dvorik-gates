@@ -58,3 +58,28 @@ for(const patch of [{product:'gate',lock:true},{product:'wicket',bolts:true},{fi
 assert.throws(()=>serialFramePrivateQuote(bare,{...sr,approved:false}));
 assert.throws(()=>serialFramePrivateQuote(bare,{...sr,rates:{}}));
 console.log('Proposed serial frame: separate procurement, optional hardware, paint, posts and approval gates passed');
+
+const {privateCanopyQuote,CANOPY_RATE_KEYS}=await import('./kd-private-canopy.mjs');
+const cr=Object.fromEntries(CANOPY_RATE_KEYS.map(k=>[k,100]));
+Object.assign(cr,{markup:25,separateMarkup:40,ownerMount:0});
+const cb={kind:'canopy',policy:'legacy-canopy-installed-v1',approved:true,revision:'synthetic-canopy',rates:cr};
+const scope={installationScope:'included'};
+const base=privateCanopyQuote({},cb,scope);
+assert.equal(base.prices.product+base.prices.installation,base.prices.total);
+assert(base.prices.total>0);
+assert(base.prices.installation>0);
+assert(privateCanopyQuote({paint:false},cb,scope).prices.total<base.prices.total);
+assert(privateCanopyQuote({existingPosts:2},cb,scope).prices.total<base.prices.total);
+assert(privateCanopyQuote({beamsExisting:true},cb,scope).prices.total<base.prices.total);
+for(const coverage of ['Профнастил','Без покрытия'])assert(privateCanopyQuote({coverage},cb,scope).prices.total>0);
+assert.throws(()=>privateCanopyQuote({},cb,{installationScope:'excluded'}));
+assert.throws(()=>privateCanopyQuote({},cb));
+assert.throws(()=>privateCanopyQuote({}, {...cb,rates:{...cr,poly:undefined}},scope));
+assert.throws(()=>privateCanopyQuote({widthMm:7000},cb,scope));
+assert.throws(()=>privateCanopyQuote({existingPosts:100},cb,scope));
+assert.throws(()=>privateCanopyQuote({}, {...cb,approved:false},scope));
+assert(!JSON.stringify(base).match(/"ownerMount"|"actualExpenses"|"profit"|"rates"/));
+assert.equal(base.canIssue,false);
+assert.equal(base.canReleaseProduction,false);
+assert.equal(base.engineeringPending,true);
+console.log('Private canopy: complete synthetic rates, mounting scope, roof options, missing rates and release locks passed');
