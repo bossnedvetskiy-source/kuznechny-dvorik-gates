@@ -38,7 +38,7 @@ jobs:
         run: |
           set -uo pipefail
           failed=0
-          for test in gate-calculator picket-calculator canopy-calculator owner-materials surveyor-3d-geometry surveyor-3d-layout surveyor-3d-product surveyor-3d-sliding plan-auto-divide surveyor-integrity offline-integrity; do
+          for test in gate-calculator picket-calculator canopy-calculator owner-materials surveyor-3d-geometry surveyor-3d-layout surveyor-3d-product surveyor-3d-sliding plan-auto-divide surveyor-integrity offline-integrity kd-private-pricing; do
             echo "::group::$test"
             node "scripts/test-$test.mjs" || failed=1
             echo "::endgroup::"
@@ -70,6 +70,7 @@ jobs:
         run: |
           set -euo pipefail
           test -z "$DEV_SURVEYOR_API_URL"
+          test ! -e _site/scripts/kd-private-pricing.mjs
           test ! -e _site/backend
           test ! -e _site/local-api.php
           for dir in dev-tools dev-tools-v4 surveyor-test; do
