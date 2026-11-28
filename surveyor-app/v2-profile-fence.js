@@ -5,8 +5,9 @@ export const PROFILE_FENCE_DEFAULTS=Object.freeze({lengthMm:12000,heightMm:1800,
 const int=(v,min,max)=>(typeof v==='number'||typeof v==='string'&&v.trim()!=='')&&Number.isSafeInteger(Number(v))&&Number(v)>=min&&Number(v)<=max;
 export function profileFenceCut(pieces,kerfMm=3){
  if(!int(kerfMm,0,20)||!Array.isArray(pieces)||pieces.some(v=>!int(v,1,6000)))throw Error('Проверьте длины раскроя');
- const bins=[];
- for(const length of [...pieces].sort((a,b)=>b-a)){
+ const bins=[],lengths=pieces.map(Number);
+ kerfMm=Number(kerfMm);
+ for(const length of lengths.sort((a,b)=>b-a)){
   let bin=bins.find(b=>b.remaining>=length+kerfMm);
   if(!bin){bin={pieces:[],remaining:6000};bins.push(bin)}
   // Exact stock-sized piece needs no cut; every shorter piece reserves kerf.
@@ -14,7 +15,7 @@ export function profileFenceCut(pieces,kerfMm=3){
   if(length+cut>bin.remaining)throw Error('Деталь с припуском реза не помещается в хлыст');
   bin.pieces.push(length);bin.remaining-=length+cut;
  }
- return {stocks:bins.length,bins,usedMm:pieces.reduce((a,b)=>a+b,0),remainderMm:bins.reduce((a,b)=>a+b.remaining,0)};
+ return {stocks:bins.length,bins,usedMm:lengths.reduce((a,b)=>a+b,0),remainderMm:bins.reduce((a,b)=>a+b.remaining,0)};
 }
 export function profileFencePlan(input={}){
  const s={...PROFILE_FENCE_DEFAULTS,...input};
